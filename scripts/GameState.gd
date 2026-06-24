@@ -9,12 +9,20 @@ signal skills_changed
 const PAD_AXIS_DEADZONE: float = 0.4
 var last_input_kind: String = "kb"  # "kb" | "pad"
 
-const TOTAL_STAGES: int = 7
+const TOTAL_STAGES: int = 8   # 본편 A1: 막1·2=전투 3 + 막3=onset 전투 1 + 종착 1. ACTS 합과 일치(검증).
+# 막(Act) 정의 — 가변 개수. 본편 확장(A2~)은 ACTS에 막을 추가하거나 막당 stages를 늘려 진행.
+# 불변식: 각 막 stages 합 == TOTAL_STAGES. boss != "" 이면 막 끝 보스 스테이지(A4 전까지 빈 슬롯).
+# (1단계 한계: 막3 전투 맵이 datacenter 1종뿐이라 막3=2. 막3 분량 확대는 A2 신규 맵과 함께.)
+const ACTS: Array = [
+	{"id": "act1", "name": "침투", "bgm": "early",      "stages": 3, "boss": ""},
+	{"id": "act2", "name": "잠입", "bgm": "mid_late",   "stages": 3, "boss": ""},
+	{"id": "act3", "name": "진실·탈출", "bgm": "boss",   "stages": 2, "boss": ""},
+]
 const SCORE_THRESHOLD: int = 4
 const SETTINGS_PATH: String = "user://settings.cfg"
 # 런 진행 저장(이어하기) — 설정과 분리한 별도 파일. 웹에선 user://가 브라우저 IndexedDB에 영속.
 const RUN_PATH: String = "user://run.cfg"
-const RUN_VERSION: int = 1
+const RUN_VERSION: int = 2  # 2: 본편 9스테이지/막 재배치 — 구 7스테이지 run.cfg 무효화(load 시 clear)
 # 플레이 피드백 설문(구글 폼). 타이틀·크레딧 끝 메뉴의 "피드백 보내기"가 연다.
 const FEEDBACK_URL: String = "https://forms.gle/byS8EABJitB9r6z88"
 const KEYBIND_ACTIONS: Array[String] = ["move_left", "move_right", "jump", "attack", "dash", "skill", "pause"]
@@ -290,7 +298,7 @@ func record_route_choice(route: Dictionary, recommended_id: String) -> void:
 		veil_degraded = false
 		veil_reversal_pending = false
 	elif not veil_degraded:
-		var reversal_onset: bool = (current_stage == 2 or current_stage == 3) if story_mode else (current_stage >= 4)
+		var reversal_onset: bool = is_late_act(current_stage)
 		if reversal_onset:
 			veil_degraded = true
 			veil_reversal_pending = true
@@ -493,6 +501,27 @@ func on_stage_clear() -> bool:
 	# regen은 획득 시점에 max_hp +1 효과만 — 매 stage HP 풀 회복이라 heal_player 불필요
 	return leveled
 
+# 막(Act) 헬퍼 — 흩어진 stage 매직넘버 대신 막 경계로 판정.
+# act_for_stage: stage가 속한 막 인덱스(0-based). ACTS의 stages 누적으로 계산.
+func act_for_stage(stage: int) -> int:
+	var acc: int = 0
+	for i in ACTS.size():
+		acc += int(ACTS[i]["stages"])
+		if stage < acc:
+			return i
+	return ACTS.size() - 1
+
+func act_def(stage: int) -> Dictionary:
+	var d: Dictionary = ACTS[act_for_stage(stage)]
+	return d
+
+# 시야붕괴 onset 막(마지막 막) 판정 — 보스/탈출 직전 첫 전투 맵에서 켜진다.
+# 스토리 모드는 5스테이지 비트가 촘촘해 기존 삼항(s==2 or s==3)을 그대로 반환(동작 보존).
+func is_late_act(stage: int) -> bool:
+	if story_mode:
+		return stage == 2 or stage == 3
+	return act_for_stage(stage) == ACTS.size() - 1
+
 func effective_total_stages() -> int:
 	return STORY_TOTAL_STAGES if story_mode else TOTAL_STAGES
 
@@ -555,7 +584,13 @@ func save_run() -> void:
 	cf.save(RUN_PATH)
 
 func has_run() -> bool:
-	return FileAccess.file_exists(RUN_PATH)
+	if not FileAccess.file_exists(RUN_PATH):
+		return false
+	# 구조 버전 불일치(본편 막 재배치 등)면 무효 — 이어하기 버튼 숨김, 풀 어긋남 방지.
+	var cf := ConfigFile.new()
+	if cf.load(RUN_PATH) != OK:
+		return false
+	return int(cf.get_value("meta", "version", 0)) == RUN_VERSION
 
 func clear_run() -> void:
 	var d := DirAccess.open("user://")
@@ -566,6 +601,9 @@ func clear_run() -> void:
 func load_run() -> bool:
 	var cf := ConfigFile.new()
 	if cf.load(RUN_PATH) != OK:
+		return false
+	if int(cf.get_value("meta", "version", 0)) != RUN_VERSION:
+		clear_run()
 		return false
 	current_stage = int(cf.get_value("run", "current_stage", 0))
 	death_count = int(cf.get_value("run", "death_count", 0))

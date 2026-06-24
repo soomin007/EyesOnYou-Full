@@ -61,8 +61,8 @@ const ALL_ROUTES: Array = [
 		"reward": 2,
 		"hidden": false,
 		"unique": false,
-		# 외부→시설 진입 brigde — stage 1~3에 등장해 외벽 단계와 내부 단계를 잇는다.
-		"min_stage": 1, "max_stage": 3,
+		# 막1(외곽) 진입 bridge — 외벽 단계 안에서만. 막2부터는 내부 맵.
+		"min_stage": 1, "max_stage": 2,
 		"tags": ["근접전", "함정", "전투"],
 		"veil_comment": "옛 지하철이에요. 좁고 어두워요. 대시 써서 함정 넘어가세요.",
 		"entry_comment": "지하철 통로예요. 좁아요. 한 번에 멀리 가요.",
@@ -76,8 +76,8 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		# 드론 첫 등장 맵 — 사용자 피드백상 후반에 등장하는 게 더 자연스러워 stage 3~4로 이동.
-		"min_stage": 3, "max_stage": 4,
+		# 드론 첫 등장 — 막2(잠입) 전반.
+		"min_stage": 3, "max_stage": 5,
 		"tags": ["전투", "드론", "함정"],
 		"veil_comment": "냉각 플랜트예요. 바닥 증기는 타이밍 보고 지나가요. 드론은 위에 떠 있어요.",
 		"entry_comment": "여긴 서버를 식히는 곳이에요. ...저도 이런 데 어딘가 있겠죠. 바닥 증기 조심해요.",
@@ -92,8 +92,8 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		# stage 1부터 등장 가능 — 외벽 옥상 직후 감시탑(둘 다 노출+높이)이 자연스럽게 이어짐.
-		"min_stage": 1, "max_stage": 4,
+		# 막1(외곽) 노출 전투 — 외벽 옥상 직후 감시탑(둘 다 노출+높이).
+		"min_stage": 1, "max_stage": 2,
 		"tags": ["원거리", "전투", "노출"],
 		"veil_comment": "감시탑은 위험해요. 저격이 많아요. 엄폐 짧게, 이동은 빠르게.",
 		"entry_comment": "관제 구역이에요. 시야 안에 들어가는 순간 쏴와요.",
@@ -107,9 +107,9 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		"min_stage": 3, "max_stage": 4,
-		# 격리 병동은 ??? 맵 복선 트리거가 있어 Stage 3~4 풀에 항상 포함되어야 함.
-		"guaranteed_in_stages": [3, 4],
+		"min_stage": 3, "max_stage": 5,
+		# 격리 병동은 ??? 맵 복선 트리거 — 막2 풀에 보장(guaranteed).
+		"guaranteed_in_stages": [4],
 		"tags": ["우회", "어두운_환경", "은폐"],
 		"veil_comment": "격리 병동이에요. 도면이랑 다르게 생겼을 거예요.",
 		"entry_comment": "격리 병동에 들어왔어요. 안쪽이 어둡고 좁아요.",
@@ -123,7 +123,9 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		"min_stage": 4, "max_stage": 5,
+		# 막3 진입 onset 전투(핵심부 직전, 시야붕괴 실연). 막3 전용 전투 맵이 1종뿐이라 단독 고정.
+		# (A2에서 막3 전투 맵 추가 시 풀 확대.)
+		"min_stage": 6, "max_stage": 6,
 		"tags": ["전투", "드론", "원거리"],
 		"veil_comment": "데이터 센터예요. 드론·저격 동시에 와요. 한 번에 정리해야 빠져요.",
 		"entry_comment": "서버 랙이에요. 위에서 드론, 같은 층에서 저격.",
@@ -137,10 +139,9 @@ const ALL_ROUTES: Array = [
 		"reward": 2,
 		"hidden": false,
 		"unique": false,
-		# "마지막에 빠져나가는 길" — 일반 모드에선 최종 스테이지(6)에만 등장(중간에 미리 "탈출"하는
-		# 게 서사상 어색해 사용자 피드백으로 제한). 선택 시 클리어=엔딩(보스 없이 빠져나간 결말).
-		"min_stage": 6, "max_stage": 6,
-		"available_stages": [6],
+		# "마지막에 빠져나가는 길" — 막3 종착 스테이지(7)에만. 선택 시 클리어=엔딩(보스 없이 빠져나간 결말).
+		"min_stage": 7, "max_stage": 7,
+		"available_stages": [7],
 		"tags": ["우회", "은폐"],
 		"veil_comment": "비상 탈출로예요. 빨리 빠지면 그만큼 안전해요.",
 		"entry_comment": "조용한 길이에요. 멈추지 말고 빠지면 돼요.",
@@ -155,7 +156,8 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		"min_stage": 5, "max_stage": 6,
+		# 막3 종착 — 보스. 최종 스테이지(7) 고정이라 클리어=엔딩("보스 깨면 종료" 불변식).
+		"min_stage": 7, "max_stage": 7,
 		"tags": ["전투", "드론", "밝은_환경"],
 		"veil_comment": "핵심부예요. 정면 돌파에 드론이 상시 순찰해요. 그만큼 크게 벌어요.",
 		"entry_comment": "핵심부에 들어왔어요. 거리 잘 잡아요.",
@@ -171,8 +173,8 @@ const ALL_ROUTES: Array = [
 		"hidden": false,
 		"unique": true,
 		"challenge": true,
-		"available_stages": [4],
-		"guaranteed_in_stages": [4],
+		"available_stages": [5],
+		"guaranteed_in_stages": [5],
 		"tags": ["도전", "어두운_환경"],
 		"veil_comment": "[도전] 교신이 끊겨요. 안에선 저도 못 도와드려요. 한 번에 빠져나오셔야 해요.",
 		"entry_comment": "여기서부터 교신 끊겨요. 30초 안에 빠져나오세요.",
@@ -186,7 +188,8 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": true,
 		"unique": true,
-		"min_stage": 5, "max_stage": 6,
+		# 막3 종착 — 진실(???). 최종 스테이지(7) 고정.
+		"min_stage": 7, "max_stage": 7,
 		"tags": ["우회", "정보"],
 		"veil_comment": "...저도 모르겠어요. 들어가실래요?",
 		"entry_comment": "...뭐가 있는 거지.",

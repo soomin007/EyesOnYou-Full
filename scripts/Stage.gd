@@ -237,9 +237,10 @@ func _arm_act3_vision_subtitle() -> void:
 		return
 	# 일반 모드: 보스(lab=ARENA, 잡몹 없어 마커 무의미)·탈출 직전의 *잡몹 전투 맵*(데이터센터 등, index 4)에서
 	# 역전을 실연한다. 기존 stage>=5는 보스/탈출에서만 떠 시각이 전투 맵에 안 내려앉고 대사 아크(stage4~)와
-	# 어긋났음(사용자 보고). → stage>=4로 당겨 첫 후보 전투 맵에서 1회 발동(위 veil_degraded 가드로 중복 없음).
+	# 어긋났음(사용자 보고). → 막3(마지막 막) 첫 후보 전투 맵에서 1회 발동(위 veil_degraded 가드로 중복 없음).
 	# 스토리 ACT3 = 보스 직전(ward/sewers, stage 2)에서 먼저 — 보스(stage 3, ARENA)는 마커 무의미라 제외.
-	var is_act3: bool = (stage == 2 or stage == 3) if GameState.story_mode else (stage >= 4)
+	# 막 경계 판정은 GameState.is_late_act로 통일(스토리 s2~3 / 본편 마지막 막).
+	var is_act3: bool = GameState.is_late_act(stage)
 	if not is_act3:
 		return
 	var line: String = _act3_vision_line(stage)
