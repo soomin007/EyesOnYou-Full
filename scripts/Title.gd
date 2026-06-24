@@ -19,6 +19,7 @@ var state: int = STATE_MAIN
 var picked_story: bool = false
 # STATE_MODE 전용 설명 패널 (오른쪽 회색 박스).
 var description_panel: PanelContainer = null
+var patch_panel: PanelContainer = null
 var description_title_label: Label = null
 var description_text_label: Label = null
 var description_icon: ColorRect = null
@@ -32,6 +33,7 @@ func _ready() -> void:
 	# 메인 테마(Glass Protocol) — 타이틀/모드 선택/튜토리얼까지 동일 트랙 유지.
 	BgmPlayer.play("main_theme")
 	_build_description_panel()
+	_build_patch_panel()
 	_set_state(STATE_MAIN)
 
 func _build_description_panel() -> void:
@@ -80,6 +82,57 @@ func _build_description_panel() -> void:
 	description_text_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(description_text_label)
 
+func _build_patch_panel() -> void:
+	# STATE_MAIN에서 보이는 우측 "최근 업데이트" 박스. GameInfo.PATCH_NOTES 최신 1건.
+	var patch: Dictionary = GameInfo.latest_patch()
+	if patch.is_empty():
+		return
+	patch_panel = PanelContainer.new()
+	patch_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	patch_panel.anchor_left = 0.55
+	patch_panel.anchor_top = 0.18
+	patch_panel.anchor_right = 0.93
+	patch_panel.anchor_bottom = 0.74
+	patch_panel.visible = false
+	patch_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.13, 0.14, 0.17, 0.92)
+	sb.border_color = Color(0.45, 0.5, 0.6, 0.55)
+	sb.set_border_width_all(1)
+	sb.content_margin_left = 26
+	sb.content_margin_right = 26
+	sb.content_margin_top = 22
+	sb.content_margin_bottom = 22
+	sb.corner_radius_top_left = 6
+	sb.corner_radius_top_right = 6
+	sb.corner_radius_bottom_left = 6
+	sb.corner_radius_bottom_right = 6
+	patch_panel.add_theme_stylebox_override("panel", sb)
+	add_child(patch_panel)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 10)
+	patch_panel.add_child(v)
+	var header := Label.new()
+	header.text = "최근 업데이트 · %s" % str(patch.get("date", ""))
+	header.add_theme_font_size_override("font_size", 19)
+	header.add_theme_color_override("font_color", Color(0.72, 0.85, 0.98))
+	v.add_child(header)
+	var subtitle: String = str(patch.get("title", ""))
+	if subtitle != "":
+		var sub := Label.new()
+		sub.text = subtitle
+		sub.add_theme_font_size_override("font_size", 15)
+		sub.add_theme_color_override("font_color", Color(0.95, 0.95, 0.95))
+		v.add_child(sub)
+	for item in patch.get("items", []):
+		var l := Label.new()
+		l.text = "· " + str(item)
+		l.add_theme_font_size_override("font_size", 13)
+		l.add_theme_color_override("font_color", Color(0.78, 0.82, 0.88))
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.custom_minimum_size = Vector2(360, 0)
+		v.add_child(l)
+
 func _on_input_kind_changed(_kind: String) -> void:
 	_refresh_hint()
 
@@ -123,8 +176,10 @@ func _set_state(new_state: int) -> void:
 	# 모드 선택일 때만 우측 설명 패널 + 좌측 정렬. 그 외엔 가운데 정렬·패널 숨김.
 	if description_panel != null:
 		description_panel.visible = (new_state == STATE_MODE)
+	if patch_panel != null:
+		patch_panel.visible = (new_state == STATE_MAIN)
 	if center_node != null:
-		center_node.anchor_right = 0.55 if new_state == STATE_MODE else 1.0
+		center_node.anchor_right = 0.55 if (new_state == STATE_MODE or new_state == STATE_MAIN) else 1.0
 	match state:
 		STATE_MAIN:
 			var b_start := _make_button("게임 시작")

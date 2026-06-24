@@ -35,6 +35,23 @@ func _ready() -> void:
 	lines = _build_lines()
 	_start_line()
 	GameState.input_kind_changed.connect(_on_input_kind_changed)
+	_build_tip_label()
+
+func _build_tip_label() -> void:
+	# 로딩 팁 — 맵마다 1개씩 로테이션(피드백 "게임이 안 알려준다" 보완). 화면 하단.
+	var tip := Label.new()
+	tip.text = "TIP   " + GameInfo.tip_at(GameState.current_stage)
+	tip.add_theme_font_size_override("font_size", 15)
+	tip.add_theme_color_override("font_color", Color(0.68, 0.74, 0.82))
+	tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tip.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	tip.anchor_top = 0.89
+	tip.anchor_bottom = 0.98
+	tip.offset_left = 140
+	tip.offset_right = -140
+	tip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(tip)
 
 func _on_input_kind_changed(_kind: String) -> void:
 	# 타이핑 진행 중엔 hint 비어 있음. 완료 상태에서만 갱신.
