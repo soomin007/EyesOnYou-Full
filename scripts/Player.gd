@@ -18,6 +18,12 @@ const INVULN_AFTER_HIT: float = 0.8
 const SKILL_COOLDOWN: float = 3.5  # explosive 재사용 대기 (너프: 3.0→3.5, "만능" 억제)
 const DROP_THROUGH_DURATION: float = 0.25  # 플랫폼 통과 예외 유지 시간
 
+# 점프 입력 관용(플랫포머 표준). coyote = 가장자리에서 막 떨어진 직후에도 지상 점프 허용,
+# jump buffer = 착지 직전 누른 점프 입력을 기억해 착지 순간 발동. 둘 다 "분명 점프했는데
+# 안 올라가짐"(2차 피드백 다수) 해소용 — 원인은 docs/design/known_issues.md 참조.
+const COYOTE_TIME: float = 0.10
+const JUMP_BUFFER_TIME: float = 0.10
+
 # 충전형 방패(barrier) — SkillTreeData.barrier 라인.
 # T1: 10초 충전 후 1회 피격 무효 / T2: 6초 충전 / T3: 무효 직후 0.6s 무적.
 const BARRIER_CHARGE_T1: float = 10.0
@@ -49,6 +55,8 @@ const _HIT_SLOWMO_DURATION: float = 0.35
 const _HIT_SLOWMO_SCALE: float = 0.4
 var slowmo_active: bool = false
 var jumps_used: int = 0
+var _coyote_t: float = 0.0       # 바닥을 떠난 뒤 지상 점프가 아직 유효한 잔여 시간
+var _jump_buffer_t: float = 0.0  # 착지 직전 누른 점프 입력을 기억하는 잔여 시간
 # 환경 레버 — Area2D body_entered 시 LeverInteractable이 직접 세팅한다.
 # attack 입력이 사격 대신 레버 당기기로 흡수된다.
 var nearby_lever: Node = null
@@ -151,6 +159,9 @@ func _physics_process(delta: float) -> void:
 	_was_on_floor = on_floor_now
 	if on_floor_now:
 		jumps_used = 0
+		_coyote_t = COYOTE_TIME
+	else:
+		_coyote_t = maxf(_coyote_t - delta, 0.0)
 	# 발걸음 SFX — 지면에서 충분한 속도로 이동 중일 때만 일정 간격으로.
 	if on_floor_now and absf(velocity.x) > 30.0:
 		_step_t += delta
@@ -238,8 +249,14 @@ func _handle_input(_delta: float) -> void:
 		var move_mult: float = _SPRINT_MULT if sprint_t > 0.0 else 1.0
 		velocity.x = dir * SPEED * move_mult
 
+	# 점프 입력은 버퍼에 기억해 두고 매 프레임 소비를 시도(jump buffer). 착지 직전 입력도
+	# 착지 순간 발동하고, coyote 윈도우 안이면 가장자리 이탈 직후에도 지상 점프가 나간다.
 	if Input.is_action_just_pressed("jump"):
-		_try_jump()
+		_jump_buffer_t = JUMP_BUFFER_TIME
+	if _jump_buffer_t > 0.0:
+		_jump_buffer_t = maxf(_jump_buffer_t - delta, 0.0)
+		if _try_jump():
+			_jump_buffer_t = 0.0
 	# 전투 입력 제한 (??? 맵에서) — 이동/점프만 허용
 	if not GameState.restrict_combat_input:
 		# 레버 영역 내에서는 attack 입력이 사격 대신 레버 당기기에만 쓰임 (꾹 누름 사격도 차단).
@@ -276,7 +293,8 @@ func _try_drop_through() -> void:
 			velocity.y = max(velocity.y, 80.0)
 			return
 
-func _try_jump() -> void:
+# 점프를 시도하고 실제로 발동했으면 true(버퍼 소비 판정용).
+func _try_jump() -> bool:
 	var max_jumps: int = 1
 	if GameState.has_skill("double_jump"):
 		max_jumps += 1
@@ -284,15 +302,20 @@ func _try_jump() -> void:
 	# T1은 활강만, 삼단점프는 T2로 분리(T1에 활강+삼단점프 둘 다라 글라이드 가치가 과했음).
 	if GameState.get_skill_tier("glide") >= 2:
 		max_jumps += 1
-	if is_on_floor():
+	# 지상 점프 — 바닥이거나, 가장자리에서 막 떨어진 직후(coyote, 아직 공중 점프 미사용).
+	if is_on_floor() or (_coyote_t > 0.0 and jumps_used == 0):
 		velocity.y = JUMP_VELOCITY
 		jumps_used = 1
+		_coyote_t = 0.0
 		SfxPlayer.play("player_jump")
+		return true
 	elif jumps_used < max_jumps:
 		velocity.y = JUMP_VELOCITY * 0.92
 		jumps_used += 1
 		# 사용자: 더블점프 전용 사운드는 어색해서 일반 점프 사운드 재사용.
 		SfxPlayer.play("player_jump")
+		return true
+	return false
 
 # 현재 티어가 반영된 실제 max 쿨다운 (HUD 게이지 표시용).
 func get_attack_cd_max() -> float:
