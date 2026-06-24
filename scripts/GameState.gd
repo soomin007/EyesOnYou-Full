@@ -616,7 +616,7 @@ func load_run() -> bool:
 # v3 (현): v2 + joy_button/joy_motion 타입 — 게임패드 매핑 보존
 # 구 버전 cfg 로드 시 input 섹션은 무시 (project.godot 기본값 유지), 다음 저장에서 v3로 전환
 
-const SETTINGS_VERSION: int = 3
+const SETTINGS_VERSION: int = 4  # 4: 키 기본배열 개편(JKL+ZXC+화살표). 구 cfg 키바인드 무효화→새 기본 적용.
 
 func load_settings() -> void:
 	var cf := ConfigFile.new()
