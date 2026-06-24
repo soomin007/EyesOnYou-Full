@@ -9,14 +9,13 @@ signal skills_changed
 const PAD_AXIS_DEADZONE: float = 0.4
 var last_input_kind: String = "kb"  # "kb" | "pad"
 
-const TOTAL_STAGES: int = 8   # 본편 A1: 막1·2=전투 3 + 막3=onset 전투 1 + 종착 1. ACTS 합과 일치(검증).
+const TOTAL_STAGES: int = 9   # A2: 막1·2=3 + 막3=전투 2(datacenter/server_hall) + 종착 1. ACTS 합과 일치.
 # 막(Act) 정의 — 가변 개수. 본편 확장(A2~)은 ACTS에 막을 추가하거나 막당 stages를 늘려 진행.
 # 불변식: 각 막 stages 합 == TOTAL_STAGES. boss != "" 이면 막 끝 보스 스테이지(A4 전까지 빈 슬롯).
-# (1단계 한계: 막3 전투 맵이 datacenter 1종뿐이라 막3=2. 막3 분량 확대는 A2 신규 맵과 함께.)
 const ACTS: Array = [
 	{"id": "act1", "name": "침투", "bgm": "early",      "stages": 3, "boss": ""},
 	{"id": "act2", "name": "잠입", "bgm": "mid_late",   "stages": 3, "boss": ""},
-	{"id": "act3", "name": "진실·탈출", "bgm": "boss",   "stages": 2, "boss": ""},
+	{"id": "act3", "name": "진실·탈출", "bgm": "boss",   "stages": 3, "boss": ""},
 ]
 const SCORE_THRESHOLD: int = 4
 const SETTINGS_PATH: String = "user://settings.cfg"

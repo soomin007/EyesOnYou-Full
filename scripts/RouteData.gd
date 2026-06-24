@@ -123,9 +123,8 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		# 막3 진입 onset 전투(핵심부 직전, 시야붕괴 실연). 막3 전용 전투 맵이 1종뿐이라 단독 고정.
-		# (A2에서 막3 전투 맵 추가 시 풀 확대.)
-		"min_stage": 6, "max_stage": 6,
+		# 막3 진입 전투(핵심부 직전, 시야붕괴 실연). server_hall과 함께 막3 전투 풀(s6~7).
+		"min_stage": 6, "max_stage": 7,
 		"tags": ["전투", "드론", "원거리"],
 		"veil_comment": "데이터 센터예요. 드론·저격 동시에 와요. 한 번에 정리해야 빠져요.",
 		"entry_comment": "서버 랙이에요. 위에서 드론, 같은 층에서 저격.",
@@ -139,9 +138,9 @@ const ALL_ROUTES: Array = [
 		"reward": 2,
 		"hidden": false,
 		"unique": false,
-		# "마지막에 빠져나가는 길" — 막3 종착 스테이지(7)에만. 선택 시 클리어=엔딩(보스 없이 빠져나간 결말).
-		"min_stage": 7, "max_stage": 7,
-		"available_stages": [7],
+		# "마지막에 빠져나가는 길" — 막3 종착 스테이지(8)에만. 선택 시 클리어=엔딩(보스 없이 빠져나간 결말).
+		"min_stage": 8, "max_stage": 8,
+		"available_stages": [8],
 		"tags": ["우회", "은폐"],
 		"veil_comment": "비상 탈출로예요. 빨리 빠지면 그만큼 안전해요.",
 		"entry_comment": "조용한 길이에요. 멈추지 말고 빠지면 돼요.",
@@ -156,8 +155,8 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		# 막3 종착 — 보스. 최종 스테이지(7) 고정이라 클리어=엔딩("보스 깨면 종료" 불변식).
-		"min_stage": 7, "max_stage": 7,
+		# 막3 종착 — 보스. 최종 스테이지(8) 고정이라 클리어=엔딩("보스 깨면 종료" 불변식).
+		"min_stage": 8, "max_stage": 8,
 		"tags": ["전투", "드론", "밝은_환경"],
 		"veil_comment": "핵심부예요. 정면 돌파에 드론이 상시 순찰해요. 그만큼 크게 벌어요.",
 		"entry_comment": "핵심부에 들어왔어요. 거리 잘 잡아요.",
@@ -188,12 +187,27 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": true,
 		"unique": true,
-		# 막3 종착 — 진실(???). 최종 스테이지(7) 고정.
-		"min_stage": 7, "max_stage": 7,
+		# 막3 종착 — 진실(???). 최종 스테이지(8) 고정.
+		"min_stage": 8, "max_stage": 8,
 		"tags": ["우회", "정보"],
 		"veil_comment": "...저도 모르겠어요. 들어가실래요?",
 		"entry_comment": "...뭐가 있는 거지.",
 		"stage_color": Color(0.06, 0.06, 0.08),
+	},
+	{
+		"id": "route_server_hall",
+		"name": "서버 회랑",
+		"description": "핵심부로 이어지는 서버 랙 회랑. 데이터가 흐르는 만큼 경비도 두텁다.",
+		"risk": 3,
+		"reward": 3,
+		"hidden": false,
+		"unique": false,
+		# 막3 진입 전투(핵심부 직전). datacenter와 함께 막3 전투 풀(s6~7).
+		"min_stage": 6, "max_stage": 7,
+		"tags": ["전투", "드론", "원거리"],
+		"veil_comment": "서버 회랑이에요. 드론이 위, 저격이 랙 위에. 랙을 엄폐로 쓰면서 빠져요.",
+		"entry_comment": "핵심부 직전이에요. 여기만 지나면... 조심해요.",
+		"stage_color": Color(0.16, 0.18, 0.22),
 	},
 ]
 

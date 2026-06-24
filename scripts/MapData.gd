@@ -35,6 +35,7 @@ static func get_layout(route_id: String) -> Dictionary:
 		"route_lab":        return _lab()
 		"route_hidden":     return _hidden()
 		"route_blackout":   return _blackout()
+		"route_server_hall": return _server_hall()
 	return {}
 
 # ─── 1. 외곽 진입로 (HORIZONTAL, 짧음) ─────────────────────────
@@ -730,5 +731,44 @@ static func _hidden() -> Dictionary:
 		"platforms": [],
 		"enemies": {"patrol": [], "sniper": [], "drone": [], "bomber": [], "shield": []},
 		"rewards": {"xp_orbs": [], "hp_pickups": []},
+		"spikes": [],
+	}
+
+# ─── 12. 서버 회랑 (HORIZONTAL, 막3 전투 — 핵심부 직전) ────────────────
+# A2 신규 맵. datacenter(ARENA 웨이브)와 달리 긴 통과형 회랑 — 드론·저격을 랙(발판)으로
+# 엄폐하며 빠져나간다. 막3 onset(시야붕괴)이 여기서 켜질 수 있다(is_late_act).
+static func _server_hall() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(4800.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(4680.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"platforms": [
+			# 서버 랙 열. 랙 위(발판)로 드론·저격을 피하거나 유리고지 확보. 지면(540)에서 단순점프로 닿음.
+			{"pos": Vector2(600, 470),  "w": 220.0},
+			{"pos": Vector2(1050, 470), "w": 200.0},
+			{"pos": Vector2(1500, 470), "w": 220.0},
+			{"pos": Vector2(2000, 470), "w": 200.0},
+			{"pos": Vector2(2500, 470), "w": 220.0},
+			{"pos": Vector2(3000, 470), "w": 200.0},
+			{"pos": Vector2(3500, 470), "w": 220.0},
+			{"pos": Vector2(4050, 470), "w": 220.0},
+			# 지면 칸막이(낮은 엄폐)
+			{"pos": Vector2(1300, 560), "w": 120.0},
+			{"pos": Vector2(2750, 560), "w": 120.0},
+		],
+		"enemies": {
+			# 핵심부 직전 — 드론·저격 동시 압박(데이터센터와 같은 적, 통과형 회랑).
+			"patrol": [Vector2(900, 600), Vector2(2200, 600), Vector2(3400, 600)],
+			"sniper": [Vector2(1500, 438), Vector2(3500, 438)],
+			"drone":  [Vector2(2500, 180), Vector2(4050, 180)],
+			"bomber": [], "shield": [],
+		},
+		"rewards": {
+			"xp_orbs":    [Vector2(2000, 440), Vector2(3000, 440), Vector2(3500, 438)],
+			"hp_pickups": [Vector2(4050, 440)],
+		},
 		"spikes": [],
 	}

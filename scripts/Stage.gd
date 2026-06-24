@@ -93,6 +93,7 @@ const _ROUTE_TRACKS: Dictionary = {
 	"route_cooling":    "mid_late",
 	"route_ward":       "mid_late",
 	"route_datacenter": "mid_late",
+	"route_server_hall": "mid_late",
 	"route_blackout":   "mid_late",
 	"route_escape":     "mid_late",
 	"route_lab":        "boss",
