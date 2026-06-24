@@ -139,6 +139,13 @@
   계속 전파됨(자기 영속). → 순서: load_settings → _bind_default_mouse_inputs/_bind_wasd_to_ui.
   좌=사격/우=스킬은 핵심 조작이라 cfg가 잃어도 항상 보강되게. (2026-06-08 사용자 보고 → fix 27852ae.)
 
+- **키 기본배열을 바꾸면 `SETTINGS_VERSION`을 같이 올릴 것 — 안 그러면 기존 cfg가 새 기본을 덮어쓴다.**
+  `load_settings`는 저장된 `meta.version >= SETTINGS_VERSION`이면 cfg의 `[input]` 키바인드로 InputMap을
+  `action_erase_events` 후 덮어쓴다. 키 기본값(project.godot)만 바꾸고 버전을 안 올리면, 이전에 플레이해
+  cfg가 있는 사용자는 *옛 키*가 복원돼 새 기본(예: ZXC, 화살표↑)이 안 먹힌다(2026-06-24 사용자 보고:
+  "데모에서 ZXC 안 됨"). → 키 배열 개편 시 `SETTINGS_VERSION`을 +1. `version < SETTINGS_VERSION`이면
+  키바인드만 폐기되고 도감·볼륨 등 다른 cfg 값은 보존되므로 안전(키만 새 기본으로 리셋). (3→4: e8fc845.)
+
 - **고정 거치 적(둥지 저격수)을 개체 수 배율로 복제하면 발판 밖 허공에 떨어진다.**
   `_spawn_from_enemies_dict`는 risk 배율(risk3=1.5)로 적 수를 늘릴 때 추가분을 `base_p ± 120px`
   랜덤 오프셋으로 스폰한다. patrol(넓은 지면)엔 맞지만, 둥지 저격수는 64px 단독 발판에 거치돼
