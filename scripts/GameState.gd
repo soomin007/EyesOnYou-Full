@@ -21,7 +21,7 @@ const SCORE_THRESHOLD: int = 4
 const SETTINGS_PATH: String = "user://settings.cfg"
 # 런 진행 저장(이어하기) — 설정과 분리한 별도 파일. 웹에선 user://가 브라우저 IndexedDB에 영속.
 const RUN_PATH: String = "user://run.cfg"
-const RUN_VERSION: int = 2  # 2: 본편 9스테이지/막 재배치 — 구 7스테이지 run.cfg 무효화(load 시 clear)
+const RUN_VERSION: int = 3  # 3: 막3 흐름 재배치(전투 s6 / lab 보스 s7 / 탈출 s8) + truth_seen — 구 run.cfg 무효화
 # 플레이 피드백 설문(구글 폼). 타이틀·크레딧 끝 메뉴의 "피드백 보내기"가 연다.
 const FEEDBACK_URL: String = "https://forms.gle/byS8EABJitB9r6z88"
 const KEYBIND_ACTIONS: Array[String] = ["move_left", "move_right", "jump", "attack", "dash", "skill", "pause"]
@@ -62,6 +62,10 @@ var veil_degraded: bool = false
 # 시야 역전 onset 맵에서 "진입부터 붕괴" 처리를 위한 1회용 신호 — record_route_choice가 켜고
 # Stage._ready가 진입 역전 멘트 1회 소비 후 끈다(중간 글리치·자막 겹침 제거, 사용자 보고).
 var veil_reversal_pending: bool = false
+
+# ??? 방문(진실 목격) — 막3 전투 풀의 ??? 분기를 클리어하면 켜진다. 특수 '진실' 엔딩(9개 중 +1)의 신호.
+# 런 단위(run.cfg 영속) — reset()/start_main_game()에서 해제. 영속 카운트 hidden_visit_count(도감류)와는 별개.
+var truth_seen: bool = false
 
 var skills: Dictionary = {}
 var current_route_id: String = ""
@@ -234,6 +238,7 @@ func reset() -> void:
 	story_mode = false
 	veil_degraded = false
 	veil_reversal_pending = false
+	truth_seen = false
 	# 디버그 연습장 플래그 누수 차단 — 연습장을 종료 버튼 아닌 경로(ESC→타이틀 등)로 빠져나오면
 	# playground_active가 true로 남아, 다음 일반 모드 클리어가 _trigger_stage_clear에서 연습장 분기로
 	# 빠져 패널만 뜨고 다음 맵으로 안 넘어가던 치명 버그. reset()은 타이틀 복귀/새 런마다 호출되므로 여기서 해제.
@@ -268,6 +273,7 @@ func start_main_game() -> void:
 	skills = STARTING_SKILLS.duplicate()
 	veil_degraded = false
 	veil_reversal_pending = false
+	truth_seen = false
 	playground_active = false  # 연습장 플래그 누수 차단(디버그→일반 모드) — reset()과 동일 방어.
 	_reset_perf_metrics()
 
@@ -575,6 +581,7 @@ func save_run() -> void:
 	cf.set_value("run", "story_mode", story_mode)
 	cf.set_value("run", "veil_degraded", veil_degraded)
 	cf.set_value("run", "veil_reversal_pending", veil_reversal_pending)
+	cf.set_value("run", "truth_seen", truth_seen)
 	cf.set_value("run", "replaying", replaying)
 	cf.set_value("run", "hits_taken", hits_taken)
 	cf.set_value("run", "recent_stage_hits", recent_stage_hits)
@@ -636,6 +643,7 @@ func load_run() -> bool:
 	story_mode = bool(cf.get_value("run", "story_mode", false))
 	veil_degraded = bool(cf.get_value("run", "veil_degraded", false))
 	veil_reversal_pending = bool(cf.get_value("run", "veil_reversal_pending", false))
+	truth_seen = bool(cf.get_value("run", "truth_seen", false))
 	replaying = bool(cf.get_value("run", "replaying", false))
 	hits_taken = int(cf.get_value("run", "hits_taken", 0))
 	recent_stage_hits = []

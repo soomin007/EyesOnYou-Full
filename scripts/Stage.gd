@@ -589,13 +589,17 @@ func _on_archive_finished() -> void:
 func _finish_hidden_archive() -> void:
 	GameState.restrict_combat_input = false
 	GameState.trust_score += 1  # ??? 클리어 보너스
-	# 다회차 카운터 — 이번 방문 기록. 다음 런부터 추가 풀이 활성화됨.
+	# 진실 목격 — 특수 '진실' 엔딩(9개 중 +1)의 런 단위 신호. 다회차 카운터(hidden_visit_count)는 영속.
+	GameState.truth_seen = true
 	GameState.hidden_visit_count += 1
 	GameState.save_settings()
-	# ??? 맵은 게임의 클라이맥스 — 잔여 stage 무시하고 무조건 ENDING으로 직행.
-	# (이전엔 stage 인덱스 기준으로 BRIEFING 갈 가능성 있어 엔딩에 도달하지 못함.)
-	GameState.current_stage = GameState.effective_total_stages()
-	get_tree().change_scene_to_file(SceneRouter.ENDING)
+	# 막3 재배치(B1): ???는 더 이상 엔딩 직행이 아니라 막3 전투 풀(s6)의 진실 분기 — 클리어 후
+	# 핵심부(s7 lab)로 진행한다. onset에서 켜진 reversal_pending은 정적 아카이브라 _ready에서 소비되지
+	# 않으므로 여기서 해제(보스 맵으로 누수돼 엉뚱한 역전 멘트가 뜨는 것 차단 — known_issues
+	# "지속 플래그는 의미가 끝나는 경계에서 해제").
+	GameState.veil_reversal_pending = false
+	GameState.current_stage += 1
+	get_tree().change_scene_to_file(SceneRouter.BRIEFING)
 
 # 첫 방문(hidden_visit_count == 0): 기존 VEIL-1 고정.
 # 이후 방문: 추가 풀(VEIL-1 첫 임무 / VEIL-2 마지막 교신 / 익명 클라이언트) 중 1개 랜덤.

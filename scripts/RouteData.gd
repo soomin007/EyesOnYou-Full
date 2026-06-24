@@ -123,8 +123,8 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		# 막3 진입 전투(핵심부 직전, 시야붕괴 실연). server_hall과 함께 막3 전투 풀(s6~7).
-		"min_stage": 6, "max_stage": 7,
+		# 막3 진입 전투(핵심부 직전, 시야붕괴 실연). server_hall·??? 와 함께 막3 전투 풀(s6).
+		"min_stage": 6, "max_stage": 6,
 		"tags": ["전투", "드론", "원거리"],
 		"veil_comment": "데이터 센터예요. 드론·저격 동시에 와요. 한 번에 정리해야 빠져요.",
 		"entry_comment": "서버 랙이에요. 위에서 드론, 같은 층에서 저격.",
@@ -138,7 +138,7 @@ const ALL_ROUTES: Array = [
 		"reward": 2,
 		"hidden": false,
 		"unique": false,
-		# "마지막에 빠져나가는 길" — 막3 종착 스테이지(8)에만. 선택 시 클리어=엔딩(보스 없이 빠져나간 결말).
+		# 막3 종착(s8) — 핵심부 lab 보스를 처치한 뒤 빠져나가는 마지막 길. 클리어=엔딩.
 		"min_stage": 8, "max_stage": 8,
 		"available_stages": [8],
 		"tags": ["우회", "은폐"],
@@ -155,8 +155,8 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		# 막3 종착 — 보스. 최종 스테이지(8) 고정이라 클리어=엔딩("보스 깨면 종료" 불변식).
-		"min_stage": 8, "max_stage": 8,
+		# 막3 핵심부 보스(s7) — 보스 처치 후 데이터 회수·처리 선택(B2). 클리어 후 s8 탈출로 이어진다.
+		"min_stage": 7, "max_stage": 7,
 		"tags": ["전투", "드론", "밝은_환경"],
 		"veil_comment": "핵심부예요. 정면 돌파에 드론이 상시 순찰해요. 그만큼 크게 벌어요.",
 		"entry_comment": "핵심부에 들어왔어요. 거리 잘 잡아요.",
@@ -187,8 +187,9 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": true,
 		"unique": true,
-		# 막3 종착 — 진실(???). 최종 스테이지(8) 고정.
-		"min_stage": 8, "max_stage": 8,
+		# 막3 진입 전투 풀의 진실 분기(s6) — 정적 아카이브(VEIL-1 reveal). 클리어 시 truth_seen,
+		# 엔딩 직행 폐기 → s7 lab으로 진행(특수 '진실' 엔딩의 신호).
+		"min_stage": 6, "max_stage": 6,
 		"tags": ["우회", "정보"],
 		"veil_comment": "...저도 모르겠어요. 들어가실래요?",
 		"entry_comment": "...뭐가 있는 거지.",
@@ -202,8 +203,8 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		# 막3 진입 전투(핵심부 직전). datacenter와 함께 막3 전투 풀(s6~7).
-		"min_stage": 6, "max_stage": 7,
+		# 막3 진입 전투(핵심부 직전). datacenter·??? 와 함께 막3 전투 풀(s6).
+		"min_stage": 6, "max_stage": 6,
 		"tags": ["전투", "드론", "원거리"],
 		"veil_comment": "서버 회랑이에요. 드론이 위, 저격이 랙 위에. 랙을 엄폐로 쓰면서 빠져요.",
 		"entry_comment": "핵심부 직전이에요. 여기만 지나면... 조심해요.",
