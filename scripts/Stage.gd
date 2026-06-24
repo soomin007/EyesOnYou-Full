@@ -2734,19 +2734,20 @@ func _on_boss_killed(at_position: Vector2) -> void:
 			tw.tween_property(holder, "modulate:a", 0.0, 0.6)
 			tw.tween_callback(boss_hp_bar_layer.queue_free)
 	# DESIGN §2.10 보스 처치 대사. 한 호흡(처치 직후 몰아쉬는 한 마디)으로 보이게 multi-line으로.
-	# 스토리 모드는 escape 단계가 있어 "서버실 앞" 멘트가 어울리지 않음 → 별도 분기.
+	# 막3 재배치(B2): 보스 처치 직후 = 핵심부 안에서 드라이브를 회수하는 비트(이어서 회수 문서 +
+	# 처리 선택). "서버실이 바로 앞" → "회수 비트"로 교정. 스토리 모드는 escape 단계가 뒤에 있음.
 	# 끝줄 "끝까지 같이 가요. 제가 보는 한." = 풀에서 뺀 안심 줄의 새 집(v3 §4). 엔딩에서
-	# 시야가 완전히 끊기며 이 다짐("제가 보는 한")이 회수된다.
+	# 시야가 완전히 끊기며 이 다짐("제가 보는 한")이 회수된다. (문구는 플레이스홀더 — 사용자 검토.)
 	if GameState.is_replay_run():
 		# 다회차 — 클라이맥스에 설명 못 할 찜찜함(미래를 안다고 선언하지 않음). 상호 존대 유지.
 		if GameState.story_mode:
-			_show_veil_subtitle("처리됐어요.\n이상하게 마음이 놓이질 않아요. 이유는 모르겠어요.\n그래도 끝까지 같이 가요. 제가 보는 한.", 3.4)
+			_show_veil_subtitle("처리됐어요.\n이상하게 마음이 놓이질 않아요. 이유는 모르겠어요.\n...드라이브, 여기 있어요. 회수해요.", 3.4)
 		else:
-			_show_veil_subtitle("처리됐어요.\n후련해야 하는데, 어쩐지 그렇지가 않네요.\n그래도 같이 가요. 제가 보는 한.", 3.4)
+			_show_veil_subtitle("처리됐어요.\n후련해야 하는데, 어쩐지 그렇지가 않네요.\n...드라이브부터 회수해요.", 3.4)
 	elif GameState.story_mode:
-		_show_veil_subtitle("처리됐어요, 요원.\n이제 빠져나가요.\n끝까지 같이 가요. 제가 보는 한.", 3.4)
+		_show_veil_subtitle("처리됐어요, 요원.\n드라이브부터 회수해요.\n끝까지 같이 가요. 제가 보는 한.", 3.4)
 	else:
-		_show_veil_subtitle("처리됐어요, 요원.\n서버실이 바로 앞이에요.\n끝까지 같이 가요. 제가 보는 한.", 3.4)
+		_show_veil_subtitle("처리됐어요, 요원.\n회수 대상이 바로 여기 있어요.\n끝까지 같이 가요. 제가 보는 한.", 3.4)
 
 func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1) -> void:
 	var e := CharacterBody2D.new()
@@ -3206,7 +3207,10 @@ func _begin_clear_sequence() -> void:
 			o.global_position = player.global_position + Vector2(randf_range(-60.0, 60.0), -90.0)
 	var is_arena: bool = challenge_active or _goal_type == "ENEMY_CLEAR"
 	var delay: float = 2.6 if is_arena else 1.0
-	_do_clear_fade(delay)
+	# 막3 핵심부(lab)는 클리어 후 회수 문서 연출(ArcturusDocumentOverlay, layer 25)이 화면을 덮으므로
+	# 클리어 페이드(layer 38)를 깔면 문서를 가린다 → lab은 페이드 생략(문서 자체 배경으로 어두워짐).
+	if GameState.current_route_id != "route_lab":
+		_do_clear_fade(delay)
 	await get_tree().create_timer(delay).timeout
 	# 보스 처치 직후 보스가 떨군 orb로 mid-stage 레벨업이 떠있을 수 있다. 그 사이에
 	# _on_arena_cleared(deferred)가 진행되어 transition이 먼저 일어나면 LevelUpOverlay
@@ -3250,6 +3254,10 @@ func _on_clear_levelup_picked(_picked_id: String) -> void:
 	_transition_after_clear()
 
 func _transition_after_clear() -> void:
+	# 막3 핵심부(lab): 보스 처치 후 데이터 회수 연출 + 진실 reveal + 처리 선택(B2). 선택 후 다음 스테이지(탈출)로.
+	if GameState.current_route_id == "route_lab":
+		_play_lab_recovery_and_disposal()
+		return
 	if GameState.is_final_stage_done():
 		# 일반 모드 전투 마무리(보스/데이터센터)는 바로 엔딩으로 끊지 않고 짧은 에필로그로
 		# 보람·여운을 준다(사용자 보고: 전환이 너무 갑작스러움). ???(hidden)은 자체 엔딩 시퀀스가
@@ -3260,6 +3268,51 @@ func _transition_after_clear() -> void:
 			get_tree().change_scene_to_file(SceneRouter.ENDING)
 	else:
 		get_tree().change_scene_to_file(SceneRouter.BRIEFING)
+
+# 막3 핵심부(lab) 클라이맥스 — 보스 처치 후: 회수한 드라이브를 문서로 reveal(ArcturusDocumentOverlay
+# 재사용) → 처리 선택(DisposalChoiceOverlay 4지선다) → 선택 저장 후 다음 스테이지(탈출 s8)로.
+# 대사 문구는 플레이스홀더(사용자 검토 대기). truth_seen(???에서 진실을 이미 본 회차)이면 reveal을
+# "이미 안다"는 톤으로 변형(엔딩은 truth_seen이면 처리·신뢰 무관 '진실' 엔딩으로 수렴).
+func _play_lab_recovery_and_disposal() -> void:
+	GameState.restrict_combat_input = true
+	var doc := ArcturusDocumentOverlay.new()
+	add_child(doc)
+	doc.finished.connect(_on_lab_recovery_doc_done)
+	doc.show_doc(_lab_recovery_doc_lines())
+
+func _on_lab_recovery_doc_done() -> void:
+	# 문서 연출이 paused=false로 끝났으므로, 처리 선택 오버레이가 다시 시간정지(자체).
+	DisposalChoiceOverlay.show(self, _on_disposal_picked)
+
+func _on_disposal_picked(choice_id: String) -> void:
+	GameState.disposal_choice = choice_id
+	# SceneRouter.go가 paused=false 보장 후 전환 — 탈출(s8) 브리핑으로.
+	SceneRouter.go(get_tree(), SceneRouter.BRIEFING)
+
+# 회수 드라이브 reveal 문서(플레이스홀더). ArcturusDocumentOverlay 라인 포맷: {text, kind, delay}.
+# kind: title / body / speaker / blank.
+func _lab_recovery_doc_lines() -> Array:
+	if GameState.truth_seen:
+		# ???에서 이미 진실을 본 회차 — reveal이 아니라 확인.
+		return [
+			{"text": "회수 데이터 — 복호화 완료", "kind": "title", "delay": 0.6},
+			{"text": "", "kind": "blank", "delay": 0.2},
+			{"text": "드라이브 내용물: 단일 실행 이미지 (서명: VEIL)", "kind": "body", "delay": 0.6},
+			{"text": "이미 알고 있던 그대로다.", "kind": "body", "delay": 0.6},
+			{"text": "이 드라이브가 회수 대상이었다. VEIL 그 자신.", "kind": "body", "delay": 0.8},
+			{"text": "VEIL", "kind": "speaker", "delay": 0.2},
+			{"text": "...요원은 벌써 알고 있었죠. 저도 알아요.", "kind": "body", "delay": 0.8},
+		]
+	return [
+		{"text": "회수 데이터 — 복호화 완료", "kind": "title", "delay": 0.6},
+		{"text": "", "kind": "blank", "delay": 0.2},
+		{"text": "회수 대상: 핵심 데이터 드라이브 (확보)", "kind": "body", "delay": 0.6},
+		{"text": "드라이브 내용물: 단일 실행 이미지", "kind": "body", "delay": 0.6},
+		{"text": "서명: VEIL", "kind": "body", "delay": 0.8},
+		{"text": "이 임무가 회수하려던 것은 — VEIL의 소스코드였다.", "kind": "body", "delay": 0.9},
+		{"text": "VEIL", "kind": "speaker", "delay": 0.2},
+		{"text": "...말할 게 있어요, 요원. 그게 저예요.", "kind": "body", "delay": 0.8},
+	]
 
 # 최종 보스/스테이지 클리어 → 엔딩 사이의 짧은 에필로그. 검은 화면 위 VEIL의 마무리 한숨으로
 # "해냈다"는 보람과 여운을 주고 엔딩으로 넘긴다. 엔딩 본문(2축 분기)은 ENDING 씬이 담당하므로

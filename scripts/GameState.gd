@@ -67,6 +67,14 @@ var veil_reversal_pending: bool = false
 # 런 단위(run.cfg 영속) — reset()/start_main_game()에서 해제. 영속 카운트 hidden_visit_count(도감류)와는 별개.
 var truth_seen: bool = false
 
+# 막3 핵심부(lab) 보스 처치 후 데이터 회수 연출 → "처리 선택"(DisposalChoiceOverlay)에서 고른 값.
+# 엔딩 9개의 처리 축(반출/파기/은닉/잔류). 런 단위 — reset()/start_main_game()에서 해제, run.cfg 영속.
+const DISPOSAL_EXTRACT: String = "extract"   # 반출 — 의뢰대로 외부로 가지고 나간다(VEIL 폐기/노출).
+const DISPOSAL_DESTROY: String = "destroy"   # 파기 — 드라이브를 소각한다(아무도 못 가짐).
+const DISPOSAL_CONCEAL: String = "conceal"   # 은닉 — 빼돌려 요원이 보관한다(의뢰 배신).
+const DISPOSAL_LEAVE: String = "leave"       # 잔류 — 건드리지 않고 그 자리에 둔다(시설에 남김).
+var disposal_choice: String = ""
+
 var skills: Dictionary = {}
 var current_route_id: String = ""
 var current_route_tags: Array = []
@@ -239,6 +247,7 @@ func reset() -> void:
 	veil_degraded = false
 	veil_reversal_pending = false
 	truth_seen = false
+	disposal_choice = ""
 	# 디버그 연습장 플래그 누수 차단 — 연습장을 종료 버튼 아닌 경로(ESC→타이틀 등)로 빠져나오면
 	# playground_active가 true로 남아, 다음 일반 모드 클리어가 _trigger_stage_clear에서 연습장 분기로
 	# 빠져 패널만 뜨고 다음 맵으로 안 넘어가던 치명 버그. reset()은 타이틀 복귀/새 런마다 호출되므로 여기서 해제.
@@ -274,6 +283,7 @@ func start_main_game() -> void:
 	veil_degraded = false
 	veil_reversal_pending = false
 	truth_seen = false
+	disposal_choice = ""
 	playground_active = false  # 연습장 플래그 누수 차단(디버그→일반 모드) — reset()과 동일 방어.
 	_reset_perf_metrics()
 
@@ -582,6 +592,7 @@ func save_run() -> void:
 	cf.set_value("run", "veil_degraded", veil_degraded)
 	cf.set_value("run", "veil_reversal_pending", veil_reversal_pending)
 	cf.set_value("run", "truth_seen", truth_seen)
+	cf.set_value("run", "disposal_choice", disposal_choice)
 	cf.set_value("run", "replaying", replaying)
 	cf.set_value("run", "hits_taken", hits_taken)
 	cf.set_value("run", "recent_stage_hits", recent_stage_hits)
@@ -644,6 +655,7 @@ func load_run() -> bool:
 	veil_degraded = bool(cf.get_value("run", "veil_degraded", false))
 	veil_reversal_pending = bool(cf.get_value("run", "veil_reversal_pending", false))
 	truth_seen = bool(cf.get_value("run", "truth_seen", false))
+	disposal_choice = str(cf.get_value("run", "disposal_choice", ""))
 	replaying = bool(cf.get_value("run", "replaying", false))
 	hits_taken = int(cf.get_value("run", "hits_taken", 0))
 	recent_stage_hits = []
