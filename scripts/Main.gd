@@ -26,16 +26,11 @@ func _ensure_mouse_event(action: String, btn: int) -> void:
 	for e in InputMap.action_get_events(action):
 		if e is InputEventMouseButton and (e as InputEventMouseButton).button_index == btn:
 			return
+	# 마우스는 보조 입력 — 키보드 기본(J/L 등)이 먼저 표시되도록 맨 뒤에 추가.
+	# (이전엔 마우스를 첫 슬롯에 넣어 HUD/안내가 마우스를 먼저 보여줘 키보드 유저가 혼란.)
 	var ev := InputEventMouseButton.new()
 	ev.button_index = btn
-	# 마우스 이벤트를 첫 번째 슬롯으로 (primary)
-	var existing: Array = []
-	for e in InputMap.action_get_events(action):
-		existing.append(e)
-	InputMap.action_erase_events(action)
 	InputMap.action_add_event(action, ev)
-	for e in existing:
-		InputMap.action_add_event(action, e)
 
 # WASD를 ui_left/right/up/down에 추가 → 메뉴/스킬 선택을 WASD로 이동 가능
 # 동시에 ui_accept/cancel/방향에 패드 매핑이 빠져 있으면 보강 (Godot 빌트인이

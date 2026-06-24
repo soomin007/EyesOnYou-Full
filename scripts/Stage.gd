@@ -2199,7 +2199,7 @@ func _build_hud() -> void:
 
 func _keys_hint_text() -> String:
 	return GameState.hint(
-		"A/D 이동   W/SPACE 점프   S 내려가기   J/마우스 좌 사격   SHIFT 대시   Q/마우스 우 스킬   ESC 일시정지",
+		"A/D 이동   W/SPACE 점프   S 내려가기   J/마우스 좌 사격   K 대시   L/마우스 우 스킬   ESC 일시정지",
 		"좌스틱/D-Pad 이동   A 점프   ↓ 내려가기   X/RT 사격   B/RB 대시   Y 스킬   START 일시정지")
 
 func _make_cd_slot(label_text: String) -> Control:

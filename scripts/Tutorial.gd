@@ -285,7 +285,7 @@ func _build_signs() -> void:
 	sign_drop = _make_keycap_sign(["S"], ["↓"], "내려가기", Vector2(JUMP_PLATFORM_3.x, JUMP_PLATFORM_3.y + 90.0))
 	# 사격 표지는 키보드 모드에서 "마우스 좌클릭 + J" 두 입력이 동등함을 보여줘야 함 — 마우스 픽토그램 포함.
 	sign_attack = _make_attack_sign_dynamic(["J"], ["X", "RT"], "사격", Vector2(1750.0, GROUND_Y - 200.0))
-	sign_dash = _make_keycap_sign(["SHIFT"], ["B"], "대시", Vector2(SPIKE_X_START + 100.0, GROUND_Y - 200.0))
+	sign_dash = _make_keycap_sign(["K"], ["B"], "대시", Vector2(SPIKE_X_START + 100.0, GROUND_Y - 200.0))
 	# 레벨업 표지는 "스킬 획득" 알림용으로만 사용 — 진입 안내는 오버레이가 직접 함.
 	sign_levelup = Label.new()
 	sign_levelup.add_theme_font_size_override("font_size", 17)
@@ -576,7 +576,7 @@ func _build_hud() -> void:
 
 func _keys_hint_text() -> String:
 	return GameState.hint(
-		"A/D 이동   W/SPACE 점프   S 내려가기   J/마우스 좌 사격   SHIFT 대시   Q/마우스 우 스킬   ESC 일시정지",
+		"A/D 이동   W/SPACE 점프   S 내려가기   J/마우스 좌 사격   K 대시   L/마우스 우 스킬   ESC 일시정지",
 		"좌스틱/D-Pad 이동   A 점프   ↓ 내려가기   X/RT 사격   B/RB 대시   Y 스킬   START 일시정지")
 
 func _on_input_kind_changed(_kind: String) -> void:
@@ -986,16 +986,16 @@ func _build_skill_sign() -> void:
 		var kb_keys: Array
 		var pad_keys: Array
 		if key_action == "skill":
-			kb_keys = ["Q", "RMB"]
+			kb_keys = ["L", "RMB"]
 			pad_keys = ["Y"]
 		elif key_action == "dash":
-			kb_keys = ["SHIFT"]
+			kb_keys = ["K"]
 			pad_keys = ["B"]
 		elif key_action != "":
 			kb_keys = [_label_for_action(key_action)]
 			pad_keys = [_label_for_action(key_action)]
 		else:
-			kb_keys = ["Q"]
+			kb_keys = ["L"]
 			pad_keys = ["Y"]
 		sign_skill = _make_keycap_sign(kb_keys, pad_keys, "스킬 사용", pos)
 	else:
@@ -1044,7 +1044,7 @@ func _on_skill_dummy_bullet_deflected() -> void:
 func _show_skill_hint_toast() -> void:
 	var toast := Label.new()
 	toast.text = GameState.hint(
-		"이 적은 총알이 안 들어가요. 폭발물(Q / 마우스 우클릭)로 처치해요.",
+		"이 적은 총알이 안 들어가요. 폭발물(L / 마우스 우클릭)로 처치해요.",
 		"이 적은 총알이 안 들어가요. 폭발물(Y 버튼)로 처치해요.")
 	toast.add_theme_font_size_override("font_size", 18)
 	toast.add_theme_color_override("font_color", Color(0.95, 0.78, 0.45))

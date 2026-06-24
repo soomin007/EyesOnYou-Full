@@ -896,10 +896,10 @@ func _apply_default_keybindings() -> void:
 	var defaults := {
 		"move_left":  [["key", KEY_A], ["key", KEY_LEFT], ["pad", JOY_BUTTON_DPAD_LEFT], ["axis", JOY_AXIS_LEFT_X, -1.0]],
 		"move_right": [["key", KEY_D], ["key", KEY_RIGHT], ["pad", JOY_BUTTON_DPAD_RIGHT], ["axis", JOY_AXIS_LEFT_X, 1.0]],
-		"jump":       [["key", KEY_W], ["key", KEY_SPACE], ["pad", JOY_BUTTON_A]],
-		"attack":     [["mouse", MOUSE_BUTTON_LEFT], ["key", KEY_J], ["pad", JOY_BUTTON_X], ["axis", JOY_AXIS_TRIGGER_RIGHT, 1.0]],
-		"dash":       [["key", KEY_SHIFT], ["key", KEY_K], ["pad", JOY_BUTTON_B], ["pad", JOY_BUTTON_RIGHT_SHOULDER]],
-		"skill":      [["mouse", MOUSE_BUTTON_RIGHT], ["key", KEY_Q], ["pad", JOY_BUTTON_Y]],
+		"jump":       [["key", KEY_W], ["key", KEY_SPACE], ["key", KEY_Z], ["pad", JOY_BUTTON_A]],
+		"attack":     [["key", KEY_J], ["key", KEY_X], ["mouse", MOUSE_BUTTON_LEFT], ["pad", JOY_BUTTON_X], ["axis", JOY_AXIS_TRIGGER_RIGHT, 1.0]],
+		"dash":       [["key", KEY_K], ["key", KEY_C], ["key", KEY_SHIFT], ["pad", JOY_BUTTON_B], ["pad", JOY_BUTTON_RIGHT_SHOULDER]],
+		"skill":      [["key", KEY_L], ["key", KEY_V], ["mouse", MOUSE_BUTTON_RIGHT], ["pad", JOY_BUTTON_Y]],
 		"pause":      [["key", KEY_ESCAPE], ["pad", JOY_BUTTON_START]],
 	}
 	for action_id in defaults.keys():
