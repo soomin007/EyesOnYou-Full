@@ -235,7 +235,7 @@ func _tick_barrier(delta: float) -> void:
 			barrier_indicator.scale = Vector2(2.6, 2.6)
 			tw.tween_property(barrier_indicator, "scale", Vector2(1.0, 1.0), 0.25)
 
-func _handle_input(_delta: float) -> void:
+func _handle_input(delta: float) -> void:
 	var dir: float = Input.get_axis("move_left", "move_right")
 	if dir != 0.0:
 		facing = 1 if dir > 0.0 else -1
