@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://ciw6t8fa3m7eo"
+path="res://.godot/imported/Cold Gear.mp3-6f81507d64123aa700551a57a2cfca2e.mp3str"
+
+[deps]
+
+source_file="res://assets/bgm/Cold Gear.mp3"
+dest_files=["res://.godot/imported/Cold Gear.mp3-6f81507d64123aa700551a57a2cfca2e.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

@@ -1,0 +1,102 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# GitHub Actions로 Pages에 직접 배포 (Branch 방식 아님).
+# repo Settings → Pages → Source: 'GitHub Actions' 선택 필요.
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+env:
+  GODOT_VERSION: 4.6-stable
+  EXPORT_PRESET: "Web"
+  BUILD_DIR: build
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache Godot
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: |
+            /usr/local/bin/godot
+            ~/.local/share/godot/export_templates
+          key: godot-${{ env.GODOT_VERSION }}-linux
+
+      - name: Install Godot binary
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          set -e
+          GODOT_URL="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          curl -L -o godot.zip "$GODOT_URL"
+          unzip -q godot.zip
+          chmod +x "Godot_v${GODOT_VERSION}_linux.x86_64"
+          sudo mv "Godot_v${GODOT_VERSION}_linux.x86_64" /usr/local/bin/godot
+
+      - name: Install export templates
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          set -e
+          TPZ_URL="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz"
+          curl -L -o templates.tpz "$TPZ_URL"
+          # 템플릿 폴더는 점(.)으로 구분 — "4.6-stable" → "4.6.stable"
+          TEMPLATE_VERSION="${GODOT_VERSION/-/.}"
+          TARGET="$HOME/.local/share/godot/export_templates/${TEMPLATE_VERSION}"
+          mkdir -p "$TARGET"
+          unzip -q -o templates.tpz -d /tmp/templates
+          mv /tmp/templates/templates/* "$TARGET/"
+
+      - name: Verify export preset exists
+        run: |
+          if [ ! -f "export_presets.cfg" ]; then
+            echo "::error::export_presets.cfg가 없어요. Godot 에디터에서 '${EXPORT_PRESET}' 프리셋을 만들고(Threads Support 끄기) 커밋해야 합니다."
+            exit 1
+          fi
+          if ! grep -q "name=\"${EXPORT_PRESET}\"" export_presets.cfg; then
+            echo "::error::export_presets.cfg에 '${EXPORT_PRESET}' 프리셋이 없어요."
+            exit 1
+          fi
+
+      - name: Build Web export
+        run: |
+          set -e
+          mkdir -p "${BUILD_DIR}"
+          godot --headless --export-release "${EXPORT_PRESET}" "${BUILD_DIR}/index.html"
+          # GitHub Pages는 .nojekyll이 있으면 _ 시작 파일도 서빙
+          touch "${BUILD_DIR}/.nojekyll"
+          ls -la "${BUILD_DIR}"
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./${{ env.BUILD_DIR }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

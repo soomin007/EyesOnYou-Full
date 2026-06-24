@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://cl44y7wmdcuv7"
+path="res://.godot/imported/Chrome Grit.mp3-3b4e09445d308bb4f16a1c50cac1317f.mp3str"
+
+[deps]
+
+source_file="res://assets/bgm/Chrome Grit.mp3"
+dest_files=["res://.godot/imported/Chrome Grit.mp3-3b4e09445d308bb4f16a1c50cac1317f.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

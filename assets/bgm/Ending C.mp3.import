@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://cn2v0qvidbtk2"
+path="res://.godot/imported/Ending C.mp3-13973900a896ad87edfc87e379e370bd.mp3str"
+
+[deps]
+
+source_file="res://assets/bgm/Ending C.mp3"
+dest_files=["res://.godot/imported/Ending C.mp3-13973900a896ad87edfc87e379e370bd.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

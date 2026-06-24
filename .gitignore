@@ -1,0 +1,58 @@
+# Godot 4+ specific ignores
+.godot/
+.import/
+
+# Imported translations (automatically generated from CSV files)
+*.translation
+
+# Mono-specific ignores
+.mono/
+data_*/
+mono_crash.*.json
+
+# System / IDE
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.vscode/
+.idea/
+
+# Godot export artifacts
+export.cfg
+export_credentials.cfg
+*.tmp
+
+# 포스터/스크린샷 산출물 — 게임 빌드·배포와 무관. 소스(scripts/Poster*.gd, Screenshotter.gd)가
+# 진실이고 PNG는 --gen으로 재생성 가능. QR 등 입력 PNG도 로컬에만 두고 git엔 안 올림.
+poster_out/
+
+# Build outputs
+builds/
+exports/
+build/
+*.zip
+*.pck
+*.exe
+# Godot Web export artifacts (root에 export될 때 — 워크플로는 build/로 보냄)
+Eyes on You.*.png
+Eyes on You.png
+Eyes on You.html
+Eyes on You.js
+Eyes on You.wasm
+Eyes on You.audio.worklet.js
+Eyes on You.audio.position.worklet.js
+Eyes on You.service.worker.js
+Eyes on You.offline.html
+*.x86_64
+*.x86_32
+*.dmg
+*.app
+*.html
+*.wasm
+*.js
+*.png.import
+!icon.svg.import
+
+# Local Claude artifacts
+.claude/
