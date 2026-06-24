@@ -36,6 +36,16 @@
   창모드 `--gen`은 hang 위험(원인 불명: 창 포커스/렌더 루프 추정)이고 결과를 Claude가 직접 못 본다. 먼저
   `--headless --import`로 스크립트 파싱·컴파일 에러를 잡고(EXIT 코드 확인), 그 다음 창모드로 실제 PNG를 뽑는다.
 
+- **`godot --import`는 스크립트 *함수 본문* 파싱 에러를 캐시로 놓칠 수 있다 — fresh import/부팅으로 검증.**
+  `_handle_input(_delta)` 파라미터를 `delta`로 참조한 미선언 에러를, 이미 import 캐시가 있는 repo의
+  `--import`는 통과시켰고(RC=0, 출력 없음), 캐시 없는 다른 repo의 *fresh* import만 잡아냈다(2026-06-24
+  데모 백포트). 원인: `--import`는 에셋 재import 중심이라 변경 없다고 본 스크립트의 함수 본문 재컴파일을
+  건너뛸 수 있고, `update_scripts_classes`는 class_name *선언*만 본다. 게다가 GitHub Actions의 export조차
+  이 에러를 통과시켰다(빌드 OK). → **스크립트 변경 검증은 `--import` RC=0만으로 "클린" 단정 금지.**
+  ⓐ `.godot` 없는 fresh 체크아웃에서 import, 또는 ⓑ 게임을 실제 부팅(`--quit-after`)해 해당 코드 경로를
+  타게 하거나, ⓒ 변경 스크립트를 인스턴스화하는 래퍼 씬으로 확인할 것. 미사용 prefix(`_delta`)를 쓰는
+  파라미터를 나중에 참조하게 되면 prefix를 떼는 것도 잊지 말 것.
+
 - **Edit 도구 들여쓰기 불일치 — Read 표시는 줄번호 뒤 탭이 하나 더 붙어 보인다(2026-06-15).**
   Read 출력의 들여쓰기를 그대로 세어 old_string을 만들면 탭 수가 1 어긋나 "String not found"가 반복된다.
   → 들여쓰기가 안 맞으면 `sed -n 'N,Mp' file | cat -A`로 실제 탭(^I) 수를 확인하고 맞춘다(GDScript는 탭 들여쓰기).
