@@ -32,13 +32,16 @@ var stall_watchdog_t: float = 0.0
 func _ready() -> void:
 	# 안전망: 이전 scene에서 paused가 carry되어 Ending이 freeze되는 패턴 차단.
 	get_tree().paused = false
-	ending_id = EndingResolver.resolve(GameState.followed_count, GameState.rec_count, GameState.aggression_score)
+	# 막3 엔딩 9개(B3): 처리(disposal) × 신뢰(수용률) + 진실(truth_seen) → 엔딩 id.
+	ending_id = EndingResolver.resolve(GameState.disposal_choice, GameState.truth_seen, GameState.followed_count, GameState.rec_count)
 	# 런 완주 1회 처리 — 본 엔딩 기록(엔딩 모으기/리플레이 토대) + 완주 카운트 + 진행 저장(run.cfg) 삭제.
 	GameState.record_ending(ending_id)
 	title_label.text = "MISSION COMPLETE"
-	sub_title_label.text = "결말  %s — %s" % [ending_id, EndingResolver.get_ending_title(ending_id)]
-	stats_label.text = "신뢰  %d   |   공격성  %d   |   사망  %d   |   스코어  %d" % [
-		GameState.trust_score, GameState.aggression_score, GameState.death_count, GameState.score
+	sub_title_label.text = "결말  —  %s" % EndingResolver.get_ending_title(ending_id)
+	var truth_mark: String = "   |   진실  ●" if GameState.truth_seen else ""
+	stats_label.text = "신뢰  %s   |   처리  %s   |   사망  %d   |   스코어  %d%s" % [
+		GameState.veil_trust_gauge_dots(), EndingResolver.disposal_label(GameState.disposal_choice),
+		GameState.death_count, GameState.score, truth_mark
 	]
 	# ??? 방 방문(hidden_visit_count > 0) 또는 ARCTURUS 아카이브 읽음(visited_arcturus) 시
 	# 라이브 lore 라인을 보여주고, 미방문 시엔 짧고 호기심 hint 라인.
@@ -51,13 +54,14 @@ func _ready() -> void:
 	choice_box.visible = false
 	hint_label.text = ""
 	text_label.text = ""
-	if ending_id == EndingResolver.ENDING_D:
+	# 진실 엔딩 — 정적·노이즈 분위기(구 결말 D 연출 재사용). "다 알고도" 톤에 맞음.
+	if ending_id == EndingResolver.ENDING_TRUTH:
 		title_label.modulate.a = 0.3
 		sub_title_label.modulate.a = 0.3
 		_setup_ending_d_atmosphere()
 	_build_hold_hint()
-	# 엔딩별 전용 BGM. ending_id에 맞춰 ending_a/b/c/d 트랙으로 cross-fade.
-	BgmPlayer.play("ending_" + ending_id.to_lower())
+	# 엔딩별 BGM — 9엔딩을 ending_a~d 4트랙으로 매핑(BgmPlayer는 4트랙뿐).
+	BgmPlayer.play("ending_" + EndingResolver.get_ending_bgm_letter(ending_id))
 	_start_line()
 
 func _hold_hint_text() -> String:

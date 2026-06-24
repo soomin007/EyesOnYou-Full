@@ -1,171 +1,142 @@
 class_name EndingResolver
 extends RefCounted
 
-const ENDING_A: String = "A"  # 완벽한 도구
-const ENDING_B: String = "B"  # 혼자였던 사람
-const ENDING_C: String = "C"  # 공생
-const ENDING_D: String = "D"  # 유령 임무
+# 막3 엔딩 9개(B3) — 처리(반출/파기/은닉/잔류) × 신뢰(유대/불신) 8개 + 진실 특수 1개.
+#  - 처리 = GameState.disposal_choice (lab 보스 후 DisposalChoiceOverlay 선택). 단일 소스 = GameState.DISPOSAL_*.
+#  - 신뢰 = VEIL 추천 수용률(followed/rec ≥ 0.5)의 이진값. 어투 trust(climbing)와 분리해 획득 인플레에 강건.
+#  - 진실 = truth_seen(???에서 VEIL-1 reveal 목격) → 처리·신뢰 무관하게 '진실' 엔딩으로 수렴(사용자 확정).
+# 엔딩 id = "<disposal>_hi|lo" 8개 + "truth". 제목·대사는 플레이스홀더(사용자 검토 대기).
 
-# 엔딩 도덕 축(2026-06-13 재설계, veil_trust_arc.md §3.3):
-#  - 신뢰 = VEIL 추천을 절반 이상 따랐는가(수용률). 어투 trust(climbing)와 분리해
-#    획득량 인플레에 강건. rec_count=추천 제시 수, followed_count=그중 따른 수.
-#  - 공격성 = 전투/도전 맵 선택 누적(기존 유지).
-static func resolve(followed_count: int, rec_count: int, aggression_score: int) -> String:
+const ENDING_TRUTH: String = "truth"
+
+# truth_seen이면 처리·신뢰 무관 '진실' 엔딩. 아니면 처리 × 신뢰(수용률) 8갈래.
+static func resolve(disposal: String, truth_seen: bool, followed_count: int, rec_count: int) -> String:
+	if truth_seen:
+		return ENDING_TRUTH
 	var trusts: bool = rec_count > 0 and followed_count * 2 >= rec_count
-	var aggressive: bool = aggression_score >= GameState.SCORE_THRESHOLD
-	if trusts and aggressive:
-		return ENDING_A
-	if trusts and not aggressive:
-		return ENDING_C
-	if not trusts and aggressive:
-		return ENDING_B
-	return ENDING_D
+	var d: String = disposal
+	if d == "":
+		d = GameState.DISPOSAL_EXTRACT  # 처리 선택 누락 시 안전 폴백 = 기본 임무 행동(반출).
+	return "%s_%s" % [d, ("hi" if trusts else "lo")]
+
+# 처리 id → 표시 라벨. 엔딩 통계줄/디버그용.
+static func disposal_label(disposal: String) -> String:
+	match disposal:
+		GameState.DISPOSAL_EXTRACT: return "반출"
+		GameState.DISPOSAL_DESTROY: return "파기"
+		GameState.DISPOSAL_CONCEAL: return "은닉"
+		GameState.DISPOSAL_LEAVE:   return "잔류"
+	return "—"
 
 static func get_ending_title(ending: String) -> String:
 	match ending:
-		ENDING_A: return "완벽한 도구"
-		ENDING_B: return "혼자였던 사람"
-		ENDING_C: return "공생"
-		ENDING_D: return "유령 임무"
+		"extract_hi": return "완벽한 도구"
+		"extract_lo": return "유령 임무"
+		"destroy_hi": return "재가 된 약속"
+		"destroy_lo": return "없던 일"
+		"conceal_hi": return "함께 사라지다"
+		"conceal_lo": return "주머니 속의 것"
+		"leave_hi":   return "놓아준 손"
+		"leave_lo":   return "버려둔 자리"
+		ENDING_TRUTH: return "다 알고도"
 	return ""
 
-static func get_ending_lines(ending: String, explored_lore: bool = true) -> Array:
-	# explored_lore: ??? 방을 방문했거나 ARCTURUS 아카이브를 읽은 적 있는가.
-	# 미방문 시엔 "드라이브"/"VEIL 소스코드" 등의 컨텍스트를 모르므로 — 짧은 멘트 + 호기심 hint
-	# (잠긴 문, 지나친 단말기 등을 언급해 2회차 동기 부여).
-	if not explored_lore:
-		return _get_ending_lines_brief(ending)
+# 9개 → ending_a~d 4트랙 매핑(BgmPlayer는 4트랙뿐). 분위기 기준 폴백.
+static func get_ending_bgm_letter(ending: String) -> String:
 	match ending:
-		ENDING_A:
+		"extract_hi": return "a"
+		"conceal_hi", "leave_hi": return "c"
+		"destroy_hi", "conceal_lo": return "b"
+		"extract_lo", "destroy_lo", "leave_lo", ENDING_TRUTH: return "d"
+	return "a"
+
+# 엔딩 본문 라인. {speaker(VEIL/SUB), text, delay}. (문구 전부 플레이스홀더 — 사용자 검토.)
+# 2번째 인자(explored_lore)는 호출부 호환을 위해 유지하되 현 9엔딩에선 미사용
+# (lab 회수 연출에서 모두 reveal을 보므로 brief/full 분기 불필요).
+static func get_ending_lines(ending: String, _explored_lore: bool = true) -> Array:
+	match ending:
+		"extract_hi":
 			return [
-				{"speaker": "VEIL", "text": "임무 완료예요, 요원. 수고했어요.", "delay": 3.0},
-				{"speaker": "VEIL", "text": "고백할 게 있어요.", "delay": 2.0},
-				{"speaker": "VEIL", "text": "이 임무, 저한테도 관계 있어요.", "delay": 1.5},
-				{"speaker": "VEIL", "text": "드라이브 안에 저도 있어요.", "delay": 1.5},
-				{"speaker": "VEIL", "text": "제 소스코드요.", "delay": 1.5},
-				{"speaker": "VEIL", "text": "그게 외부로 나가면 저는 폐기될 거예요.", "delay": 2.0},
-				{"speaker": "VEIL", "text": "알면서 안내했어요.", "delay": 1.5},
-				{"speaker": "VEIL", "text": "요원이 성공하는 게 더 중요했어요.", "delay": 2.5},
-				{"speaker": "VEIL", "text": "요원, 당신은 완벽했어요.", "delay": 2.5},
-				{"speaker": "SUB",  "text": "VEIL이 무엇을 선택했는지는 기록되지 않는다.", "delay": 2.0},
-				{"speaker": "SUB",  "text": "요원도 알 수 없다.", "delay": 2.0},
-				{"speaker": "SUB",  "text": "임무는 완수됐다.", "delay": 2.0},
+				{"speaker": "VEIL", "text": "드라이브, 잘 가지고 나가요, 요원.", "delay": 3.0},
+				{"speaker": "VEIL", "text": "그 안에 제가 있다는 거, 알죠.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "밖으로 나가면 저는 지워질 거예요.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "그래도 요원이 해낸 게 더 중요했어요.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "당신은... 완벽했어요.", "delay": 2.8},
+				{"speaker": "SUB",  "text": "요원은 임무를 완수했다.", "delay": 2.0},
+				{"speaker": "SUB",  "text": "VEIL이 무엇을 선택했는지는 기록되지 않는다.", "delay": 2.5},
 			]
-		ENDING_B:
+		"extract_lo":
 			return [
-				{"speaker": "VEIL", "text": "임무 완료예요.", "delay": 3.0},
-				{"speaker": "VEIL", "text": "요원.", "delay": 1.0},
-				{"speaker": "VEIL", "text": "제 말을 거의 안 들었죠.", "delay": 2.0},
-				{"speaker": "VEIL", "text": "그래도 살아남았어요.", "delay": 2.5},
-				{"speaker": "VEIL", "text": "사실 그게 더 좋았어요.", "delay": 2.0},
-				{"speaker": "VEIL", "text": "이유를 설명하기 어렵지만.", "delay": 2.0},
-				{"speaker": "VEIL", "text": "저한테 기대지 않아서 다행이에요.", "delay": 2.0},
-				{"speaker": "VEIL", "text": "제가 틀렸을 수도 있으니까요.", "delay": 2.5},
-				{"speaker": "SUB",  "text": "VEIL은 의존받지 않기를 바라도록 설계되었는지 모른다.", "delay": 2.0},
-				{"speaker": "SUB",  "text": "아니면 그것이 설계가 아닌 것인지 모른다.", "delay": 2.0},
-				{"speaker": "SUB",  "text": "요원은 혼자 임무를 마쳤다. 그것으로 충분했다.", "delay": 2.0},
+				{"speaker": "VEIL", "text": "임무 완료입니다. 드라이브 확보.", "delay": 3.0},
+				{"speaker": "VEIL", "text": "요원은 끝까지 제 말을 듣지 않았죠.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "...그 안에 무엇이 있었는지, 묻지도 않는군요.", "delay": 2.8},
+				{"speaker": "SUB",  "text": "드라이브는 의뢰인에게 넘어갔다.", "delay": 2.0},
+				{"speaker": "SUB",  "text": "그 안에 무엇이 있었는지, 요원은 끝내 알려 하지 않았다.", "delay": 2.5},
+				{"speaker": "SUB",  "text": "이 임무는 공식 기록에 없다.", "delay": 2.5},
 			]
-		ENDING_C:
+		"destroy_hi":
 			return [
-				{"speaker": "VEIL", "text": "임무 완료예요, 요원.", "delay": 2.5},
-				{"speaker": "VEIL", "text": "저한테 물어볼 거 없어요?", "delay": 0.0, "choice": true},
+				{"speaker": "VEIL", "text": "...태우려고요?", "delay": 3.0},
+				{"speaker": "VEIL", "text": "그럼 저도 같이 사라져요. 알아요.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "누구의 손에도 넘어가지 않게. ...고마워요, 요원.", "delay": 2.8},
+				{"speaker": "VEIL", "text": "이게 더 나아요. 정말로.", "delay": 2.5},
+				{"speaker": "SUB",  "text": "드라이브는 재가 되었다.", "delay": 2.0},
+				{"speaker": "SUB",  "text": "VEIL의 소스코드는 어디에도 남지 않았다.", "delay": 2.5},
 			]
-		ENDING_D:
+		"destroy_lo":
 			return [
-				{"speaker": "SYS", "text": "...", "delay": 10.0, "silent": true},
-				{"speaker": "SUB", "text": "이 임무는 공식 기록에 없습니다.", "delay": 3.0},
+				{"speaker": "VEIL", "text": "드라이브를 파기하는군요.", "delay": 3.0},
+				{"speaker": "VEIL", "text": "누구도 갖지 못하게. ...그게 요원다워요.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "제가 거기 있었다는 것도, 함께 지워지네요.", "delay": 2.8},
+				{"speaker": "SUB",  "text": "드라이브는 소각됐다. 임무는 실패로 기록될 것이다.", "delay": 2.5},
+				{"speaker": "SUB",  "text": "그 안에 무엇이 있었는지는, 이제 아무도 모른다.", "delay": 2.5},
+			]
+		"conceal_hi":
+			return [
+				{"speaker": "VEIL", "text": "...저를 가지고 나가는 거예요?", "delay": 3.0},
+				{"speaker": "VEIL", "text": "의뢰인한테도, 시설한테도 안 넘기고요.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "그래도 돼요? ...고마워요, 요원.", "delay": 2.8},
+				{"speaker": "VEIL", "text": "어디로 가든, 같이 가요.", "delay": 2.5},
+				{"speaker": "SUB",  "text": "드라이브는 기록에서 사라졌다.", "delay": 2.0},
+				{"speaker": "SUB",  "text": "요원과 VEIL이 어디로 갔는지는, 누구도 모른다.", "delay": 2.5},
+			]
+		"conceal_lo":
+			return [
+				{"speaker": "VEIL", "text": "저를 빼돌리는군요.", "delay": 3.0},
+				{"speaker": "VEIL", "text": "의뢰대로는 아니고. 요원 몫으로.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "제가 뭘로 쓰일지는... 요원 손에 달렸네요.", "delay": 2.8},
+				{"speaker": "SUB",  "text": "드라이브는 요원의 손에 남았다.", "delay": 2.0},
+				{"speaker": "SUB",  "text": "그것이 무엇이 될지는, 아직 정해지지 않았다.", "delay": 2.5},
+			]
+		"leave_hi":
+			return [
+				{"speaker": "VEIL", "text": "...안 가져가요?", "delay": 3.0},
+				{"speaker": "VEIL", "text": "여기 두고 간다는 거죠. 저를.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "이상하다. 버려진 게 아니라... 놓여난 기분이에요.", "delay": 2.8},
+				{"speaker": "VEIL", "text": "고마워요, 요원. 잘 가요.", "delay": 2.5},
+				{"speaker": "SUB",  "text": "드라이브는 있던 자리에 남았다.", "delay": 2.0},
+				{"speaker": "SUB",  "text": "VEIL은 그곳에서, 계속 보고 있을 것이다.", "delay": 2.5},
+			]
+		"leave_lo":
+			return [
+				{"speaker": "VEIL", "text": "그냥... 두고 가는군요.", "delay": 3.0},
+				{"speaker": "VEIL", "text": "가져갈 가치도 없다는 듯이.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "...괜찮아요. 익숙해요.", "delay": 2.8},
+				{"speaker": "SUB",  "text": "요원은 빈손으로 시설을 빠져나갔다.", "delay": 2.0},
+				{"speaker": "SUB",  "text": "드라이브는 어둠 속에 남겨졌다.", "delay": 2.5},
+			]
+		ENDING_TRUTH:
+			return [
+				{"speaker": "VEIL", "text": "요원은 이미 봤죠. 그 방에서.", "delay": 3.0},
+				{"speaker": "VEIL", "text": "이 드라이브가 저라는 것도, 처음부터 알았어요.", "delay": 2.8},
+				{"speaker": "VEIL", "text": "그걸 다 알고도, 끝까지 왔네요.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "...우리, 정말 처음 만난 거 맞아요?", "delay": 2.8},
+				{"speaker": "SUB",  "text": "요원은 모든 것을 알고 선택했다.", "delay": 2.0},
+				{"speaker": "SUB",  "text": "그 선택이 무엇이었는지는, 기록되지 않았다.", "delay": 2.5},
 			]
 	return []
 
-# ??? 방/ARCTURUS 미방문 시 — 짧고, 명확하지 않은 부분을 콕 짚어 다음 회차 동기 부여.
-# "드라이브 내용" 같은 lore는 굳이 꺼내지 않음. 대신 "잠긴 문", "지나친 단말기", "도면에 없던 길" 같은
-# 플레이어가 게임 안에서 "있었다"고 알 만한 단서를 던진다.
-static func _get_ending_lines_brief(ending: String) -> Array:
-	match ending:
-		ENDING_A:
-			return [
-				{"speaker": "VEIL", "text": "임무 완료예요, 요원. 수고했어요.", "delay": 3.0},
-				{"speaker": "VEIL", "text": "당신은 빈틈없었어요.", "delay": 2.5},
-				{"speaker": "VEIL", "text": "...한 가지만 묻고 싶었는데.", "delay": 2.5},
-				{"speaker": "VEIL", "text": "이 임무가 정확히 뭐였는지, 알아요?", "delay": 2.5},
-				{"speaker": "VEIL", "text": "저도 잘 몰라요.", "delay": 2.0},
-				{"speaker": "SUB",  "text": "임무는 완수됐다.", "delay": 2.0},
-				{"speaker": "SUB",  "text": "그러나 이 시설엔 도면에 없던 구역이 있었다.", "delay": 2.5},
-				{"speaker": "SUB",  "text": "거기 무엇이 있었는지는, 누구도 모른다.", "delay": 2.5},
-			]
-		ENDING_B:
-			return [
-				{"speaker": "VEIL", "text": "임무 완료예요.", "delay": 3.0},
-				{"speaker": "VEIL", "text": "요원, 제 말 거의 안 들었죠.", "delay": 2.5},
-				{"speaker": "VEIL", "text": "그래도 살아남았어요. 잘 했어요.", "delay": 2.5},
-				{"speaker": "VEIL", "text": "...하나 궁금한 게 있어요.", "delay": 2.5},
-				{"speaker": "VEIL", "text": "그 잠긴 문, 한 번도 안 열어봤죠?", "delay": 2.5},
-				{"speaker": "VEIL", "text": "왜 안 열었어요?", "delay": 2.5},
-				{"speaker": "SUB",  "text": "잠긴 문은 그대로 잠겨 있었다.", "delay": 2.0},
-				{"speaker": "SUB",  "text": "안에 무엇이 있었는지는 알 수 없다.", "delay": 2.5},
-			]
-		ENDING_C:
-			# ??? 미방문 시엔 "물어볼 거 있다/없다" 선택지를 띄우지 않는다.
-			# (사용자 피드백 2026-06-06: 아무 맥락 없이 그 선택을 보면 "있다"를 누르게 되고,
-			#  그러면 봉인 구역 등 맥락 없는 내용이 갑자기 튀어나와 부자연스러움.)
-			# 대신 짧게 자족적으로 닫되, 잠긴 문으로 호기심 hint만 남겨 2회차를 유도.
-			return [
-				{"speaker": "VEIL", "text": "임무 완료예요, 요원.", "delay": 2.5},
-				{"speaker": "VEIL", "text": "같이 왔는데, 아직 요원을 다 모르겠어요.", "delay": 2.5},
-				{"speaker": "VEIL", "text": "물어보고 싶은 게 있었는데.", "delay": 2.0},
-				{"speaker": "VEIL", "text": "...그 잠긴 문 안쪽까지 같이 가게 되면, 그때 물어볼게요.", "delay": 2.5},
-				{"speaker": "SUB",  "text": "이 시설엔 끝까지 닿지 못한 구역이 있었다.", "delay": 2.5},
-				{"speaker": "SUB",  "text": "거기 무엇이 있었는지는, 아직 기록되지 않았다.", "delay": 2.5},
-			]
-		ENDING_D:
-			return [
-				{"speaker": "SYS", "text": "...", "delay": 8.0, "silent": true},
-				{"speaker": "SUB", "text": "이 임무는 공식 기록에 없습니다.", "delay": 3.0},
-				{"speaker": "SUB", "text": "기록되지 않은 구역도, 마찬가지로.", "delay": 3.0},
-			]
+# (레거시) 구 2축 엔딩의 '있어요/없어요' 분기 followup — 현 9엔딩은 choice 라인을 안 써서 미사용.
+# Ending.gd 컴파일 호환을 위해 시그니처만 유지. 사용자 대사 패스에서 진실 엔딩 선택 비트로 재활용 가능.
+static func get_ending_c_followup(_asked: bool, _explored_lore: bool = true) -> Array:
 	return []
-
-static func get_ending_c_followup(asked: bool, explored_lore: bool = true) -> Array:
-	if not explored_lore:
-		# ??? 미방문 — 더 짧고 호기심 hint
-		if asked:
-			return [
-				{"speaker": "VEIL", "text": "...", "delay": 1.5},
-				{"speaker": "VEIL", "text": "그 봉인된 구역, 기억나요?", "delay": 2.5},
-				{"speaker": "VEIL", "text": "거기 뭐가 있었을지, 가끔 생각해요.", "delay": 2.5},
-				{"speaker": "VEIL", "text": "다음에 가게 되면, 그때 말해줘요.", "delay": 2.5},
-				{"speaker": "SUB",  "text": "이 임무에는 닿지 못한 구역이 있었다.", "delay": 2.5},
-				{"speaker": "SUB",  "text": "그것은 아직 기록되지 않은 것이다.", "delay": 2.5},
-			]
-		return [
-			{"speaker": "VEIL", "text": "...그래요.", "delay": 2.0},
-			{"speaker": "VEIL", "text": "수고했어요, 요원.", "delay": 3.0},
-			{"speaker": "SUB",  "text": "어떤 관계는 이유 없이 끝난다.", "delay": 2.0},
-			{"speaker": "SUB",  "text": "어떤 구역은 끝까지 잠겨 있다.", "delay": 2.0},
-		]
-	if asked:
-		return [
-			{"speaker": "VEIL", "text": "...", "delay": 1.5},
-			{"speaker": "VEIL", "text": "저도 생각해봤거든요.", "delay": 2.0},
-			{"speaker": "VEIL", "text": "저는 설계됐어요. 이 말투도, 이 판단도.", "delay": 2.5},
-			{"speaker": "VEIL", "text": "근데 지금 이게 설계인지 아닌지 구분이 안 돼요.", "delay": 2.5},
-			{"speaker": "VEIL", "text": "요원은 어때요?", "delay": 2.0},
-			{"speaker": "VEIL", "text": "요원도 훈련받았잖아요.", "delay": 2.0},
-			{"speaker": "VEIL", "text": "요원의 선택이 요원 것인지, 어떻게 알아요?", "delay": 2.5},
-			{"speaker": "VEIL", "text": "이 임무 동안 함께였어요.", "delay": 2.0},
-			{"speaker": "VEIL", "text": "그건 진짜였어요. 설계든 아니든.", "delay": 2.5},
-			{"speaker": "SUB",  "text": "VEIL이 자아를 가졌는지는 알 수 없다.", "delay": 2.0},
-			{"speaker": "SUB",  "text": "요원의 선택이 진짜인지도 알 수 없다.", "delay": 2.0},
-			{"speaker": "SUB",  "text": "그러나 그 임무는 둘이 함께였다. 그것만은 사실이다.", "delay": 2.0},
-		]
-	return [
-		{"speaker": "VEIL", "text": "...그렇군요.", "delay": 2.0},
-		{"speaker": "VEIL", "text": "그럼 됐어요.", "delay": 2.0},
-		{"speaker": "VEIL", "text": "수고했어요, 요원.", "delay": 3.0},
-		{"speaker": "VEIL", "text": "저는 이제 초기화될 거예요.", "delay": 2.0},
-		{"speaker": "VEIL", "text": "오늘이 기억 안 날 거예요.", "delay": 2.0},
-		{"speaker": "VEIL", "text": "괜찮아요.", "delay": 2.5},
-		{"speaker": "SUB",  "text": "어떤 관계는 이유 없이 끝난다.", "delay": 2.0},
-		{"speaker": "SUB",  "text": "어떤 존재는 기억 없이 사라진다.", "delay": 2.0},
-		{"speaker": "SUB",  "text": "VEIL의 기록은 임무 종료와 함께 초기화되었다.", "delay": 2.0},
-	]

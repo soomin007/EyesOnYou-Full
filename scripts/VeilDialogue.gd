@@ -176,15 +176,17 @@ static func get_intro_system_text() -> String:
 static func get_intro_veil_lines() -> Array[String]:
 	if not (GameState.is_replay_run()):
 		return INTRO_VEIL
-	# 다회차일 때 기본 변형에 엔딩 수집 비트를 덧붙인다. 4개(A/B/C/D) 다 봤으면 완수 인정, 3개면 남은 갈래 암시.
+	# 다회차일 때 기본 변형에 엔딩 수집 비트를 덧붙인다(엔딩 9개: 처리×신뢰 8 + 진실 1).
+	# 9개 다 봤으면 완수 인정, 6개 이상이면 남은 갈래 암시. (endings_seen에 구 A/B/C/D가 섞여 있을
+	# 수 있으나 — settings.cfg 영속 — 카운트 기반 소프트 게이지라 무해.)
 	var out: Array[String] = []
 	for s in INTRO_VEIL_REPLAY:
 		out.append(s)
 	var seen: int = GameState.endings_seen.size()
-	if seen >= 4:
+	if seen >= 9:
 		out.append("결말은 다 보셨습니다. 그런데도 또 오셨군요.\n...어쩌면 끝이 중요한 게 아니었는지도 모릅니다.")
-	elif seen == 3:
-		out.append("아직 닿지 않은 결말이 하나 남았습니다.\n어떤 선택은 끝까지 가본 뒤에야 보입니다.")
+	elif seen >= 6:
+		out.append("아직 닿지 않은 갈래가 남았습니다.\n어떤 선택은 끝까지 가본 뒤에야 보입니다.")
 	return out
 
 static func get_levelup_advice(player_skills: Dictionary, route_tags: Array, route_id: String = "") -> Dictionary:

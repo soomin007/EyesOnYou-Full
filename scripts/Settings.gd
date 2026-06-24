@@ -246,34 +246,35 @@ func _build_debug_tab() -> Control:
 	enter_btn.pressed.connect(_on_playground_pressed)
 	v.add_child(enter_btn)
 
-	# 엔딩 미리보기 — 4종 직접 진입. trust/aggression 점수를 임시 세팅해 EndingResolver
-	# 분기를 강제하고, lore도 explored 상태로 설정해 풀 멘트를 보여준다.
+	# 엔딩 미리보기 — 9종 직접 진입(처리 4 × 신뢰 2 + 진실 1). 처리/신뢰/진실 플래그를 임시 세팅해
+	# EndingResolver 분기를 강제한다. (대사는 플레이스홀더 — 사용자 검토.)
 	var spacer := Control.new()
 	spacer.custom_minimum_size = Vector2(0, 12)
 	v.add_child(spacer)
-	v.add_child(_make_section_header("엔딩 미리보기"))
+	v.add_child(_make_section_header("엔딩 미리보기 (9종)"))
 	var endings_note := Label.new()
 	endings_note.text = "각 엔딩을 즉시 진입해 텍스트·BGM·연출을 확인. 진행 데이터는 갱신되지 않아요."
 	endings_note.add_theme_font_size_override("font_size", 13)
 	endings_note.add_theme_color_override("font_color", Color(0.62, 0.72, 0.85))
 	endings_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(endings_note)
-	var ending_row := HBoxContainer.new()
-	ending_row.add_theme_constant_override("separation", 10)
+	var ending_row := GridContainer.new()
+	ending_row.columns = 3
+	ending_row.add_theme_constant_override("h_separation", 10)
+	ending_row.add_theme_constant_override("v_separation", 8)
 	v.add_child(ending_row)
 	var ending_btns: Array = []
-	for entry in [
-		{"id": "A", "label": "엔딩 A — 완벽한 도구"},
-		{"id": "B", "label": "엔딩 B — 혼자였던 사람"},
-		{"id": "C", "label": "엔딩 C — 공생"},
-		{"id": "D", "label": "엔딩 D — 유령 임무"},
-	]:
-		var d: Dictionary = entry
+	var ending_ids: Array = [
+		"extract_hi", "destroy_hi", "conceal_hi",
+		"extract_lo", "destroy_lo", "conceal_lo",
+		"leave_hi", "leave_lo", EndingResolver.ENDING_TRUTH,
+	]
+	for eid in ending_ids:
 		var btn := Button.new()
-		btn.text = str(d["label"])
-		btn.custom_minimum_size = Vector2(160, 36)
-		btn.add_theme_font_size_override("font_size", 12)
-		btn.pressed.connect(_on_ending_preview_pressed.bind(str(d["id"])))
+		btn.text = "%s (%s)" % [EndingResolver.get_ending_title(eid), eid]
+		btn.custom_minimum_size = Vector2(190, 34)
+		btn.add_theme_font_size_override("font_size", 11)
+		btn.pressed.connect(_on_ending_preview_pressed.bind(eid))
 		ending_row.add_child(btn)
 		ending_btns.append(btn)
 	# 세로 포커스 연결 — 연습장 버튼 ↕ 엔딩 행. (HBox 내부 좌우는 Godot 자동.) 명시 안 하면
@@ -287,32 +288,20 @@ func _build_debug_tab() -> Control:
 
 	return outer
 
-# 엔딩 미리보기 진입 — trust/aggression을 EndingResolver 임계값에 맞춰 강제 세팅.
-# explored_lore는 hidden_visit_count + visited_arcturus 둘 중 하나만 있어도 true.
+# 엔딩 미리보기 진입 — 처리(disposal)·신뢰(수용률)·진실(truth_seen)을 ending_id에 맞춰 강제.
 # 기존 진행도는 백업 안 함 — 디버그 용도라 진행 데이터 손실은 무시 (사용자가 알고 누름).
 func _on_ending_preview_pressed(ending_id: String) -> void:
-	var t: int = GameState.SCORE_THRESHOLD
-	# 엔딩 미리보기 — 새 엔딩축(추천 수용률 + 공격성)을 강제. rec_count=4 분모 고정,
-	# followed_count로 신뢰 on/off. trust_score는 stats 표시용으로만 같이 세팅.
-	GameState.rec_count = 4
-	match ending_id:
-		"A":
-			GameState.followed_count = 4
-			GameState.aggression_score = t
-			GameState.trust_score = 12
-		"B":
-			GameState.followed_count = 0
-			GameState.aggression_score = t
-			GameState.trust_score = 0
-		"C":
-			GameState.followed_count = 4
-			GameState.aggression_score = 0
-			GameState.trust_score = 12
-		"D":
-			GameState.followed_count = 0
-			GameState.aggression_score = 0
-			GameState.trust_score = 0
-	# explored_lore=true 풀 멘트 보기. (false 버전 보고 싶으면 둘 다 false 후 진입)
+	GameState.rec_count = 4  # 수용률 분모 고정 — followed_count로 신뢰 hi/lo 강제.
+	if ending_id == EndingResolver.ENDING_TRUTH:
+		# 진실은 처리·신뢰 무관 — truth_seen만 켜면 수렴.
+		GameState.truth_seen = true
+		GameState.disposal_choice = GameState.DISPOSAL_EXTRACT
+		GameState.followed_count = 4
+	else:
+		GameState.truth_seen = false
+		GameState.disposal_choice = ending_id.trim_suffix("_hi").trim_suffix("_lo")
+		GameState.followed_count = 4 if ending_id.ends_with("_hi") else 0
+	GameState.trust_score = 12 if GameState.followed_count >= 4 else 0  # stats 게이지 표시용.
 	GameState.visited_arcturus = true
 	get_tree().paused = false
 	get_tree().change_scene_to_file(SceneRouter.ENDING)
