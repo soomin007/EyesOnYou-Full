@@ -284,8 +284,8 @@ func _build_signs() -> void:
 	# 위쪽에 두면 겹침. 발판(y=310) 아래 y=400에 배치 → 위에서 내려보면 명확.
 	sign_drop = _make_keycap_sign(["S"], ["↓"], "내려가기", Vector2(JUMP_PLATFORM_3.x, JUMP_PLATFORM_3.y + 90.0))
 	# 사격 표지는 키보드 모드에서 "마우스 좌클릭 + J" 두 입력이 동등함을 보여줘야 함 — 마우스 픽토그램 포함.
-	sign_attack = _make_attack_sign_dynamic(["J"], ["X", "RT"], "사격", Vector2(1750.0, GROUND_Y - 200.0))
-	sign_dash = _make_keycap_sign(["K"], ["B"], "대시", Vector2(SPIKE_X_START + 100.0, GROUND_Y - 200.0))
+	sign_attack = _make_attack_sign_dynamic([GameState.action_label("attack", "J")], ["X", "RT"], "사격", Vector2(1750.0, GROUND_Y - 200.0))
+	sign_dash = _make_keycap_sign([GameState.action_label("dash", "K")], ["B"], "대시", Vector2(SPIKE_X_START + 100.0, GROUND_Y - 200.0))
 	# 레벨업 표지는 "스킬 획득" 알림용으로만 사용 — 진입 안내는 오버레이가 직접 함.
 	sign_levelup = Label.new()
 	sign_levelup.add_theme_font_size_override("font_size", 17)
@@ -575,9 +575,7 @@ func _build_hud() -> void:
 	GameState.input_kind_changed.connect(_on_input_kind_changed)
 
 func _keys_hint_text() -> String:
-	return GameState.hint(
-		"A/D 이동   W/SPACE 점프   S 내려가기   J/마우스 좌 사격   K 대시   L/마우스 우 스킬   ESC 일시정지",
-		"좌스틱/D-Pad 이동   A 점프   ↓ 내려가기   X/RT 사격   B/RB 대시   Y 스킬   START 일시정지")
+	return GameState.controls_hint_line()
 
 func _on_input_kind_changed(_kind: String) -> void:
 	if is_instance_valid(hint_label):
@@ -986,16 +984,16 @@ func _build_skill_sign() -> void:
 		var kb_keys: Array
 		var pad_keys: Array
 		if key_action == "skill":
-			kb_keys = ["L", "RMB"]
+			kb_keys = [GameState.action_label("skill", "L"), "RMB"]
 			pad_keys = ["Y"]
 		elif key_action == "dash":
-			kb_keys = ["K"]
+			kb_keys = [GameState.action_label("dash", "K")]
 			pad_keys = ["B"]
 		elif key_action != "":
 			kb_keys = [_label_for_action(key_action)]
 			pad_keys = [_label_for_action(key_action)]
 		else:
-			kb_keys = ["L"]
+			kb_keys = [GameState.action_label("skill", "L")]
 			pad_keys = ["Y"]
 		sign_skill = _make_keycap_sign(kb_keys, pad_keys, "스킬 사용", pos)
 	else:
@@ -1080,24 +1078,7 @@ func _update_levelup_sign(picked_id: String) -> void:
 	sign_levelup.text = "[%s 획득]\n%s" % [sname, hint]
 
 func _label_for_action(action: String) -> String:
-	if not InputMap.has_action(action):
-		return "?"
-	for ev in InputMap.action_get_events(action):
-		if ev is InputEventKey:
-			var k := ev as InputEventKey
-			var kc: int = k.physical_keycode
-			if kc == 0:
-				kc = k.keycode
-			var s: String = OS.get_keycode_string(kc)
-			if s != "":
-				return s
-		elif ev is InputEventMouseButton:
-			var mb := ev as InputEventMouseButton
-			match mb.button_index:
-				MOUSE_BUTTON_LEFT:   return "마우스 좌클릭"
-				MOUSE_BUTTON_RIGHT:  return "마우스 우클릭"
-				MOUSE_BUTTON_MIDDLE: return "마우스 가운데"
-	return "?"
+	return GameState.action_label(action)
 
 func _on_goal_reached(body: Node) -> void:
 	if goal_reached:

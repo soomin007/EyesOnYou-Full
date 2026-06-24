@@ -168,6 +168,39 @@ func arm_focus_with_delay(host: Node, first_btn: Button, delay: float = INPUT_LO
 func hint(kb_text: String, pad_text: String) -> String:
 	return pad_text if last_input_kind == "pad" else kb_text
 
+# 액션의 대표 입력 라벨 — InputMap에서 첫 키(없으면 마우스)를 읽어 표시용 문자열로 만든다.
+# 키 안내의 단일 소스: 기본 키를 바꾸거나 사용자가 설정에서 리매핑해도 안내가 자동으로 따라온다.
+# (하드코딩 "J"/"Q" 등을 곳곳에 박지 말 것 — 키 변경 시 안내가 거짓말이 된다.)
+func action_label(action: String, fallback: String = "?") -> String:
+	if not InputMap.has_action(action):
+		return fallback
+	for ev in InputMap.action_get_events(action):
+		if ev is InputEventKey:
+			var k := ev as InputEventKey
+			var kc: int = k.physical_keycode
+			if kc == 0:
+				kc = k.keycode
+			var s: String = OS.get_keycode_string(kc)
+			if s != "":
+				return s
+		elif ev is InputEventMouseButton:
+			match (ev as InputEventMouseButton).button_index:
+				MOUSE_BUTTON_LEFT: return "마우스 좌클릭"
+				MOUSE_BUTTON_RIGHT: return "마우스 우클릭"
+				MOUSE_BUTTON_MIDDLE: return "마우스 가운데"
+	return fallback
+
+# 하단 조작 안내 한 줄 — 키 라벨을 action_label로 동적 조립(단일 소스).
+# Tutorial·Stage 일시정지 등이 공유한다. 키 변경/리매핑 시 자동 반영.
+func controls_hint_line() -> String:
+	if is_pad_mode():
+		return "좌스틱/D-Pad 이동   A 점프   ↓ 내려가기   X/RT 사격   B/RB 대시   Y 스킬   START 일시정지"
+	return "%s/%s 이동   %s 점프   %s 내려가기   %s 사격   %s 대시   %s 스킬   %s 일시정지" % [
+		action_label("move_left", "A"), action_label("move_right", "D"),
+		action_label("jump", "W"), action_label("move_down", "S"),
+		action_label("attack", "J"), action_label("dash", "K"),
+		action_label("skill", "L"), action_label("pause", "ESC")]
+
 func reset() -> void:
 	current_stage = 0
 	death_count = 0
