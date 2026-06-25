@@ -3259,13 +3259,9 @@ func _transition_after_clear() -> void:
 		_play_lab_recovery_and_disposal()
 		return
 	if GameState.is_final_stage_done():
-		# 일반 모드 전투 마무리(보스/데이터센터)는 바로 엔딩으로 끊지 않고 짧은 에필로그로
-		# 보람·여운을 준다(사용자 보고: 전환이 너무 갑작스러움). ???(hidden)은 자체 엔딩 시퀀스가
-		# 있어 제외. 스토리 모드는 탈출 단계가 마무리를 겸하므로 현행 유지.
-		if not GameState.story_mode and GameState.current_route_id != "route_hidden":
-			_play_final_epilogue()
-		else:
-			get_tree().change_scene_to_file(SceneRouter.ENDING)
+		# 막3 재배치 후 최종 스테이지 = 탈출(escape, 양 모드 공통). 엔딩별 에필로그 1챕터를 거쳐
+		# 엔딩으로 잇는다(???는 더 이상 최종 스테이지가 아니므로 분기 불필요).
+		_play_final_epilogue()
 	else:
 		get_tree().change_scene_to_file(SceneRouter.BRIEFING)
 
@@ -3314,9 +3310,9 @@ func _lab_recovery_doc_lines() -> Array:
 		{"text": "...말할 게 있어요, 요원. 그게 저예요.", "kind": "body", "delay": 0.8},
 	]
 
-# 최종 보스/스테이지 클리어 → 엔딩 사이의 짧은 에필로그. 검은 화면 위 VEIL의 마무리 한숨으로
-# "해냈다"는 보람과 여운을 주고 엔딩으로 넘긴다. 엔딩 본문(2축 분기)은 ENDING 씬이 담당하므로
-# 여기선 감정적으로 중립적·따뜻한 마무리만. 텍스트는 추후 작가가 다듬을 수 있음.
+# 탈출(escape) 클리어 → 엔딩 사이의 에필로그 1챕터. 검은 화면 위 VEIL의 "빠져나온 직후" 한 호흡.
+# 엔딩별로 내용이 다르다(처리 결과 반영) — EndingResolver.get_epilogue_lines. ENDING 씬과 동일한 입력
+# (disposal/truth/followed/rec)으로 같은 id를 산출하므로 에필로그↔엔딩 본문이 일관된다. (문구 플레이스홀더.)
 func _play_final_epilogue() -> void:
 	GameState.restrict_combat_input = true
 	var ep_layer := CanvasLayer.new()
@@ -3344,13 +3340,11 @@ func _play_final_epilogue() -> void:
 	ft.tween_property(bg, "modulate:a", 1.0, 1.0)
 	await ft.finished
 	await get_tree().create_timer(0.6).timeout
-	var lines: Array[String] = [
-		"...끝났어요, 요원.",
-		"데이터, 회수했어요. 임무 완수예요.",
-		"수고했어요. ...정말로.",
-	]
+	# 엔딩별 에필로그 — ENDING 씬과 같은 입력으로 resolve해 동일 id의 에필로그를 고른다.
+	var eid: String = EndingResolver.resolve(GameState.disposal_choice, GameState.truth_seen, GameState.followed_count, GameState.rec_count)
+	var lines: Array = EndingResolver.get_epilogue_lines(eid)
 	for ln in lines:
-		label.text = ln
+		label.text = str(ln)
 		var lt := label.create_tween()
 		lt.tween_property(label, "modulate:a", 1.0, 0.6)
 		lt.tween_interval(1.9)

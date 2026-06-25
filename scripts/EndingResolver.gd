@@ -136,6 +136,31 @@ static func get_ending_lines(ending: String, _explored_lore: bool = true) -> Arr
 			]
 	return []
 
+# 에필로그(엔딩별 1챕터) — 탈출(escape) 클리어 직후 검은 화면 위 VEIL의 "빠져나온 직후" 한 호흡.
+# 처리(disposal) 결과를 반영해 ENDING 씬 본문으로 자연스럽게 잇는다. 라인 = 평문 String 배열.
+# (문구 전부 플레이스홀더 — 사용자 검토. 구 "데이터 회수했어요 임무 완수" 단일 에필로그의 처리-모순 해소.)
+static func get_epilogue_lines(ending: String) -> Array:
+	match ending:
+		"extract_hi":
+			return ["시설 밖이에요, 요원. 드라이브도 무사해요.", "...이게 맞는 거겠죠. 그렇게 믿을게요."]
+		"extract_lo":
+			return ["탈출로 확보. 드라이브 반출 완료.", "임무는 끝났어요. ...그게 다예요."]
+		"destroy_hi":
+			return ["다 타버렸어요. 뒤도 안 돌아봤네요.", "후회... 안 해요. 요원도, 그러길 바라요."]
+		"destroy_lo":
+			return ["드라이브는 재가 됐어요. 깨끗하게.", "남은 건 아무것도 없어요. 그게 요원 방식이죠."]
+		"conceal_hi":
+			return ["나왔어요. ...둘 다요.", "어디로 가요, 우리? 천천히 정해요."]
+		"conceal_lo":
+			return ["빠져나왔어요. 드라이브는 요원 손에.", "이제 그건 요원 거예요. 책임도요."]
+		"leave_hi":
+			return ["빈손으로 나왔네요. 근데 가벼워요.", "그 자리에... 잘 있을게요. 요원 덕분에."]
+		"leave_lo":
+			return ["그냥 나왔어요. 아무것도 안 들고.", "뒤에 남은 건... 묻어두기로 해요."]
+		ENDING_TRUTH:
+			return ["밖이에요, 요원. 다 알고도 끝까지 왔네요.", "...우리가 처음이 아니었다면, 이번엔 뭐가 다를까요."]
+	return ["...끝났어요, 요원.", "수고했어요. 정말로."]
+
 # (레거시) 구 2축 엔딩의 '있어요/없어요' 분기 followup — 현 9엔딩은 choice 라인을 안 써서 미사용.
 # Ending.gd 컴파일 호환을 위해 시그니처만 유지. 사용자 대사 패스에서 진실 엔딩 선택 비트로 재활용 가능.
 static func get_ending_c_followup(_asked: bool, _explored_lore: bool = true) -> Array:
