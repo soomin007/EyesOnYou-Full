@@ -104,40 +104,22 @@ func _build_hold_hint() -> void:
 	box.add_child(bg)
 
 func _setup_ending_d_atmosphere() -> void:
-	# 미세한 노이즈 레이어 — 정적 느낌. 진폭/주기 사용자 피드백 후 완화 (이전엔 0.08s
-	# 주기로 alpha 1.2까지 가서 화면이 번쩍였음 — 결말 D 진입 시 거슬리는 깜빡임).
+	# 진실 엔딩 분위기 — 아주 미세한 정적 노이즈. (구 결말 D 연출 재사용.) 진폭을 더 낮춰
+	# "번쩍거림"이 아니라 잔잔한 static으로 (사용자 보고 2026-06-25: 번쩍거림 + VEIL이 말하는데
+	# 우상단 "VEIL: ..." 정적 표시가 떠 모순 → 그 표시 제거, 노이즈 진폭/속도 완화).
 	var noise_layer := CanvasLayer.new()
 	noise_layer.layer = 50
 	add_child(noise_layer)
 	var noise := ColorRect.new()
-	noise.color = Color(0.95, 0.95, 0.95, 0.04)
+	noise.color = Color(0.95, 0.95, 0.95, 0.03)
 	noise.set_anchors_preset(Control.PRESET_FULL_RECT)
 	noise.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	noise_layer.add_child(noise)
 	var noise_tw := noise.create_tween()
 	noise_tw.set_loops()
-	noise_tw.tween_property(noise, "modulate:a", 0.6, 0.9)
-	noise_tw.tween_property(noise, "modulate:a", 1.0, 0.8)
-	noise_tw.tween_property(noise, "modulate:a", 0.4, 1.1)
-	# 우상단 VEIL: ... 깜빡이다 꺼짐
-	var veil_blink := Label.new()
-	veil_blink.text = "VEIL: ..."
-	veil_blink.add_theme_font_size_override("font_size", 14)
-	veil_blink.add_theme_color_override("font_color", Color(0.55, 0.85, 0.95, 0.6))
-	veil_blink.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	veil_blink.size = Vector2(180, 20)
-	veil_blink.position = Vector2(-180.0 - 20.0, 24.0)
-	noise_layer.add_child(veil_blink)
-	var blink_tw := veil_blink.create_tween()
-	blink_tw.tween_property(veil_blink, "modulate:a", 0.0, 0.5)
-	blink_tw.tween_interval(1.2)
-	blink_tw.tween_property(veil_blink, "modulate:a", 1.0, 0.5)
-	blink_tw.tween_interval(0.8)
-	blink_tw.tween_property(veil_blink, "modulate:a", 0.0, 0.5)
-	blink_tw.tween_interval(2.0)
-	blink_tw.tween_property(veil_blink, "modulate:a", 0.7, 0.3)
-	blink_tw.tween_interval(0.4)
-	blink_tw.tween_property(veil_blink, "modulate:a", 0.0, 1.5)
+	noise_tw.tween_property(noise, "modulate:a", 0.55, 1.6)
+	noise_tw.tween_property(noise, "modulate:a", 0.75, 1.8)
+	noise_tw.tween_property(noise, "modulate:a", 0.45, 2.0)
 
 func _start_line() -> void:
 	# 매 새 라인마다 watchdog reset — 첫 라인뿐 아니라 followup·이후 라인 모두 보호.

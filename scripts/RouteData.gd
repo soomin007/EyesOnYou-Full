@@ -220,11 +220,11 @@ const ALL_ROUTES: Array = [
 		"reward": 2,
 		"hidden": false,
 		"unique": false,
-		# 막1 침투 변형 — 외곽 단계(s0~1) 풀에 합류. s0 선택지를 2→3으로.
-		"min_stage": 0, "max_stage": 1,
+		# 막1 침투 변형 — s1~2(첫 맵 s0엔 안 둠: 방패병이 첫 맵엔 불합리, 사용자 보고 2026-06-25).
+		"min_stage": 1, "max_stage": 2,
 		"tags": ["우회", "근접전", "어두운_환경"],
 		"veil_comment": "지하 주차장이에요. 차 사이로 가요. 정면 막는 적이 하나 있어요.",
-		"entry_comment": "주차장이에요. 차를 엄폐로 써요. 다 상대 안 해도 돼요.",
+		"entry_comment": "주차장이에요. 차 사이로 빠져요. 다 상대 안 해도 돼요.",
 		"stage_color": Color(0.12, 0.12, 0.15),
 	},
 	{
@@ -364,7 +364,7 @@ const ALL_ROUTES: Array = [
 		"reward": 2,
 		"hidden": false,
 		"unique": false,
-		"min_stage": 0, "max_stage": 2,
+		"min_stage": 1, "max_stage": 2,
 		"tags": ["우회", "이동"],
 		"veil_comment": "순찰로예요. 전투는 가벼워요. 경비 사이로 빠르게 통과해요.",
 		"entry_comment": "외곽 순찰선이에요. 다 상대 안 해도 돼요. 멈추지 말고.",

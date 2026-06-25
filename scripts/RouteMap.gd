@@ -214,9 +214,9 @@ func _make_progress_node(i: int, cur: int) -> Control:
 		name_l.text = RouteData.name_for_id(rid)
 		name_l.add_theme_color_override("font_color", PROG_DONE_TEXT)
 	elif i == cur:
-		# 지금 고르는 단계 — VEIL 신뢰 톤색으로 강조.
+		# 지금 고르는 단계 — VEIL 신뢰 톤색으로 강조. (◆는 폰트에 없어 깨질 수 있어 ●로, 색으로 구분.)
 		var tone: Color = GameState.veil_tone_color()
-		dot.text = "◆"
+		dot.text = "●"
 		dot.add_theme_color_override("font_color", tone)
 		name_l.text = "지금"
 		name_l.add_theme_color_override("font_color", tone)
@@ -232,16 +232,18 @@ func _make_progress_node(i: int, cur: int) -> Control:
 
 func _make_progress_connector(done: bool) -> Control:
 	# 노드와 같은 2단 구조(선 / 빈칸)로 만들어 점·이름 행 높이를 맞춘다.
+	# 연결선은 글자("──", box-drawing)가 아니라 ColorRect로 그린다 — 번들 폰트(Pretendard)에
+	# box-drawing 글리프가 없어 두부(□)로 깨졌음(사용자 보고 2026-06-25).
 	var box := VBoxContainer.new()
 	box.custom_minimum_size = Vector2(24, 0)
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
 	box.add_theme_constant_override("separation", 2)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var line := Label.new()
-	line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	line.add_theme_font_size_override("font_size", 16)
-	line.text = "──"
-	line.add_theme_color_override("font_color", PROG_DONE_LINE if done else PROG_FUTURE_LINE)
+	var line := ColorRect.new()
+	line.custom_minimum_size = Vector2(20, 2)
+	line.color = PROG_DONE_LINE if done else PROG_FUTURE_LINE
+	line.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var spacer := Label.new()
 	spacer.add_theme_font_size_override("font_size", 11)
 	spacer.text = " "
