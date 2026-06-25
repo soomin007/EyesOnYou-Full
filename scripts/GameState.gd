@@ -530,6 +530,13 @@ func act_def(stage: int) -> Dictionary:
 	var d: Dictionary = ACTS[act_for_stage(stage)]
 	return d
 
+# 막의 *첫* stage 판정 — 막 진입 카드(Briefing) 표시용. stage 0 또는 직전 stage와 막이 다르면 막 진입.
+# 본편(비스토리) 전용 의도 — 호출처(Briefing)에서 story_mode 가드. ACTS stages 누적 경계와 자동 일치.
+func is_act_start(stage: int) -> bool:
+	if stage <= 0:
+		return true
+	return act_for_stage(stage) != act_for_stage(stage - 1)
+
 # 시야붕괴 onset 막(마지막 막) 판정 — 보스/탈출 직전 첫 전투 맵에서 켜진다.
 # 스토리 모드는 5스테이지 비트가 촘촘해 기존 삼항(s==2 or s==3)을 그대로 반환(동작 보존).
 func is_late_act(stage: int) -> bool:
