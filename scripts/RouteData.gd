@@ -1,7 +1,7 @@
 class_name RouteData
 extends RefCounted
 
-# 22개 맵 — Dead Cells 스타일로 stage_index 별 후보 풀이 다름.
+# 25개 맵 — Dead Cells 스타일로 stage_index 별 후보 풀이 다름.
 #   min_stage / max_stage : 등장 가능 stage 범위 (양 끝 포함)
 #   available_stages       : 명시적 리스트 (있으면 우선, 없으면 min/max 사용)
 #   guaranteed_in_stages   : 해당 stage 풀 빌드 시 항상 포함되는 맵 (셔플 전 fix-slot)
@@ -341,6 +341,48 @@ const ALL_ROUTES: Array = [
 		"veil_comment": "통제실 회랑이에요. 드론·저격 동시에. 핵심부가 코앞이에요.",
 		"entry_comment": "통제실 직전이에요. 사선 많아요. 엄폐 쓰면서 빠져요.",
 		"stage_color": Color(0.15, 0.17, 0.21),
+	},
+	{
+		"id": "route_condenser",
+		"name": "응축기 구역",
+		"description": "냉각수를 응축하는 구역. 바닥 증기가 주기로 솟고, 드론이 머리 위를 점한다.",
+		"risk": 2,
+		"reward": 3,
+		"hidden": false,
+		"unique": false,
+		"min_stage": 3, "max_stage": 5,
+		"tags": ["드론", "함정", "전투"],
+		"veil_comment": "응축기 구역이에요. 바닥 증기는 타이밍 보고, 드론은 위에 떠 있어요.",
+		"entry_comment": "증기 분출구예요. 솟는 타이밍 보고 지나가요. 위 조심.",
+		"stage_color": Color(0.10, 0.15, 0.18),
+	},
+	{
+		"id": "route_perimeter",
+		"name": "외곽 순찰로",
+		"description": "외벽을 따라 도는 순찰 동선. 경비 사이를 빠르게 빠져나가면 된다.",
+		"risk": 2,
+		"reward": 2,
+		"hidden": false,
+		"unique": false,
+		"min_stage": 0, "max_stage": 2,
+		"tags": ["우회", "이동"],
+		"veil_comment": "순찰로예요. 전투는 가벼워요. 경비 사이로 빠르게 통과해요.",
+		"entry_comment": "외곽 순찰선이에요. 다 상대 안 해도 돼요. 멈추지 말고.",
+		"stage_color": Color(0.11, 0.13, 0.13),
+	},
+	{
+		"id": "route_gauntlet",
+		"name": "함정 통로",
+		"description": "보안 포탑이 빼곡한 좁은 통로. 적보다 함정이 길을 막는다.",
+		"risk": 2,
+		"reward": 3,
+		"hidden": false,
+		"unique": false,
+		"min_stage": 3, "max_stage": 5,
+		"tags": ["함정", "이동"],
+		"veil_comment": "함정 통로예요. 포탑이 많아요. 타이밍이랑 동선이 전부예요.",
+		"entry_comment": "포탑 통로예요. 위아래로 쏴요. 레이저도 조심. 끊어 가요.",
+		"stage_color": Color(0.14, 0.13, 0.10),
 	},
 ]
 

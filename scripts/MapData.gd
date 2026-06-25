@@ -1,10 +1,10 @@
 class_name MapData
 extends RefCounted
 
-# 22개 맵의 세계 형태 + platform/적 spawn/보상/함정 통합 명세.
+# 25개 맵의 세계 형태 + platform/적 spawn/보상/함정 통합 명세.
 # 명세: docs/design/world_layout.md
-# (A2 신규(2026-06-25): 막1 parking_lot/demolition_zone/pump_station, 막2 substation/testing_grounds/
-#  relay_station/warehouse/checkpoint, 막3 전투 control_corridor.)
+# (A2 신규(2026-06-25): 막1 parking_lot/demolition_zone/pump_station/perimeter, 막2 substation/
+#  testing_grounds/relay_station/warehouse/checkpoint/condenser/gauntlet, 막3 전투 control_corridor.)
 #
 # 각 layout 반환 구조:
 #   "world_type":   String  ("HORIZONTAL" / "VERTICAL_UP" / "VERTICAL_DOWN" / "ARENA")
@@ -47,6 +47,9 @@ static func get_layout(route_id: String) -> Dictionary:
 		"route_warehouse":     return _warehouse()
 		"route_checkpoint":    return _checkpoint()
 		"route_control_corridor": return _control_corridor()
+		"route_condenser":     return _condenser()
+		"route_perimeter":     return _perimeter()
+		"route_gauntlet":      return _gauntlet()
 	return {}
 
 # ─── 1. 외곽 진입로 (HORIZONTAL, 짧음) ─────────────────────────
@@ -1102,4 +1105,120 @@ static func _control_corridor() -> Dictionary:
 			"hp_pickups": [Vector2(1080, 440.0)],
 		},
 		"spikes": [],
+	}
+
+# ─── 23. 응축기 구역 (HORIZONTAL, 막2) — 증기 타이밍 + 드론(cooling 자매, 게이트 없음) ──
+# 시그니처 = 증기 분출구(SteamVent) 타이밍 통과 + 머리 위 드론. cooling과 같은 해저드 계열이나
+# 글라이드 게이트 없는 순수 통과형(드론 처리·증기 회피 학습).
+static func _condenser() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(3400.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(3280.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"platforms": [
+			{"pos": Vector2(600, 460),  "w": 190.0},
+			{"pos": Vector2(1100, 440), "w": 180.0},
+			{"pos": Vector2(1560, 460), "w": 190.0},
+			{"pos": Vector2(2040, 440), "w": 180.0},
+			{"pos": Vector2(2520, 460), "w": 190.0},
+			{"pos": Vector2(2980, 470), "w": 200.0},
+		],
+		# 증기 분출구 — 바닥에서 주기 분출. phase 생략 시 Stage가 x로 분산(엇갈림).
+		"steam_vents": [
+			{"x": 420,  "h": 280.0},
+			{"x": 880,  "h": 300.0},
+			{"x": 1340, "h": 260.0},
+			{"x": 1820, "h": 300.0},
+			{"x": 2300, "h": 280.0},
+			{"x": 2760, "h": 260.0},
+		],
+		"enemies": {
+			"patrol": [Vector2(820, 600.0), Vector2(2200, 600.0)],
+			"sniper": [],
+			"drone":  [Vector2(1100, 250.0), Vector2(2040, 240.0), Vector2(2760, 250.0)],
+			"bomber": [],
+			"shield": [],
+		},
+		"rewards": {
+			"xp_orbs":    [Vector2(1100, 410.0), Vector2(2040, 410.0)],
+			"hp_pickups": [Vector2(2980, 440.0)],
+		},
+		"spikes": [],
+	}
+
+# ─── 24. 외곽 순찰로 (HORIZONTAL, 막1) — 저밀도 traversal(전투 가벼움, 길게) ──
+# 전투 밀도가 낮은 잠행 구간 — 순찰 patrol 사이를 빠르게 통과. 전투-중심 맵들과 대비되는 호흡.
+static func _perimeter() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(3600.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(3480.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"platforms": [
+			{"pos": Vector2(560, 480),  "w": 200.0},
+			{"pos": Vector2(1100, 470), "w": 200.0},
+			{"pos": Vector2(1680, 480), "w": 200.0},
+			{"pos": Vector2(2240, 470), "w": 200.0},
+			{"pos": Vector2(2800, 480), "w": 200.0},
+		],
+		"enemies": {
+			# 저밀도 — patrol 2 + 단독 저격 1(회피 가능). 통과 중심.
+			"patrol": [Vector2(900, 600.0), Vector2(2500, 600.0)],
+			"sniper": [Vector2(1680, 448.0)],
+			"drone":  [],
+			"bomber": [],
+			"shield": [],
+		},
+		"rewards": {
+			"xp_orbs":    [Vector2(1100, 440.0), Vector2(2240, 440.0)],
+			"hp_pickups": [Vector2(2800, 450.0)],
+		},
+		"spikes": [],
+	}
+
+# ─── 25. 함정 통로 (HORIZONTAL, 막2) — 함정 내비게이션(적 적음, 포탑 다수) ──
+# 적보다 해저드가 주력 — 상·하향 주기 포탑 + 트립와이어 연동. 타이밍/동선이 핵심.
+static func _gauntlet() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(3400.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(3280.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"platforms": [
+			{"pos": Vector2(560, 460),  "w": 200.0},
+			{"pos": Vector2(1060, 440), "w": 180.0},
+			{"pos": Vector2(1560, 460), "w": 200.0},
+			{"pos": Vector2(2060, 440), "w": 180.0},
+			{"pos": Vector2(2560, 460), "w": 200.0},
+		],
+		"enemies": {
+			# 적 최소 — patrol 2만. 해저드가 주력.
+			"patrol": [Vector2(900, 600.0), Vector2(2300, 600.0)],
+			"sniper": [],
+			"drone":  [],
+			"bomber": [],
+			"shield": [],
+		},
+		"rewards": {
+			"xp_orbs":    [Vector2(1060, 410.0), Vector2(2060, 410.0)],
+			"hp_pickups": [Vector2(2560, 430.0)],
+		},
+		"spikes": [],
+		# 상·하향 주기 포탑 + 트립와이어 연동 일제 발사. 통로 체류·점프 경로 견제.
+		"traps": [
+			{"x": 1060, "y": 458.0, "dir": "down", "interval": 1.7, "phase": 0.0},
+			{"x": 2060, "y": 458.0, "dir": "down", "interval": 1.7, "phase": 0.5},
+			{"x": 1820, "y": 588.0, "dir": "up", "mode": "triggered", "trigger_id": "gt1", "burst": 3},
+			{"x": 2000, "y": 588.0, "dir": "up", "mode": "triggered", "trigger_id": "gt1", "burst": 3},
+		],
+		"tripwires": [
+			{"x": 1620, "y": 540.0, "dir": "up", "len": 200.0, "trigger_id": "gt1", "cooldown": 2.6},
+		],
 	}

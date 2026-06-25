@@ -626,6 +626,11 @@ camera:       가로 follow
 - **물류 창고 (warehouse) — HORIZONTAL, 막2 s3~5**: 컨테이너 엄폐 + 방패병·폭격기 혼합 근접.
 - **보안 검문소 (checkpoint) — HORIZONTAL, 막2 s3~5**: 검문선(트립와이어) 건드리면 앞쪽 포탑 일제 발사(subway 패턴).
 - **통제실 회랑 (control_corridor) — HORIZONTAL, 막3 전투 s6**: server_hall 계열(드론+저격) 4번째 s6 선택지. ???는 s6 guaranteed로 유지.
+- **응축기 구역 (condenser) — HORIZONTAL, 막2 s3~5**: 증기 분출구 타이밍 + 드론(cooling 자매, 글라이드 게이트 없는 순수 통과형).
+- **외곽 순찰로 (perimeter) — HORIZONTAL, 막1 s0~2**: 저밀도 traversal(전투 가벼움). 전투-중심 맵들과 대비되는 호흡.
+- **함정 통로 (gauntlet) — HORIZONTAL, 막2 s3~5**: 적 최소 + 상·하향 포탑·트립와이어 다수. 함정 내비게이션.
+
+(맵 25개 — A2 양산 1차. 30+까지는 추가 가능하나, VERTICAL/ARENA 변주는 완주 가능성·페이싱 검증 위해 플레이테스트와 병행 권장.)
 
 ---
 
