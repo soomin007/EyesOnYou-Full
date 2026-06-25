@@ -1,9 +1,10 @@
 class_name MapData
 extends RefCounted
 
-# 16개 맵의 세계 형태 + platform/적 spawn/보상/함정 통합 명세.
+# 22개 맵의 세계 형태 + platform/적 spawn/보상/함정 통합 명세.
 # 명세: docs/design/world_layout.md
-# (A2 신규: parking_lot 막1, substation·testing_grounds 막2 — 2026-06-25.)
+# (A2 신규(2026-06-25): 막1 parking_lot/demolition_zone/pump_station, 막2 substation/testing_grounds/
+#  relay_station/warehouse/checkpoint, 막3 전투 control_corridor.)
 #
 # 각 layout 반환 구조:
 #   "world_type":   String  ("HORIZONTAL" / "VERTICAL_UP" / "VERTICAL_DOWN" / "ARENA")
@@ -40,6 +41,12 @@ static func get_layout(route_id: String) -> Dictionary:
 		"route_parking_lot": return _parking_lot()
 		"route_substation":  return _substation()
 		"route_testing_grounds": return _testing_grounds()
+		"route_demolition_zone": return _demolition_zone()
+		"route_pump_station":  return _pump_station()
+		"route_relay_station": return _relay_station()
+		"route_warehouse":     return _warehouse()
+		"route_checkpoint":    return _checkpoint()
+		"route_control_corridor": return _control_corridor()
 	return {}
 
 # ─── 1. 외곽 진입로 (HORIZONTAL, 짧음) ─────────────────────────
@@ -888,4 +895,211 @@ static func _testing_grounds() -> Dictionary:
 			{"x": 1020, "y": 468.0, "dir": "down", "interval": 1.8, "phase": 0.0},
 			{"x": 1980, "y": 468.0, "dir": "down", "interval": 1.8, "phase": 0.6},
 		],
+	}
+
+# ─── 17. 철거 구역 (HORIZONTAL, 막1) — 잔해 엄폐 + 방패병, 바닥 포탑 1 ──
+# 막1 난이도 유지(patrol/방패만). 잔해 발판 + 바닥 상향 포탑 하나로 동선 변주.
+static func _demolition_zone() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(3200.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(3080.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"platforms": [
+			{"pos": Vector2(560, 470),  "w": 200.0},
+			{"pos": Vector2(1040, 450), "w": 180.0},
+			{"pos": Vector2(1560, 470), "w": 200.0},
+			{"pos": Vector2(2080, 450), "w": 180.0},
+			{"pos": Vector2(2600, 470), "w": 200.0},
+		],
+		"enemies": {
+			"patrol": [Vector2(820, 600.0), Vector2(2300, 600.0)],
+			"sniper": [],
+			"drone":  [],
+			"bomber": [],
+			"shield": [Vector2(1560, 600.0)],
+		},
+		"rewards": {
+			"xp_orbs":    [Vector2(1040, 420.0), Vector2(2080, 420.0)],
+			"hp_pickups": [],
+		},
+		"spikes": [],
+		# 바닥 상향 포탑 — 갭(점프 경로) 높이에서 견제. 발판 사이 통과 시 맞음.
+		"traps": [
+			{"x": 1300, "y": 588.0, "dir": "up", "interval": 1.8, "phase": 0.0},
+		],
+	}
+
+# ─── 18. 배수 펌프장 (HORIZONTAL, 막1) — 저격 노출 + 좁은 통로 ──
+static func _pump_station() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(3000.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(2880.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"platforms": [
+			# 펌프/파이프 발판.
+			{"pos": Vector2(540, 460),  "w": 190.0},
+			{"pos": Vector2(1000, 460), "w": 190.0},
+			{"pos": Vector2(1460, 460), "w": 200.0},
+			{"pos": Vector2(1960, 460), "w": 190.0},
+			{"pos": Vector2(2440, 470), "w": 200.0},
+		],
+		"enemies": {
+			"patrol": [Vector2(800, 600.0), Vector2(2200, 600.0)],
+			# 저격 — 파이프 위 거치. 사선 끊으며 전진.
+			"sniper": [Vector2(1460, 428.0), Vector2(2440, 438.0)],
+			"drone":  [],
+			"bomber": [],
+			"shield": [],
+		},
+		"rewards": {
+			"xp_orbs":    [Vector2(1000, 430.0), Vector2(1960, 430.0)],
+			"hp_pickups": [Vector2(2440, 440.0)],
+		},
+		"spikes": [],
+	}
+
+# ─── 19. 통신 중계소 (HORIZONTAL, 막2) — 저격+드론 복합 노출 ──
+static func _relay_station() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(3600.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(3480.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"platforms": [
+			{"pos": Vector2(600, 460),  "w": 200.0},
+			{"pos": Vector2(1080, 440), "w": 180.0},
+			{"pos": Vector2(1560, 460), "w": 200.0},
+			{"pos": Vector2(2060, 440), "w": 180.0},
+			{"pos": Vector2(2560, 460), "w": 200.0},
+			{"pos": Vector2(3040, 470), "w": 200.0},
+		],
+		"enemies": {
+			"patrol": [Vector2(900, 600.0), Vector2(2400, 600.0)],
+			# 안테나/중계기 위 저격 + 머리 위 드론 — 둘 다 동시 압박.
+			"sniper": [Vector2(1560, 428.0), Vector2(2560, 428.0)],
+			"drone":  [Vector2(1300, 230.0), Vector2(2100, 240.0), Vector2(2900, 230.0)],
+			"bomber": [],
+			"shield": [],
+		},
+		"rewards": {
+			"xp_orbs":    [Vector2(1080, 410.0), Vector2(2060, 410.0), Vector2(3040, 440.0)],
+			"hp_pickups": [Vector2(1560, 430.0)],
+		},
+		"spikes": [],
+	}
+
+# ─── 20. 물류 창고 (HORIZONTAL, 막2) — 적재함 엄폐 + 혼합 근접(방패/폭격) ──
+static func _warehouse() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(3400.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(3280.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"platforms": [
+			# 적재함(컨테이너) — 높이 변화로 엄폐 + 발판.
+			{"pos": Vector2(560, 460),  "w": 220.0},
+			{"pos": Vector2(1080, 440), "w": 180.0},
+			{"pos": Vector2(1560, 470), "w": 200.0},
+			{"pos": Vector2(2060, 440), "w": 180.0},
+			{"pos": Vector2(2560, 460), "w": 220.0},
+			{"pos": Vector2(1320, 560), "w": 120.0},
+			{"pos": Vector2(2300, 560), "w": 120.0},
+		],
+		"enemies": {
+			"patrol": [Vector2(860, 600.0), Vector2(2400, 600.0)],
+			"sniper": [],
+			"drone":  [],
+			"bomber": [Vector2(1800, 600.0)],
+			"shield": [Vector2(1080, 600.0)],
+		},
+		"rewards": {
+			"xp_orbs":    [Vector2(1080, 410.0), Vector2(2060, 410.0)],
+			"hp_pickups": [Vector2(2560, 430.0)],
+		},
+		"spikes": [],
+	}
+
+# ─── 21. 보안 검문소 (HORIZONTAL, 막2) — 저격 + 트립와이어 연동 포탑 ──
+# subway 트립와이어 패턴 재사용: 검문선(레이저)을 가로지르면 앞쪽 포탑 일제 발사.
+static func _checkpoint() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(3200.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(3080.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"platforms": [
+			{"pos": Vector2(560, 470),  "w": 200.0},
+			{"pos": Vector2(1080, 460), "w": 180.0},
+			{"pos": Vector2(1640, 470), "w": 200.0},
+			{"pos": Vector2(2160, 460), "w": 180.0},
+			{"pos": Vector2(2680, 470), "w": 200.0},
+		],
+		"enemies": {
+			"patrol": [Vector2(820, 600.0), Vector2(2400, 600.0)],
+			"sniper": [Vector2(1640, 438.0)],
+			"drone":  [],
+			"bomber": [],
+			"shield": [Vector2(2160, 600.0)],
+		},
+		"rewards": {
+			"xp_orbs":    [Vector2(1080, 430.0), Vector2(2160, 430.0)],
+			"hp_pickups": [Vector2(2680, 440.0)],
+		},
+		"spikes": [],
+		# 검문선(세로 레이저) 밟으면 앞쪽 triggered 포탑(cp1) 일제 발사 → 달려들며 회피.
+		"traps": [
+			{"x": 1500, "y": 588.0, "dir": "up", "mode": "triggered", "trigger_id": "cp1", "burst": 3},
+			{"x": 1760, "y": 588.0, "dir": "up", "mode": "triggered", "trigger_id": "cp1", "burst": 3},
+		],
+		"tripwires": [
+			{"x": 1300, "y": 540.0, "dir": "up", "len": 200.0, "trigger_id": "cp1", "cooldown": 2.4},
+		],
+	}
+
+# ─── 22. 통제실 회랑 (HORIZONTAL, 막3 전투 s6) — 드론+저격 통과형(server_hall 계열) ──
+# 막3 전투 풀(s6)의 4번째 선택지. datacenter/server_hall과 같은 적, 핵심부 접근 회랑.
+# (??? 진실 분기가 항상 보이도록 RouteData에서 hidden을 s6 guaranteed로 둠.)
+static func _control_corridor() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(4400.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(4280.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"platforms": [
+			{"pos": Vector2(620, 470),  "w": 210.0},
+			{"pos": Vector2(1080, 470), "w": 200.0},
+			{"pos": Vector2(1560, 470), "w": 210.0},
+			{"pos": Vector2(2060, 470), "w": 200.0},
+			{"pos": Vector2(2560, 470), "w": 210.0},
+			{"pos": Vector2(3060, 470), "w": 200.0},
+			{"pos": Vector2(3600, 470), "w": 210.0},
+			{"pos": Vector2(1320, 560), "w": 120.0},
+			{"pos": Vector2(2820, 560), "w": 120.0},
+		],
+		"enemies": {
+			"patrol": [Vector2(900, 600.0), Vector2(2300, 600.0), Vector2(3500, 600.0)],
+			"sniper": [Vector2(1560, 438.0), Vector2(3060, 438.0)],
+			"drone":  [Vector2(2060, 180.0), Vector2(3600, 180.0)],
+			"bomber": [],
+			"shield": [],
+		},
+		"rewards": {
+			"xp_orbs":    [Vector2(2060, 440.0), Vector2(3060, 438.0), Vector2(3600, 440.0)],
+			"hp_pickups": [Vector2(1080, 440.0)],
+		},
+		"spikes": [],
 	}

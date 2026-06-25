@@ -1,7 +1,7 @@
 class_name RouteData
 extends RefCounted
 
-# 16개 맵 — Dead Cells 스타일로 stage_index 별 후보 풀이 다름.
+# 22개 맵 — Dead Cells 스타일로 stage_index 별 후보 풀이 다름.
 #   min_stage / max_stage : 등장 가능 stage 범위 (양 끝 포함)
 #   available_stages       : 명시적 리스트 (있으면 우선, 없으면 min/max 사용)
 #   guaranteed_in_stages   : 해당 stage 풀 빌드 시 항상 포함되는 맵 (셔플 전 fix-slot)
@@ -189,7 +189,9 @@ const ALL_ROUTES: Array = [
 		"unique": true,
 		# 막3 진입 전투 풀의 진실 분기(s6) — 정적 아카이브(VEIL-1 reveal). 클리어 시 truth_seen,
 		# 엔딩 직행 폐기 → s7 lab으로 진행(특수 '진실' 엔딩의 신호).
+		# s6 전투 맵이 3종 초과(control_corridor 추가)라, 진실 분기가 항상 선택 가능하도록 guaranteed.
 		"min_stage": 6, "max_stage": 6,
+		"guaranteed_in_stages": [6],
 		"tags": ["우회", "정보"],
 		"veil_comment": "...저도 모르겠어요. 들어가실래요?",
 		"entry_comment": "...뭐가 있는 거지.",
@@ -254,6 +256,91 @@ const ALL_ROUTES: Array = [
 		"veil_comment": "실험 구역이에요. 폭격기랑 방패병, 천장 포탑까지. 화력 있으면 편해요.",
 		"entry_comment": "실험 베이예요. 위에서 쏘는 포탑 조심해요.",
 		"stage_color": Color(0.13, 0.16, 0.15),
+	},
+	{
+		"id": "route_demolition_zone",
+		"name": "철거 구역",
+		"description": "절반쯤 헐린 외곽 건물군. 잔해가 통로를 메우고, 무너진 벽 사이로 길이 난다.",
+		"risk": 2,
+		"reward": 2,
+		"hidden": false,
+		"unique": false,
+		"min_stage": 1, "max_stage": 2,
+		"tags": ["근접전", "어두운_환경", "전투"],
+		"veil_comment": "철거 구역이에요. 잔해를 엄폐로 써요. 방패병 하나 있어요.",
+		"entry_comment": "무너진 건물이에요. 발 밑 조심하고, 잔해 뒤로 붙어요.",
+		"stage_color": Color(0.14, 0.12, 0.11),
+	},
+	{
+		"id": "route_pump_station",
+		"name": "배수 펌프장",
+		"description": "외곽 빗물을 퍼올리던 펌프장. 파이프 위로 사선이 깔린다.",
+		"risk": 2,
+		"reward": 2,
+		"hidden": false,
+		"unique": false,
+		"min_stage": 1, "max_stage": 2,
+		"tags": ["원거리", "노출", "전투"],
+		"veil_comment": "펌프장이에요. 파이프 위 저격이 사선을 잡아요. 엄폐 끊어 가요.",
+		"entry_comment": "펌프 설비예요. 위에서 노려요. 한 번에 붙어요.",
+		"stage_color": Color(0.10, 0.14, 0.16),
+	},
+	{
+		"id": "route_relay_station",
+		"name": "통신 중계소",
+		"description": "시설 교신을 중계하는 안테나 구역. 중계기 위 저격과 머리 위 드론이 겹친다.",
+		"risk": 3,
+		"reward": 3,
+		"hidden": false,
+		"unique": false,
+		"min_stage": 3, "max_stage": 5,
+		"tags": ["원거리", "드론", "노출", "전투"],
+		"veil_comment": "중계소예요. 저격이랑 드론이 동시에 와요. 엄폐 짧게, 빠르게.",
+		"entry_comment": "통신 중계기예요. 위아래로 사선이에요. 멈추지 말아요.",
+		"stage_color": Color(0.12, 0.16, 0.18),
+	},
+	{
+		"id": "route_warehouse",
+		"name": "물류 창고",
+		"description": "시설 보급을 쌓아둔 적재 창고. 컨테이너가 미로처럼 시야를 가른다.",
+		"risk": 2,
+		"reward": 3,
+		"hidden": false,
+		"unique": false,
+		"min_stage": 3, "max_stage": 5,
+		"tags": ["근접전", "전투"],
+		"veil_comment": "물류 창고예요. 컨테이너 사이로 폭격기랑 방패병. 화력 있으면 편해요.",
+		"entry_comment": "적재 창고예요. 컨테이너를 엄폐로. 근접 조심해요.",
+		"stage_color": Color(0.15, 0.14, 0.12),
+	},
+	{
+		"id": "route_checkpoint",
+		"name": "보안 검문소",
+		"description": "내부 구역을 나누는 보안 검문선. 검문 레이저를 건드리면 포탑이 깨어난다.",
+		"risk": 2,
+		"reward": 2,
+		"hidden": false,
+		"unique": false,
+		"min_stage": 3, "max_stage": 5,
+		"tags": ["함정", "원거리", "전투"],
+		"veil_comment": "검문소예요. 바닥 레이저 건드리면 포탑이 일제히 쏴요. 타이밍 봐요.",
+		"entry_comment": "보안 검문선이에요. 레이저 밟으면 앞에서 쏴와요. 끊어 가요.",
+		"stage_color": Color(0.16, 0.14, 0.16),
+	},
+	{
+		"id": "route_control_corridor",
+		"name": "통제실 회랑",
+		"description": "핵심부 통제실로 이어지는 회랑. 데이터가 흐르는 만큼 감시도 두텁다.",
+		"risk": 3,
+		"reward": 3,
+		"hidden": false,
+		"unique": false,
+		# 막3 전투 풀(s6) — datacenter/server_hall과 같은 통과형. ???(guaranteed)와 함께 선택.
+		"min_stage": 6, "max_stage": 6,
+		"tags": ["전투", "드론", "원거리"],
+		"veil_comment": "통제실 회랑이에요. 드론·저격 동시에. 핵심부가 코앞이에요.",
+		"entry_comment": "통제실 직전이에요. 사선 많아요. 엄폐 쓰면서 빠져요.",
+		"stage_color": Color(0.15, 0.17, 0.21),
 	},
 ]
 
