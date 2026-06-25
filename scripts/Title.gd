@@ -6,7 +6,7 @@ extends Control
 #   STATE_TUTOR : 튜토리얼부터 시작? 예 / 아니오 / 뒤로
 # 각 단계는 Buttons VBox를 비우고 다시 빌드. ESC/패드 B는 한 단계 뒤로.
 
-enum { STATE_MAIN, STATE_MODE, STATE_TUTOR, STATE_NEWGAME_CONFIRM }
+enum { STATE_MAIN, STATE_MODE, STATE_TUTOR, STATE_NEWGAME_CONFIRM, STATE_PATCHNOTES }
 
 @onready var hint_label: Label = $Center/V/Hint
 @onready var buttons_box: VBoxContainer = $Center/V/Buttons
@@ -20,6 +20,7 @@ var picked_story: bool = false
 # STATE_MODE 전용 설명 패널 (오른쪽 회색 박스).
 var description_panel: PanelContainer = null
 var patch_panel: PanelContainer = null
+var patch_v: VBoxContainer = null
 var description_title_label: Label = null
 var description_text_label: Label = null
 var description_icon: ColorRect = null
@@ -83,9 +84,9 @@ func _build_description_panel() -> void:
 	v.add_child(description_text_label)
 
 func _build_patch_panel() -> void:
-	# STATE_MAIN에서 보이는 우측 "최근 업데이트" 박스. GameInfo.PATCH_NOTES 최신 1건.
-	var patch: Dictionary = GameInfo.latest_patch()
-	if patch.is_empty():
+	# 우측 "최근 업데이트" 박스(컨테이너만 생성). STATE_MAIN은 최신 1건, STATE_PATCHNOTES는
+	# 좌측 목록에서 고른 패치를 보여준다. 내용 채우기는 _fill_patch_panel이 담당.
+	if GameInfo.PATCH_NOTES.is_empty():
 		return
 	patch_panel = PanelContainer.new()
 	patch_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
@@ -109,21 +110,31 @@ func _build_patch_panel() -> void:
 	sb.corner_radius_bottom_right = 6
 	patch_panel.add_theme_stylebox_override("panel", sb)
 	add_child(patch_panel)
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 10)
-	patch_panel.add_child(v)
+	patch_v = VBoxContainer.new()
+	patch_v.add_theme_constant_override("separation", 10)
+	patch_panel.add_child(patch_v)
+	_fill_patch_panel(GameInfo.latest_patch(), true)
+
+# 우측 패치 패널 내용을 채운다. latest=true면 "최근 업데이트 · 날짜"(STATE_MAIN), false면 날짜만(목록 열람).
+func _fill_patch_panel(patch: Dictionary, latest: bool) -> void:
+	if patch_v == null:
+		return
+	for c in patch_v.get_children():
+		c.queue_free()
+	if patch.is_empty():
+		return
 	var header := Label.new()
-	header.text = "최근 업데이트 · %s" % str(patch.get("date", ""))
+	header.text = ("최근 업데이트 · %s" % str(patch.get("date", ""))) if latest else str(patch.get("date", ""))
 	header.add_theme_font_size_override("font_size", 19)
 	header.add_theme_color_override("font_color", Color(0.72, 0.85, 0.98))
-	v.add_child(header)
+	patch_v.add_child(header)
 	var subtitle: String = str(patch.get("title", ""))
 	if subtitle != "":
 		var sub := Label.new()
 		sub.text = subtitle
 		sub.add_theme_font_size_override("font_size", 15)
 		sub.add_theme_color_override("font_color", Color(0.95, 0.95, 0.95))
-		v.add_child(sub)
+		patch_v.add_child(sub)
 	for item in patch.get("items", []):
 		var l := Label.new()
 		l.text = "· " + str(item)
@@ -131,7 +142,7 @@ func _build_patch_panel() -> void:
 		l.add_theme_color_override("font_color", Color(0.78, 0.82, 0.88))
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		l.custom_minimum_size = Vector2(360, 0)
-		v.add_child(l)
+		patch_v.add_child(l)
 
 func _on_input_kind_changed(_kind: String) -> void:
 	_refresh_hint()
@@ -177,11 +188,14 @@ func _set_state(new_state: int) -> void:
 	if description_panel != null:
 		description_panel.visible = (new_state == STATE_MODE)
 	if patch_panel != null:
-		patch_panel.visible = (new_state == STATE_MAIN)
+		patch_panel.visible = (new_state == STATE_MAIN or new_state == STATE_PATCHNOTES)
 	if center_node != null:
-		center_node.anchor_right = 0.55 if (new_state == STATE_MODE or new_state == STATE_MAIN) else 1.0
+		var split: bool = new_state == STATE_MODE or new_state == STATE_MAIN or new_state == STATE_PATCHNOTES
+		center_node.anchor_right = 0.55 if split else 1.0
 	match state:
 		STATE_MAIN:
+			# 메인 재진입 시 우측 패널을 최신 패치로 되돌린다(업데이트 내역 열람 후 복귀 대비).
+			_fill_patch_panel(GameInfo.latest_patch(), true)
 			var b_start := _make_button("게임 시작")
 			b_start.pressed.connect(_on_start_pressed)
 			buttons_box.add_child(b_start)
@@ -193,6 +207,10 @@ func _set_state(new_state: int) -> void:
 			var b_settings := _make_button("설정")
 			b_settings.pressed.connect(_on_settings_pressed)
 			buttons_box.add_child(b_settings)
+			if not GameInfo.PATCH_NOTES.is_empty():
+				var b_patch := _make_button("업데이트 내역")
+				b_patch.pressed.connect(_set_state.bind(STATE_PATCHNOTES))
+				buttons_box.add_child(b_patch)
 			var b_feedback := _make_button("피드백 보내기")
 			b_feedback.pressed.connect(_on_feedback_pressed)
 			buttons_box.add_child(b_feedback)
@@ -251,6 +269,20 @@ func _set_state(new_state: int) -> void:
 			b_cancel.pressed.connect(_set_state.bind(STATE_MAIN))
 			buttons_box.add_child(b_cancel)
 			b_cancel.grab_focus.call_deferred()
+		STATE_PATCHNOTES:
+			# 좌측: 역대 패치 목록(날짜 + 제목). 포커스/마우스 호버로 우측 패널에 그 패치 상세를 펼침.
+			for i in GameInfo.PATCH_NOTES.size():
+				var p: Dictionary = GameInfo.PATCH_NOTES[i]
+				var b := _make_button("%s   %s" % [str(p.get("date", "")), str(p.get("title", ""))])
+				b.focus_entered.connect(_fill_patch_panel.bind(p, false))
+				b.mouse_entered.connect(_fill_patch_panel.bind(p, false))
+				buttons_box.add_child(b)
+			var b_back := _make_button("뒤로")
+			b_back.pressed.connect(_on_back_pressed)
+			buttons_box.add_child(b_back)
+			if not GameInfo.PATCH_NOTES.is_empty():
+				_fill_patch_panel(GameInfo.PATCH_NOTES[0], false)
+				(buttons_box.get_child(0) as Button).grab_focus.call_deferred()
 	SfxPlayer.wire_ui_buttons(buttons_box)
 	_refresh_hint()
 
@@ -371,6 +403,8 @@ func _on_back_pressed() -> void:
 		STATE_MODE:
 			_set_state(STATE_MAIN)
 		STATE_NEWGAME_CONFIRM:
+			_set_state(STATE_MAIN)
+		STATE_PATCHNOTES:
 			_set_state(STATE_MAIN)
 
 func _on_settings_pressed() -> void:

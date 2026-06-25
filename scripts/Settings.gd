@@ -140,7 +140,7 @@ func _build_keybind_tab() -> Control:
 	outer.add_child(v)
 
 	var hint := Label.new()
-	hint.text = "키 또는 마우스 버튼을 변경하려면 슬롯을 클릭한 뒤 새 입력을 누르세요. 각 액션당 최대 2개까지 등록할 수 있어요."
+	hint.text = "슬롯을 클릭한 뒤 새 키나 마우스 버튼을 누르면 변경됩니다. 액션당 슬롯은 2개까지 보여요. 화면에 없는 기본 보조 키(점프 Z·↑, 사격 좌클릭, 대시 Shift, 스킬 우클릭)도 함께 작동하고, '기본값으로'를 누르면 모두 초기화됩니다."
 	hint.add_theme_font_size_override("font_size", 13)
 	hint.add_theme_color_override("font_color", Color(0.62, 0.72, 0.85))
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
