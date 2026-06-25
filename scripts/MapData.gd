@@ -1,8 +1,9 @@
 class_name MapData
 extends RefCounted
 
-# 11개 맵의 세계 형태 + platform/적 spawn/보상/함정 통합 명세.
+# 16개 맵의 세계 형태 + platform/적 spawn/보상/함정 통합 명세.
 # 명세: docs/design/world_layout.md
+# (A2 신규: parking_lot 막1, substation·testing_grounds 막2 — 2026-06-25.)
 #
 # 각 layout 반환 구조:
 #   "world_type":   String  ("HORIZONTAL" / "VERTICAL_UP" / "VERTICAL_DOWN" / "ARENA")
@@ -36,6 +37,9 @@ static func get_layout(route_id: String) -> Dictionary:
 		"route_hidden":     return _hidden()
 		"route_blackout":   return _blackout()
 		"route_server_hall": return _server_hall()
+		"route_parking_lot": return _parking_lot()
+		"route_substation":  return _substation()
+		"route_testing_grounds": return _testing_grounds()
 	return {}
 
 # ─── 1. 외곽 진입로 (HORIZONTAL, 짧음) ─────────────────────────
@@ -771,4 +775,117 @@ static func _server_hall() -> Dictionary:
 			"hp_pickups": [Vector2(4050, 440)],
 		},
 		"spikes": [],
+	}
+
+# ─── 14. 지하 주차장 (HORIZONTAL, 막1) — 차량/기둥 엄폐, 방패병 도입 ──
+# 외곽 침투 변형(s0~1 풀에 합류 → s0 선택지 확대). 차 지붕을 낮은 발판으로, patrol + 방패병 1로
+# "정면을 막는 적"(상성=폭발물)을 부담 없이 소개. 통과형(POSITION) — 다 싸울 필요 없음.
+static func _parking_lot() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(3000.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(2880.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"platforms": [
+			# 주차 차량 지붕(낮은 발판) — 지면 540에서 단순점프로 닿음.
+			{"pos": Vector2(520, 470),  "w": 180.0},
+			{"pos": Vector2(980, 470),  "w": 180.0},
+			{"pos": Vector2(1480, 470), "w": 200.0},
+			{"pos": Vector2(2000, 470), "w": 180.0},
+			{"pos": Vector2(2460, 470), "w": 180.0},
+			# 콘크리트 기둥 사이 낮은 엄폐
+			{"pos": Vector2(1240, 560), "w": 110.0},
+			{"pos": Vector2(2230, 560), "w": 110.0},
+		],
+		"enemies": {
+			"patrol": [Vector2(760, 600.0), Vector2(1700, 600.0), Vector2(2300, 600.0)],
+			"sniper": [],
+			"drone":  [],
+			"bomber": [],
+			# 방패병 1 — 통로 입구에서 정면 차단(상성=폭발물).
+			"shield": [Vector2(1480, 600.0)],
+		},
+		"rewards": {
+			"xp_orbs":    [Vector2(1460, 440.0), Vector2(1500, 440.0)],
+			"hp_pickups": [],
+		},
+		"spikes": [],
+	}
+
+# ─── 15. 변전소 (HORIZONTAL, 막2) — 옥외 변전 설비. 저격 노출 + 드론 압박 ──
+# server_hall 계열(드론+저격 통과형)의 막2 변형. 변압기 뱅크 위에 저격 거치, 머리 위 드론.
+# 엄폐(변압기 발판)로 사선 끊으며 빠지는 노출 전투 맵.
+static func _substation() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(3600.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(3480.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"platforms": [
+			# 변압기 뱅크(중간 발판) — 드론 회피·저격 사선 차단 엄폐. 지면 540에서 단순점프.
+			{"pos": Vector2(620, 460),  "w": 200.0},
+			{"pos": Vector2(1080, 460), "w": 170.0},
+			{"pos": Vector2(1520, 460), "w": 200.0},
+			{"pos": Vector2(2040, 460), "w": 180.0},
+			{"pos": Vector2(2520, 460), "w": 200.0},
+			{"pos": Vector2(3020, 470), "w": 200.0},
+		],
+		"enemies": {
+			"patrol": [Vector2(900, 600.0), Vector2(2300, 600.0)],
+			# 저격 — 변압기 위 거치. 노출 구간 사선.
+			"sniper": [Vector2(1520, 428.0), Vector2(2520, 428.0)],
+			# 드론 — 머리 위 호버(상성=글라이드).
+			"drone":  [Vector2(1300, 230.0), Vector2(2700, 240.0)],
+			"bomber": [],
+			"shield": [],
+		},
+		"rewards": {
+			"xp_orbs":    [Vector2(2040, 430.0), Vector2(3020, 440.0)],
+			"hp_pickups": [Vector2(1520, 430.0)],
+		},
+		"spikes": [],
+	}
+
+# ─── 16. 실험 구역 (HORIZONTAL, 막2) — 봉인 실험 베이. 혼합 적 + 하향 포탑 함정 ──
+# 폭격기(상성=fire_boost)·방패병 혼합 + 관측 발판 밑면 하향 포탑(subway 포탑 패턴). 화력·기동 복합.
+static func _testing_grounds() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(3400.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(3280.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"platforms": [
+			# 실험 베이 칸막이/관측 발판.
+			{"pos": Vector2(560, 470),  "w": 200.0},
+			{"pos": Vector2(1020, 450), "w": 180.0},
+			{"pos": Vector2(1480, 470), "w": 200.0},
+			{"pos": Vector2(1980, 450), "w": 180.0},
+			{"pos": Vector2(2460, 470), "w": 200.0},
+			{"pos": Vector2(2900, 470), "w": 180.0},
+		],
+		"enemies": {
+			"patrol": [Vector2(820, 600.0), Vector2(2200, 600.0)],
+			"sniper": [],
+			"drone":  [],
+			# 폭격기 — 붙기 전에 화력으로(상성=fire_boost).
+			"bomber": [Vector2(1700, 600.0)],
+			# 방패병 — 정면 차단(상성=폭발물).
+			"shield": [Vector2(2460, 600.0)],
+		},
+		"rewards": {
+			"xp_orbs":    [Vector2(1020, 420.0), Vector2(1980, 420.0)],
+			"hp_pickups": [Vector2(2900, 440.0)],
+		},
+		"spikes": [],
+		# 하향 포탑 — 관측 발판 밑면 주기 발사(subway 포탑 패턴). 통로 체류 견제.
+		"traps": [
+			{"x": 1020, "y": 468.0, "dir": "down", "interval": 1.8, "phase": 0.0},
+			{"x": 1980, "y": 468.0, "dir": "down", "interval": 1.8, "phase": 0.6},
+		],
 	}

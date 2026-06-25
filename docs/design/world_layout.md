@@ -612,6 +612,17 @@ camera:       가로 follow
 
 ---
 
+### 2.x A2 확장 맵 (좌표 진실 = MapData.gd)
+
+본편 A2 분량 확대로 추가/합류한 맵. 상세 좌표는 `MapData.gd`가 진실 — 여기선 역할만.
+
+- **서버 회랑 (server_hall) — HORIZONTAL, 막3 전투 s6**: datacenter와 같은 적(드론+저격) 통과형 회랑. 핵심부 직전.
+- **지하 주차장 (parking_lot) — HORIZONTAL, 막1 s0~1**: 차량/기둥 엄폐 + 방패병 1 도입. s0 선택지를 2→3으로.
+- **변전소 (substation) — HORIZONTAL, 막2 s3~5**: 변압기 위 저격 + 머리 위 드론. 노출 전투(server_hall 막2 변형).
+- **실험 구역 (testing_grounds) — HORIZONTAL, 막2 s3~5**: 폭격기·방패병 혼합 + 관측 발판 밑 하향 포탑(함정).
+
+---
+
 ### 2.12 스킬-적 상성 참고 (맵 주력 적 → 유리한 스킬)
 
 > **이건 추천/출현 로직(코드)이지 적 배치 변경이 아니다.** 위 §2의 맵 좌표·적 spawn은

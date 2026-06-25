@@ -1,7 +1,7 @@
 class_name RouteData
 extends RefCounted
 
-# 11개 맵 — Dead Cells 스타일로 stage_index 별 후보 풀이 다름.
+# 16개 맵 — Dead Cells 스타일로 stage_index 별 후보 풀이 다름.
 #   min_stage / max_stage : 등장 가능 stage 범위 (양 끝 포함)
 #   available_stages       : 명시적 리스트 (있으면 우선, 없으면 min/max 사용)
 #   guaranteed_in_stages   : 해당 stage 풀 빌드 시 항상 포함되는 맵 (셔플 전 fix-slot)
@@ -209,6 +209,51 @@ const ALL_ROUTES: Array = [
 		"veil_comment": "서버 회랑이에요. 드론이 위, 저격이 랙 위에. 랙을 엄폐로 쓰면서 빠져요.",
 		"entry_comment": "핵심부 직전이에요. 여기만 지나면... 조심해요.",
 		"stage_color": Color(0.16, 0.18, 0.22),
+	},
+	{
+		"id": "route_parking_lot",
+		"name": "지하 주차장",
+		"description": "외곽과 시설을 잇는 지하 주차 구역. 버려진 차량과 기둥이 시야를 가른다.",
+		"risk": 1,
+		"reward": 2,
+		"hidden": false,
+		"unique": false,
+		# 막1 침투 변형 — 외곽 단계(s0~1) 풀에 합류. s0 선택지를 2→3으로.
+		"min_stage": 0, "max_stage": 1,
+		"tags": ["우회", "근접전", "어두운_환경"],
+		"veil_comment": "지하 주차장이에요. 차 사이로 가요. 정면 막는 적이 하나 있어요.",
+		"entry_comment": "주차장이에요. 차를 엄폐로 써요. 다 상대 안 해도 돼요.",
+		"stage_color": Color(0.12, 0.12, 0.15),
+	},
+	{
+		"id": "route_substation",
+		"name": "변전소",
+		"description": "시설 전력을 받는 옥외 변전 설비. 변압기 위로 저격선이 깔리고 드론이 점한다.",
+		"risk": 3,
+		"reward": 3,
+		"hidden": false,
+		"unique": false,
+		# 막2 잠입 노출 전투 — 시설 내부 단계(s3~5) 풀.
+		"min_stage": 3, "max_stage": 5,
+		"tags": ["원거리", "드론", "노출", "전투"],
+		"veil_comment": "변전소예요. 변압기 위 저격, 머리 위 드론. 엄폐 짧게 끊어 가요.",
+		"entry_comment": "변전 설비예요. 사선이 많아요. 변압기 뒤로 붙어요.",
+		"stage_color": Color(0.16, 0.15, 0.10),
+	},
+	{
+		"id": "route_testing_grounds",
+		"name": "실험 구역",
+		"description": "봉인된 실험 베이가 늘어선 구역. 무엇을 시험했는지 관측창마다 지워져 있다.",
+		"risk": 2,
+		"reward": 3,
+		"hidden": false,
+		"unique": false,
+		# 막2 잠입 혼합 전투 — 시설 내부 단계(s3~5) 풀.
+		"min_stage": 3, "max_stage": 5,
+		"tags": ["근접전", "함정", "전투"],
+		"veil_comment": "실험 구역이에요. 폭격기랑 방패병, 천장 포탑까지. 화력 있으면 편해요.",
+		"entry_comment": "실험 베이예요. 위에서 쏘는 포탑 조심해요.",
+		"stage_color": Color(0.13, 0.16, 0.15),
 	},
 ]
 
