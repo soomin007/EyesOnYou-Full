@@ -73,11 +73,14 @@ func _begin_act_card() -> void:
 	var act: Dictionary = GameState.ACTS[act_idx]
 	_act_card = _build_act_card(act_idx, str(act.get("name", "")))
 	add_child(_act_card)  # 마지막 자식 = 최상단 → 브리핑 위를 덮음
-	_act_card.modulate.a = 0.0
+	# 카드 배경(ColorRect)은 불투명 그대로 첫 프레임부터 화면을 덮어 브리핑 박스·그림 누수를 차단하고,
+	# 텍스트(Content)만 페이드한다 — 카드 전체를 페이드하면 투명 구간에 아래 브리핑이 비친다(사용자 보고).
+	var content: Control = _act_card.get_node("Content")
+	content.modulate.a = 0.0
 	_card_tween = create_tween()
-	_card_tween.tween_property(_act_card, "modulate:a", 1.0, 0.4)
+	_card_tween.tween_property(content, "modulate:a", 1.0, 0.4)
 	_card_tween.tween_interval(1.1)
-	_card_tween.tween_property(_act_card, "modulate:a", 0.0, 0.5)
+	_card_tween.tween_property(content, "modulate:a", 0.0, 0.5)
 	_card_tween.tween_callback(_finish_card)
 
 func _build_act_card(act_idx: int, act_name: String) -> Control:
@@ -86,6 +89,7 @@ func _build_act_card(act_idx: int, act_name: String) -> Control:
 	card.set_anchors_preset(Control.PRESET_FULL_RECT)
 	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var center := VBoxContainer.new()
+	center.name = "Content"  # _begin_act_card가 이 노드만 페이드 (배경은 불투명 유지)
 	center.alignment = BoxContainer.ALIGNMENT_CENTER
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	center.add_theme_constant_override("separation", 12)
