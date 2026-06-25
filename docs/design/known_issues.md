@@ -46,6 +46,22 @@
   타게 하거나, ⓒ 변경 스크립트를 인스턴스화하는 래퍼 씬으로 확인할 것. 미사용 prefix(`_delta`)를 쓰는
   파라미터를 나중에 참조하게 되면 prefix를 떼는 것도 잊지 말 것.
 
+- **`const` 배열/사전은 오토로드 멤버(`GameState.X`)를 못 담는다 — 컴파일 에러.**
+  `const CHOICES = [{"id": GameState.DISPOSAL_EXTRACT}]`처럼 const 초기값에 오토로드의 const/멤버를
+  참조하면 "non-constant value in constant expression"으로 컴파일 실패(2026-06-25 DisposalChoiceOverlay).
+  오토로드는 런타임 싱글톤이라 컴파일 타임 상수가 아니다. → 런타임 지역변수(`var`)나 static 함수로 빼서
+  반환. 단일 소스 유지하려면 id 문자열을 오토로드 const로 두되 *참조는 런타임에*.
+
+- **새 `class_name` 스크립트는 `--import` 후에야 헤드리스 씬 검증에서 보인다.**
+  방금 만든 `class_name Foo`를 래퍼 씬에서 쓰면 "Identifier 'Foo' not declared"로 파스 실패(2026-06-25).
+  전역 클래스 캐시(`update_scripts_classes`)가 아직 비어서. → 새 class_name 추가 후 검증 전 한 번
+  `godot --headless --import`로 캐시 갱신(로그에 `update_scripts_classes | Foo` 확인) → 그다음 씬 실행.
+  (래퍼 검증 패턴: import → `--headless res://_check.tscn --quit-after N`.)
+
+- **헤드리스 검증 끝의 `ObjectDB instances leaked` / `1 resources still in use at exit`는 대개 무해.**
+  타이핑/트윈이 진행 중인 씬(Ending 등)을 `get_tree().quit()`/`--quit-after`로 끊으면 미정리 노드·리소스가
+  남아 이 경고가 뜬다. SCRIPT ERROR/Parse Error가 없으면 로직엔 영향 없음(2026-06-25 B2/B3 검증).
+
 - **Edit 도구 들여쓰기 불일치 — Read 표시는 줄번호 뒤 탭이 하나 더 붙어 보인다(2026-06-15).**
   Read 출력의 들여쓰기를 그대로 세어 old_string을 만들면 탭 수가 1 어긋나 "String not found"가 반복된다.
   → 들여쓰기가 안 맞으면 `sed -n 'N,Mp' file | cat -A`로 실제 탭(^I) 수를 확인하고 맞춘다(GDScript는 탭 들여쓰기).
