@@ -7,6 +7,13 @@ extends RefCounted
 #   guaranteed_in_stages   : 해당 stage 풀 빌드 시 항상 포함되는 맵 (셔플 전 fix-slot)
 #   unique                 : true면 한 번 선택 후 다시 등장 안 함 (현재는 route_history 필터로 보편 규칙)
 #   hidden                 : VEIL 추천 대상에서 제외 (??? 전용)
+#
+# ─── 막 정체성 계약 (단일 소스 = docs/design/act_identity.md) — 새 맵 추가 시 지킬 것 ───
+#   막1(침투, s0~2) 팔레트 = **인간 경비만**(patrol/방패병/저격). 드론·폭격기·증기·포탑·레이저는 막2+ 전용.
+#     → 막2 진입의 "기계가 깨어난다" 문턱(첫 드론 반응, B-4)이 성립하려면 막1엔 기계 위협이 없어야 한다.
+#     (현재 막1 맵 8종 전부 drone/bomber [] — 누수 없음. 막1 맵에 drone/bomber 넣지 말 것.)
+#   막1 난이도 램프 = s0 안전(검증 오프너만) / s1 변형(risk≤2) / s2 고조(risk3 watchtower 등). 오프닝 막에
+#     risk3 스파이크 금지 — 새 막1 맵의 등장 stage는 이 램프에 맞춰 배치.
 
 const ALL_ROUTES: Array = [
 	{
@@ -92,8 +99,9 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		# 막1(외곽) 노출 전투 — 외벽 옥상 직후 감시탑(둘 다 노출+높이).
-		"min_stage": 1, "max_stage": 2,
+		# 막1 고조(B-3 난이도 램프) — 막1 유일 risk3(저격 둥지 3). s2 전용으로 빼 오프닝 막 s1 스파이크 제거.
+		# act_identity.md §2-3: s0 안전 / s1 변형(risk≤2) / s2 고조(이 맵 = 막1 클라이맥스, 노출결).
+		"min_stage": 2, "max_stage": 2,
 		"tags": ["원거리", "전투", "노출"],
 		"veil_comment": "감시탑은 위험해요. 저격이 많아요. 엄폐 짧게, 이동은 빠르게.",
 		"entry_comment": "관제 구역이에요. 시야 안에 들어가는 순간 쏴와요.",
