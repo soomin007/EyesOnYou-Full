@@ -316,7 +316,10 @@ func _try_jump() -> bool:
 		SfxPlayer.play("player_jump")
 		return true
 	elif jumps_used < max_jumps:
-		velocity.y = JUMP_VELOCITY * 0.92
+		# 공중 점프는 "설정"이라, 첫 점프로 더 빠르게 상승 중(t<~0.03s)에 누르면 속도가 *깎여* 높이를
+		# 잃었다(피드백: "너무 빨리 누르면 못 올라감"). min으로 현재 상승보다 느려지지 않게 — 일찍 눌러도
+		# 손해 없음(최대 높이·글라이드 게이트 calibration 불변). 정점 근처에서 누르면 종전대로 풀 부스트.
+		velocity.y = min(velocity.y, JUMP_VELOCITY * 0.92)
 		jumps_used += 1
 		# 사용자: 더블점프 전용 사운드는 어색해서 일반 점프 사운드 재사용.
 		SfxPlayer.play("player_jump")
