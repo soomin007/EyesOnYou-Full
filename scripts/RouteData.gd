@@ -14,6 +14,12 @@ extends RefCounted
 #     (현재 막1 맵 8종 전부 drone/bomber [] — 누수 없음. 막1 맵에 drone/bomber 넣지 말 것.)
 #   막1 난이도 램프 = s0 안전(검증 오프너만) / s1 변형(risk≤2) / s2 고조(risk3 watchtower 등). 오프닝 막에
 #     risk3 스파이크 금지 — 새 막1 맵의 등장 stage는 이 램프에 맞춰 배치.
+#   막2(잠입, s3~5) 팔레트 = **기계·함정 도입**(드론/폭격기/증기/포탑/레이저). 위협의 장치화 = 막2 정체성.
+#     램프 = s3 도입(risk2, 기계 입문) / s4 전개(ward ??? 복선 보장) / s5 고조(risk3 substation·relay + blackout
+#     도전 보장). risk3 맵은 막2 첫 stage(s3) 금지 — 문턱 직후 스파이크 방지.
+#   막3(진실·탈출, s6~8) = 선형 클라이맥스. s6 전투 풀(datacenter/server_hall/control_corridor + ??? 보장)
+#     / s7 lab 보스(단일) / s8 escape 탈출(단일). 시야 붕괴(VeilSight degradation)가 막3 고유 비트.
+#     ★후반 확장 시 라이벌 VEIL 첫 간섭의 씨앗 자리(rival_veil_concept.md, 5막 전제) — 현재는 미구현.
 
 const ALL_ROUTES: Array = [
 	{
@@ -243,8 +249,9 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		# 막2 잠입 노출 전투 — 시설 내부 단계(s3~5) 풀.
-		"min_stage": 3, "max_stage": 5,
+		# 막2 고조(난이도 램프) — risk3(저격+드론 동시). 막2 첫 stage(s3) 제외해 문턱 직후 스파이크 제거.
+		# act_identity.md §4: s3 도입(r2 기계 입문) / s4 전개 / s5 고조. s4~5 전개·고조 구간에 배치.
+		"min_stage": 4, "max_stage": 5,
 		"tags": ["원거리", "드론", "노출", "전투"],
 		"veil_comment": "변전소예요. 변압기 위 저격, 머리 위 드론. 엄폐 짧게 끊어 가요.",
 		"entry_comment": "변전 설비예요. 사선이 많아요. 변압기 뒤로 붙어요.",
@@ -301,7 +308,8 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		"min_stage": 3, "max_stage": 5,
+		# 막2 고조(난이도 램프) — risk3(저격+드론 동시). substation과 함께 s3 제외(문턱 직후 스파이크 방지).
+		"min_stage": 4, "max_stage": 5,
 		"tags": ["원거리", "드론", "노출", "전투"],
 		"veil_comment": "중계소예요. 저격이랑 드론이 동시에 와요. 엄폐 짧게, 빠르게.",
 		"entry_comment": "통신 중계기예요. 위아래로 사선이에요. 멈추지 말아요.",
