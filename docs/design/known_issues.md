@@ -277,6 +277,14 @@
   `get_tree().paused`는 SceneTree 전역이라 scene 전환에 carry된다. overlay/도전방 등에서 paused 해제
   누락 시 다음 scene이 freeze. 새 overlay/scene 추가 시 paused 해제 안전판을 같은 패턴으로 둘 것.
 
+- **검증 하니스가 Stage를 *단독* 부팅하면 `get_tree().paused=true`로 시작 → `_physics_process` 안 돈다.**
+  실제 게임은 Briefing._ready가 `paused=false`로 풀고 Stage로 오지만, 래퍼에서 Stage.tscn을 직접
+  인스턴스화하면 그 해제를 건너뛰어 트리가 paused로 남는다. 그러면 이동 발판(MovingPlatform) 등
+  `_physics_process` 구동 요소가 첫 프레임만 돌고 멈춰 "안 움직인다"로 오판된다(2026-06-26 MovingPlatform
+  검증에서 dx=0으로 나와 메커닉 버그로 오해할 뻔). → **Stage 단독 부팅 검증은 `add_child` 직후
+  `get_tree().paused = false`를 명시**해 실게임 조건(unpause)을 만들 것. (메커닉이 unpause에서 정상이면
+  실게임에서도 정상.)
+
 - **트리에서 빠진 노드의 콜백/틱이 `get_tree()`를 쓰면 null 크래시.**
   플레이어 사망 → 씬 전환 중, 아직 free 안 된 적의 tween/timer 콜백이나 한 프레임 늦은 틱이
   `get_tree().get_nodes_in_group(...)`를 호출 → "Cannot call method ... on a null value"(Enemy.gd, 2026-06-09).

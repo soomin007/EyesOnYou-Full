@@ -50,6 +50,7 @@ static func get_layout(route_id: String) -> Dictionary:
 		"route_condenser":     return _condenser()
 		"route_perimeter":     return _perimeter()
 		"route_gauntlet":      return _gauntlet()
+		"route_freight_lift":  return _freight_lift()
 	return {}
 
 # ─── 1. 외곽 진입로 (HORIZONTAL, 짧음) ─────────────────────────
@@ -1220,5 +1221,48 @@ static func _gauntlet() -> Dictionary:
 		],
 		"tripwires": [
 			{"x": 1620, "y": 540.0, "dir": "up", "len": 200.0, "trigger_id": "gt1", "cooldown": 2.6},
+		],
+	}
+
+# ─── 26. 화물 리프트 (HORIZONTAL, 막2) — 이동 발판 기믹 주역 ──
+# reskin 탈피 첫 "진짜 기믹 맵"(2026-06-26, act_identity 2번 레버). 정비 화물구역:
+# 스파이크 구덩이(dmg2) 위를 왕복하는 화물 리프트(MovingPlatform)를 타이밍 맞춰 건넌다.
+# 발판이 동선의 *주역* — 적은 최소(patrol 3). 지면은 연속이라 구덩이=스파이크 구간(한 구덩이 도보
+# 횡단≈치명) → 발판이 안전 동선. 단 떨어져도 즉사 아님(dmg2 진입 1회=HP 손실)이라 완주 안전.
+# 중앙 수직 리프트는 XP 보너스(선택 — 메인 동선 아님). cycle 넉넉(5~5.5s)·phase 엇갈림으로 리듬.
+static func _freight_lift() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(3300.0, 720.0),
+		"player_start": Vector2(140.0, 520.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(3160.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"platforms": [
+			# 수직 리프트 상단 보너스 알코브 받침(선택 경로)
+			{"pos": Vector2(1330, 300), "w": 150.0},
+		],
+		"moving_platforms": [
+			# 구덩이 1 — 수평 화물 리프트(낮음)
+			{"from": Vector2(800, 520), "to": Vector2(1120, 520), "w": 180.0, "cycle": 5.0, "phase": 0.0},
+			# 보너스 — 중앙 수직 리프트(지면→알코브). 선택(메인 동선 아님).
+			{"from": Vector2(1330, 580), "to": Vector2(1330, 340), "w": 130.0, "cycle": 4.5, "phase": 0.2},
+			# 구덩이 2 — 수평(약간 높음, 더 김)
+			{"from": Vector2(1580, 480), "to": Vector2(1960, 480), "w": 180.0, "cycle": 5.5, "phase": 0.35},
+			# 구덩이 3 — 수평
+			{"from": Vector2(2440, 520), "to": Vector2(2760, 520), "w": 170.0, "cycle": 5.0, "phase": 0.6},
+		],
+		"enemies": {
+			"patrol": [Vector2(460, 540.0), Vector2(2180, 540.0), Vector2(2980, 540.0)],
+			"sniper": [], "drone": [], "bomber": [], "shield": [],
+		},
+		"rewards": {
+			"xp_orbs":    [Vector2(1300, 270.0), Vector2(1360, 270.0)],
+			"hp_pickups": [],
+		},
+		"spikes": [
+			{"x": 960.0, "w": 300.0, "dmg": 2},    # 구덩이 1
+			{"x": 1770.0, "w": 320.0, "dmg": 2},   # 구덩이 2
+			{"x": 2600.0, "w": 300.0, "dmg": 2},   # 구덩이 3
 		],
 	}

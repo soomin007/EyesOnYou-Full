@@ -102,6 +102,7 @@ const _ROUTE_TRACKS: Dictionary = {
 	"route_condenser":   "mid_late",
 	"route_perimeter":   "early",
 	"route_gauntlet":    "mid_late",
+	"route_freight_lift": "mid_late",
 	"route_cooling":    "mid_late",
 	"route_ward":       "mid_late",
 	"route_datacenter": "mid_late",
@@ -767,6 +768,7 @@ func _build_world() -> void:
 	_build_background()
 	_build_ground()
 	_build_platforms()
+	_build_moving_platforms()
 	_build_decorations()
 	_build_route_ambience()
 	_build_hazards()
@@ -1192,6 +1194,21 @@ func _build_platforms() -> void:
 		var p: Vector2 = d.get("pos", Vector2.ZERO)
 		var w: float = float(d.get("w", 220.0))
 		_build_platform(p.x, p.y, w)
+
+# 이동 발판(MovingPlatform 기믹) — MapData "moving_platforms" 배열을 읽어 AnimatableBody2D 발판 생성.
+# 각 항목 = {from, to, w, cycle, phase?}. 위에 탄 플레이어는 move_and_slide가 자동 운반.
+func _build_moving_platforms() -> void:
+	for entry in _map_data.get("moving_platforms", []):
+		var d: Dictionary = entry
+		var mp := MovingPlatform.new()
+		add_child(mp)
+		mp.setup(
+			d.get("from", Vector2.ZERO),
+			d.get("to", Vector2.ZERO),
+			float(d.get("w", 160.0)),
+			float(d.get("cycle", 4.0)),
+			float(d.get("phase", 0.0))
+		)
 
 func _build_platforms_fallback() -> void:
 	# 안전한 일자형 폴백 (튜토리얼/플레이그라운드용)

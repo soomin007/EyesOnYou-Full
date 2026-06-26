@@ -400,6 +400,21 @@ const ALL_ROUTES: Array = [
 		"entry_comment": "포탑 통로예요. 위아래로 쏴요. 레이저도 조심. 끊어 가요.",
 		"stage_color": Color(0.14, 0.13, 0.10),
 	},
+	{
+		"id": "route_freight_lift",
+		"name": "화물 리프트",
+		"description": "시설 정비 화물구역. 스파이크 구덩이 위를 왕복하는 화물 리프트를 타이밍 맞춰 건넌다.",
+		"risk": 2,
+		"reward": 3,
+		"hidden": false,
+		"unique": false,
+		# 막2 이동 발판 기믹 맵 — s3(도입) 제외, 전개·고조(s4~5)에. 발판이 동선 주역(act_identity 2번 레버).
+		"min_stage": 4, "max_stage": 5,
+		"tags": ["이동", "함정"],
+		"veil_comment": "화물 리프트예요. 발판이 움직여요. 가장자리에서 잠깐 멈출 때 올라타요. 서두르지 말아요.",
+		"entry_comment": "리프트가 왕복해요. 끝에서 멈출 때 타요. 밑은 스파이크예요. 타이밍이 전부예요.",
+		"stage_color": Color(0.15, 0.13, 0.09),
+	},
 ]
 
 # 스토리 모드 — 5스테이지 고정 스케줄. 드론·도전·??? 맵 모두 빼고 핵심 동선만.
