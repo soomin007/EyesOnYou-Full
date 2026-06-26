@@ -12,6 +12,7 @@ const PERIOD: float = TELEGRAPH + BURST + COOLDOWN
 
 const WIDTH: float = 64.0
 const COL: Color = Color(0.62, 0.92, 1.0)   # 냉각 시안-화이트 증기
+const WARN: Color = Color(1.0, 0.55, 0.2)   # 위험 경고색(호박/주황) — "기류"가 아니라 "해로움"으로 읽히게
 
 @export var height: float = 260.0
 @export var phase: float = 0.0   # 0~1 사이클 위상 오프셋 (분출구 엇갈림)
@@ -50,16 +51,38 @@ func _check_hit() -> void:
 				SfxPlayer.play_at("spike_hit", global_position)
 			return
 
+# 상시 지면 노즐 + 호박 위험 줄무늬 — 분출 안 할 때도 "여기 해저드"를 항상 보이게(피드백: 위치 모르고
+# 진입해 맞음). 분출 임박/중엔 줄무늬가 밝아진다.
+func _draw_base_marker(ct: float) -> void:
+	var hot: float = 0.0
+	if ct < TELEGRAPH:
+		hot = 0.4 + 0.6 * (ct / TELEGRAPH)
+	elif ct < TELEGRAPH + BURST:
+		hot = 1.0
+	# 노즐 본체(금속)
+	draw_rect(Rect2(-WIDTH * 0.5, -11.0, WIDTH, 11.0), Color(0.22, 0.23, 0.27))
+	# 호박/검정 위험 줄무늬(항상 보이되 임박 시 밝게)
+	var stripe_a: float = 0.4 + 0.5 * hot
+	var sw: float = 9.0
+	var x: float = -WIDTH * 0.5
+	var idx: int = 0
+	while x < WIDTH * 0.5 - 0.5:
+		if idx % 2 == 0:
+			draw_rect(Rect2(x, -9.0, sw, 7.0), Color(WARN.r, WARN.g, WARN.b, stripe_a))
+		x += sw
+		idx += 1
+
 func _draw() -> void:
 	var ct: float = fmod(_t, PERIOD)
+	_draw_base_marker(ct)
 	if ct < TELEGRAPH:
-		# 텔레그래프 — 바닥에서 옅은 김이 점점 또렷해진다(곧 분출 경고).
+		# 텔레그래프 — 경고색(주황)으로 곧 분출을 알린다. 시안 김이 아니라 *위험* 신호.
 		var warn: float = ct / TELEGRAPH
 		for i in 4:
 			var yy: float = -float(i) * 16.0 - 6.0
 			var w: float = WIDTH * (0.32 + 0.1 * float(i))
-			var a: float = (0.10 + 0.20 * warn) * (1.0 - float(i) * 0.2)
-			draw_rect(Rect2(-w * 0.5, yy, w, 12.0), COL * Color(1.0, 1.0, 1.0, a))
+			var a: float = (0.16 + 0.34 * warn) * (1.0 - float(i) * 0.2)
+			draw_rect(Rect2(-w * 0.5, yy, w, 12.0), Color(WARN.r, WARN.g, WARN.b, a))
 		return
 	if ct < TELEGRAPH + BURST:
 		# 분출 — 수직 증기 기둥. 위로 갈수록 옅게, 좌우로 흔들린다.
@@ -73,5 +96,6 @@ func _draw() -> void:
 			var w: float = WIDTH * (1.0 - 0.4 * f) * (0.7 + 0.3 * intensity)
 			var a: float = (0.5 * (1.0 - f) + 0.15) * intensity
 			draw_rect(Rect2(-w * 0.5 + jitter, yy - 8.0, w, 14.0), COL * Color(1.0, 1.0, 1.0, a))
-		# 노즐 베이스 — 분출구 입구 밝게.
+		# 노즐 베이스 — 분출구 입구 밝게 + 경고색 핫코어(해로움 신호).
 		draw_rect(Rect2(-WIDTH * 0.5, -10.0, WIDTH, 10.0), COL * Color(1.0, 1.0, 1.0, 0.5 * intensity))
+		draw_rect(Rect2(-WIDTH * 0.42, -7.0, WIDTH * 0.84, 6.0), Color(WARN.r, WARN.g, WARN.b, 0.55 * intensity))

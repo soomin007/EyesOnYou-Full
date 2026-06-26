@@ -3233,6 +3233,31 @@ func _build_goal_position() -> void:
 	beam.position = Vector2(-90.0, -300.0)
 	beam.size = Vector2(180.0, 600.0)
 	goal.add_child(beam)
+	# 박스 외곽선 — "배경 장식"이 아니라 *문/출구*로 읽히게(피드백: 노란 네모가 끝인지 모름).
+	var border := Line2D.new()
+	border.points = PackedVector2Array([
+		Vector2(-30.0, -100.0), Vector2(30.0, -100.0), Vector2(30.0, 100.0), Vector2(-30.0, 100.0),
+	])
+	border.closed = true
+	border.width = 2.0
+	border.default_color = Color(1.0, 0.9, 0.45, 0.85)
+	goal.add_child(border)
+	# "출구" 라벨 + 점멸 — 글자로 명시(시선 유도).
+	var exit_lbl := Label.new()
+	exit_lbl.text = "▼ 출구"
+	exit_lbl.add_theme_font_size_override("font_size", 20)
+	exit_lbl.add_theme_color_override("font_color", Color(1.0, 0.92, 0.5))
+	exit_lbl.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.85))
+	exit_lbl.add_theme_constant_override("outline_size", 5)
+	exit_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	exit_lbl.position = Vector2(-60.0, -150.0)
+	exit_lbl.size = Vector2(120.0, 26.0)
+	exit_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	goal.add_child(exit_lbl)
+	var pulse := exit_lbl.create_tween()
+	pulse.set_loops()
+	pulse.tween_property(exit_lbl, "modulate:a", 0.55, 0.8)
+	pulse.tween_property(exit_lbl, "modulate:a", 1.0, 0.8)
 	goal.body_entered.connect(_on_goal_reached)
 
 func _on_goal_reached(body: Node) -> void:
