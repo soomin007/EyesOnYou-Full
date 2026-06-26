@@ -34,7 +34,7 @@ func _ready() -> void:
 	# (이 시점 불변식: route_history.size() == current_stage)
 	GameState.save_run()
 	stage_label.text = "STAGE %d / %d  —  루트 선택" % [GameState.current_stage + 1, GameState.effective_total_stages()]
-	subtitle_label.text = "● 위험도 / 보상   —   ? 미상"
+	subtitle_label.text = "● 위험도 · 보상(경험치)   —   ? 미상"
 	pool = RouteData.get_route_pool_for_stage(GameState.current_stage, GameState.route_history)
 	var rec: Dictionary = RouteData.choose_veil_recommendation_with_reason(pool)
 	recommended_id = str(rec.get("id", ""))
@@ -157,7 +157,8 @@ func _setup_trust_gauge() -> void:
 		return
 	var gauge := Label.new()
 	gauge.name = "TrustGauge"
-	gauge.text = "VEIL 신뢰   " + GameState.veil_trust_gauge_dots()
+	# 신뢰가 무슨 뜻인지 모른다는 피드백 — 게이지 옆에 의미 한 줄 병기(추천 수용으로 깊어지는 관계).
+	gauge.text = "VEIL 신뢰  " + GameState.veil_trust_gauge_dots() + "   (추천 따를수록 깊어져요)"
 	gauge.add_theme_font_size_override("font_size", 14)
 	gauge.add_theme_color_override("font_color", GameState.veil_tone_color())
 	header.add_child(gauge)
