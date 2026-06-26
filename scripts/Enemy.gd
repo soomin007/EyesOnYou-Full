@@ -437,7 +437,9 @@ func _tick_sniper(delta: float) -> void:
 		if aim_los_clear:
 			if aim_line == null:
 				_start_aim()
-			_update_aim()
+			# 발사 임박도(0=조준 시작, 1=발사 직전) — 조준선이 굵고 밝아진다.
+			var aim_prog: float = clampf(1.0 - fire_timer / _eff_sniper_aim_time(), 0.0, 1.0)
+			_update_aim(aim_prog)
 		else:
 			# 시야 끊김 → 발사 취소, 조준 다시 처음부터
 			_clear_aim()
@@ -461,13 +463,16 @@ func _has_line_of_sight(p: Node2D) -> bool:
 
 func _start_aim() -> void:
 	aim_line = Line2D.new()
-	aim_line.width = 1.0
-	aim_line.default_color = Color(1.0, 0.30, 0.30, 0.55)
+	aim_line.width = 1.5
+	aim_line.default_color = Color(1.0, 0.30, 0.30, 0.45)
+	aim_line.begin_cap_mode = Line2D.LINE_CAP_ROUND  # 총구·표적 끝을 점처럼 — "겨눠진" 느낌
+	aim_line.end_cap_mode = Line2D.LINE_CAP_ROUND
 	aim_line.z_index = 1
 	get_parent().add_child(aim_line)
 	SfxPlayer.play_at("enemy_sniper_charge", global_position)
 
-func _update_aim() -> void:
+# prog: 0=조준 시작, 1=발사 직전. 임박할수록 굵고 밝게 → "곧 쏜다, 위험"을 또렷이(피드백).
+func _update_aim(prog: float) -> void:
 	if aim_line == null:
 		return
 	var p := _find_player()
@@ -476,6 +481,8 @@ func _update_aim() -> void:
 	aim_line.clear_points()
 	aim_line.add_point(global_position + Vector2(0, -20))
 	aim_line.add_point(p.global_position + Vector2(0, -28))
+	aim_line.width = lerpf(1.5, 4.5, prog)
+	aim_line.default_color = Color(1.0, 0.32 + 0.18 * prog, 0.30, lerpf(0.40, 0.95, prog))
 
 func _clear_aim() -> void:
 	if aim_line != null:
