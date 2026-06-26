@@ -135,11 +135,13 @@ func _on_body_entered(body: Node) -> void:
 			body.take_damage(damage, dir)
 		if not pierce:
 			queue_free()
+	elif body.is_in_group("platform"):
+		# 원웨이 발판(머리 높이 포함)은 *통과* — 점프로 뚫고 오르는 지형이라 수평 사격을 막을 이유가 없다.
+		# 코앞에서 쐈는데 발판에 막히는 불편 제거(사용자: 개발 초기부터 보고). 이동 발판도 "platform"이라 동일.
+		return
 	elif body is StaticBody2D:
-		# 벽/플랫폼 충돌 — 사라짐. 맵 경계벽·바닥·플랫폼은 "수직 벽"이 아니라 impact SFX 생략.
-		# (boundary_wall: 외곽 가드, ground: 메인 지면, platform: 발판류)
-		var skip_sfx: bool = body.is_in_group("boundary_wall") \
-			or body.is_in_group("ground") or body.is_in_group("platform")
+		# 벽/바닥 충돌 — 사라짐. 경계벽·바닥은 "수직 벽"이 아니라 impact SFX 생략.
+		var skip_sfx: bool = body.is_in_group("boundary_wall") or body.is_in_group("ground")
 		if not skip_sfx:
 			SfxPlayer.play_at("bullet_impact_wall", global_position)
 		queue_free()
