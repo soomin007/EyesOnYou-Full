@@ -74,6 +74,23 @@ const STORY_BRIEFINGS_BY_BAND: Dictionary = {
 	],
 }
 
+# ─── 막 진입 문턱 멘트(B-4) — 막 진입 카드 직후 브리핑 앞에 1줄 ──────────────
+# 막 경계를 *말*로도 박는 4중 문턱의 한 축(카드+BGM전환+이 멘트+첫 드론). 막2(잠입)=시설 내부로 들어가며
+# "기계도 본다" 예고, 막3(진실·탈출)=핵심부에서 "내 시야가 닿지 않는다" 예고. 막1은 PALIMPSEST 인트로가
+# 담당하므로 제외. 본편 전용(스토리 모드 제외). 어투는 신뢰 밴드.  키 = 막 인덱스(act_for_stage).
+const ACT_ENTRY_BY_BAND: Dictionary = {
+	1: {
+		"cold": "외곽을 벗어났습니다. 여기부터는 시설 내부입니다. 기계의 눈이 돌아갑니다 — 제 시야 밖에서도.",
+		"thaw": "이제 안으로 들어왔어요. 여기부턴 저만 보는 게 아니에요. 기계도 봐요. 조심해요.",
+		"warm": "안이에요. 여기선 저 말고도 보는 게 있어요. 머리 위, 잊지 말아요.",
+	},
+	2: {
+		"cold": "핵심부 권역입니다. 이 안쪽은 제 시야가 닿지 않는 곳이 있습니다. 그곳은 요원이 보십시오.",
+		"thaw": "여기가 핵심부예요. 이 안은... 저도 잘 안 보여요. 그땐 요원이 봐줘요.",
+		"warm": "다 왔어요. 이 안은... 저도 무서워요. 그래도 같이 가요, 요원.",
+	},
+}
+
 # 첫 임무 시작 화면 — Briefing.gd가 stage 0 진입 시 한 번만 표시.
 # 한 화면에 임무명·목표·VEIL 동행을 같이 통보 — 이전엔 라인이 4개로 쪼개져
 # 사용자가 무슨 내용인지 못 읽고 그냥 ENTER로 넘기던 문제(사용자 보고).
@@ -140,6 +157,22 @@ const DEATH_SKILLED: Dictionary = {
 }
 
 # ─── API ──────────────────────────────────────────────────
+
+# 막 진입(막2+)의 첫 stage면 문턱 멘트 1줄, 아니면 "". Briefing이 막 진입 카드 직후 브리핑 앞에 끼운다.
+# 본편 전용 — 스토리/막1/막 중간 stage는 "". 어투는 신뢰 밴드(없으면 thaw 폴백).
+static func get_act_entry_line(stage_index: int) -> String:
+	if GameState.story_mode:
+		return ""
+	if not GameState.is_act_start(stage_index):
+		return ""
+	var act_idx: int = GameState.act_for_stage(stage_index)
+	if not ACT_ENTRY_BY_BAND.has(act_idx):
+		return ""  # 막1(0) 또는 정의 없는 막 — 인트로/없음
+	var by_band: Dictionary = ACT_ENTRY_BY_BAND[act_idx]
+	var band: String = GameState.veil_register_band()
+	if by_band.has(band):
+		return str(by_band[band])
+	return str(by_band.get("thaw", ""))
 
 static func get_briefing(stage_index: int) -> String:
 	# 어투 밴드(신뢰)로 풀 선택, 진행도(stage)로 비트 행 선택. 빈 셀은 인접 밴드 폴백.

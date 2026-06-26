@@ -169,8 +169,45 @@ func _setup_veil_mistakes() -> void:
 		if entry != "":
 			# 맵 진입 첫 멘트 — 빠른 fade-in(0.12s) + 긴 표시(4.5s)로 진입 직후 바로/오래 인지되게.
 			_show_veil_subtitle(entry, 4.5, false, true)
+	# 막1→막2 문턱(B-4) — 런 첫 드론 맵 진입 시 VEIL 1회 반응(진입 멘트 뒤 지연).
+	_arm_drone_intro()
 	# ACT3 시야 역전 — onset은 위 진입 멘트로 소비(아래는 veil_degraded 가드로 early-return되는 fallback).
 	_arm_act3_vision_subtitle()
+
+# 막1→막2 문턱(B-4) — 막1은 인간 경비만(드론 0)이라, 런에서 드론이 처음 깔린 맵(막2+)에 들어서면
+# "기계가 깨어났다"를 VEIL이 1회 짚어준다. 진입 멘트(4.5s)와 안 겹치게 지연. 플래그는 *발동 시* 세워
+# 발동 전 사망/재시도엔 다시 armed → 살아남으면 그때 1회 발동(한 번 떴으면 런 내내 재발동 없음).
+func _arm_drone_intro() -> void:
+	if GameState.story_mode or GameState.playground_active:
+		return
+	if GameState.drone_intro_seen:
+		return
+	if GameState.act_for_stage(GameState.current_stage) < 1:
+		return  # 막1(드론 없음) 안전 가드
+	var enemies: Dictionary = _map_data.get("enemies", {})
+	var drones: Array = enemies.get("drone", [])
+	if drones.is_empty():
+		return
+	var tw := create_tween()
+	tw.tween_interval(5.2)
+	tw.tween_callback(_fire_drone_intro)
+
+func _fire_drone_intro() -> void:
+	if not is_inside_tree():
+		return
+	if GameState.drone_intro_seen:
+		return
+	GameState.drone_intro_seen = true
+	_show_veil_subtitle(_drone_intro_line(), 4.0)
+
+func _drone_intro_line() -> String:
+	match GameState.veil_register_band():
+		"cold":
+			return "상공에 부유 유닛 — 드론입니다. 머리 위가 사선입니다. 이제 위도 보십시오."
+		"warm":
+			return "저거 봐요, 드론이에요. 머리 위를 봐요. ...이제 기계도 우릴 봐요."
+		_:
+			return "저거... 드론이에요. 머리 위에서 떨어뜨려요. 이제 위도 같이 봐요."
 
 func _arm_ward_foreshadow_at(trigger_x: float) -> void:
 	var area := Area2D.new()

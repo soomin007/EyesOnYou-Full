@@ -145,6 +145,11 @@ func _build_lines() -> Array:
 		out.append({"speaker": "SYS", "text": VeilDialogue.get_intro_system_text()})
 		for s in VeilDialogue.get_intro_veil_lines():
 			out.append({"speaker": "VEIL", "text": str(s)})
+	else:
+		# 막 진입(막2+)의 첫 stage면 문턱 멘트 1줄을 브리핑 앞에 — 막 진입 카드와 한 박자(B-4).
+		var entry_line: String = VeilDialogue.get_act_entry_line(GameState.current_stage)
+		if entry_line != "":
+			out.append({"speaker": "VEIL", "text": entry_line})
 	out.append({"speaker": "VEIL", "text": VeilDialogue.get_briefing(GameState.current_stage)})
 	return out
 

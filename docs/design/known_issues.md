@@ -233,9 +233,17 @@
   의존하므로 한 번 안 겹친다고 안전하다고 보지 말 것.
 
 - **`--headless`로 Stage 진입 시 `_build_camera`(Stage.gd) backtrace는 무해한 헤드리스 quirk.**
-  헤드리스엔 실제 윈도우/뷰포트가 없어 카메라 셋업 일부가 에러를 찍지만 게임 로직엔 영향 없음.
+  헤드리스엔 실제 윈도우/뷰포트가 없어 카메라 셋업 일부가 에러를 찍지만 *창모드 게임 로직엔* 영향 없음.
   창 모드(`--windowed`) 실행에선 안 남. 검증 하니스가 Stage를 헤드리스로 띄울 땐 이 backtrace 무시.
-  (런타임 로직 검증은 `--headless`로 충분하나, Stage 렌더가 필요하면 `--windowed`로.)
+
+- **그러나 그 카메라 에러는 헤드리스에서 `Stage._ready`를 그 지점(`_build_camera`)에서 *중단*시킨다 — 이후
+  코드가 안 돈다.** `_ready` 순서상 `_build_camera`(line 67) *뒤*의 `_build_hud`/`_spawn_enemies`/`_build_goal`/
+  `_setup_veil_mistakes`(72) 등은 헤드리스에서 실행되지 않는다. `_map_data`는 그 *앞*(`_build_world`, 65)에서
+  채워져 멀쩡해 보이므로 "빌드는 됐는데 진입 자막/스폰 로직이 안 탄다"로 오인하기 쉽다(2026-06-26 B-4 첫
+  드론 반응이 헤드리스에서 `false`로 나와 버그로 오판할 뻔). → **`_build_camera` 이후의 Stage 진입 로직 검증은
+  반드시 `--windowed`로.** 헤드리스로는 그 메서드를 *직접 호출*(`s.call("_arm_drone_intro")`)해 로직만 분리
+  검증하거나, 자동 경로(_ready 통과)는 창모드로 확인. (헤드리스 RC=0 + 카메라 backtrace만 있어도 _ready
+  완주를 단정하지 말 것.)
 
 - **CanvasLayer의 Control 자식은 anchor로 화면 크기를 못 받는다.**
   CanvasLayer는 Control이 아니라 자식에게 rect를 전파하지 않는다. 그 아래 Control에 `PRESET_FULL_RECT`를
