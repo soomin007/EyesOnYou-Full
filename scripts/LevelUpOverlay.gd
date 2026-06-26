@@ -97,7 +97,6 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 		var sid: String = str(skill.get("id", ""))
 		var family: String = str(skill.get("family", ""))
 		var tier: int = int(skill.get("tier", 1))
-		var tier_tag: String = "T%d" % tier
 		# 상성 추천(skill_id 지정)이면 그 스킬만 ★ — family 폴백이면 해당 계열 전체.
 		var is_recommended: bool
 		if advice_skill_id != "":
@@ -130,13 +129,28 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 
 		var name_lbl := Label.new()
 		if family != "":
-			name_lbl.text = "%s\n[%s · %s]" % [str(skill.get("name", "")), family, tier_tag]
+			name_lbl.text = "%s\n[%s]" % [str(skill.get("name", "")), family]
 		else:
-			name_lbl.text = "%s\n[%s]" % [str(skill.get("name", "")), tier_tag]
+			name_lbl.text = str(skill.get("name", ""))
 		name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		name_lbl.add_theme_font_size_override("font_size", 16)
 		name_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		content.add_child(name_lbl)
+
+		# 티어 pip(●●○) — "T2" 텍스트 대신 시각화. 새 스킬이 아니라 *레벨업*임을 한눈에(피드백:
+		# "T1/T2 말고 동그라미 n개로"). 채운 동그라미=이번에 도달할 티어 / 빈 동그라미=남은 상위 티어.
+		var _line: Dictionary = SkillTreeData.find_line(sid)
+		var _tiers: Array = _line.get("tiers", [])
+		var max_tier: int = _tiers.size() if _tiers.size() > 0 else tier
+		var pip_lbl := Label.new()
+		pip_lbl.text = "●".repeat(tier) + "○".repeat(maxi(max_tier - tier, 0))
+		pip_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		pip_lbl.add_theme_font_size_override("font_size", 16)
+		pip_lbl.add_theme_color_override("font_color", Color(0.95, 0.78, 0.35))
+		pip_lbl.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.6))
+		pip_lbl.add_theme_constant_override("outline_size", 3)
+		pip_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		content.add_child(pip_lbl)
 
 		var desc_lbl := Label.new()
 		desc_lbl.text = str(skill.get("desc", ""))
