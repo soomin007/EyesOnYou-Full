@@ -3290,6 +3290,34 @@ func _on_arena_cleared() -> void:
 		GameState.add_xp(bonus_xp, false)
 	_trigger_stage_clear()
 
+# 클리어 시 캐릭터 백색 발광 → 떠오르며 소멸 + 확장 링(출구로 빠져나가는 임팩트).
+func _play_clear_player_fx() -> void:
+	if player == null or not is_instance_valid(player):
+		return
+	var ppos: Vector2 = player.global_position
+	# 캐릭터 과노출 백색 발광 → 알파 소멸
+	var tw := player.create_tween()
+	tw.tween_property(player, "modulate", Color(2.6, 2.6, 3.0, 1.0), 0.15)
+	tw.tween_property(player, "modulate:a", 0.0, 0.7)
+	# 확장 백색 링
+	var ring := Line2D.new()
+	var pts := PackedVector2Array()
+	for i in 25:
+		var a: float = TAU * float(i) / 24.0
+		pts.append(Vector2(cos(a), sin(a)) * 40.0)
+	ring.points = pts
+	ring.closed = true
+	ring.width = 4.0
+	ring.default_color = Color(0.9, 0.95, 1.0, 0.9)
+	ring.global_position = ppos
+	ring.z_index = 30
+	add_child(ring)
+	var rtw := ring.create_tween()
+	rtw.set_parallel(true)
+	rtw.tween_property(ring, "scale", Vector2(3.6, 3.6), 0.55)
+	rtw.tween_property(ring, "modulate:a", 0.0, 0.55)
+	rtw.chain().tween_callback(ring.queue_free)
+
 func _trigger_stage_clear() -> void:
 	if GameState.playground_active:
 		# 연습장에선 자동 진행 안 함 — 패널에서 직접 다음 stage/route 선택
@@ -3309,6 +3337,11 @@ func _begin_clear_sequence() -> void:
 	else:
 		SfxPlayer.play("stage_clear_chime")
 	GameState.restrict_combat_input = true
+	# 클리어 시각 임팩트 — 일반 골(출구 도달) 클리어에서 캐릭터가 백색 발광하며 소멸(피드백: 클리어
+	# 피드백이 소리뿐이라 약함). 보스(lab, 회수 연출)·ARENA는 후속 비트가 있어 제외.
+	var _is_arena_fx: bool = challenge_active or _goal_type == "ENEMY_CLEAR"
+	if not _is_arena_fx and GameState.current_route_id != "route_lab":
+		_play_clear_player_fx()
 	# 남은 XP orb를 player 근처로 텔레포트 → 자동 흡수 (PICKUP_RANGE 내).
 	if player != null and is_instance_valid(player):
 		for orb in get_tree().get_nodes_in_group("exp_orb"):
