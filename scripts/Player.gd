@@ -57,6 +57,9 @@ var slowmo_active: bool = false
 var jumps_used: int = 0
 var _coyote_t: float = 0.0       # 바닥을 떠난 뒤 지상 점프가 아직 유효한 잔여 시간
 var _jump_buffer_t: float = 0.0  # 착지 직전 누른 점프 입력을 기억하는 잔여 시간
+# 글라이드 취소 래치 — 공중에서 아래키를 누르면 켜지고, *착지할 때까지* 글라이드가 꺼진다(사용자 요청:
+# 홀드 말고 그 시점부터 바닥까지 원래 속도 하강). 착지(is_on_floor)에서 해제.
+var _glide_cancelled: bool = false
 # 환경 레버 — Area2D body_entered 시 LeverInteractable이 직접 세팅한다.
 # attack 입력이 사격 대신 레버 당기기로 흡수된다.
 var nearby_lever: Node = null
@@ -271,7 +274,10 @@ func _handle_input(delta: float) -> void:
 		if Input.is_action_just_pressed("skill"):
 			_try_skill()
 	if Input.is_action_just_pressed("move_down"):
+		# 바닥: 원웨이 발판 통과. 공중: 글라이드 취소(착지까지 원래 속도 하강).
 		_try_drop_through()
+		if not is_on_floor():
+			_glide_cancelled = true
 
 func _try_drop_through() -> void:
 	if not is_on_floor():
@@ -519,13 +525,14 @@ func _spawn_explosion() -> void:
 
 func _apply_gravity(delta: float) -> void:
 	if is_on_floor():
+		_glide_cancelled = false  # 착지 — 글라이드 취소 래치 해제
 		return
 	velocity.y = min(velocity.y + GRAVITY * delta, MAX_FALL_SPEED)
 	# 공중 활강 — T1부터 낙하 시 자동으로 천천히 떨어진다(점프 홀드 불필요 — 패시브).
-	# 아래 방향키를 누르면 활강을 끄고 원래 속도로 빠르게 떨어진다(사용자 요청). 좌우 입력은 활강 가속.
+	# 아래키를 누르면 그 시점부터 *착지까지* 활강을 끄고 원래 속도로 떨어진다(_glide_cancelled 래치).
 	# T2=활강 중 사격 관통+데미지, T3=유도 — 효과는 _spawn_bullet. 공중 제압 라인(상성: 저격수·드론).
 	var glide_tier: int = GameState.get_skill_tier("glide")
-	if glide_tier >= 1 and velocity.y > 0.0 and not Input.is_action_pressed("move_down"):
+	if glide_tier >= 1 and velocity.y > 0.0 and not _glide_cancelled:
 		var fall_speed: float = GLIDE_FALL_SPEED
 		# 좌우 이동 입력 시 낙하 속도 ↑ (활공 거리·속도 제어).
 		if Input.get_axis("move_left", "move_right") != 0.0:
