@@ -17,6 +17,7 @@ var camera: Camera2D
 var hud: CanvasLayer
 var hp_label: Label
 var xp_label: Label
+var xp_bar: ProgressBar   # 레벨업 EXP 진행 바 (피드백: 텍스트보다 바가 한눈에)
 var stage_label: Label
 var map_label: Label   # 현재 맵(루트) 이름 — HUD 상단
 var trust_label: Label # VEIL 신뢰도 게이지 — HUD 상단
@@ -2172,6 +2173,24 @@ func _build_hud() -> void:
 	var hb := HBoxContainer.new()
 	hb.add_theme_constant_override("separation", 28)
 	top_v.add_child(hb)
+	# EXP 진행 바 — 라벨 행과 스킬 행 사이 얇은 줄. 한눈에 레벨업까지 얼마 남았는지(피드백).
+	var hb_xp := HBoxContainer.new()
+	top_v.add_child(hb_xp)
+	xp_bar = ProgressBar.new()
+	xp_bar.custom_minimum_size = Vector2(184.0, 7.0)
+	xp_bar.show_percentage = false
+	xp_bar.max_value = float(GameState.XP_PER_LEVEL)
+	var _xp_bg := StyleBoxFlat.new()
+	_xp_bg.bg_color = Color(0.10, 0.12, 0.16, 0.85)
+	_xp_bg.set_corner_radius_all(3)
+	_xp_bg.set_border_width_all(1)
+	_xp_bg.border_color = Color(0.0, 0.0, 0.0, 0.6)
+	var _xp_fg := StyleBoxFlat.new()
+	_xp_fg.bg_color = Color(0.45, 0.78, 1.0)
+	_xp_fg.set_corner_radius_all(3)
+	xp_bar.add_theme_stylebox_override("background", _xp_bg)
+	xp_bar.add_theme_stylebox_override("fill", _xp_fg)
+	hb_xp.add_child(xp_bar)
 	var hb2 := HBoxContainer.new()
 	hb2.add_theme_constant_override("separation", 12)
 	top_v.add_child(hb2)
@@ -2314,6 +2333,9 @@ func _update_cd_slot(slot: Control, remaining: float, max_cd: float) -> void:
 func _refresh_hud() -> void:
 	hp_label.text = "HP  %s" % _hearts(GameState.player_hp, GameState.player_max_hp)
 	xp_label.text = "LV %d   XP %d/%d" % [GameState.player_level, GameState.player_xp, GameState.XP_PER_LEVEL]
+	if xp_bar != null and is_instance_valid(xp_bar):
+		xp_bar.max_value = float(GameState.XP_PER_LEVEL)
+		xp_bar.value = float(GameState.player_xp)
 	var marks: Array = []
 	if GameState.is_high_risk():
 		marks.append("[고위험]")

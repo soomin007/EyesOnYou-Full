@@ -18,6 +18,7 @@ var locked: bool = false  # one_shot 후 다시 못 당기게
 var _base: ColorRect
 var _handle: ColorRect
 var _glow: ColorRect
+var _prompt: Label  # 근접 시 "공격으로 당기기" 안내 (피드백: 레버를 못 알아봄)
 
 func _ready() -> void:
 	add_to_group("lever")
@@ -64,17 +65,38 @@ func _build_visual() -> void:
 	tw.set_loops()
 	tw.tween_property(_glow, "modulate:a", 0.25, 0.9)
 	tw.tween_property(_glow, "modulate:a", 1.0, 0.9)
+	# 근접 안내 프롬프트(평소 숨김) — 레버가 상호작용 대상임을 글자로 명시(피드백: "정체불명 상자").
+	_prompt = Label.new()
+	_prompt.text = "공격으로 당기기"
+	_prompt.add_theme_font_size_override("font_size", 14)
+	_prompt.add_theme_color_override("font_color", Color(0.85, 0.95, 1.0))
+	_prompt.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.85))
+	_prompt.add_theme_constant_override("outline_size", 4)
+	_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_prompt.position = Vector2(-70.0, -64.0)
+	_prompt.size = Vector2(140.0, 20.0)
+	_prompt.modulate.a = 0.0
+	_prompt.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_prompt)
+
+func _show_prompt(show_it: bool) -> void:
+	if _prompt == null or not is_instance_valid(_prompt):
+		return
+	var tw := _prompt.create_tween()
+	tw.tween_property(_prompt, "modulate:a", 1.0 if show_it else 0.0, 0.18)
 
 func _on_body_entered(body: Node) -> void:
 	if locked:
 		return
 	if body.is_in_group("player"):
 		body.set("nearby_lever", self)
+		_show_prompt(true)
 
 func _on_body_exited(body: Node) -> void:
 	if body.is_in_group("player"):
 		if body.get("nearby_lever") == self:
 			body.set("nearby_lever", null)
+		_show_prompt(false)
 
 func try_pull() -> bool:
 	if locked:
@@ -99,7 +121,8 @@ func _animate_pull() -> void:
 	tw.set_parallel(true)
 	tw.tween_property(_handle, "rotation", deg_to_rad(28.0), 0.18)
 	tw.tween_property(_handle, "color", Color(0.95, 0.55, 0.35), 0.18)
-	# hint 빛 사라짐 — 더 이상 안내할 필요 없음
+	# hint 빛·프롬프트 사라짐 — 더 이상 안내할 필요 없음
 	if is_instance_valid(_glow):
 		var tw2 := _glow.create_tween()
 		tw2.tween_property(_glow, "modulate:a", 0.0, 0.30)
+	_show_prompt(false)
