@@ -22,6 +22,7 @@ GameState="*res://scripts/GameState.gd"
 BgmPlayer="*res://scripts/BgmPlayer.gd"
 SfxPlayer="*res://scripts/SfxPlayer.gd"
 Accessibility="*res://scripts/Accessibility.gd"
+OrientationGuard="*res://scripts/OrientationGuard.gd"
 
 [display]
 

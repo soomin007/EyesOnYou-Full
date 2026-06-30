@@ -207,20 +207,13 @@ func _exit_tree() -> void:
 # --- 그리기 (자식 _Pad의 _draw에서 호출) ---
 
 func _render(pad: Control) -> void:
+	# 세로일 때의 "가로로 돌려주세요" 안내는 전역 OrientationGuard(layer 128)가 모든 화면에서 덮으므로
+	# 여기선 버튼만 그리지 않는다(입력은 _input에서 portrait 가드로 이미 차단).
 	if _portrait:
-		_render_rotate_hint(pad)
 		return
 	for i in _buttons.size():
 		var b: Dictionary = _buttons[i]
 		_draw_button(pad, b, _down.has(i))
-
-func _render_rotate_hint(pad: Control) -> void:
-	var vs: Vector2 = pad.size
-	pad.draw_rect(Rect2(Vector2.ZERO, vs), Color(0.03, 0.04, 0.05, 0.96))
-	if _font != null:
-		var msg: String = "기기를 가로로 돌려주세요"
-		var fs: int = 38
-		pad.draw_string(_font, Vector2(0.0, vs.y * 0.5), msg, HORIZONTAL_ALIGNMENT_CENTER, vs.x, fs, Color(0.85, 0.92, 1.0, 0.95))
 
 func _draw_button(pad: Control, b: Dictionary, down: bool) -> void:
 	var c: Vector2 = b["center"]
