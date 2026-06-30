@@ -56,6 +56,8 @@ func _ready() -> void:
 	# Death 화면에서 set_ducked(true)였다면 stage 재진입에서 원복.
 	BgmPlayer.set_ducked(false)
 	_apply_bgm_for_current_route()
+	# 모바일 가상 패드 — 터치 기기에서만(데스크톱 무영향). route 분기 전에 둬서 ??? 방 포함 모든 맵에 적용.
+	_build_touch_controls()
 	# ??? 맵은 적/가시/골이 없는 정적 시퀀스 맵 (별도 로직)
 	if GameState.current_route_id == "route_hidden":
 		_build_hidden_archive()
@@ -4052,6 +4054,12 @@ func _unhandled_input(event: InputEvent) -> void:
 			_show_pause()
 		else:
 			_hide_pause()
+
+# 모바일 가상 패드 — 터치 기기에서만 생성한다(데스크톱/키보드 플레이엔 영향 없음).
+func _build_touch_controls() -> void:
+	if not DisplayServer.is_touchscreen_available():
+		return
+	add_child(TouchControls.new())
 
 func _show_pause() -> void:
 	get_tree().paused = true

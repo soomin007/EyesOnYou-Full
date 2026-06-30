@@ -16,7 +16,12 @@ func _ready() -> void:
 
 # 마우스 좌/우 클릭을 attack/skill의 기본 이벤트로 보강(이미 있으면 그대로). load_settings 뒤에 호출 —
 # 좌클릭 사격·우클릭 스킬은 핵심 조작이라 cfg가 잃어버려도 항상 살아 있게 한다.
+# 단 터치 기기에선 마우스를 바인딩하지 않는다 — emulate_mouse_from_touch가 켜져 있어(메뉴 탭 처리에
+# 필요) 빈 화면 터치가 좌클릭=attack 오발사를 일으키기 때문. 인게임 사격은 가상 패드(TouchControls)가
+# 전담하고, 메뉴 UI 탭은 emulate 마우스로 그대로 동작한다.
 func _bind_default_mouse_inputs() -> void:
+	if DisplayServer.is_touchscreen_available():
+		return
 	_ensure_mouse_event("attack", MOUSE_BUTTON_LEFT)
 	_ensure_mouse_event("skill", MOUSE_BUTTON_RIGHT)
 
