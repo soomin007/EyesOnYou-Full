@@ -32,6 +32,18 @@
   진행 로그를 볼 수 없고, godot이 hang하면 PowerShell도 무한 대기한다(포스터 창모드 렌더가 20분 안 끝남, 2026-06-14).
   → 출력은 `*> "log.txt"`로 직접 리다이렉트(또는 Tee-Object). 진행이 실시간 기록돼 hang 진단이 가능.
 
+- **Godot.exe(Windows 에디터/GUI 빌드)의 스크립트 `print`(stdout)는 콘솔에 안 잡힌다 — 검증 값은 `FileAccess`로 파일에 직접 써라.**
+  엔진 로그(import·WARNING 등 stderr)는 `... 2>&1 | Select-String`으로 보이지만, `print` 출력은 GUI 빌드라
+  `*>`/`2>&1`로도 빈 파일이었다(2026-07-01 터치 검증, 0바이트 반복). → 검증 스크립트가
+  `FileAccess.open("C:/abs/path.txt", FileAccess.WRITE)`로 결과를 *직접 기록*하고 PowerShell이 그 파일을 읽는다.
+  단계마다 flush(매번 열고 닫기)하면 어디서 멈췄는지도 보인다.
+
+- **헤드리스에선 `Input.parse_input_event`의 ScreenTouch/ScreenDrag가 `_input`에 안 오고 뷰포트가 정사각(비정상)이다 — 터치 검증은 창모드로.**
+  헤드리스 DisplayServer가 dummy라 주입한 터치가 액션을 안 만들었고(action_press 전부 0/0.0),
+  `get_viewport().get_visible_rect().size`가 1280×1280으로 나왔다. → 터치·뷰포트·입력 좌표 의존 검증은
+  **`--windowed --resolution 1280x720`** 창모드로. FileAccess 기록은 창모드에서도 되니 결과는 회수된다.
+  (2026-07-01: 헤드리스 전부 실패 → 창모드에서 멀티터치·좌우 드래그 전환·release 전부 통과.)
+
 - **포스터/캐릭터 렌더 검증은 헤드리스 import로 파싱부터 확인 후 창모드.**
   창모드 `--gen`은 hang 위험(원인 불명: 창 포커스/렌더 루프 추정)이고 결과를 Claude가 직접 못 본다. 먼저
   `--headless --import`로 스크립트 파싱·컴파일 에러를 잡고(EXIT 코드 확인), 그 다음 창모드로 실제 PNG를 뽑는다.
