@@ -235,6 +235,37 @@
 
 ---
 
+## 모바일 / 터치 (2026-07-01)
+
+- **`DisplayServer.is_touchscreen_available()`은 모바일 *웹*에서 false를 흔히 반환한다 — 터치 UI 게이팅이 안 켜진다.**
+  안드로이드 크롬에서 false라 터치 패드가 생성 안 돼 "데스크톱 화면 그대로"가 나왔다(사용자 보고).
+  → 웹이면 `JavaScriptBridge.eval("(navigator.maxTouchPoints||0)>0 || 'ontouchstart' in window")`로 직접
+  판정(`OrientationGuard.is_touch_device()`). 데스크톱 네이티브는 is_touchscreen_available()로 충분.
+
+- **터치 조작을 인게임(Stage)에만 붙이면 그 앞 진입 경로에서 막혀 게임 시작 자체가 불가하다.**
+  패드를 Stage에만 넣었더니 튜토리얼(=실제 플레이)·오프닝 멘트(브리핑)를 폰에서 못 넘겨 "플레이를 못한다"
+  (사용자). → 씬 흐름 전체를 터치로 커버: Tutorial엔 패드(player가 Player.gd라 폴링 입력 그대로 먹음),
+  진행성 화면(Briefing/Death/Ending)은 화면 탭을 진행 입력으로. 새 조작 넣을 땐 Title→Tutorial→Briefing→
+  RouteMap→Stage 전 경로가 폰으로 통과되는지 확인.
+
+- **화면을 덮는 Control이 있는 씬에서 `_unhandled_input`은 터치 탭을 못 받는다(키보드는 받음).**
+  Briefing 등은 루트가 full-rect Control이라 탭(emulate 마우스)이 gui_input에서 소비돼 `_unhandled_input`에
+  ScreenTouch가 안 온다. 키(jump)는 UI가 안 먹어 데스크톱에선 정상이라 놓치기 쉽다(사용자: "튜토는 되는데
+  오프닝 멘트가 안 넘어감"). → 터치 진행이 필요한 화면은 `_input`으로(UI 소비 전에 받음). 자체 클릭 버튼이
+  있으면 그 상태에서 return해 버튼 gui_input으로 넘긴다.
+
+- **모바일 웹은 데스크톱 비율(1280×720) UI를 그대로 렌더해 버튼·글씨가 작아 누르기 어렵다.**
+  stretch/expand는 해상도만 맞출 뿐 UI 물리 크기를 안 키운다. 폰 작은 화면에선 메뉴/설정 버튼이 너무
+  작았다(사용자 보고). → 터치 기기에서 `get_window().content_scale_factor`를 올려 확대(메뉴 1.4 / 인게임
+  1.1, 씬 그룹으로 분기). 인게임은 월드도 같이 커지니 밸런스 고려해 낮게.
+
+- **모바일 웹 가로 강제는 project 설정으론 안 되고 런타임 처리가 필요하다.**
+  `window/handheld/orientation`은 네이티브 빌드에만 먹고 브라우저는 무시(기기 방향 추종). → 웹은 첫 제스처에
+  `screen.orientation.lock('landscape')`(fullscreen 필요, 안드로이드만; iOS Safari 미지원) 시도 + 세로면
+  "가로로 돌려주세요" 안내로 폴백. fullscreen 대상은 `canvas`보다 `document.documentElement`가 안정적.
+
+---
+
 ## 렌더링 / 레이아웃
 
 - **오버레이/끝 메뉴를 띄울 때 그 아래 스크롤·스택 컨텐츠를 숨기지 않으면 멈춘 위치에서 겹친다.**
