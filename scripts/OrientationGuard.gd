@@ -19,6 +19,9 @@ var _font: Font = null
 var _portrait: bool = false
 var _lock_tried: bool = false
 var _touch_cached: int = -1  # -1 미판정, 0 아님, 1 터치 기기
+# [임시 진단] 웹에서 수집한 터치 지원 값 — 화면 상단 DBG 바에 표시.
+var _dbg_maxtouch: int = -1
+var _dbg_ontouch: int = -1
 
 # 터치 기기 여부(캐시). Stage/Main의 터치 UI 게이팅이 이걸 쓴다.
 # DisplayServer.is_touchscreen_available()은 모바일 *웹*에서 false를 흔히 반환하므로(알려진 문제),
@@ -57,8 +60,19 @@ func _ready() -> void:
 	_card.host = self
 	_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_layer.add_child(_card)
+	# [임시 진단] 웹 터치/방향 값을 1회 수집(maxTouchPoints 등은 안 변함). 진단 끝나면 제거.
+	if OS.has_feature("web"):
+		var a: Variant = JavaScriptBridge.eval("(navigator.maxTouchPoints||0)", true)
+		_dbg_maxtouch = int(a) if a != null else -1
+		var b: Variant = JavaScriptBridge.eval("('ontouchstart' in window)?1:0", true)
+		_dbg_ontouch = int(b) if b != null else -1
 	_refresh()
 	get_viewport().size_changed.connect(_refresh)
+
+# [임시 진단] 매 프레임 진단 텍스트를 갱신(lock/scene 상태 변화 반영). 진단 끝나면 _process 제거.
+func _process(_delta: float) -> void:
+	if _card != null:
+		_card.queue_redraw()
 
 func _refresh() -> void:
 	var vs: Vector2 = get_viewport().get_visible_rect().size
@@ -66,7 +80,7 @@ func _refresh() -> void:
 	if _card != null:
 		_card.position = Vector2.ZERO
 		_card.size = vs
-		_card.visible = _portrait
+		_card.visible = true  # [임시 진단] 진단 바를 항상 보이게(원래는 _portrait). 진단 끝나면 되돌리기.
 		_card.queue_redraw()
 
 func _input(event: InputEvent) -> void:
@@ -106,10 +120,20 @@ func _try_web_landscape() -> void:
 
 func _render(card: Control) -> void:
 	var vs: Vector2 = card.size
-	card.draw_rect(Rect2(Vector2.ZERO, vs), Color(0.03, 0.04, 0.05, 0.98))
-	if _font == null:
-		return
-	var msg: String = "기기를 가로로 돌려주세요"
-	card.draw_string(_font, Vector2(0.0, vs.y * 0.5), msg, HORIZONTAL_ALIGNMENT_CENTER, vs.x, 40, Color(0.86, 0.92, 1.0, 0.96))
-	var sub: String = "화면 회전 잠금이 켜져 있으면 꺼주세요"
-	card.draw_string(_font, Vector2(0.0, vs.y * 0.5 + 46.0), sub, HORIZONTAL_ALIGNMENT_CENTER, vs.x, 22, Color(0.62, 0.72, 0.82, 0.9))
+	# 세로일 때만 풀스크린 어둠 + "가로로 돌려주세요" 안내.
+	if _portrait:
+		card.draw_rect(Rect2(Vector2.ZERO, vs), Color(0.03, 0.04, 0.05, 0.98))
+		if _font != null:
+			var msg: String = "기기를 가로로 돌려주세요"
+			card.draw_string(_font, Vector2(0.0, vs.y * 0.5), msg, HORIZONTAL_ALIGNMENT_CENTER, vs.x, 40, Color(0.86, 0.92, 1.0, 0.96))
+			var sub: String = "화면 회전 잠금이 켜져 있으면 꺼주세요"
+			card.draw_string(_font, Vector2(0.0, vs.y * 0.5 + 46.0), sub, HORIZONTAL_ALIGNMENT_CENTER, vs.x, 22, Color(0.62, 0.72, 0.82, 0.9))
+	# [임시 진단] 화면 상단에 항상 표시 — 사용자가 읽어주면 원인 확정. 진단 끝나면 이 블록 삭제.
+	if _font != null:
+		var scn: Node = get_tree().current_scene
+		var sn: String = scn.name if scn != null else "?"
+		var l1: String = "DBG web=%s touch=%s maxT=%d ots=%d" % [str(OS.has_feature("web")), str(is_touch_device()), _dbg_maxtouch, _dbg_ontouch]
+		var l2: String = "vp=%dx%d P=%s lock=%s scene=%s" % [int(vs.x), int(vs.y), str(_portrait), str(_lock_tried), sn]
+		card.draw_rect(Rect2(0.0, 0.0, vs.x, 52.0), Color(0.0, 0.0, 0.0, 0.72))
+		card.draw_string(_font, Vector2(8.0, 20.0), l1, HORIZONTAL_ALIGNMENT_LEFT, vs.x - 16.0, 18, Color(1.0, 1.0, 0.55))
+		card.draw_string(_font, Vector2(8.0, 44.0), l2, HORIZONTAL_ALIGNMENT_LEFT, vs.x - 16.0, 18, Color(1.0, 1.0, 0.55))
