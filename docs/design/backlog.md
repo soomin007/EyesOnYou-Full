@@ -73,8 +73,12 @@
   - ✅ **모바일(터치) = 폰 실플레이 가능 + 폴리시 진행 중**(2026-07-01): 터치 패드(멀티터치) + 진입 경로
     전체 터치화(튜토리얼 패드 / 오프닝·브리핑·데스·엔딩 탭) + 웹 가로 유도(`OrientationGuard`) + 터치 감지
     (maxTouchPoints) + UI 스케일(메뉴 1.4/인게임 1.1) + 버튼 배치 폴리시. **안드로이드 웹서 진입~플레이 확인**.
-    **남음 = 내일 값 튜닝 실측**(버튼 배치·HUD·가로 자동전환) + 폴리시 잔여(쿨다운/미보유 버튼, 세로 일시정지,
-    Credits/Arcturus 탭, iOS 실측, 햅틱). 상세=`session_logs/2026-07-01.md` 세션2 + `known_issues` 모바일 섹션.
+  - ✅ **모바일 폴리시 잔여 대부분 완료**(2026-07-02): dash/skill 버튼 미보유=흐리게+비활성·쿨다운=흐리게
+    (`TouchControls._update_states`, 매 프레임 player 폴링) · ??? 방 등 `restrict_combat_input`에서 전투버튼
+    (사격/대시/스킬) 숨김 · 세로 전환 시 인게임 자동 일시정지(`OrientationGuard._update_portrait_pause`, 우리
+    pause만 해제) · Credits 화면 홀드=빨리감기 + Arcturus 탭 진행/닫기(emulate 마우스 좌클릭 중복 방지). 창모드
+    래퍼 검증(4스크립트 컴파일·`_update_states` 동작). **남음 = 폰 실측만**: 버튼 배치·HUD 스케일 값 튜닝 ·
+    세로 자동전환·자동 일시정지 실동작 · iOS(orientation lock 미지원) · 햅틱. 상세=`session_logs/2026-07-02.md`.
   - **런 길이 확대(→5막)** — 막3 엔드게임을 막5로 이주하는 라이벌 재구조화와 얽힘(아래 ★와 함께).
   - **★ 막4~5 라이벌 VEIL** — `rival_veil_concept.md`(5막 확장 전제, 막3 재구조화). 가장 큰 단위.
 

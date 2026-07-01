@@ -284,20 +284,22 @@ func _input(event: InputEvent) -> void:
 				_scroll_paper(-48.0)
 				get_viewport().set_input_as_handled()
 				return
-		# 닫기 — 확인 키(Space/Enter)·스킵·공격·좌클릭. jump(W)는 스크롤에 쓰므로 닫기에서 뺀다.
+		# 닫기 — 확인 키(Space/Enter)·스킵·공격·좌클릭·화면 탭. jump(W)는 스크롤에 쓰므로 닫기에서 뺀다.
 		var close_pressed: bool = false
-		if event.is_action_pressed("ui_accept") or event.is_action_pressed("ui_skip") or event.is_action_pressed("attack"):
+		if event.is_action_pressed("ui_accept") or event.is_action_pressed("ui_skip") or event.is_action_pressed("attack") or OrientationGuard.is_tap(event):
 			close_pressed = true
-		elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		# 터치 기기에선 화면 탭이 좌클릭으로도 합성(emulate_mouse_from_touch)돼 is_tap과 중복 → 데스크톱만.
+		elif not OrientationGuard.is_touch_device() and event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 			close_pressed = true
 		if close_pressed:
 			get_viewport().set_input_as_handled()
 			_start_finalize()
 		return
 	var pressed: bool = false
-	if event.is_action_pressed("jump") or event.is_action_pressed("ui_skip") or event.is_action_pressed("attack"):
+	if event.is_action_pressed("jump") or event.is_action_pressed("ui_skip") or event.is_action_pressed("attack") or OrientationGuard.is_tap(event):
 		pressed = true
-	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+	# 터치 기기: 화면 탭이 좌클릭으로도 합성돼 is_tap과 중복(한 탭에 2줄 스킵) → 데스크톱만 좌클릭 인정.
+	elif not OrientationGuard.is_touch_device() and event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		pressed = true
 	if not pressed:
 		return

@@ -78,6 +78,8 @@ var _finished: bool = false
 var _hint_label: Label
 # 진입 직후 입력 lockout — 게임 종료 후 점프 연타가 즉시 크레딧을 닫는 사고 방지.
 var _input_lockout_t: float = GameState.INPUT_LOCKOUT_DURATION
+# 화면을 누르고 있는 손가락(index) — 폰에서 화면 홀드 = SPACE 홀드(빨리 감기)로 매핑.
+var _touch_fingers: Dictionary = {}
 
 # 크레딧 끝 메뉴 (scene 모드). "다시 플레이하기"는 포커스 시 글리치로 글자가 바뀐다.
 var _menu_shown: bool = false
@@ -168,7 +170,7 @@ func _process(delta: float) -> void:
 	if _finished or _menu_shown:
 		return
 	var speed: float = SCROLL_SPEED
-	if Input.is_action_pressed("ui_skip") or Input.is_action_pressed("jump") or Input.is_action_pressed("ui_accept"):
+	if Input.is_action_pressed("ui_skip") or Input.is_action_pressed("jump") or Input.is_action_pressed("ui_accept") or not _touch_fingers.is_empty():
 		speed *= SCROLL_FAST_MULT
 	_scroll_y += speed * delta
 	_scroll.position.y = TOP_GAP - _scroll_y
@@ -178,6 +180,16 @@ func _process(delta: float) -> void:
 			_finish(true)
 		else:
 			_show_end_menu()
+
+# 화면 홀드를 빨리 감기로 — 루트가 full-rect Control이라 탭이 gui_input에서 소비돼
+# _unhandled_input엔 안 오므로 _input에서 직접 손가락을 추적한다(소비하지 않음: 끝 메뉴 버튼 탭 보존).
+func _input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch:
+		var st := event as InputEventScreenTouch
+		if st.pressed:
+			_touch_fingers[st.index] = true
+		else:
+			_touch_fingers.erase(st.index)
 
 func _unhandled_input(event: InputEvent) -> void:
 	# ESC는 최우선 — 입력 락아웃과 무관하게 즉시 반응(락아웃은 점프 연타 차단용이라 ESC엔 불필요).

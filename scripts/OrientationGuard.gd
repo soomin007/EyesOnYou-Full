@@ -20,6 +20,7 @@ var _font: Font = null
 var _portrait: bool = false
 var _lock_tried: bool = false
 var _touch_cached: int = -1  # -1 미판정, 0 아님, 1 터치 기기
+var _portrait_paused: bool = false  # 세로 전환으로 우리가 건 pause인지 — 우리 것만 해제
 
 # 터치 기기 여부(캐시). is_touchscreen_available()은 모바일 웹에서 false를 흔히 반환하므로 웹은 JS로 직접 확인.
 func is_touch_device() -> bool:
@@ -72,11 +73,36 @@ func _refresh() -> void:
 		_card.size = vs
 		_card.visible = _portrait
 		_card.queue_redraw()
+	_update_portrait_pause()
+
+# 세로(portrait)로 돌리면 인게임을 자동 일시정지 — 안내 카드 뒤에서 플레이어가 피격/추락하지 않게.
+# stage(게임플레이)에서만. 우리가 건 pause(_portrait_paused)만 가로 복귀 시 해제해 사용자의
+# 일시정지 메뉴(직접 연 pause)는 건드리지 않는다.
+func _update_portrait_pause() -> void:
+	if not is_touch_device():
+		return
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return
+	var in_stage: bool = tree.get_first_node_in_group("stage") != null
+	if _portrait and in_stage:
+		if not tree.paused:
+			tree.paused = true
+			_portrait_paused = true
+	elif _portrait_paused:
+		tree.paused = false
+		_portrait_paused = false
 
 # 터치 기기에서 메뉴 UI를 확대(인게임은 1.0). 씬 전환마다 반영되게 매 프레임 목표값을 맞춘다.
 func _process(_delta: float) -> void:
 	if not is_touch_device():
 		return
+	# size_changed를 놓친 경우(일부 모바일 웹 방향 전환) 대비해 portrait 상태를 매 프레임 재동기화.
+	var vs: Vector2 = get_viewport().get_visible_rect().size
+	if (vs.y > vs.x) != _portrait:
+		_refresh()
+	# 씬 전환으로 stage 등장/이탈은 size_changed와 무관 → 매 프레임 pause 조건 재확인(상태 변화 시에만 동작).
+	_update_portrait_pause()
 	var play: bool = get_tree().get_first_node_in_group("stage") != null
 	var target: float = PLAY_UI_SCALE if play else MENU_UI_SCALE
 	var win: Window = get_window()

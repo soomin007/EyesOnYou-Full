@@ -264,6 +264,19 @@
   `screen.orientation.lock('landscape')`(fullscreen 필요, 안드로이드만; iOS Safari 미지원) 시도 + 세로면
   "가로로 돌려주세요" 안내로 폴백. fullscreen 대상은 `canvas`보다 `document.documentElement`가 안정적.
 
+- **`emulate_mouse_from_touch`(기본 true)로 화면 탭은 좌클릭도 합성한다 — is_tap과 좌클릭을 둘 다 처리하면 2회 발동.**
+  탭 한 번에 ScreenTouch + 합성 InputEventMouseButton(LEFT)이 각각 `_input`에 와, `is_tap`(ScreenTouch)과
+  `MOUSE_BUTTON_LEFT`을 모두 인정하는 화면(ArcturusDocumentOverlay: 줄 진행/닫기)은 한 탭에 2줄이 넘어간다.
+  `set_input_as_handled()`는 *다른* 합성 이벤트를 막지 못한다(별개 이벤트). Briefing류는 좌클릭을 안 다루고
+  jump/is_tap만 봐서 무사했음. → 좌클릭 분기에 `not OrientationGuard.is_touch_device()` 가드를 달아
+  터치 기기에선 is_tap 경로만 쓴다. emulate 자체는 메뉴 버튼 탭에 필요하니 끄지 말 것(2026-07-02).
+
+- **process_mode=ALWAYS 오버레이를 `show_doc()` 없이 add_child만 하면 _process가 미생성 노드에서 null 크래시.**
+  검증 하니스가 `ArcturusDocumentOverlay.new()`+`add_child`만 하고 `show_doc(lines)`를 안 부르면, `paper`가
+  아직 null인데 _process(line166 `paper.position`)가 돌아 "property 'position' on Nil"이 뜬다. 실게임은
+  add_child 직후 같은 프레임에 show_doc를 부르므로 정상. → 지연 초기화 오버레이는 **하니스에서도 정식 진입
+  함수까지 호출**해 검증할 것(안 그러면 하니스 인공물을 실버그로 오판). (2026-07-02 터치 검증에서 관측.)
+
 ---
 
 ## 렌더링 / 레이아웃
