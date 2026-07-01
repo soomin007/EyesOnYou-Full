@@ -4056,8 +4056,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			_hide_pause()
 
 # 모바일 가상 패드 — 터치 기기에서만 생성한다(데스크톱/키보드 플레이엔 영향 없음).
+# 게이팅은 OrientationGuard.is_touch_device() — 모바일 웹에서 부정확한 is_touchscreen_available()
+# 대신 navigator.maxTouchPoints로 확인한다.
 func _build_touch_controls() -> void:
-	if not DisplayServer.is_touchscreen_available():
+	if not OrientationGuard.is_touch_device():
 		return
 	add_child(TouchControls.new())
 

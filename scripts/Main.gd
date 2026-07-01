@@ -20,7 +20,7 @@ func _ready() -> void:
 # 필요) 빈 화면 터치가 좌클릭=attack 오발사를 일으키기 때문. 인게임 사격은 가상 패드(TouchControls)가
 # 전담하고, 메뉴 UI 탭은 emulate 마우스로 그대로 동작한다.
 func _bind_default_mouse_inputs() -> void:
-	if DisplayServer.is_touchscreen_available():
+	if OrientationGuard.is_touch_device():
 		return
 	_ensure_mouse_event("attack", MOUSE_BUTTON_LEFT)
 	_ensure_mouse_event("skill", MOUSE_BUTTON_RIGHT)

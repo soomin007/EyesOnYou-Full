@@ -18,6 +18,24 @@ var _card: Control = null
 var _font: Font = null
 var _portrait: bool = false
 var _lock_tried: bool = false
+var _touch_cached: int = -1  # -1 미판정, 0 아님, 1 터치 기기
+
+# 터치 기기 여부(캐시). Stage/Main의 터치 UI 게이팅이 이걸 쓴다.
+# DisplayServer.is_touchscreen_available()은 모바일 *웹*에서 false를 흔히 반환하므로(알려진 문제),
+# 웹이면 navigator.maxTouchPoints/ontouchstart로 직접 확인한다.
+func is_touch_device() -> bool:
+	if _touch_cached == -1:
+		_touch_cached = 1 if _detect_touch() else 0
+	return _touch_cached == 1
+
+func _detect_touch() -> bool:
+	if DisplayServer.is_touchscreen_available():
+		return true
+	if OS.has_feature("web"):
+		var r: Variant = JavaScriptBridge.eval("(('ontouchstart' in window)||((navigator.maxTouchPoints||0)>0))?1:0", true)
+		if r != null:
+			return int(r) == 1
+	return false
 
 # 그리기 전용 Control — CanvasLayer는 _draw가 없어 자식 Control의 _draw에서 host._render를 부른다.
 class _Card extends Control:
@@ -67,19 +85,21 @@ func _input(event: InputEvent) -> void:
 func _try_web_landscape() -> void:
 	if not OS.has_feature("web"):
 		return
-	# canvas를 풀스크린으로 만든 뒤 가로로 잠근다. 실패(iOS 등)는 조용히 무시.
+	# documentElement를 풀스크린으로 만든 뒤 가로로 잠근다(canvas 요소 선택 실패를 피함).
+	# 실패(iOS Safari 등 orientation.lock 미지원)는 조용히 무시 — 세로 안내로 폴백.
 	var js: String = """
 	(function(){
+	  var lock = function(){
+	    try { if (screen.orientation && screen.orientation.lock) { screen.orientation.lock('landscape').catch(function(){}); } } catch(e){}
+	  };
 	  try {
-	    var lock = function(){
-	      if (screen.orientation && screen.orientation.lock) {
-	        screen.orientation.lock('landscape').catch(function(){});
-	      }
-	    };
-	    var c = document.querySelector('canvas');
-	    if (c && c.requestFullscreen) { c.requestFullscreen().then(lock).catch(lock); }
-	    else { lock(); }
-	  } catch(e) {}
+	    var el = document.documentElement;
+	    var req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
+	    if (req) {
+	      var p = req.call(el);
+	      if (p && p.then) { p.then(lock).catch(lock); } else { lock(); }
+	    } else { lock(); }
+	  } catch(e) { lock(); }
 	})();
 	"""
 	JavaScriptBridge.eval(js, true)
