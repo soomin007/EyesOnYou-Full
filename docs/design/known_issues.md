@@ -83,7 +83,18 @@
   들어가 용량이 부풀었다(codex 리뷰, 2026-06-18 — pck ~58MB). → 빌드 무관 산출물은 두 preset 모두
   `exclude_filter="poster_out/*"`로 제외. export 후 `--verbose` 또는 pck 크기로 실제 제외를 검증.
 
-- **스킬/맵 재설계 시 README·MapData 주석의 티어 표기가 코드와 어긋난 채 남는다.**
+- **`"함정"` 태그 + 빈 `spikes` 배열 = 원치 않는 랜덤 스파이크가 폴백 생성된다.**
+  `Stage._build_hazards`는 `spikes`가 비어 있고 route tags에 `"함정"`이 있으면 스테이지 전역에 랜덤 스파이크를
+  뿌린다(디버그/플레이그라운드용 폴백). 발사 트랩(BulletTrap)만 두고 싶은 맵에 습관적으로 `"함정"` 태그를
+  달면 의도치 않은 가시가 깔린다. → 트랩만 있는 맵은 `"함정"` 태그를 빼거나 `spikes`를 명시(빈 배열이라도
+  tags에서 빼야 함). 트랩 "못 잡는 함정" VEIL 경고는 태그가 아니라 `_traps_present`(트랩 생성 시 set)가
+  담당하므로 태그 없이도 뜬다. (2026-07-02 차량 엄폐 맵.)
+
+- **StaticBody를 탄이 데미지 주게 하려면 탄이 *충돌 대상을 통지*해야 한다 — 탄은 layer 0이라 Area가 못 잡는다.**
+  EnemyBullet/Bullet은 `collision_layer=0, mask=1|2`(또는 1|4)라 *스스로는* 어떤 Area/Body 감지에도 안 잡힌다
+  (layer 0). 그래서 "부서지는 엄폐물"이 맞았는지 엄폐물 쪽 Area로는 알 수 없다. → 탄의 `body_entered`에서
+  StaticBody를 만났을 때 `body.has_method("hit_by_bullet")`면 호출하는 방식으로 *탄이 통지*한다(엄폐물은
+  layer1 StaticBody라 탄의 mask에 잡힘). 일반 벽/발판은 메서드가 없어 그냥 소멸 — 기존 동작 불변. (2026-07-02.)
   글라이드 T3을 '관통·추적'→'유도'로 재설계(2026-06-15)했으나 README는 옛 문구를, 삼단점프 티어는
   T1/T2가 파일마다 뒤섞여 있었다(codex 리뷰, 2026-06-18). 게이트 맵 목록도 강등/제거된 rooftops·watchtower가
   남아 있었다. → 스킬 정의의 단일 소스는 `SkillTreeData.gd`. 티어/효과를 바꾸면 README 스킬표·기믹표와

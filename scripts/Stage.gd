@@ -106,6 +106,7 @@ const _ROUTE_TRACKS: Dictionary = {
 	"route_perimeter":   "early",
 	"route_gauntlet":    "mid_late",
 	"route_freight_lift": "mid_late",
+	"route_car_cover":  "mid_late",
 	"route_cooling":    "mid_late",
 	"route_ward":       "mid_late",
 	"route_datacenter": "mid_late",
@@ -772,6 +773,7 @@ func _build_world() -> void:
 	_build_ground()
 	_build_platforms()
 	_build_moving_platforms()
+	_build_destructible_covers()
 	_build_decorations()
 	_build_route_ambience()
 	_build_hazards()
@@ -1212,6 +1214,17 @@ func _build_moving_platforms() -> void:
 			float(d.get("cycle", 4.0)),
 			float(d.get("phase", 0.0))
 		)
+
+# 부서지는 엄폐물(DestructibleCover 기믹) — MapData "destructible_covers" 배열을 읽어 생성.
+# 각 항목 = {pos(바닥 접점=하단 중앙), w, h, hp}. 솔리드 + 적탄 피격으로 파괴(엄폐 관리 = 이 맵 정체성).
+func _build_destructible_covers() -> void:
+	for entry in _map_data.get("destructible_covers", []):
+		var d: Dictionary = entry
+		var cover := DestructibleCover.new()
+		add_child(cover)
+		cover.position = d.get("pos", Vector2.ZERO)
+		cover.z_index = -1  # 배우(플레이어/적) 뒤 — 항상 플레이어가 보이게
+		cover.setup(float(d.get("w", 96.0)), float(d.get("h", 72.0)), int(d.get("hp", 3)))
 
 func _build_platforms_fallback() -> void:
 	# 안전한 일자형 폴백 (튜토리얼/플레이그라운드용)

@@ -51,6 +51,7 @@ static func get_layout(route_id: String) -> Dictionary:
 		"route_perimeter":     return _perimeter()
 		"route_gauntlet":      return _gauntlet()
 		"route_freight_lift":  return _freight_lift()
+		"route_car_cover":     return _car_cover()
 	return {}
 
 # ─── 1. 외곽 진입로 (HORIZONTAL, 짧음) ─────────────────────────
@@ -1265,4 +1266,47 @@ static func _freight_lift() -> Dictionary:
 			{"x": 1770.0, "w": 320.0, "dmg": 2},   # 구덩이 2
 			{"x": 2600.0, "w": 300.0, "dmg": 2},   # 구덩이 3
 		],
+	}
+
+# ─── 차량 엄폐 통로 (HORIZONTAL) — 부서지는 엄폐 기믹 맵 (막2 s4~5) ─────────
+# 정체성: 저격에 노출된 개활 통로를 "부서지는 차량"(DestructibleCover) 뒤에 붙어 전진.
+#   · 차량은 솔리드 → 저격수 LoS를 막아 뒤에 붙으면 안전, 넘어갈 때만 노출(넘는 순간 조준당함).
+#   · 통로 끝의 발사 함정(BulletTrap)이 LoS 무관하게 훑어 먼 쪽 차량부터 침식 → 목표 근처가 점점
+#     노출된다("머물면 엄폐가 깨진다"). 목표까지 커버가 남아있는 동안 전진하는 레이스.
+# 램프: risk3라 s3 금지(min_stage 4). 앞쪽 = 여유(엄폐 많음, warmup patrol) → 뒤쪽 = 저격 2 + 함정
+#   침식으로 노출 최고조(막2 고조에 맞는 곡선).
+static func _car_cover() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(3000.0, 720.0),
+		"player_start": Vector2(130.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(2860.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"platforms": [],
+		# 바닥(y=600)에 늘어선 정비 차량 = 엄폐물 행. 사이 트로프가 안전지대, 차량 넘기가 노출.
+		"destructible_covers": [
+			{"pos": Vector2(420, 600),  "w": 96.0, "h": 72.0, "hp": 3},
+			{"pos": Vector2(720, 600),  "w": 96.0, "h": 72.0, "hp": 3},
+			{"pos": Vector2(1040, 600), "w": 96.0, "h": 72.0, "hp": 3},
+			{"pos": Vector2(1360, 600), "w": 96.0, "h": 72.0, "hp": 3},
+			{"pos": Vector2(1720, 600), "w": 96.0, "h": 72.0, "hp": 3},
+			{"pos": Vector2(2080, 600), "w": 96.0, "h": 72.0, "hp": 3},
+			{"pos": Vector2(2440, 600), "w": 96.0, "h": 72.0, "hp": 3},
+		],
+		"enemies": {
+			# 앞쪽 warmup patrol(엄폐로 접근해 잡는 법 학습) + 뒤쪽 저격 2(목표 접근 처벌).
+			"patrol": [Vector2(880, 540.0)],
+			"sniper": [Vector2(2560, 540.0), Vector2(2740, 540.0)],
+			"drone": [], "bomber": [], "shield": [],
+		},
+		# 발사 함정 — 오른쪽 벽에서 통로를 왼쪽으로 훑어 먼 쪽 차량부터 침식(목표 근처 노출 압박).
+		"traps": [
+			{"x": 2900.0, "y": 560.0, "dir": "left", "interval": 1.8, "phase": 0.0, "telegraph": 0.6, "dmg": 1},
+		],
+		"rewards": {
+			"xp_orbs":    [Vector2(600, 560.0), Vector2(1200, 560.0), Vector2(1880, 560.0)],
+			"hp_pickups": [Vector2(2300, 560.0)],  # 마지막 트로프 — 노출된 최종 진입 전 회복
+		},
+		"spikes": [],
 	}

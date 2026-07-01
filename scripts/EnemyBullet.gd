@@ -55,4 +55,7 @@ func _on_body_entered(body: Node) -> void:
 			body.take_hit(damage)
 		queue_free()
 	elif body is StaticBody2D:
+		# 부서지는 엄폐물(DestructibleCover)은 피격마다 데미지를 받는다. 일반 벽/발판은 그냥 소멸.
+		if body.has_method("hit_by_bullet"):
+			body.hit_by_bullet()
 		queue_free()
