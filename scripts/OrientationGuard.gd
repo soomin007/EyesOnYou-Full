@@ -10,8 +10,9 @@ extends Node
 
 const FONT_PATH: String = "res://assets/fonts/Pretendard-Regular.otf"
 # 폰에선 메뉴/설정/브리핑 UI가 데스크톱 비율(1280×720) 그대로라 너무 작아 누르기 어렵다 → 확대.
-# 인게임(stage 그룹)은 월드 프레이밍·밸런스 보존 위해 1.0. 값은 실측으로 조정.
+# 인게임(stage 그룹)은 HUD 가독성 위해 살짝만(월드도 확대되나 10%라 밸런스 영향 미미). 값은 실측 조정.
 const MENU_UI_SCALE: float = 1.4
+const PLAY_UI_SCALE: float = 1.1
 
 var _layer: CanvasLayer = null
 var _card: Control = null
@@ -77,7 +78,7 @@ func _process(_delta: float) -> void:
 	if not is_touch_device():
 		return
 	var play: bool = get_tree().get_first_node_in_group("stage") != null
-	var target: float = 1.0 if play else MENU_UI_SCALE
+	var target: float = PLAY_UI_SCALE if play else MENU_UI_SCALE
 	var win: Window = get_window()
 	if win != null and not is_equal_approx(win.content_scale_factor, target):
 		win.content_scale_factor = target

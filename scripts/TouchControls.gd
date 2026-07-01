@@ -85,17 +85,18 @@ func _fit() -> void:
 func _layout(vs: Vector2) -> void:
 	var w: float = vs.x
 	var h: float = vs.y
-	# 좌하단 = 이동 클러스터(왼손 엄지)
-	_set_center("move_left",  Vector2(108.0, h - 92.0))
-	_set_center("move_right", Vector2(248.0, h - 92.0))
-	_set_center("move_down",  Vector2(178.0, h - 204.0))
-	# 우하단 = 액션 클러스터(오른손 엄지). 사격을 코너 가장 가까이(가장 자주 씀).
-	_set_center("attack", Vector2(w - 104.0, h - 96.0))
-	_set_center("jump",   Vector2(w - 230.0, h - 120.0))
-	_set_center("dash",   Vector2(w - 112.0, h - 232.0))
-	_set_center("skill",  Vector2(w - 224.0, h - 256.0))
-	# 우상단 = 일시정지
-	_set_center("pause",  Vector2(w - 58.0, 54.0))
+	# 좌하단 = 이동 D-pad(왼손). 좌우 나란히 + '아래'(▼)는 그 밑 중앙 — 아이콘 방향과 위치를 일치시켜
+	# "아래인데 위에 있어 어색"을 해소. 손가락 기본 위치(버튼 사이 빈 공간)에 맞게 안쪽으로 모음.
+	_set_center("move_left",  Vector2(140.0, h - 128.0))
+	_set_center("move_right", Vector2(296.0, h - 128.0))
+	_set_center("move_down",  Vector2(218.0, h - 52.0))
+	# 우하단 = 액션(오른손). 사격=주(우하단), 점프는 사격에서 떼어 왼쪽 위. 안쪽으로 모음.
+	_set_center("attack", Vector2(w - 140.0, h - 120.0))
+	_set_center("jump",   Vector2(w - 288.0, h - 146.0))
+	_set_center("dash",   Vector2(w - 150.0, h - 250.0))
+	_set_center("skill",  Vector2(w - 286.0, h - 264.0))
+	# 우상단 = 일시정지. HUD 우상단의 VEIL 눈(BriefingVisual, y≈14~84)과 겹치지 않게 그 아래로.
+	_set_center("pause",  Vector2(w - 48.0, 128.0))
 
 func _set_center(action: String, c: Vector2) -> void:
 	for i in _buttons.size():
