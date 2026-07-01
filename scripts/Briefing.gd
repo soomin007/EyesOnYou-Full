@@ -195,14 +195,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if card_active:
 		# 막 진입 카드는 락아웃 경과 후 점프/스킵으로 건너뛴다(ESC는 위에서 처리됨).
-		if input_lockout_t <= 0.0 and (event.is_action_pressed("ui_skip") or event.is_action_pressed("jump")):
+		if input_lockout_t <= 0.0 and (event.is_action_pressed("ui_skip") or event.is_action_pressed("jump") or OrientationGuard.is_tap(event)):
 			get_viewport().set_input_as_handled()
 			_finish_card()
 		return
 	if input_lockout_t > 0.0:
 		# 보스 클리어 후 잔여 점프 연타 차단.
 		return
-	if event.is_action_pressed("ui_skip") or event.is_action_pressed("jump"):
+	if event.is_action_pressed("ui_skip") or event.is_action_pressed("jump") or OrientationGuard.is_tap(event):
 		if not done:
 			# 한 줄 즉시 완성
 			var full: String = str(lines[line_idx].get("text", ""))

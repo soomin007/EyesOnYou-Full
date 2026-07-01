@@ -63,7 +63,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		GameState.reset()
 		get_tree().change_scene_to_file(SceneRouter.TITLE)
 		return
-	if event.is_action_pressed("ui_skip") or event.is_action_pressed("jump"):
+	if event.is_action_pressed("ui_skip") or event.is_action_pressed("jump") or OrientationGuard.is_tap(event):
 		if not done:
 			revealed = full_text.length()
 			text_label.text = full_text

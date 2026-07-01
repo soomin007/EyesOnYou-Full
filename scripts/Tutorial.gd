@@ -112,6 +112,9 @@ func _ready() -> void:
 	_build_hud()
 	_refresh_hud()
 	_build_veil_presence()
+	# 모바일 가상 패드 — 터치 기기에서만(player가 Player.gd라 이동/점프/사격/대시/스킬 그대로 동작).
+	if OrientationGuard.is_touch_device():
+		add_child(TouchControls.new())
 	# 어투 아크의 출발점 — 튜토리얼은 첫 접촉이라 가장 차갑고 격식 있는 격식체(~습니다).
 	# 후반으로 갈수록 ~해요체로 풀린다(친근함). 동시에 SILO-7/요원/작전이라는 세계를 도입.
 	_veil_say("통신 연결됐습니다. 요원, 여기는 훈련 구역입니다. 실전에 들어가기 전에 조작을 익혀두십시오.", 5.0)

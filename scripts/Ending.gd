@@ -281,11 +281,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	# 시퀀스 완료 후엔 SPACE 단발은 무시 — 길게 누르기로만 타이틀 이동 (process에서 처리).
 	if sequence_complete:
+		# 폰: '길게 눌러 종료'를 탭으로 대체 — hold를 채워 다음 _process에서 크레딧으로 넘어간다.
+		if OrientationGuard.is_tap(event):
+			hold_progress = HOLD_TO_QUIT_DURATION
 		return
 	if input_lockout_t > 0.0:
 		# 진입 직후 1초 동안 입력 무시 — 점프 연타 사고 방지.
 		return
-	if event.is_action_pressed("ui_skip") or event.is_action_pressed("jump"):
+	if event.is_action_pressed("ui_skip") or event.is_action_pressed("jump") or OrientationGuard.is_tap(event):
 		# 한 줄 즉시 완성
 		if line_idx < lines.size():
 			var line: Dictionary = lines[line_idx]

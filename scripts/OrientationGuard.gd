@@ -1,15 +1,12 @@
 extends Node
 
-# 모바일 웹에서 가로 화면을 유도/강제하는 전역 가드(autoload).
+# 모바일 웹 가로 유도/강제 + 터치 기기 감지 + 탭 진행 헬퍼 (autoload).
 #
-# 왜 필요한가: project.godot의 window/handheld/orientation은 *네이티브* 빌드에만 먹고, 모바일 웹
-# 브라우저는 이를 무시하고 기기 방향을 따른다. 그래서 웹에서 가로를 보장하려면 런타임 처리가 필요하다.
-#
-# 두 가지를 한다:
-#  1) 세로(portrait)일 때 모든 화면(타이틀·메뉴·인게임 공통) 위에 "가로로 돌려주세요" 안내를 띄운다.
-#  2) 웹이면 첫 사용자 제스처(터치/클릭)에 fullscreen + screen.orientation.lock('landscape')을 시도한다.
-#     안드로이드 크롬 등에서 가로가 자동 잠긴다. iOS Safari는 orientation lock 미지원이라 1)의 안내 +
-#     물리적 회전에 의존한다.
+# 1) 세로(portrait)일 때 모든 화면 위에 "가로로 돌려주세요" 안내(layer 128).
+# 2) 웹이면 첫 사용자 제스처에 fullscreen + screen.orientation.lock('landscape') 시도(안드로이드 자동 가로).
+# 3) is_touch_device(): 모바일 웹에서 부정확한 DisplayServer.is_touchscreen_available() 대신
+#    navigator.maxTouchPoints로 터치 기기를 판정(Stage/Tutorial/Main 게이팅이 사용).
+# 4) is_tap(event): 키보드 없는 폰에서 오프닝·브리핑·엔딩 등 진행성 화면이 화면 탭을 진행 입력으로 받게.
 
 const FONT_PATH: String = "res://assets/fonts/Pretendard-Regular.otf"
 
@@ -19,13 +16,8 @@ var _font: Font = null
 var _portrait: bool = false
 var _lock_tried: bool = false
 var _touch_cached: int = -1  # -1 미판정, 0 아님, 1 터치 기기
-# [임시 진단] 웹에서 수집한 터치 지원 값 — 화면 상단 DBG 바에 표시.
-var _dbg_maxtouch: int = -1
-var _dbg_ontouch: int = -1
 
-# 터치 기기 여부(캐시). Stage/Main의 터치 UI 게이팅이 이걸 쓴다.
-# DisplayServer.is_touchscreen_available()은 모바일 *웹*에서 false를 흔히 반환하므로(알려진 문제),
-# 웹이면 navigator.maxTouchPoints/ontouchstart로 직접 확인한다.
+# 터치 기기 여부(캐시). is_touchscreen_available()은 모바일 웹에서 false를 흔히 반환하므로 웹은 JS로 직접 확인.
 func is_touch_device() -> bool:
 	if _touch_cached == -1:
 		_touch_cached = 1 if _detect_touch() else 0
@@ -39,6 +31,11 @@ func _detect_touch() -> bool:
 		if r != null:
 			return int(r) == 1
 	return false
+
+# 화면 탭(터치)을 "진행/확인" 입력으로 받기 위한 헬퍼 — 진행성 화면이 jump/ui_skip 조건 옆에 OR로 쓴다.
+# ScreenTouch만 인정한다(emulate 마우스 중복 방지 + 데스크톱 마우스 클릭엔 영향 없음).
+func is_tap(event: InputEvent) -> bool:
+	return event is InputEventScreenTouch and (event as InputEventScreenTouch).pressed
 
 # 그리기 전용 Control — CanvasLayer는 _draw가 없어 자식 Control의 _draw에서 host._render를 부른다.
 class _Card extends Control:
@@ -60,19 +57,8 @@ func _ready() -> void:
 	_card.host = self
 	_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_layer.add_child(_card)
-	# [임시 진단] 웹 터치/방향 값을 1회 수집(maxTouchPoints 등은 안 변함). 진단 끝나면 제거.
-	if OS.has_feature("web"):
-		var a: Variant = JavaScriptBridge.eval("(navigator.maxTouchPoints||0)", true)
-		_dbg_maxtouch = int(a) if a != null else -1
-		var b: Variant = JavaScriptBridge.eval("('ontouchstart' in window)?1:0", true)
-		_dbg_ontouch = int(b) if b != null else -1
 	_refresh()
 	get_viewport().size_changed.connect(_refresh)
-
-# [임시 진단] 매 프레임 진단 텍스트를 갱신(lock/scene 상태 변화 반영). 진단 끝나면 _process 제거.
-func _process(_delta: float) -> void:
-	if _card != null:
-		_card.queue_redraw()
 
 func _refresh() -> void:
 	var vs: Vector2 = get_viewport().get_visible_rect().size
@@ -80,7 +66,7 @@ func _refresh() -> void:
 	if _card != null:
 		_card.position = Vector2.ZERO
 		_card.size = vs
-		_card.visible = true  # [임시 진단] 진단 바를 항상 보이게(원래는 _portrait). 진단 끝나면 되돌리기.
+		_card.visible = _portrait
 		_card.queue_redraw()
 
 func _input(event: InputEvent) -> void:
@@ -120,20 +106,10 @@ func _try_web_landscape() -> void:
 
 func _render(card: Control) -> void:
 	var vs: Vector2 = card.size
-	# 세로일 때만 풀스크린 어둠 + "가로로 돌려주세요" 안내.
-	if _portrait:
-		card.draw_rect(Rect2(Vector2.ZERO, vs), Color(0.03, 0.04, 0.05, 0.98))
-		if _font != null:
-			var msg: String = "기기를 가로로 돌려주세요"
-			card.draw_string(_font, Vector2(0.0, vs.y * 0.5), msg, HORIZONTAL_ALIGNMENT_CENTER, vs.x, 40, Color(0.86, 0.92, 1.0, 0.96))
-			var sub: String = "화면 회전 잠금이 켜져 있으면 꺼주세요"
-			card.draw_string(_font, Vector2(0.0, vs.y * 0.5 + 46.0), sub, HORIZONTAL_ALIGNMENT_CENTER, vs.x, 22, Color(0.62, 0.72, 0.82, 0.9))
-	# [임시 진단] 화면 상단에 항상 표시 — 사용자가 읽어주면 원인 확정. 진단 끝나면 이 블록 삭제.
-	if _font != null:
-		var scn: Node = get_tree().current_scene
-		var sn: String = scn.name if scn != null else "?"
-		var l1: String = "DBG web=%s touch=%s maxT=%d ots=%d" % [str(OS.has_feature("web")), str(is_touch_device()), _dbg_maxtouch, _dbg_ontouch]
-		var l2: String = "vp=%dx%d P=%s lock=%s scene=%s" % [int(vs.x), int(vs.y), str(_portrait), str(_lock_tried), sn]
-		card.draw_rect(Rect2(0.0, 0.0, vs.x, 52.0), Color(0.0, 0.0, 0.0, 0.72))
-		card.draw_string(_font, Vector2(8.0, 20.0), l1, HORIZONTAL_ALIGNMENT_LEFT, vs.x - 16.0, 18, Color(1.0, 1.0, 0.55))
-		card.draw_string(_font, Vector2(8.0, 44.0), l2, HORIZONTAL_ALIGNMENT_LEFT, vs.x - 16.0, 18, Color(1.0, 1.0, 0.55))
+	card.draw_rect(Rect2(Vector2.ZERO, vs), Color(0.03, 0.04, 0.05, 0.98))
+	if _font == null:
+		return
+	var msg: String = "기기를 가로로 돌려주세요"
+	card.draw_string(_font, Vector2(0.0, vs.y * 0.5), msg, HORIZONTAL_ALIGNMENT_CENTER, vs.x, 40, Color(0.86, 0.92, 1.0, 0.96))
+	var sub: String = "화면 회전 잠금이 켜져 있으면 꺼주세요"
+	card.draw_string(_font, Vector2(0.0, vs.y * 0.5 + 46.0), sub, HORIZONTAL_ALIGNMENT_CENTER, vs.x, 22, Color(0.62, 0.72, 0.82, 0.9))
