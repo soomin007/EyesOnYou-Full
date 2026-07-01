@@ -56,7 +56,8 @@ func _process(delta: float) -> void:
 			hint_label.text = _done_hint()
 		text_label.text = full_text.substr(0, revealed)
 
-func _unhandled_input(event: InputEvent) -> void:
+# 모바일: 화면 탭이 UI Control에 먹히기 전에 받으려 _unhandled_input 대신 _input을 쓴다.
+func _input(event: InputEvent) -> void:
 	if input_lockout_t > 0.0:
 		return
 	if event.is_action_pressed("ui_cancel"):

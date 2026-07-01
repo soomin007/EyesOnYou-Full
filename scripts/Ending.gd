@@ -266,7 +266,9 @@ func _on_sequence_done() -> void:
 	if hold_progress_bar != null and hold_progress_bar.get_parent() is Control:
 		(hold_progress_bar.get_parent() as Control).visible = true
 
-func _unhandled_input(event: InputEvent) -> void:
+# 모바일: 화면 탭이 UI Control에 먹히기 전에 받으려 _unhandled_input 대신 _input을 쓴다.
+# 선택지(있어요/없어요) 버튼은 waiting_choice에서 return하므로 버튼 gui_input으로 정상 전달된다.
+func _input(event: InputEvent) -> void:
 	# ESC는 최우선 — 결말 연출을 건너뛴다(입력 락아웃 무관). 선택지(있어요/없어요)는
 	# 서사 분기라 ESC로 건너뛰지 않는다(그 경우 버튼으로만 진행).
 	if event.is_action_pressed("ui_cancel") and not waiting_choice:

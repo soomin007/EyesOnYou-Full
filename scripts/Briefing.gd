@@ -186,7 +186,9 @@ func _process(delta: float) -> void:
 			hint_label.text = _continue_hint()
 		text_label.text = full.substr(0, revealed_chars)
 
-func _unhandled_input(event: InputEvent) -> void:
+# 모바일: 화면 탭(ScreenTouch)이 UI Control(루트 Control이 화면을 덮음)에 먹히기 전에 받으려
+# _unhandled_input 대신 _input을 쓴다. 키보드 동작은 동일(자체 클릭 버튼이 없는 멘트 화면).
+func _input(event: InputEvent) -> void:
 	# ESC는 최우선 — 입력 락아웃과 무관하게 브리핑 전체를 건너뛰고 루트 선택으로.
 	# (오프닝/브리핑에서 ESC가 안 먹던 문제. 어떤 화면에서도 ESC는 즉시 반응.)
 	if event.is_action_pressed("ui_cancel"):
