@@ -80,7 +80,7 @@ const STORY_BRIEFINGS_BY_BAND: Dictionary = {
 # 담당하므로 제외. 본편 전용(스토리 모드 제외). 어투는 신뢰 밴드.  키 = 막 인덱스(act_for_stage).
 const ACT_ENTRY_BY_BAND: Dictionary = {
 	1: {
-		"cold": "외곽을 벗어났습니다. 여기부터는 시설 내부입니다. 기계의 눈이 돌아갑니다 — 제 시야 밖에서도.",
+		"cold": "외곽을 벗어났습니다. 여기부터는 시설 내부입니다. 기계의 눈이 돌아갑니다. 제 시야 밖에서도.",
 		"thaw": "이제 안으로 들어왔어요. 여기부턴 저만 보는 게 아니에요. 기계도 봐요. 조심해요.",
 		"warm": "안이에요. 여기선 저 말고도 보는 게 있어요. 머리 위, 잊지 말아요.",
 	},
@@ -94,7 +94,7 @@ const ACT_ENTRY_BY_BAND: Dictionary = {
 # 첫 임무 시작 화면 — Briefing.gd가 stage 0 진입 시 한 번만 표시.
 # 한 화면에 임무명·목표·VEIL 동행을 같이 통보 — 이전엔 라인이 4개로 쪼개져
 # 사용자가 무슨 내용인지 못 읽고 그냥 ENTER로 넘기던 문제(사용자 보고).
-const INTRO_SYSTEM: String = "침투 작전 — 보안 시설 SILO-7\n최종 목표: 시설 심장부 도달 → 데이터 회수 → 탈출\n도면 없음. 사전 정보 없음.\n현장 지원 AI: VEIL.\n작전명: PALIMPSEST"
+const INTRO_SYSTEM: String = "침투 작전: 보안 시설 SILO-7\n최종 목표: 시설 심장부 도달 → 데이터 회수 → 탈출\n도면 없음. 사전 정보 없음.\n현장 지원 AI: VEIL.\n작전명: PALIMPSEST"
 
 # 시스템 텍스트 직후 VEIL 첫 마디. 두 화면으로 분리 — ① 교신/시야 분담, ② 목표·교전선택·진입.
 # (한 화면에 다 넣으면 줄 수가 늘어 우측 MissionVisual 목표 아이콘과 겹침 — 2026-06-23 피드백.) trust 0이라 COLD 고정.
@@ -107,7 +107,7 @@ const INTRO_VEIL: Array[String] = [
 # 톤: 작전명 PALIMPSEST(덮어쓰여도 흔적이 남는 문서) + 게임의 루프/리셋 테마. VEIL은 기록상 '처음'인데
 # 어쩐지 낯익어한다(4번째 벽 금지 — "플레이어가 전에 했다"가 아니라 VEIL의 흔적/기억으로 처리). trust 0=COLD.
 # 화면당 3줄 유지(우측 MissionVisual 겹침 회피). 어미는 1회차와 같은 격식체.
-const INTRO_SYSTEM_REPLAY: String = "침투 작전 — 보안 시설 SILO-7\n최종 목표: 시설 심장부 도달 → 데이터 회수 → 탈출\n이전 작전 기록: 덮어쓰기됨 (잔여 흔적 검출)\n현장 지원 AI: VEIL.\n작전명: PALIMPSEST"
+const INTRO_SYSTEM_REPLAY: String = "침투 작전: 보안 시설 SILO-7\n최종 목표: 시설 심장부 도달 → 데이터 회수 → 탈출\n이전 작전 기록: 덮어쓰기됨 (잔여 흔적 검출)\n현장 지원 AI: VEIL.\n작전명: PALIMPSEST"
 const INTRO_VEIL_REPLAY: Array[String] = [
 	"...통신 연결됐습니다. 들립니까, 요원?\n기록상 우리는 처음입니다. 그런데, 이상하네요.\n이 목소리도, 이 침묵도, 어쩐지 낯익습니다.",
 	"심장부까지 들어가 데이터를 확보한 뒤, 살아서 빠져나오면 됩니다.\n모든 적과 싸울 필요는 없습니다. 길만 열면 그 구역은 통과입니다.\n이번엔 다른 길이 보일지도 모르겠습니다. 외곽부터, 천천히.",

@@ -588,13 +588,13 @@ func _on_input_kind_changed(_kind: String) -> void:
 func _refresh_hud() -> void:
 	var step_name := ""
 	match step:
-		Step.MOVE:    step_name = "1/6 — 이동"
-		Step.JUMP:    step_name = "2/6 — 점프"
-		Step.ATTACK:  step_name = "3/6 — 사격"
-		Step.LEVELUP: step_name = "4/6 — 레벨업"
-		Step.SKILL:   step_name = "5/6 — 스킬 사용"
-		Step.DASH:    step_name = "6/6 — 대시"
-		Step.DONE:    step_name = "튜토리얼 완료 — 골에 도달해요"
+		Step.MOVE:    step_name = "1/6  이동"
+		Step.JUMP:    step_name = "2/6  점프"
+		Step.ATTACK:  step_name = "3/6  사격"
+		Step.LEVELUP: step_name = "4/6  레벨업"
+		Step.SKILL:   step_name = "5/6  스킬 사용"
+		Step.DASH:    step_name = "6/6  대시"
+		Step.DONE:    step_name = "튜토리얼 완료  골에 도달해요"
 	hud_label.text = "TUTORIAL  %s" % step_name
 
 # ─── VEIL 존재감 (눈 + 음성 자막) ──────────────────────────────
@@ -640,7 +640,7 @@ func _veil_say(line: String, dur: float) -> void:
 		return
 	SfxPlayer.play("veil_subtitle_in")
 	var l := Label.new()
-	l.text = "VEIL  —  " + line
+	l.text = "VEIL   " + line
 	l.add_theme_font_size_override("font_size", 20)
 	l.add_theme_color_override("font_color", Color(0.80, 0.92, 1.0))
 	l.add_theme_color_override("font_outline_color", Color(0, 0, 0))
@@ -664,6 +664,13 @@ func _veil_say(line: String, dur: float) -> void:
 	tw.tween_callback(func() -> void:
 		if is_instance_valid(l):
 			l.queue_free())
+
+# 한 자막 뒤에 다음 자막을 이어 보여준다(한 번에 몰지 않고 나눠서). delay 초 뒤 _veil_say 호출.
+func _veil_after(delay: float, line: String, dur: float) -> void:
+	var tm := get_tree().create_timer(delay)
+	tm.timeout.connect(func() -> void:
+		if is_instance_valid(self) and is_inside_tree():
+			_veil_say(line, dur))
 
 # ─── 인터랙션 노드 ─────────────────────────────────────────────
 
@@ -912,7 +919,8 @@ func _advance_to(next: int) -> void:
 		Step.SKILL:
 			_build_skill_sign()
 			_spawn_skill_dummies()
-			_veil_say("폭발물을 하나 내줬습니다. 스킬 키를 꾹 눌러 사거리를 잡으십시오. 궤도가 보입니다. 놓으면 던집니다.\n마음에 들지 않으면 ▼로 취소하십시오. 남은 표적에 써 보십시오.", 6.0)
+			_veil_say("폭발물입니다. 꾹 눌렀다 놓으면 던집니다.", 3.5)
+			_veil_after(4.3, "오래 누를수록 멀리 갑니다. 취소는 ▼입니다.", 3.5)
 		Step.DASH:
 			sign_dash.visible = true
 			_veil_say("전방 장애물. 대시로 통과하십시오.", 3.5)
@@ -1003,7 +1011,7 @@ func _build_skill_sign() -> void:
 		sign_skill = _make_keycap_sign(kb_keys, pad_keys, skill_label, pos)
 	else:
 		var sname: String = str(skill.get("name", "패시브"))
-		sign_skill = _make_text_sign("[%s] 자동 적용 — 처리하면 진행" % sname, pos)
+		sign_skill = _make_text_sign("[%s] 자동 적용, 처리하면 진행" % sname, pos)
 	add_child(sign_skill)
 
 # 한 줄 안내문 표지 — 키캡 없는 짧은 문구. 패시브 스킬 안내 등에 사용.
@@ -1047,8 +1055,8 @@ func _on_skill_dummy_bullet_deflected() -> void:
 func _show_skill_hint_toast() -> void:
 	var toast := Label.new()
 	toast.text = GameState.hint(
-		"이 적은 총알이 안 들어가요. 폭발물(L / 마우스 우클릭)을 꾹 눌러 던져요. 놓으면 날아가요.",
-		"이 적은 총알이 안 들어가요. 폭발물(Y 버튼)을 꾹 눌러 던져요. 놓으면 날아가요.")
+		"이 적은 총알이 안 들어가요. 폭발물(L / 마우스 우클릭)을 꾹 눌러 던져요.",
+		"이 적은 총알이 안 들어가요. 폭발물(Y 버튼)을 꾹 눌러 던져요.")
 	toast.add_theme_font_size_override("font_size", 18)
 	toast.add_theme_color_override("font_color", Color(0.95, 0.78, 0.45))
 	toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -1079,7 +1087,7 @@ func _update_levelup_sign(picked_id: String) -> void:
 		var key_action: String = str(skill.get("key", ""))
 		hint = "사용: %s" % _label_for_action(key_action)
 	else:
-		hint = "자동 적용 — 키 입력 불필요"
+		hint = "자동 적용, 키 입력 불필요"
 	sign_levelup.text = "[%s 획득]\n%s" % [sname, hint]
 
 func _label_for_action(action: String) -> String:

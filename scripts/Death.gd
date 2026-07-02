@@ -38,8 +38,8 @@ func _on_input_kind_changed(_kind: String) -> void:
 
 func _done_hint() -> String:
 	return GameState.hint(
-		"[ SPACE — 다시 시도 ]   [ ESC — 타이틀 ]",
-		"[ A — 다시 시도 ]   [ B — 타이틀 ]")
+		"[ SPACE  다시 시도 ]   [ ESC  타이틀 ]",
+		"[ A  다시 시도 ]   [ B  타이틀 ]")
 
 func _process(delta: float) -> void:
 	if input_lockout_t > 0.0:

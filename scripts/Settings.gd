@@ -647,7 +647,7 @@ func _refresh_all_keybind_buttons() -> void:
 			if i < events.size():
 				btn.text = _event_label(events[i])
 			else:
-				btn.text = "—"
+				btn.text = "-"
 			btn.disabled = false
 
 func _event_label(ev: InputEvent) -> String:
@@ -696,7 +696,7 @@ func _event_label(ev: InputEvent) -> String:
 			JOY_AXIS_TRIGGER_LEFT: return "패드 LT"
 			JOY_AXIS_TRIGGER_RIGHT: return "패드 RT"
 			_: return "축 %d %s" % [jm.axis, sign_str]
-	return "—"
+	return "-"
 
 func _on_key_button_pressed(action_id: String, index: int, btn: Button) -> void:
 	if capturing_action != "":

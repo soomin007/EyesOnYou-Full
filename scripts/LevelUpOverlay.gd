@@ -45,7 +45,7 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 	center.add_child(v)
 
 	var title := Label.new()
-	title.text = "LEVEL UP  —  스킬을 선택해요"
+	title.text = "LEVEL UP   스킬을 선택해요"
 	title.add_theme_font_size_override("font_size", 24)
 	title.add_theme_color_override("font_color", Color(0.95, 0.95, 0.95))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -64,7 +64,7 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 		# 신뢰도는 폰트 색(veil_tone_color)으로 표현. prefix는 안 붙임 — 실력 lead-in을
 		# 위협 문장 앞에 붙이면 "필요하면, 저격수가 노려요"처럼 어색해 폐지(플레이테스트 피드백).
 		var advice_label := Label.new()
-		advice_label.text = "VEIL  —  " + advice_line
+		advice_label.text = "VEIL   " + advice_line
 		advice_label.add_theme_font_size_override("font_size", 22)
 		advice_label.add_theme_color_override("font_color", GameState.veil_tone_color())
 		advice_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

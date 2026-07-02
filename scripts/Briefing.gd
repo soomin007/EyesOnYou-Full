@@ -136,7 +136,7 @@ func _on_input_kind_changed(_kind: String) -> void:
 		hint_label.text = _continue_hint()
 
 func _continue_hint() -> String:
-	return GameState.hint("[ SPACE — 계속 ]", "[ A — 계속 ]")
+	return GameState.hint("[ SPACE  계속 ]", "[ A  계속 ]")
 
 func _build_lines() -> Array:
 	var out: Array = []

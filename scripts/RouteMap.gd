@@ -33,8 +33,8 @@ func _ready() -> void:
 	# 자동저장 — 스테이지 사이(다음 루트 선택 직전)의 깨끗한 스냅샷. 웹에서 닫아도 "이어하기"로 복귀.
 	# (이 시점 불변식: route_history.size() == current_stage)
 	GameState.save_run()
-	stage_label.text = "STAGE %d / %d  —  루트 선택" % [GameState.current_stage + 1, GameState.effective_total_stages()]
-	subtitle_label.text = "● 위험도 · 보상(경험치)   —   ? 미상"
+	stage_label.text = "STAGE %d / %d   루트 선택" % [GameState.current_stage + 1, GameState.effective_total_stages()]
+	subtitle_label.text = "● 위험도 · 보상(경험치)   ·   ? 미상"
 	pool = RouteData.get_route_pool_for_stage(GameState.current_stage, GameState.route_history)
 	var rec: Dictionary = RouteData.choose_veil_recommendation_with_reason(pool)
 	recommended_id = str(rec.get("id", ""))
@@ -366,9 +366,9 @@ func _update_veil_comment() -> void:
 	# 추천 맵: ★ + 추천 사유(VEIL이 직접 말로). 비추천 맵: 그 맵 고유 veil_comment.
 	var is_recommended: bool = (route.get("id", "") == recommended_id and recommended_reason != "")
 	if is_recommended:
-		msg += "★ 베일 추천\nVEIL  —  " + recommended_reason
+		msg += "★ 베일 추천\nVEIL   " + recommended_reason
 	else:
-		msg += "VEIL  —  " + str(route.get("veil_comment", ""))
+		msg += "VEIL   " + str(route.get("veil_comment", ""))
 	veil_text.text = msg
 	# 고위험/고보상 경고는 별도 우측 패널, 권장 스킬은 별도 좌측 칩 — 본 멘트와 시각 분리.
 	_update_risk_reward_panel(route)

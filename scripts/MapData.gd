@@ -750,8 +750,8 @@ static func _hidden() -> Dictionary:
 		"spikes": [],
 	}
 
-# ─── 12. 서버 회랑 (HORIZONTAL, 막3 전투 — 핵심부 직전) ────────────────
-# A2 신규 맵. datacenter(ARENA 웨이브)와 달리 긴 통과형 회랑 — 드론·저격을 랙(발판)으로
+# ─── 12. 서버 복도 (HORIZONTAL, 막3 전투 — 핵심부 직전) ────────────────
+# A2 신규 맵. datacenter(ARENA 웨이브)와 달리 긴 통과형 복도 — 드론·저격을 랙(발판)으로
 # 엄폐하며 빠져나간다. 막3 onset(시야붕괴)이 여기서 켜질 수 있다(is_late_act).
 static func _server_hall() -> Dictionary:
 	return {
@@ -776,7 +776,7 @@ static func _server_hall() -> Dictionary:
 			{"pos": Vector2(2750, 560), "w": 120.0},
 		],
 		"enemies": {
-			# 핵심부 직전 — 드론·저격 동시 압박(데이터센터와 같은 적, 통과형 회랑).
+			# 핵심부 직전 — 드론·저격 동시 압박(데이터센터와 같은 적, 통과형 복도).
 			"patrol": [Vector2(900, 600), Vector2(2200, 600), Vector2(3400, 600)],
 			"sniper": [Vector2(1500, 438), Vector2(3500, 438)],
 			"drone":  [Vector2(2500, 180), Vector2(4050, 180)],
@@ -1073,8 +1073,8 @@ static func _checkpoint() -> Dictionary:
 		],
 	}
 
-# ─── 22. 통제실 회랑 (HORIZONTAL, 막3 전투 s6) — 드론+저격 통과형(server_hall 계열) ──
-# 막3 전투 풀(s6)의 4번째 선택지. datacenter/server_hall과 같은 적, 핵심부 접근 회랑.
+# ─── 22. 통제실 복도 (HORIZONTAL, 막3 전투 s6) — 드론+저격 통과형(server_hall 계열) ──
+# 막3 전투 풀(s6)의 4번째 선택지. datacenter/server_hall과 같은 적, 핵심부 접근 복도.
 # (??? 진실 분기가 항상 보이도록 RouteData에서 hidden을 s6 guaranteed로 둠.)
 static func _control_corridor() -> Dictionary:
 	return {

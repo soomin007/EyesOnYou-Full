@@ -37,7 +37,7 @@ func _ready() -> void:
 	# 런 완주 1회 처리 — 본 엔딩 기록(엔딩 모으기/리플레이 토대) + 완주 카운트 + 진행 저장(run.cfg) 삭제.
 	GameState.record_ending(ending_id)
 	title_label.text = "MISSION COMPLETE"
-	sub_title_label.text = "결말  —  %s" % EndingResolver.get_ending_title(ending_id)
+	sub_title_label.text = "결말  %s" % EndingResolver.get_ending_title(ending_id)
 	var truth_mark: String = "   |   진실  ●" if GameState.truth_seen else ""
 	stats_label.text = "신뢰  %s   |   처리  %s   |   사망  %d   |   스코어  %d%s" % [
 		GameState.veil_trust_gauge_dots(), EndingResolver.disposal_label(GameState.disposal_choice),
@@ -65,7 +65,7 @@ func _ready() -> void:
 	_start_line()
 
 func _hold_hint_text() -> String:
-	return GameState.hint("SPACE 길게 — 크레딧 (3초)", "A 길게 — 크레딧 (3초)")
+	return GameState.hint("SPACE 길게  크레딧 (3초)", "A 길게  크레딧 (3초)")
 
 func _on_input_kind_changed(_kind: String) -> void:
 	if hold_hint != null:
@@ -159,7 +159,7 @@ func _process(delta: float) -> void:
 			push_warning("[Ending] stall watchdog 발동 line_idx=%d/%d" % [line_idx, lines.size()])
 			var line: Dictionary = lines[line_idx] if line_idx < lines.size() else {}
 			var full: String = str(line.get("text", ""))
-			var prefix: String = "VEIL  —  " if str(line.get("speaker", "")) == "VEIL" else ""
+			var prefix: String = "VEIL   " if str(line.get("speaker", "")) == "VEIL" else ""
 			text_label.text = prefix + full
 			revealed = full.length()
 			typing_done = true
@@ -202,7 +202,7 @@ func _process(delta: float) -> void:
 				silent_timer = 0.0
 			var prefix: String = ""
 			if str(line.get("speaker", "")) == "VEIL":
-				prefix = "VEIL  —  "
+				prefix = "VEIL   "
 			text_label.text = prefix + full.substr(0, revealed)
 		return
 	if line.get("choice", false):
@@ -299,7 +299,7 @@ func _input(event: InputEvent) -> void:
 			if not typing_done:
 				var full: String = str(line.get("text", ""))
 				revealed = full.length()
-				var prefix: String = "VEIL  —  " if str(line.get("speaker", "")) == "VEIL" else ""
+				var prefix: String = "VEIL   " if str(line.get("speaker", "")) == "VEIL" else ""
 				text_label.text = prefix + full
 				typing_done = true
 				silent_timer = 0.0

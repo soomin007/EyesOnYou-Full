@@ -228,11 +228,11 @@ func _show_line_desc(line_id: String, fam: String, is_baseline: bool) -> void:
 		var ds: String = str(td.get("desc", ""))
 		var note: String = _active_note(td)
 		if t <= owned:
-			txt += "[color=#%s]✓ T%d  %s — %s[/color]%s\n" % [fam_hex, t, nm, ds, note]
+			txt += "[color=#%s]✓ T%d  %s  %s[/color]%s\n" % [fam_hex, t, nm, ds, note]
 		elif t == owned + 1:
-			txt += "[color=#%s]▶ T%d  %s — %s  (다음 선택 가능)[/color]%s\n" % [next_hex, t, nm, ds, note]
+			txt += "[color=#%s]▶ T%d  %s  %s  (다음 선택 가능)[/color]%s\n" % [next_hex, t, nm, ds, note]
 		else:
-			txt += "[color=#%s]· T%d  %s — %s  (잠김)[/color]%s\n" % [lock_hex, t, nm, ds, note]
+			txt += "[color=#%s]· T%d  %s  %s  (잠김)[/color]%s\n" % [lock_hex, t, nm, ds, note]
 	desc_label.text = txt
 
 func _input(event: InputEvent) -> void:

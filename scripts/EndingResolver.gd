@@ -26,7 +26,7 @@ static func disposal_label(disposal: String) -> String:
 		GameState.DISPOSAL_DESTROY: return "파기"
 		GameState.DISPOSAL_CONCEAL: return "은닉"
 		GameState.DISPOSAL_LEAVE:   return "잔류"
-	return "—"
+	return "-"
 
 static func get_ending_title(ending: String) -> String:
 	match ending:

@@ -35,12 +35,12 @@ const CREDITS_LINES: Array[String] = [
 	"",
 	"",
 	"[HEADER]Music",
-	"Glass Protocol — 메인 테마",
-	"Cold Gear — 외곽 / 외벽",
-	"Cold Wire — 시설 내부",
-	"Chrome Grit — SENTINEL",
-	"Gravity Static — ???",
-	"Ending A / B / C / D — 결말 분기",
+	"Glass Protocol: 메인 테마",
+	"Cold Gear: 외곽 / 외벽",
+	"Cold Wire: 시설 내부",
+	"Chrome Grit: SENTINEL",
+	"Gravity Static: ???",
+	"Ending A / B / C / D: 결말 분기",
 	"[SUB]All tracks generated with Suno",
 	"",
 	"",
@@ -62,7 +62,7 @@ const CREDITS_LINES: Array[String] = [
 	"[BIG]감사합니다",
 	"",
 	"",
-	"[SUB]— END —",
+	"[SUB]END",
 ]
 
 const SCROLL_SPEED: float = 36.0   # px / sec
@@ -222,7 +222,7 @@ func _actually_finish() -> void:
 	if _is_overlay:
 		emit_signal("closed")
 		return
-	# scene 모드 — 타이틀로.
+	# scene 모드  타이틀로.
 	GameState.reset()
 	get_tree().change_scene_to_file(SceneRouter.TITLE)
 

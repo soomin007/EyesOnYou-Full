@@ -31,7 +31,7 @@ func _ready() -> void:
 	# 제거(2026-06-23 방향 전환). 진행 이어하기는 별도 run.cfg가 담당(reset과 무관).
 	GameState.save_settings()
 	GameState.input_kind_changed.connect(_on_input_kind_changed)
-	# 메인 테마(Glass Protocol) — 타이틀/모드 선택/튜토리얼까지 동일 트랙 유지.
+	# 메인 테마(Glass Protocol)  타이틀/모드 선택/튜토리얼까지 동일 트랙 유지.
 	BgmPlayer.play("main_theme")
 	_build_description_panel()
 	_build_patch_panel()
@@ -339,7 +339,7 @@ func _track_debug_unlock_sequence(ev: InputEventKey) -> void:
 
 func _show_debug_unlock_toast() -> void:
 	var toast := Label.new()
-	toast.text = "디버그 모드 잠금 해제 — 설정 → 디버그 탭"
+	toast.text = "디버그 모드 잠금 해제: 설정 → 디버그 탭"
 	toast.add_theme_font_size_override("font_size", 14)
 	toast.add_theme_color_override("font_color", Color(0.95, 0.85, 0.30))
 	toast.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))

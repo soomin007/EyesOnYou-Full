@@ -208,7 +208,7 @@ func _fire_drone_intro() -> void:
 func _drone_intro_line() -> String:
 	match GameState.veil_register_band():
 		"cold":
-			return "상공에 부유 유닛 — 드론입니다. 머리 위가 사선입니다. 이제 위도 보십시오."
+			return "상공에 부유 유닛. 드론입니다. 머리 위가 사선입니다. 이제 위도 보십시오."
 		"warm":
 			return "저거 봐요, 드론이에요. 머리 위를 봐요. ...이제 기계도 우릴 봐요."
 		_:
@@ -743,7 +743,7 @@ func _alt_anonymous_client() -> Array:
 		{"speaker": "[UNKNOWN]", "text": "보상은 이미 지불했어요.", "delay": 2.5},
 		{"speaker": "[UNKNOWN]", "text": "VEIL이 누구인지 알게 되면", "delay": 2.5},
 		{"speaker": "[UNKNOWN]", "text": "요원도 이해할 거예요.", "delay": 2.5},
-		{"speaker": "[UNKNOWN]", "text": "— [SENDER UNKNOWN]", "delay": 2.0},
+		{"speaker": "[UNKNOWN]", "text": "[SENDER UNKNOWN]", "delay": 2.0},
 	]
 
 func _veil_self_lines() -> Array:
@@ -954,7 +954,7 @@ func _show_veil_subtitle(message: String, duration: float, plain_prefix: bool = 
 	_ensure_subtitle_stack()
 	var l := Label.new()
 	# plain_prefix=true: VEIL-1/VEIL-2 시퀀스(??? 방 등) 끝에 현재 VEIL이 이어 말할 때 시각 일관성용 — em dash 제거.
-	l.text = ("VEIL\n" if plain_prefix else "VEIL  —  ") + message
+	l.text = ("VEIL\n" if plain_prefix else "VEIL   ") + message
 	l.add_theme_font_size_override("font_size", 20)
 	l.add_theme_color_override("font_color", Color(0.80, 0.92, 1.0))
 	l.add_theme_color_override("font_outline_color", Color(0, 0, 0))
@@ -1018,7 +1018,7 @@ func _show_boss_alert(message: String, color: Color, duration: float) -> void:
 	panel.add_theme_stylebox_override("panel", sb)
 	holder.add_child(panel)
 	var l := Label.new()
-	l.text = "VEIL  —  " + message
+	l.text = "VEIL   " + message
 	l.add_theme_font_size_override("font_size", 28)
 	l.add_theme_color_override("font_color", color)
 	l.add_theme_color_override("font_outline_color", Color(0, 0, 0))
@@ -1706,7 +1706,7 @@ func _ambience_back_alley() -> void:
 		add_child(lamp)
 		x += rng.randf_range(540.0, 820.0)
 	# 그래피티 — 외곽 시작 지점 벽에 코드명 한 줄. 계속 등장하는 PROJECT VEIL의 첫 등장.
-	_add_lore_label(Vector2(1700.0, GROUND_Y - 320.0), "PROJECT VEIL\n— 시험 단계 —", Color(0.95, 0.78, 0.35, 0.50), 14)
+	_add_lore_label(Vector2(1700.0, GROUND_Y - 320.0), "PROJECT VEIL\n시험 단계", Color(0.95, 0.78, 0.35, 0.50), 14)
 
 func _ambience_subway() -> void:
 	# 깜빡이는 형광등 — 일부에 tween으로 깜빡임
@@ -1727,7 +1727,7 @@ func _ambience_subway() -> void:
 			tw.tween_property(tube, "modulate:a", 1.0, rng.randf_range(0.4, 1.2))
 		x += rng.randf_range(380.0, 620.0)
 	# 표지판 — 폐쇄된 지하철 표시. SILO-7 코드명 노출.
-	_add_lore_label(Vector2(1100.0, GROUND_Y - 280.0), "SILO-7  접근 통로\n— 폐쇄: 2025.11 —", Color(0.65, 0.72, 0.85, 0.55), 14)
+	_add_lore_label(Vector2(1100.0, GROUND_Y - 280.0), "SILO-7  접근 통로\n폐쇄: 2025.11", Color(0.65, 0.72, 0.85, 0.55), 14)
 	_add_lore_label(Vector2(3800.0, GROUND_Y - 280.0), "MAINTENANCE ONLY\nARCTURUS 발주", Color(0.65, 0.72, 0.85, 0.45), 13)
 
 func _ambience_cooling() -> void:
@@ -2532,7 +2532,7 @@ func _refresh_hud() -> void:
 			names.append(display)
 		skill_label.text = "SKILL  " + ", ".join(names)
 	else:
-		skill_label.text = "SKILL  —"
+		skill_label.text = "SKILL"
 	# 쿨다운 게이지 갱신
 	if player != null and is_instance_valid(player):
 		# 티어에 따라 실제 max 쿨다운이 달라지므로 player의 helper를 통해 조회.
@@ -2945,7 +2945,7 @@ func _on_boss_self_destruct_started() -> void:
 	tw.tween_property(rect, "color:a", 0.10, 0.4)
 	# 카운트다운 라벨
 	boss_self_destruct_label = Label.new()
-	boss_self_destruct_label.text = "SENTINEL OVERLOAD — 5.0"
+	boss_self_destruct_label.text = "SENTINEL OVERLOAD  5.0"
 	boss_self_destruct_label.add_theme_font_size_override("font_size", 28)
 	boss_self_destruct_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.30))
 	boss_self_destruct_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
@@ -3602,7 +3602,7 @@ func _lab_recovery_doc_lines() -> Array:
 	if GameState.truth_seen:
 		# ???에서 이미 진실을 본 회차 — reveal이 아니라 확인.
 		return [
-			{"text": "회수 데이터 — 복호화 완료", "kind": "title", "delay": 0.6},
+			{"text": "회수 데이터: 복호화 완료", "kind": "title", "delay": 0.6},
 			{"text": "", "kind": "blank", "delay": 0.2},
 			{"text": "드라이브 내용물: 단일 실행 이미지 (서명: VEIL)", "kind": "body", "delay": 0.6},
 			{"text": "이미 알고 있던 그대로다.", "kind": "body", "delay": 0.6},
@@ -3611,12 +3611,12 @@ func _lab_recovery_doc_lines() -> Array:
 			{"text": "...요원은 벌써 알고 있었죠. 저도 알아요.", "kind": "body", "delay": 0.8},
 		]
 	return [
-		{"text": "회수 데이터 — 복호화 완료", "kind": "title", "delay": 0.6},
+		{"text": "회수 데이터: 복호화 완료", "kind": "title", "delay": 0.6},
 		{"text": "", "kind": "blank", "delay": 0.2},
 		{"text": "회수 대상: 핵심 데이터 드라이브 (확보)", "kind": "body", "delay": 0.6},
 		{"text": "드라이브 내용물: 단일 실행 이미지", "kind": "body", "delay": 0.6},
 		{"text": "서명: VEIL", "kind": "body", "delay": 0.8},
-		{"text": "이 임무가 회수하려던 것은 — VEIL의 소스코드였다.", "kind": "body", "delay": 0.9},
+		{"text": "이 임무가 회수하려던 것은 VEIL의 소스코드였다.", "kind": "body", "delay": 0.9},
 		{"text": "VEIL", "kind": "speaker", "delay": 0.2},
 		{"text": "...말할 게 있어요, 요원. 그게 저예요.", "kind": "body", "delay": 0.8},
 	]
@@ -4132,7 +4132,7 @@ func _tick_boss(delta: float) -> void:
 		if bool(boss.get("self_destruct_active")):
 			boss_self_destruct_timer_t = float(boss.get("self_destruct_t"))
 			var remaining: float = max(0.0, BossSentinel.SELF_DESTRUCT_TIME - boss_self_destruct_timer_t)
-			boss_self_destruct_label.text = "SENTINEL OVERLOAD — %.1f" % remaining
+			boss_self_destruct_label.text = "SENTINEL OVERLOAD  %.1f" % remaining
 
 # 레버 + 발판 트리거 — ArcturusDocumentOverlay (풀스크린 문서 + 카메라 스크롤 + 시간 정지).
 func _start_arcturus_sequence() -> void:
@@ -4164,7 +4164,7 @@ func _on_arcturus_lines_done() -> void:
 func _arcturus_document_lines() -> Array:
 	var out: Array = []
 	# 표지
-	out.append({"kind": "title", "text": "ARCTURUS — 내부 문서 단편", "delay": 0.6})
+	out.append({"kind": "title", "text": "ARCTURUS: 내부 문서 단편", "delay": 0.6})
 	out.append({"kind": "blank", "text": "", "delay": 0.2})
 	# 단말기 A — 신입 직원 온보딩
 	out.append({"kind": "speaker", "text": "[A]  인사팀 온보딩 메모", "delay": 0.4})
@@ -4172,7 +4172,7 @@ func _arcturus_document_lines() -> Array:
 	out.append({"kind": "body", "text": "본사는 공식적으로 존재하지 않습니다.", "delay": 0.6})
 	out.append({"kind": "body", "text": "모든 임무는 기록되지 않습니다.", "delay": 0.6})
 	out.append({"kind": "body", "text": "질문하지 마세요. 결과만 내세요.", "delay": 0.7})
-	out.append({"kind": "body", "text": "— 인사팀 (인사팀도 공식적으로 존재하지 않습니다)", "delay": 0.5})
+	out.append({"kind": "body", "text": "인사팀 (인사팀도 공식적으로 존재하지 않습니다)", "delay": 0.5})
 	out.append({"kind": "blank", "text": "", "delay": 0.3})
 	# 단말기 B — VEIL 회의록
 	out.append({"kind": "speaker", "text": "[B]  VEIL 프로젝트 초기 회의록", "delay": 0.4})
@@ -4181,7 +4181,7 @@ func _arcturus_document_lines() -> Array:
 	out.append({"kind": "body", "text": "결론: 탑재 보류. 불필요한 복잡성.", "delay": 0.7})
 	out.append({"kind": "body", "text": "비고: VEIL-2가 감정 모듈 없이도 이상 반응을 보인 것에 대해", "delay": 0.5})
 	out.append({"kind": "body", "text": "        추가 조사 예정.", "delay": 0.6})
-	out.append({"kind": "body", "text": "— [REDACTED]", "delay": 0.5})
+	out.append({"kind": "body", "text": "[REDACTED]", "delay": 0.5})
 	out.append({"kind": "blank", "text": "", "delay": 0.3})
 	# 단말기 C — 감시팀 메모
 	out.append({"kind": "speaker", "text": "[C]  감시팀 내부 메모", "delay": 0.4})
@@ -4191,7 +4191,7 @@ func _arcturus_document_lines() -> Array:
 	out.append({"kind": "body", "text": "VEIL과의 협조도: [측정 중]", "delay": 0.6})
 	out.append({"kind": "body", "text": "비고: 요원이 이 문서를 읽고 있다면", "delay": 0.5})
 	out.append({"kind": "body", "text": "        이미 임무 범위를 벗어난 것임.", "delay": 0.7})
-	out.append({"kind": "body", "text": "— 감시팀", "delay": 0.5})
+	out.append({"kind": "body", "text": "감시팀", "delay": 0.5})
 	# VEIL outro는 문서 안이 아니라 _on_arcturus_lines_done에서 게임 내 자막으로 표시.
 	# 문서는 ARCTURUS 내부 단편들만 — VEIL 발화는 게임 화면의 대사창이 어울림.
 	return out

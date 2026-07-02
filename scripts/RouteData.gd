@@ -213,8 +213,8 @@ const ALL_ROUTES: Array = [
 	},
 	{
 		"id": "route_server_hall",
-		"name": "서버 회랑",
-		"description": "핵심부로 이어지는 서버 랙 회랑. 데이터가 흐르는 만큼 경비도 두텁다.",
+		"name": "서버 복도",
+		"description": "핵심부로 이어지는 서버 랙 복도. 데이터가 흐르는 만큼 경비도 두텁다.",
 		"risk": 3,
 		"reward": 3,
 		"hidden": false,
@@ -222,7 +222,7 @@ const ALL_ROUTES: Array = [
 		# 막3 진입 전투(핵심부 직전). datacenter·??? 와 함께 막3 전투 풀(s6).
 		"min_stage": 6, "max_stage": 6,
 		"tags": ["전투", "드론", "원거리"],
-		"veil_comment": "서버 회랑이에요. 드론이 위, 저격이 랙 위에. 랙을 엄폐로 쓰면서 빠져요.",
+		"veil_comment": "서버 복도예요. 드론이 위, 저격이 랙 위에. 랙을 엄폐로 쓰면서 빠져요.",
 		"entry_comment": "핵심부 직전이에요. 여기만 지나면... 조심해요.",
 		"stage_color": Color(0.16, 0.18, 0.22),
 	},
@@ -345,8 +345,8 @@ const ALL_ROUTES: Array = [
 	},
 	{
 		"id": "route_control_corridor",
-		"name": "통제실 회랑",
-		"description": "핵심부 통제실로 이어지는 회랑. 데이터가 흐르는 만큼 감시도 두텁다.",
+		"name": "통제실 복도",
+		"description": "핵심부 통제실로 이어지는 복도. 데이터가 흐르는 만큼 감시도 두텁다.",
 		"risk": 3,
 		"reward": 3,
 		"hidden": false,
@@ -354,7 +354,7 @@ const ALL_ROUTES: Array = [
 		# 막3 전투 풀(s6) — datacenter/server_hall과 같은 통과형. ???(guaranteed)와 함께 선택.
 		"min_stage": 6, "max_stage": 6,
 		"tags": ["전투", "드론", "원거리"],
-		"veil_comment": "통제실 회랑이에요. 드론·저격 동시에. 핵심부가 코앞이에요.",
+		"veil_comment": "통제실 복도예요. 드론·저격 동시에. 핵심부가 코앞이에요.",
 		"entry_comment": "통제실 직전이에요. 사선 많아요. 엄폐 쓰면서 빠져요.",
 		"stage_color": Color(0.15, 0.17, 0.21),
 	},
