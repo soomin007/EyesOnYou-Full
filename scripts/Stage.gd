@@ -1061,8 +1061,8 @@ func _build_background() -> void:
 	top_fade.z_index = -19
 	add_child(top_fade)
 
-	# 별/티끌 — 외곽 루트(외곽 진입로 / 외벽 옥상)에서만. 실내 맵엔 어색.
-	var outdoor_routes: Array = ["route_back_alley", "route_rooftops"]
+	# 별/티끌 — 외곽 루트(외곽 진입로 / 외벽 옥상 / 외곽 순찰로)에서만. 실내 맵엔 어색.
+	var outdoor_routes: Array = ["route_back_alley", "route_rooftops", "route_perimeter"]
 	if GameState.current_route_id in outdoor_routes:
 		var srng := RandomNumberGenerator.new()
 		srng.seed = GameState.current_stage * 911 + 17
@@ -1079,6 +1079,12 @@ func _build_background() -> void:
 
 	# 멀리 있는 실루엣 기둥 — HORIZONTAL 맵에서만
 	if _world_type != "HORIZONTAL":
+		return
+	# 실내 맵(주차장/펌프장/변전소/창고/시설)은 야경 도시 실루엣 대신 실내 구조 배경.
+	# (원래 데모 맵은 _indoor_env가 빈 문자열 → 아래 기존 스카이라인 유지 = 무회귀.)
+	var _ienv: String = _indoor_env()
+	if _ienv != "":
+		_build_indoor_backdrop(_ienv)
 		return
 	var rng := RandomNumberGenerator.new()
 	rng.seed = GameState.current_stage * 7919 + 13
@@ -1130,6 +1136,146 @@ func _add_silhouette_pillar(pos: Vector2, size: Vector2, color: Color, z: int) -
 	line.size = Vector2(size.x, 1.0)
 	line.z_index = z + 1
 	add_child(line)
+
+# ─── 실내 배경 (야경 도시 대체) ──────────────────────────────────
+# 새 실내 맵은 도시 스카이라인이 아니라 실내 구조(천장 슬래브 + 지지 기둥 + 형광등)를 그린다.
+# env별 팔레트로 톤을 구분해 "새 맵이 다 똑같은 야경" 문제를 해소. 시그니처 소품(주차 구획선·배관·물)은
+# 각 _ambience_* 가 이 배경 위에 얹는다. 빈 env(원래 데모 맵)는 기존 스카이라인 유지.
+func _indoor_env() -> String:
+	var m: Dictionary = {
+		"route_parking_lot": "garage", "route_car_cover": "garage",
+		"route_pump_station": "water", "route_condenser": "water",
+		"route_substation": "electrical", "route_relay_station": "electrical",
+		"route_warehouse": "warehouse", "route_freight_lift": "warehouse",
+		"route_testing_grounds": "interior", "route_demolition_zone": "interior",
+		"route_checkpoint": "interior", "route_gauntlet": "interior",
+		"route_control_corridor": "interior", "route_server_hall": "interior",
+	}
+	return str(m.get(GameState.current_route_id, ""))
+
+func _env_palette(env: String) -> Dictionary:
+	match env:
+		"garage":     return {"pillar": Color(0.17, 0.17, 0.19), "accent": Color(0.80, 0.85, 0.95)}
+		"water":      return {"pillar": Color(0.13, 0.18, 0.21), "accent": Color(0.45, 0.70, 0.90)}
+		"electrical": return {"pillar": Color(0.19, 0.17, 0.13), "accent": Color(0.95, 0.75, 0.35)}
+		"warehouse":  return {"pillar": Color(0.18, 0.16, 0.13), "accent": Color(0.90, 0.70, 0.45)}
+	return {"pillar": Color(0.15, 0.16, 0.18), "accent": Color(0.70, 0.78, 0.88)}  # interior
+
+func _build_indoor_backdrop(env: String) -> void:
+	var pal: Dictionary = _env_palette(env)
+	var pillar_col: Color = pal["pillar"]
+	var accent: Color = pal["accent"]
+	var w: float = STAGE_LENGTH
+	# 천장 슬래브 — 상단 구조물(도시 실루엣 대체).
+	var ceil := ColorRect.new()
+	ceil.color = pillar_col.darkened(0.35)
+	ceil.position = Vector2(-200.0, -300.0)
+	ceil.size = Vector2(w + 400.0, 210.0)
+	ceil.z_index = -16
+	add_child(ceil)
+	var ceil_edge := ColorRect.new()
+	ceil_edge.color = Color(accent.r, accent.g, accent.b, 0.22)
+	ceil_edge.position = Vector2(-200.0, -92.0)
+	ceil_edge.size = Vector2(w + 400.0, 3.0)
+	ceil_edge.z_index = -15
+	add_child(ceil_edge)
+	# 지지 기둥 + 기둥 사이 천장 형광등 — 반복되는 실내 홀.
+	var gap: float = 360.0
+	var x: float = 140.0
+	while x < w:
+		var cw: float = 46.0
+		var col := ColorRect.new()
+		col.color = pillar_col
+		col.position = Vector2(x - cw * 0.5, -92.0)
+		col.size = Vector2(cw, GROUND_Y + 60.0)
+		col.z_index = -14
+		add_child(col)
+		var hl := ColorRect.new()
+		hl.color = pillar_col.lightened(0.12)
+		hl.position = Vector2(x - cw * 0.5, -92.0)
+		hl.size = Vector2(4.0, GROUND_Y + 60.0)
+		hl.z_index = -13
+		add_child(hl)
+		var lamp := ColorRect.new()
+		lamp.color = Color(accent.r, accent.g, accent.b, 0.42)
+		lamp.position = Vector2(x + gap * 0.5 - 55.0, -78.0)
+		lamp.size = Vector2(110.0, 5.0)
+		lamp.z_index = -12
+		add_child(lamp)
+		x += gap
+
+# ─── 실내 맵 시그니처 소품 ────────────────────────────────────
+# 지하 주차장 / 차량 엄폐 통로 — 주차 구획선 + 배경 주차 차량 실루엣(차 존재 신호) + 층 표지.
+func _ambience_garage_props() -> void:
+	var w: float = STAGE_LENGTH
+	var x: float = 260.0
+	while x < w:
+		var ln := ColorRect.new()
+		ln.color = Color(0.90, 0.78, 0.30, 0.32)
+		ln.position = Vector2(x, GROUND_Y - 72.0)
+		ln.size = Vector2(4.0, 68.0)
+		ln.z_index = -6
+		add_child(ln)
+		x += 150.0
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 211 + 5
+	var cx: float = 220.0
+	while cx < w:
+		_add_parked_car(Vector2(cx, GROUND_Y - 8.0), rng)
+		cx += rng.randf_range(230.0, 350.0)
+	_add_lore_label(Vector2(360.0, -58.0), "B2 · 주차 구역", Color(0.80, 0.85, 0.95, 0.42), 15)
+
+func _add_parked_car(pos: Vector2, rng: RandomNumberGenerator) -> void:
+	var cw: float = rng.randf_range(94.0, 128.0)
+	var ch: float = rng.randf_range(40.0, 50.0)
+	var t: float = rng.randf_range(0.10, 0.17)
+	var body := ColorRect.new()
+	body.color = Color(t, t, t + 0.02, 0.92)
+	body.position = pos + Vector2(-cw * 0.5, -ch)
+	body.size = Vector2(cw, ch)
+	body.z_index = -11
+	add_child(body)
+	var cab := ColorRect.new()
+	cab.color = Color(t * 0.65, t * 0.65, t * 0.8, 0.92)
+	cab.position = pos + Vector2(-cw * 0.26, -ch - ch * 0.48)
+	cab.size = Vector2(cw * 0.52, ch * 0.5)
+	cab.z_index = -11
+	add_child(cab)
+
+# 배수 펌프장 — 큰 가로 배관 + 밸브 휠 + 바닥 배수로 물 + 표지.
+func _ambience_pump_station() -> void:
+	var w: float = STAGE_LENGTH
+	var pipe_ys: Array = [-46.0, GROUND_Y - 210.0]
+	for i in pipe_ys.size():
+		var hy: float = pipe_ys[i]
+		var pipe := ColorRect.new()
+		pipe.color = Color(0.22, 0.30, 0.34, 0.85)
+		pipe.position = Vector2(-200.0, hy)
+		pipe.size = Vector2(w + 400.0, 22.0)
+		pipe.z_index = -10
+		add_child(pipe)
+		var hl := ColorRect.new()
+		hl.color = Color(0.45, 0.60, 0.68, 0.5)
+		hl.position = Vector2(-200.0, hy + 3.0)
+		hl.size = Vector2(w + 400.0, 3.0)
+		hl.z_index = -9
+		add_child(hl)
+	var x: float = 320.0
+	while x < w:
+		var valve := ColorRect.new()
+		valve.color = Color(0.60, 0.28, 0.24, 0.9)
+		valve.position = Vector2(x - 9.0, GROUND_Y - 210.0 - 6.0)
+		valve.size = Vector2(18.0, 18.0)
+		valve.z_index = -8
+		add_child(valve)
+		x += 520.0
+	var water := ColorRect.new()
+	water.color = Color(0.20, 0.45, 0.50, 0.20)
+	water.position = Vector2(-200.0, GROUND_Y - 24.0)
+	water.size = Vector2(w + 400.0, 38.0)
+	water.z_index = -3
+	add_child(water)
+	_add_lore_label(Vector2(360.0, -22.0), "배수 펌프 · B2", Color(0.45, 0.70, 0.90, 0.45), 15)
 
 func _build_ground() -> void:
 	var ground := StaticBody2D.new()
@@ -1494,6 +1640,10 @@ func _build_route_ambience() -> void:
 			_ambience_escape()
 		"route_hidden":
 			_ambience_hidden()
+		"route_parking_lot", "route_car_cover":
+			_ambience_garage_props()
+		"route_pump_station":
+			_ambience_pump_station()
 
 func _ambience_sewers() -> void:
 	# 화면 가장자리 어두운 비네트 (CanvasLayer 위에 띄움) + 바닥 옅은 안개
