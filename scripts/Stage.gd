@@ -107,6 +107,7 @@ const _ROUTE_TRACKS: Dictionary = {
 	"route_gauntlet":    "mid_late",
 	"route_freight_lift": "mid_late",
 	"route_car_cover":  "mid_late",
+	"route_collapse":   "mid_late",
 	"route_cooling":    "mid_late",
 	"route_ward":       "mid_late",
 	"route_datacenter": "mid_late",
@@ -774,6 +775,7 @@ func _build_world() -> void:
 	_build_platforms()
 	_build_moving_platforms()
 	_build_destructible_covers()
+	_build_hurdles()
 	_build_decorations()
 	_build_route_ambience()
 	_build_hazards()
@@ -781,6 +783,7 @@ func _build_world() -> void:
 	_build_locked_door()
 	_build_wall(-50.0)
 	_build_wall(STAGE_LENGTH + 50.0)
+	_build_chase_hazard()
 
 var locked_door_triggered: bool = false
 
@@ -1150,6 +1153,7 @@ func _indoor_env() -> String:
 		"route_testing_grounds": "interior", "route_demolition_zone": "interior",
 		"route_checkpoint": "interior", "route_gauntlet": "interior",
 		"route_control_corridor": "interior", "route_server_hall": "interior",
+			"route_collapse": "interior",
 	}
 	return str(m.get(GameState.current_route_id, ""))
 
@@ -1533,6 +1537,69 @@ func _ambience_gauntlet() -> void:
 		x += rng.randf_range(400.0, 600.0)
 	_add_lore_label(Vector2(360.0, -30.0), "함정 통로 · 경고", Color(0.9, 0.6, 0.2, 0.5), 15)
 
+# 붕괴 갱도(강제 전진) — 균열 벽 + 지지 빔 + 낙하 잔해 + 먼지 + 붉은 비상등.
+func _ambience_collapse() -> void:
+	var w: float = STAGE_LENGTH
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 521 + 7
+	var x: float = 200.0
+	while x < w:
+		var crack := Line2D.new()
+		crack.width = 2.0
+		crack.default_color = Color(0.05, 0.05, 0.06, 0.7)
+		var pts := PackedVector2Array()
+		var cx: float = x
+		var yy: float = rng.randf_range(-180.0, GROUND_Y - 120.0)
+		for i in 5:
+			pts.append(Vector2(cx, yy))
+			cx += rng.randf_range(20.0, 50.0)
+			yy += rng.randf_range(-40.0, 60.0)
+		crack.points = pts
+		crack.z_index = -13
+		add_child(crack)
+		x += rng.randf_range(280.0, 480.0)
+	var bx: float = 260.0
+	while bx < w:
+		var beam := ColorRect.new()
+		beam.color = Color(0.16, 0.15, 0.14)
+		beam.position = Vector2(bx, -100.0)
+		beam.size = Vector2(14.0, GROUND_Y + 100.0)
+		beam.z_index = -12
+		add_child(beam)
+		bx += rng.randf_range(340.0, 560.0)
+	for i in 10:
+		var deb := ColorRect.new()
+		deb.color = Color(0.20, 0.18, 0.16, 0.8)
+		deb.position = Vector2(rng.randf_range(0.0, w), rng.randf_range(-200.0, 0.0))
+		var ds: float = rng.randf_range(3.0, 7.0)
+		deb.size = Vector2(ds, ds)
+		deb.z_index = -5
+		add_child(deb)
+		var td := deb.create_tween()
+		td.set_loops()
+		td.tween_property(deb, "position:y", GROUND_Y, rng.randf_range(1.4, 3.0))
+		td.tween_property(deb, "position:y", rng.randf_range(-200.0, -60.0), 0.0)
+	var dust := ColorRect.new()
+	dust.color = Color(0.30, 0.26, 0.22, 0.07)
+	dust.position = Vector2(-200.0, -100.0)
+	dust.size = Vector2(w + 400.0, 260.0)
+	dust.z_index = -6
+	add_child(dust)
+	var lx: float = 450.0
+	while lx < w:
+		var light := ColorRect.new()
+		light.color = Color(0.9, 0.25, 0.2, 0.35)
+		light.position = Vector2(lx - 40.0, -100.0)
+		light.size = Vector2(80.0, 700.0)
+		light.z_index = -7
+		add_child(light)
+		var tl := light.create_tween()
+		tl.set_loops()
+		tl.tween_property(light, "modulate:a", 0.3, rng.randf_range(0.5, 1.0))
+		tl.tween_property(light, "modulate:a", 1.0, rng.randf_range(0.5, 1.0))
+		lx += rng.randf_range(700.0, 1000.0)
+	_add_lore_label(Vector2(360.0, -30.0), "붕괴 진행 · 대피", Color(0.9, 0.4, 0.25, 0.55), 15)
+
 func _build_ground() -> void:
 	var ground := StaticBody2D.new()
 	ground.collision_layer = 1
@@ -1627,6 +1694,48 @@ func _build_destructible_covers() -> void:
 		cover.position = d.get("pos", Vector2.ZERO)
 		cover.z_index = -1  # 배우(플레이어/적) 뒤 — 항상 플레이어가 보이게
 		cover.setup(float(d.get("w", 96.0)), float(d.get("h", 72.0)), int(d.get("hp", 3)))
+
+# 솔리드 장애물(붕괴 잔해 등) — MapData "hurdles" 배열. {x, w, h}. 두 방향 솔리드(넘어야 함).
+# 강제 전진 맵에서 점프/등반을 강제해 시간 손실 → 추격 벽이 따라붙게 만드는 요소.
+func _build_hurdles() -> void:
+	for entry in _map_data.get("hurdles", []):
+		var d: Dictionary = entry
+		var hx: float = float(d.get("x", 0.0))
+		var hw: float = float(d.get("w", 50.0))
+		var hh: float = float(d.get("h", 100.0))
+		var body := StaticBody2D.new()
+		body.collision_layer = 1
+		body.collision_mask = 0
+		add_child(body)
+		var col := CollisionShape2D.new()
+		var shape := RectangleShape2D.new()
+		shape.size = Vector2(hw, hh)
+		col.shape = shape
+		col.position = Vector2(hx, GROUND_Y - hh * 0.5)
+		body.add_child(col)
+		# 잔해 비주얼 — 어두운 각진 더미 + 상단 하이라이트.
+		var vis := Polygon2D.new()
+		vis.color = Color(0.14, 0.13, 0.13)
+		vis.polygon = PackedVector2Array([
+			Vector2(hx - hw * 0.5, GROUND_Y), Vector2(hx - hw * 0.42, GROUND_Y - hh),
+			Vector2(hx + hw * 0.28, GROUND_Y - hh * 0.86), Vector2(hx + hw * 0.5, GROUND_Y)])
+		vis.z_index = -1
+		add_child(vis)
+		var edge := ColorRect.new()
+		edge.color = Color(0.35, 0.22, 0.18, 0.6)
+		edge.position = Vector2(hx - hw * 0.5, GROUND_Y - hh)
+		edge.size = Vector2(hw, 3.0)
+		edge.z_index = -1
+		add_child(edge)
+
+# 강제 전진 추격 벽(ChaseHazard 기믹) — MapData "chase_hazard" = {start_x, speed, max_gap?}.
+func _build_chase_hazard() -> void:
+	var cfg: Dictionary = _map_data.get("chase_hazard", {})
+	if cfg.is_empty():
+		return
+	var hz := ChaseHazard.new()
+	add_child(hz)
+	hz.setup(float(cfg.get("start_x", -300.0)), float(cfg.get("speed", 210.0)), float(cfg.get("max_gap", 700.0)))
 
 func _build_platforms_fallback() -> void:
 	# 안전한 일자형 폴백 (튜토리얼/플레이그라운드용)
@@ -1922,6 +2031,8 @@ func _build_route_ambience() -> void:
 			_ambience_testing()
 		"route_gauntlet":
 			_ambience_gauntlet()
+		"route_collapse":
+			_ambience_collapse()
 
 func _ambience_sewers() -> void:
 	# 화면 가장자리 어두운 비네트 (CanvasLayer 위에 띄움) + 바닥 옅은 안개

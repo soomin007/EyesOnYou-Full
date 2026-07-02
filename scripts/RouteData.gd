@@ -430,6 +430,21 @@ const ALL_ROUTES: Array = [
 		"entry_comment": "정비 차량이 엄폐예요. 뒤에 붙으면 저격이 못 봐요. 넘을 때만 노출돼요. 차량은 영원하지 않아요.",
 		"stage_color": Color(0.14, 0.13, 0.15),
 	},
+	{
+		"id": "route_collapse",
+		"name": "붕괴 갱도",
+		"description": "구조가 무너지기 시작한 정비 갱도. 뒤에서 붕괴가 쫓아온다. 멈추면 삼켜진다.",
+		"risk": 3,
+		"reward": 3,
+		"hidden": false,
+		"unique": false,
+		# 막2 강제 전진 기믹 맵 — risk3라 s3 금지, 전개·고조(s4~5)에. 붕괴 벽(추격)이 동선 주역.
+		"min_stage": 4, "max_stage": 5,
+		"tags": ["이동", "노출"],
+		"veil_comment": "뒤가 무너져요. 멈추지 말아요. 잔해는 넘고, 계속 앞으로.",
+		"entry_comment": "구조가 버티질 못해요. 붕괴가 따라와요. 멈추면 삼켜져요. 앞으로만.",
+		"stage_color": Color(0.10, 0.08, 0.07),
+	},
 ]
 
 # 스토리 모드 — 5스테이지 고정 스케줄. 드론·도전·??? 맵 모두 빼고 핵심 동선만.

@@ -52,6 +52,7 @@ static func get_layout(route_id: String) -> Dictionary:
 		"route_gauntlet":      return _gauntlet()
 		"route_freight_lift":  return _freight_lift()
 		"route_car_cover":     return _car_cover()
+		"route_collapse":      return _collapse()
 	return {}
 
 # ─── 1. 외곽 진입로 (HORIZONTAL, 짧음) ─────────────────────────
@@ -1305,6 +1306,52 @@ static func _car_cover() -> Dictionary:
 		"rewards": {
 			"xp_orbs":    [Vector2(600, 560.0), Vector2(1200, 560.0), Vector2(1880, 560.0)],
 			"hp_pickups": [Vector2(2300, 560.0)],  # 마지막 트로프 — 노출된 최종 진입 전 회복
+		},
+		"spikes": [],
+	}
+
+# ─── 붕괴 갱도 (HORIZONTAL) — 강제 전진(추격) 기믹 맵 (막2 s4~5) ─────────
+# 정체성: 뒤에서 붕괴 벽(ChaseHazard)이 전진해 멈추면 삼켜져 죽는다. 계속 달려야 산다.
+#   · 벽은 210px/s(플레이어 240보다 느림)로 전진 + 최대 700px 뒤까지 캡 → 상시 위협. 시간 손실(잔해
+#     점프 봉크·높은 장애물)이 나면 벽이 따라붙는다. 회복은 앞으로 전진뿐.
+#   · 잔해(hurdles)=솔리드, 넘어야 함. 적은 최소(달려 지나침) — 벽이 주역.
+# 램프: risk3(막2 고조). 붕괴는 침입 중 구조 불안정이 촉발된 비상 상황.
+static func _collapse() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(4200.0, 720.0),
+		"player_start": Vector2(200.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(4080.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		# 강제 전진 추격 벽 — 뒤에서 전진(플레이어보다 느리되 700px 캡으로 상시 위협).
+		"chase_hazard": {"start_x": -300.0, "speed": 210.0, "max_gap": 700.0},
+		# 선택 상단 경로(원웨이 발판) — XP 보상, 추격 중 오르는 리스크.
+		"platforms": [
+			{"pos": Vector2(1600, 470), "w": 130.0},
+			{"pos": Vector2(2900, 460), "w": 130.0},
+		],
+		# 붕괴 잔해 = 솔리드 장애물. 넘어야 하며 봉크(멈춤) 시 벽이 따라붙는다. 낮음=단순점프 / 높음=더블점프.
+		"hurdles": [
+			{"x": 950.0,  "w": 46.0, "h": 80.0},
+			{"x": 1200.0, "w": 46.0, "h": 100.0},
+			{"x": 1450.0, "w": 54.0, "h": 120.0},
+			{"x": 1760.0, "w": 44.0, "h": 145.0},
+			{"x": 2120.0, "w": 50.0, "h": 95.0},
+			{"x": 2420.0, "w": 54.0, "h": 128.0},
+			{"x": 2760.0, "w": 44.0, "h": 148.0},
+			{"x": 3120.0, "w": 52.0, "h": 104.0},
+			{"x": 3420.0, "w": 56.0, "h": 124.0},
+			{"x": 3760.0, "w": 46.0, "h": 84.0},
+		],
+		"enemies": {
+			# 최소 — 달려 지나치는 정도. 벽이 주역이라 전투는 부차.
+			"patrol": [Vector2(700, 540.0), Vector2(2350, 540.0)],
+			"sniper": [], "drone": [], "bomber": [], "shield": [],
+		},
+		"rewards": {
+			"xp_orbs":    [Vector2(1600, 440.0), Vector2(2050, 560.0), Vector2(2900, 430.0), Vector2(3600, 560.0)],
+			"hp_pickups": [Vector2(2550, 560.0)],
 		},
 		"spikes": [],
 	}
