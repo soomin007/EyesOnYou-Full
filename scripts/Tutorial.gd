@@ -912,7 +912,7 @@ func _advance_to(next: int) -> void:
 		Step.SKILL:
 			_build_skill_sign()
 			_spawn_skill_dummies()
-			_veil_say("스킬을 하나 내줬습니다. 남은 표적에 써 보십시오.", 3.5)
+			_veil_say("폭발물을 하나 내줬습니다. 스킬 키를 꾹 눌러 사거리를 잡으십시오 — 궤도가 보입니다. 놓으면 던집니다.\n마음에 들지 않으면 ▼로 취소하십시오. 남은 표적에 써 보십시오.", 6.0)
 		Step.DASH:
 			sign_dash.visible = true
 			_veil_say("전방 장애물. 대시로 통과하십시오.", 3.5)
@@ -998,7 +998,9 @@ func _build_skill_sign() -> void:
 		else:
 			kb_keys = [GameState.action_label("skill", "L")]
 			pad_keys = ["Y"]
-		sign_skill = _make_keycap_sign(kb_keys, pad_keys, "스킬 사용", pos)
+		# 폭발물(key=="skill")은 꾹 눌러 던지는 투척이라 라벨로 홀드를 명시. 그 외 액티브는 "스킬 사용".
+		var skill_label: String = "꾹 눌러 던지기" if key_action == "skill" else "스킬 사용"
+		sign_skill = _make_keycap_sign(kb_keys, pad_keys, skill_label, pos)
 	else:
 		var sname: String = str(skill.get("name", "패시브"))
 		sign_skill = _make_text_sign("[%s] 자동 적용 — 처리하면 진행" % sname, pos)
@@ -1045,8 +1047,8 @@ func _on_skill_dummy_bullet_deflected() -> void:
 func _show_skill_hint_toast() -> void:
 	var toast := Label.new()
 	toast.text = GameState.hint(
-		"이 적은 총알이 안 들어가요. 폭발물(L / 마우스 우클릭)로 처치해요.",
-		"이 적은 총알이 안 들어가요. 폭발물(Y 버튼)로 처치해요.")
+		"이 적은 총알이 안 들어가요. 폭발물(L / 마우스 우클릭)을 꾹 눌러 던져요 — 놓으면 투척.",
+		"이 적은 총알이 안 들어가요. 폭발물(Y 버튼)을 꾹 눌러 던져요 — 놓으면 투척.")
 	toast.add_theme_font_size_override("font_size", 18)
 	toast.add_theme_color_override("font_color", Color(0.95, 0.78, 0.45))
 	toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

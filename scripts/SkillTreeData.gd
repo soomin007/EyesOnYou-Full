@@ -41,7 +41,7 @@ const LINES: Array = [
 	{
 		"id": "explosive", "family": FAMILY_COMBAT,
 		"tiers": [
-			{"name": "폭발물",       "desc": "주위 적 광역 처치 (3s 쿨다운)",  "active": true,  "key": "skill"},
+			{"name": "폭발물",       "desc": "꾹 눌러 던지는 광역 폭발 (3s 쿨다운)",  "active": true,  "key": "skill"},
 			{"name": "폭발물+",      "desc": "반경 +30%, 쿨다운 2.5s",        "active": true,  "key": "skill"},
 			{"name": "이중 충전",    "desc": "폭발물 2회 충전",               "active": true,  "key": "skill"},
 		],
