@@ -1242,8 +1242,8 @@ func _add_parked_car(pos: Vector2, rng: RandomNumberGenerator) -> void:
 	cab.z_index = -11
 	add_child(cab)
 
-# 배수 펌프장 — 큰 가로 배관 + 밸브 휠 + 바닥 배수로 물 + 표지.
-func _ambience_pump_station() -> void:
+# 배수 펌프장/응축기 — 큰 가로 배관 + 밸브 휠 + 바닥 배수로 물 + 표지(응축기가 재사용).
+func _ambience_pump_station(label: String = "배수 펌프 · B2") -> void:
 	var w: float = STAGE_LENGTH
 	var pipe_ys: Array = [-46.0, GROUND_Y - 210.0]
 	for i in pipe_ys.size():
@@ -1275,7 +1275,263 @@ func _ambience_pump_station() -> void:
 	water.size = Vector2(w + 400.0, 38.0)
 	water.z_index = -3
 	add_child(water)
-	_add_lore_label(Vector2(360.0, -22.0), "배수 펌프 · B2", Color(0.45, 0.70, 0.90, 0.45), 15)
+	_add_lore_label(Vector2(360.0, -22.0), label, Color(0.45, 0.70, 0.90, 0.45), 15)
+
+# 변전소/통신 중계소 — 변압기 박스(방열핀) + 상단 케이블 + 애자 앰버 점 + 표지.
+func _ambience_electrical(label: String) -> void:
+	var w: float = STAGE_LENGTH
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 307 + 11
+	var x: float = 240.0
+	while x < w:
+		var tw2: float = rng.randf_range(70.0, 110.0)
+		var th: float = rng.randf_range(120.0, 190.0)
+		var box := ColorRect.new()
+		box.color = Color(0.15, 0.14, 0.12)
+		box.position = Vector2(x, GROUND_Y - th)
+		box.size = Vector2(tw2, th)
+		box.z_index = -12
+		add_child(box)
+		var fins: int = int(tw2 / 12.0)
+		for i in fins:
+			var f := ColorRect.new()
+			f.color = Color(0.22, 0.20, 0.17, 0.7)
+			f.position = Vector2(x + 5.0 + float(i) * 12.0, GROUND_Y - th + 8.0)
+			f.size = Vector2(2.0, th - 16.0)
+			f.z_index = -11
+			add_child(f)
+		var ins := ColorRect.new()
+		ins.color = Color(0.95, 0.75, 0.35, 0.8)
+		ins.position = Vector2(x + tw2 * 0.5 - 3.0, GROUND_Y - th - 8.0)
+		ins.size = Vector2(6.0, 8.0)
+		ins.z_index = -10
+		add_child(ins)
+		x += tw2 + rng.randf_range(170.0, 330.0)
+	for i in 4:
+		var cab := ColorRect.new()
+		cab.color = Color(0.08, 0.08, 0.09, 0.8)
+		cab.position = Vector2(-200.0, -62.0 - float(i) * 8.0)
+		cab.size = Vector2(w + 400.0, 2.0)
+		cab.z_index = -9
+		add_child(cab)
+	_add_lore_label(Vector2(360.0, -30.0), label, Color(0.95, 0.75, 0.35, 0.5), 15)
+
+# 물류 창고/화물 구역 — 선반 랙(기둥+선반+상자) + 매달린 작업등 + 표지.
+func _ambience_warehouse(label: String) -> void:
+	var w: float = STAGE_LENGTH
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 331 + 7
+	var x: float = 200.0
+	while x < w:
+		var rh: float = rng.randf_range(200.0, 300.0)
+		var rw: float = rng.randf_range(120.0, 180.0)
+		for px in [x, x + rw]:
+			var post := ColorRect.new()
+			post.color = Color(0.20, 0.17, 0.13)
+			post.position = Vector2(px, GROUND_Y - rh)
+			post.size = Vector2(8.0, rh)
+			post.z_index = -12
+			add_child(post)
+		for s in 3:
+			var sy: float = GROUND_Y - rh + float(s + 1) * (rh / 4.0)
+			var sh := ColorRect.new()
+			sh.color = Color(0.24, 0.20, 0.15)
+			sh.position = Vector2(x, sy)
+			sh.size = Vector2(rw + 8.0, 6.0)
+			sh.z_index = -11
+			add_child(sh)
+			if rng.randf() < 0.7:
+				var bw: float = rng.randf_range(30.0, 60.0)
+				var bh: float = rng.randf_range(24.0, 40.0)
+				var crate := ColorRect.new()
+				crate.color = Color(0.35, 0.28, 0.18, 0.9)
+				crate.position = Vector2(x + rng.randf_range(4.0, rw - bw), sy - bh)
+				crate.size = Vector2(bw, bh)
+				crate.z_index = -10
+				add_child(crate)
+		x += rw + rng.randf_range(120.0, 240.0)
+	var lx: float = 400.0
+	while lx < w:
+		var lamp := ColorRect.new()
+		lamp.color = Color(0.95, 0.85, 0.55, 0.10)
+		lamp.position = Vector2(lx - 50.0, -100.0)
+		lamp.size = Vector2(100.0, 400.0)
+		lamp.z_index = -8
+		add_child(lamp)
+		lx += 700.0
+	_add_lore_label(Vector2(360.0, -30.0), label, Color(0.90, 0.70, 0.45, 0.5), 15)
+
+# 서버 복도 — 서버 랙 실루엣 + LED 점멸 + 표지.
+func _ambience_server_hall() -> void:
+	var w: float = STAGE_LENGTH
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 409 + 3
+	var x: float = 220.0
+	while x < w:
+		var rh: float = rng.randf_range(220.0, 320.0)
+		var rw: float = rng.randf_range(70.0, 100.0)
+		var rack := ColorRect.new()
+		rack.color = Color(0.10, 0.13, 0.16)
+		rack.position = Vector2(x, GROUND_Y - rh)
+		rack.size = Vector2(rw, rh)
+		rack.z_index = -12
+		add_child(rack)
+		var rows: int = int(rh / 24.0)
+		for r in rows:
+			if rng.randf() < 0.5:
+				var led := ColorRect.new()
+				led.color = Color(0.4, 0.9, 1.0, rng.randf_range(0.4, 0.9))
+				led.position = Vector2(x + rng.randf_range(6.0, rw - 10.0), GROUND_Y - rh + 8.0 + float(r) * 24.0)
+				led.size = Vector2(4.0, 3.0)
+				led.z_index = -10
+				add_child(led)
+				var tw2 := led.create_tween()
+				tw2.set_loops()
+				tw2.tween_property(led, "modulate:a", 0.1, rng.randf_range(0.4, 1.2))
+				tw2.tween_property(led, "modulate:a", 1.0, rng.randf_range(0.4, 1.2))
+		x += rw + rng.randf_range(60.0, 140.0)
+	_add_lore_label(Vector2(360.0, -30.0), "서버 랙 · 코어 접근", Color(0.4, 0.85, 1.0, 0.5), 15)
+
+# 통제실 복도 — 벽면 모니터 뱅크(점멸) + 표지.
+func _ambience_control_room() -> void:
+	var w: float = STAGE_LENGTH
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 433 + 9
+	var x: float = 260.0
+	while x < w:
+		for r in 2:
+			for c in 2:
+				var sc := ColorRect.new()
+				sc.color = Color(0.20, 0.35, 0.45, 0.55)
+				sc.position = Vector2(x + float(c) * 54.0, -80.0 + float(r) * 44.0)
+				sc.size = Vector2(48.0, 38.0)
+				sc.z_index = -10
+				add_child(sc)
+				var tw2 := sc.create_tween()
+				tw2.set_loops()
+				tw2.tween_property(sc, "modulate:a", rng.randf_range(0.4, 0.7), rng.randf_range(1.0, 2.5))
+				tw2.tween_property(sc, "modulate:a", 1.0, rng.randf_range(1.0, 2.5))
+		x += rng.randf_range(360.0, 560.0)
+	_add_lore_label(Vector2(360.0, -30.0), "통제실 · 감시망", Color(0.4, 0.7, 0.9, 0.5), 15)
+
+# 보안 검문소 — 스캐너 아치(ㄷ자 프레임) + 상하 스캔 라인 + 표지.
+func _ambience_checkpoint() -> void:
+	var w: float = STAGE_LENGTH
+	var frame_col := Color(0.55, 0.60, 0.68, 0.6)
+	var x: float = 500.0
+	while x < w:
+		var top := ColorRect.new()
+		top.color = frame_col
+		top.position = Vector2(x - 40.0, -40.0)
+		top.size = Vector2(80.0, 8.0)
+		top.z_index = -9
+		add_child(top)
+		for side in [-40.0, 32.0]:
+			var post := ColorRect.new()
+			post.color = frame_col
+			post.position = Vector2(x + side, -40.0)
+			post.size = Vector2(8.0, GROUND_Y - 40.0)
+			post.z_index = -9
+			add_child(post)
+		var scan := ColorRect.new()
+		scan.color = Color(0.9, 0.3, 0.3, 0.28)
+		scan.position = Vector2(x - 36.0, -36.0)
+		scan.size = Vector2(72.0, 3.0)
+		scan.z_index = -8
+		add_child(scan)
+		var tw2 := scan.create_tween()
+		tw2.set_loops()
+		tw2.tween_property(scan, "position:y", GROUND_Y - 60.0, 2.2)
+		tw2.tween_property(scan, "position:y", -36.0, 0.0)
+		x += 800.0
+	_add_lore_label(Vector2(360.0, -30.0), "보안 검문 · 신원 확인", Color(0.7, 0.75, 0.85, 0.5), 15)
+
+# 철거 구역 — 잔해 더미 + 주의 테이프 + 먼지 안개 + 표지.
+func _ambience_demolition() -> void:
+	var w: float = STAGE_LENGTH
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 457 + 13
+	var x: float = 200.0
+	while x < w:
+		var rw: float = rng.randf_range(80.0, 160.0)
+		var rh: float = rng.randf_range(40.0, 110.0)
+		var pile := Polygon2D.new()
+		pile.color = Color(0.16, 0.15, 0.14)
+		pile.polygon = PackedVector2Array([
+			Vector2(x, GROUND_Y), Vector2(x + rw * 0.3, GROUND_Y - rh),
+			Vector2(x + rw * 0.7, GROUND_Y - rh * 0.7), Vector2(x + rw, GROUND_Y)])
+		pile.z_index = -11
+		add_child(pile)
+		x += rw + rng.randf_range(120.0, 280.0)
+	var tape := ColorRect.new()
+	tape.color = Color(0.9, 0.75, 0.2, 0.35)
+	tape.position = Vector2(-200.0, -50.0)
+	tape.size = Vector2(w + 400.0, 6.0)
+	tape.z_index = -7
+	add_child(tape)
+	var dust := ColorRect.new()
+	dust.color = Color(0.4, 0.38, 0.34, 0.06)
+	dust.position = Vector2(-200.0, GROUND_Y - 120.0)
+	dust.size = Vector2(w + 400.0, 140.0)
+	dust.z_index = -6
+	add_child(dust)
+	_add_lore_label(Vector2(360.0, -30.0), "철거 구역 · 접근 주의", Color(0.9, 0.75, 0.3, 0.5), 15)
+
+# 실험 구역 — 격자 라인 + 관측 유리 패널 + 표지.
+func _ambience_testing() -> void:
+	var w: float = STAGE_LENGTH
+	var x: float = 160.0
+	while x < w:
+		var g := ColorRect.new()
+		g.color = Color(0.4, 0.7, 0.75, 0.06)
+		g.position = Vector2(x, -200.0)
+		g.size = Vector2(1.0, 800.0)
+		g.z_index = -11
+		add_child(g)
+		x += 100.0
+	var px: float = 400.0
+	while px < w:
+		var glass := ColorRect.new()
+		glass.color = Color(0.35, 0.55, 0.60, 0.10)
+		glass.position = Vector2(px, -80.0)
+		glass.size = Vector2(220.0, GROUND_Y - 40.0)
+		glass.z_index = -9
+		add_child(glass)
+		var frame := ColorRect.new()
+		frame.color = Color(0.5, 0.7, 0.75, 0.4)
+		frame.position = Vector2(px, -80.0)
+		frame.size = Vector2(220.0, 4.0)
+		frame.z_index = -8
+		add_child(frame)
+		px += 620.0
+	_add_lore_label(Vector2(360.0, -30.0), "실험 구역 · 관측", Color(0.5, 0.8, 0.85, 0.5), 15)
+
+# 함정 통로 — 상하 위험 스트라이프 + 붉은 경고등(점멸) + 표지.
+func _ambience_gauntlet() -> void:
+	var w: float = STAGE_LENGTH
+	for hy in [-40.0, GROUND_Y - 6.0]:
+		var stripe := ColorRect.new()
+		stripe.color = Color(0.9, 0.7, 0.15, 0.18)
+		stripe.position = Vector2(-200.0, hy)
+		stripe.size = Vector2(w + 400.0, 6.0)
+		stripe.z_index = -7
+		add_child(stripe)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 479 + 5
+	var x: float = 350.0
+	while x < w:
+		var light := ColorRect.new()
+		light.color = Color(0.9, 0.25, 0.2, 0.5)
+		light.position = Vector2(x - 6.0, -60.0)
+		light.size = Vector2(12.0, 10.0)
+		light.z_index = -8
+		add_child(light)
+		var tw2 := light.create_tween()
+		tw2.set_loops()
+		tw2.tween_property(light, "modulate:a", 0.15, 0.6)
+		tw2.tween_property(light, "modulate:a", 1.0, 0.6)
+		x += rng.randf_range(400.0, 600.0)
+	_add_lore_label(Vector2(360.0, -30.0), "함정 통로 · 경고", Color(0.9, 0.6, 0.2, 0.5), 15)
 
 func _build_ground() -> void:
 	var ground := StaticBody2D.new()
@@ -1644,6 +1900,28 @@ func _build_route_ambience() -> void:
 			_ambience_garage_props()
 		"route_pump_station":
 			_ambience_pump_station()
+		"route_condenser":
+			_ambience_pump_station("응축기 구역 · 냉각수")
+		"route_substation":
+			_ambience_electrical("고압 위험 · 변전 구역")
+		"route_relay_station":
+			_ambience_electrical("통신 중계 · 안테나 정렬")
+		"route_warehouse":
+			_ambience_warehouse("물류 창고 · 구역 D")
+		"route_freight_lift":
+			_ambience_warehouse("화물 구역 · 리프트")
+		"route_server_hall":
+			_ambience_server_hall()
+		"route_control_corridor":
+			_ambience_control_room()
+		"route_checkpoint":
+			_ambience_checkpoint()
+		"route_demolition_zone":
+			_ambience_demolition()
+		"route_testing_grounds":
+			_ambience_testing()
+		"route_gauntlet":
+			_ambience_gauntlet()
 
 func _ambience_sewers() -> void:
 	# 화면 가장자리 어두운 비네트 (CanvasLayer 위에 띄움) + 바닥 옅은 안개
