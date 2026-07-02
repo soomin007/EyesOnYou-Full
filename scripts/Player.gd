@@ -16,6 +16,13 @@ const DASH_DURATION: float = 0.18
 const DASH_COOLDOWN: float = 0.7
 const INVULN_AFTER_HIT: float = 0.8
 const SKILL_COOLDOWN: float = 3.5  # explosive 재사용 대기 (너프: 3.0→3.5, "만능" 억제)
+
+# 수류탄 투척(explosive 스킬) — 몸에서 터지는 근접기 대신 포물선 투척으로 재설계(엄폐 뒤에서 먼 적 타격).
+# 홀드로 사거리 차징(0→최대), 놓으면 투척. 궤도/착탄/폭발반경 미리보기를 그린다.
+const GRENADE_CHARGE_TIME: float = 0.8   # 0 → 최대 사거리까지 홀드 시간
+const GRENADE_MIN_SPEED: float = 430.0
+const GRENADE_MAX_SPEED: float = 840.0
+const GRENADE_LAUNCH_ANGLE: float = 0.98  # rad(~56°) — 엄폐물을 넘기는 로브 각도(고정)
 const DROP_THROUGH_DURATION: float = 0.25  # 플랫폼 통과 예외 유지 시간
 
 # 점프 입력 관용(플랫포머 표준). coyote = 가장자리에서 막 떨어진 직후에도 지상 점프 허용,
@@ -67,6 +74,10 @@ var dash_timer: float = 0.0
 var dash_cd: float = 0.0
 var skill_cd: float = 0.0
 var invuln: float = 0.0
+# 수류탄 차징 상태
+var _charging: bool = false
+var _grenade_charge: float = 0.0
+var _aim_preview: Node2D = null
 
 var visual: Node2D
 var torso: Node2D = null      # CharacterArt가 만든 Torso 컨테이너 — idle bob에 사용
@@ -260,6 +271,9 @@ func _handle_input(delta: float) -> void:
 		_jump_buffer_t = maxf(_jump_buffer_t - delta, 0.0)
 		if _try_jump():
 			_jump_buffer_t = 0.0
+	# 전투 차단(연출/??? 방) 진입 시 진행 중인 수류탄 차징 취소.
+	if GameState.restrict_combat_input and _charging:
+		_cancel_grenade_charge()
 	# 전투 입력 제한 (??? 맵에서) — 이동/점프만 허용
 	if not GameState.restrict_combat_input:
 		# 레버 영역 내에서는 attack 입력이 사격 대신 레버 당기기에만 쓰임 (꾹 누름 사격도 차단).
@@ -271,8 +285,15 @@ func _handle_input(delta: float) -> void:
 			_try_attack()
 		if Input.is_action_just_pressed("dash"):
 			_try_dash()
-		if Input.is_action_just_pressed("skill"):
-			_try_skill()
+		# 폭발(explosive) = 수류탄 투척: 홀드로 사거리 차징 → 놓으면 투척(궤도 미리보기).
+		if GameState.get_skill_tier("explosive") > 0:
+			if Input.is_action_just_pressed("skill"):
+				_begin_grenade_charge()
+			elif _charging and Input.is_action_pressed("skill"):
+				_grenade_charge = minf(_grenade_charge + delta / GRENADE_CHARGE_TIME, 1.0)
+				_update_aim_preview()
+			if _charging and Input.is_action_just_released("skill"):
+				_throw_grenade()
 	if Input.is_action_just_pressed("move_down"):
 		# 바닥: 원웨이 발판 통과. 공중: 글라이드 취소(착지까지 원래 속도 하강).
 		_try_drop_through()
@@ -417,19 +438,106 @@ func _try_dash() -> void:
 		iframe += 0.3
 	invuln = max(invuln, iframe)
 
-func _try_skill() -> void:
-	# explosive: T1=쿨다운 3.0s, T2=반경+30% 쿨다운 2.5s, T3=쿨다운 2.5s + 2회 충전.
-	var ex_tier: int = GameState.get_skill_tier("explosive")
-	if ex_tier == 0:
-		return
+# 수류탄 차징 시작 — 충전이 있어야 시작(없으면 무시).
+func _begin_grenade_charge() -> void:
 	_refresh_skill_charges()  # 티어 변경(레벨업 직후) 반영
+	if skill_charges <= 0:
+		return
+	_charging = true
+	_grenade_charge = 0.0
+	_ensure_aim_preview()
+	_update_aim_preview()
+
+# 차징 취소(전투 차단 등) — 충전 소모/투척 없이 미리보기만 정리.
+func _cancel_grenade_charge() -> void:
+	_charging = false
+	_grenade_charge = 0.0
+	_clear_aim_preview()
+
+# 투척 — 충전 1 소모, 쿨다운 시작, 차징한 사거리로 Grenade 생성.
+func _throw_grenade() -> void:
+	_charging = false
+	_clear_aim_preview()
 	if skill_charges <= 0:
 		return
 	skill_charges -= 1
 	if skill_cd <= 0.0:
 		skill_cd = get_skill_cd_max()
 	SfxPlayer.play("skill_active_use")
-	_spawn_explosion()
+	var g := Grenade.new()
+	g.velocity = _grenade_launch_velocity()
+	g.radius = EXPLOSION_RADIUS * (1.3 if GameState.get_skill_tier("explosive") >= 2 else 1.0)
+	g.damage = EXPLOSION_DAMAGE
+	g.max_hits = MAX_EXPLOSION_HITS
+	get_parent().add_child(g)
+	g.global_position = _grenade_origin()
+
+func _grenade_origin() -> Vector2:
+	return global_position + Vector2(float(facing) * 14.0, -30.0)
+
+func _grenade_launch_velocity() -> Vector2:
+	var speed: float = lerpf(GRENADE_MIN_SPEED, GRENADE_MAX_SPEED, _grenade_charge)
+	return Vector2(cos(GRENADE_LAUNCH_ANGLE) * float(facing), -sin(GRENADE_LAUNCH_ANGLE)) * speed
+
+func _grenade_blast_radius() -> float:
+	return EXPLOSION_RADIUS * (1.3 if GameState.get_skill_tier("explosive") >= 2 else 1.0)
+
+# 조준 궤도 미리보기 — 월드 원점(0,0)에 붙은 Node2D가 _draw_aim을 호출.
+class _AimPreview extends Node2D:
+	var player: Player = null
+	func _draw() -> void:
+		if player != null and is_instance_valid(player):
+			player._draw_aim(self)
+
+func _ensure_aim_preview() -> void:
+	if _aim_preview != null and is_instance_valid(_aim_preview):
+		return
+	var ap := _AimPreview.new()
+	ap.player = self
+	ap.z_index = 5
+	get_parent().add_child(ap)
+	ap.position = Vector2.ZERO  # 월드 좌표로 그리기(원점)
+	_aim_preview = ap
+
+func _clear_aim_preview() -> void:
+	if _aim_preview != null and is_instance_valid(_aim_preview):
+		_aim_preview.queue_free()
+	_aim_preview = null
+
+func _update_aim_preview() -> void:
+	if _aim_preview != null and is_instance_valid(_aim_preview):
+		_aim_preview.queue_redraw()
+
+# 포물선 궤도를 시뮬레이션해 점선 + 착탄점 + 폭발반경을 그린다. Grenade와 같은 중력이라 실제 비행과 일치.
+func _draw_aim(node: Node2D) -> void:
+	var origin: Vector2 = _grenade_origin()
+	var v: Vector2 = _grenade_launch_velocity()
+	var space := get_world_2d().direct_space_state
+	var t: float = 0.0
+	var step: float = 0.045
+	var prev: Vector2 = origin
+	var landing: Vector2 = origin
+	var dots: Array = []
+	for i in 48:
+		t += step
+		var p: Vector2 = origin + v * t + Vector2(0.0, 0.5 * GRAVITY * t * t)
+		var q := PhysicsRayQueryParameters2D.create(prev, p, 1)  # 월드(layer1)에 막히면 거기가 착탄
+		q.exclude = [get_rid()]
+		var hit: Dictionary = space.intersect_ray(q)
+		if not hit.is_empty():
+			landing = hit["position"]
+			break
+		dots.append(p)
+		landing = p
+		prev = p
+	# 궤도 점선
+	for i in dots.size():
+		if i % 2 == 0:
+			node.draw_circle(dots[i], 3.0, Color(1.0, 0.72, 0.32, 0.5))
+	# 착탄점 + 폭발 반경 미리보기(어느 적이 걸리는지)
+	var r: float = _grenade_blast_radius()
+	node.draw_arc(landing, r, 0.0, TAU, 32, Color(1.0, 0.55, 0.30, 0.30), 2.0, true)
+	node.draw_circle(landing, 6.0, Color(1.0, 0.60, 0.30, 0.55))
 
 # T3에서 max 2 charges. 매 _ready/_try_skill 진입 시 호출해 티어 갱신을 반영.
 func _refresh_skill_charges() -> void:
@@ -481,50 +589,6 @@ func _play_skill_acquire_flash() -> void:
 		var ft := torso.create_tween()
 		ft.tween_property(torso, "modulate", Color(1.6, 1.6, 1.8), 0.08)
 		ft.tween_property(torso, "modulate", Color(1, 1, 1), 0.34)
-
-func _spawn_explosion() -> void:
-	var center: Vector2 = global_position + Vector2(0, -28)
-	# 폭발 임팩트 — skill_active_use(발동 클릭) 위에 bomb_explode를 레이어해서 폭발감 보강.
-	SfxPlayer.play("bomb_explode")
-	# explosive T2/T3 = 반경 +30%
-	var radius: float = EXPLOSION_RADIUS
-	if GameState.get_skill_tier("explosive") >= 2:
-		radius *= 1.3
-	# 데미지: 반경 안 적을 거리순으로 최대 MAX_EXPLOSION_HITS체만 (몰살 방지).
-	var in_range: Array = []
-	for n in get_tree().get_nodes_in_group("enemy"):
-		if not (n is Node2D):
-			continue
-		var enemy := n as Node2D
-		var d: float = enemy.global_position.distance_to(center)
-		if d <= radius and enemy.has_method("take_damage"):
-			in_range.append({"e": enemy, "d": d})
-	in_range.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["d"]) < float(b["d"]))
-	var hits: int = 0
-	for item in in_range:
-		if hits >= MAX_EXPLOSION_HITS:
-			break
-		var it: Dictionary = item
-		var e: Node2D = it["e"]
-		e.take_damage(EXPLOSION_DAMAGE)
-		hits += 1
-	# 시각: 확장하며 페이드되는 원
-	var blast := Polygon2D.new()
-	blast.color = Color(1.0, 0.55, 0.30, 0.85)
-	blast.z_index = 3
-	var pts: Array = []
-	for i in 28:
-		var a: float = float(i) * TAU / 28.0
-		pts.append(Vector2(cos(a) * radius, sin(a) * radius))
-	blast.polygon = PackedVector2Array(pts)
-	blast.global_position = center
-	blast.scale = Vector2(0.2, 0.2)
-	get_parent().add_child(blast)
-	var tw := blast.create_tween()
-	tw.set_parallel(true)
-	tw.tween_property(blast, "scale", Vector2(1.0, 1.0), 0.30)
-	tw.tween_property(blast, "modulate", Color(1, 1, 1, 0), 0.45)
-	tw.chain().tween_callback(blast.queue_free)
 
 func _apply_gravity(delta: float) -> void:
 	if is_on_floor():
@@ -613,6 +677,8 @@ func _exit_tree() -> void:
 	if slowmo_active or not is_equal_approx(Engine.time_scale, 1.0):
 		Engine.time_scale = 1.0
 		slowmo_active = false
+	# 차징 중 사망/씬 이탈 시 조준 미리보기(부모=Stage 소속)가 남지 않게 정리.
+	_clear_aim_preview()
 
 func _show_shield_flash() -> void:
 	# 방어막 발동 — 강한 흰 플래시 + 확장하는 후광 (한 번에 인지되도록 강화).

@@ -90,6 +90,18 @@
   tags에서 빼야 함). 트랩 "못 잡는 함정" VEIL 경고는 태그가 아니라 `_traps_present`(트랩 생성 시 set)가
   담당하므로 태그 없이도 뜬다. (2026-07-02 차량 엄폐 맵.)
 
+- **CanvasItem `draw_*`는 `_draw()` 안에서만 호출된다 — 커스텀 미리보기는 자식 Node2D + queue_redraw로.**
+  수류탄 조준 궤도처럼 매 프레임 갱신되는 오버레이를 그릴 때, 그리기 함수를 직접 호출하면 "draw_* can only be
+  called during NOTIFICATION_DRAW"로 죽는다. → 월드 원점(0,0)에 붙인 자식 Node2D의 `_draw()`가 소유자의
+  `_draw_xxx(self)`를 부르게 하고, 값이 바뀔 때 `node.queue_redraw()`로 다시 그리게 한다(엔진이 draw 컨텍스트
+  에서 호출). 궤도 안의 raycast(intersect_ray)는 draw 중 호출해도 안전. (2026-07-02 수류탄 미리보기.)
+
+- **`--quit-after N`(창모드) 검증에서 idle 프레임과 물리 프레임이 디커플링돼 투사체가 안 움직인 것처럼 보인다.**
+  언캡 창모드는 idle 루프가 실시간보다 빨리 돌아 N idle 프레임 동안 물리(`_physics_process`, 60Hz 고정)가
+  몇 틱 안 될 수 있다 → 프레임 카운트로 투사체 이동을 확인하면 "안 날아감"으로 오판(2026-07-02 수류탄).
+  → 투사체/물리 검증은 **`node._physics_process(dt)`를 수동으로 여러 번 호출**해 결정적으로 확인할 것
+  (dx/dy 직접 측정). idle 프레임 경과에 의존하지 말 것.
+
 - **StaticBody를 탄이 데미지 주게 하려면 탄이 *충돌 대상을 통지*해야 한다 — 탄은 layer 0이라 Area가 못 잡는다.**
   EnemyBullet/Bullet은 `collision_layer=0, mask=1|2`(또는 1|4)라 *스스로는* 어떤 Area/Body 감지에도 안 잡힌다
   (layer 0). 그래서 "부서지는 엄폐물"이 맞았는지 엄폐물 쪽 Area로는 알 수 없다. → 탄의 `body_entered`에서

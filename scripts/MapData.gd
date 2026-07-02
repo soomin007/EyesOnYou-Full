@@ -1295,9 +1295,10 @@ static func _car_cover() -> Dictionary:
 			{"pos": Vector2(2440, 600), "w": 96.0, "h": 72.0, "hp": 3},
 		],
 		"enemies": {
-			# 앞쪽 warmup patrol(엄폐로 접근해 잡는 법 학습) + 뒤쪽 저격 2(목표 접근 처벌).
-			"patrol": [Vector2(880, 540.0)],
-			"sniper": [Vector2(2560, 540.0), Vector2(2740, 540.0)],
+			# 앞쪽 warmup patrol + 통로에 저격 3을 분산(몰지 않음) — 엄폐로 전진하며 수류탄으로 하나씩 처리
+			# 하거나, 목표(POSITION)라 엄폐로 통과도 가능. 예전엔 목표 앞에 몰아둬 "숨어선 못 침" 문제.
+			"patrol": [Vector2(760, 540.0)],
+			"sniper": [Vector2(1320, 540.0), Vector2(1980, 540.0), Vector2(2600, 540.0)],
 			"drone": [], "bomber": [], "shield": [],
 		},
 		# 발사 함정 — 오른쪽 벽에서 통로를 왼쪽으로 훑어 먼 쪽 차량부터 침식(목표 근처 노출 압박).
