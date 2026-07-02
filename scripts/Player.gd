@@ -19,7 +19,7 @@ const SKILL_COOLDOWN: float = 3.5  # explosive 재사용 대기 (너프: 3.0→3
 
 # 수류탄 투척(explosive 스킬) — 몸에서 터지는 근접기 대신 포물선 투척으로 재설계(엄폐 뒤에서 먼 적 타격).
 # 홀드로 사거리 차징(0→최대), 놓으면 투척. 궤도/착탄/폭발반경 미리보기를 그린다.
-const GRENADE_CHARGE_TIME: float = 0.8   # 0 → 최대 사거리까지 홀드 시간
+const GRENADE_CHARGE_TIME: float = 1.1   # 0 → 최대 사거리까지 홀드 시간 (제어 여유 위해 0.8→1.1로 완화)
 const GRENADE_MIN_SPEED: float = 430.0
 const GRENADE_MAX_SPEED: float = 840.0
 const GRENADE_LAUNCH_ANGLE: float = 0.98  # rad(~56°) — 엄폐물을 넘기는 로브 각도(고정)
@@ -521,7 +521,7 @@ func _draw_aim(node: Node2D) -> void:
 	for i in 48:
 		t += step
 		var p: Vector2 = origin + v * t + Vector2(0.0, 0.5 * GRAVITY * t * t)
-		var q := PhysicsRayQueryParameters2D.create(prev, p, 1)  # 월드(layer1)에 막히면 거기가 착탄
+		var q := PhysicsRayQueryParameters2D.create(prev, p, 1 | 4)  # 벽·발판·엄폐물(1)+적(4)에 막히면 착탄
 		q.exclude = [get_rid()]
 		var hit: Dictionary = space.intersect_ray(q)
 		if not hit.is_empty():

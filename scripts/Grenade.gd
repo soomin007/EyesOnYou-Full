@@ -49,12 +49,11 @@ func _physics_process(delta: float) -> void:
 	if _fuse <= 0.0:
 		explode()
 
-func _on_body_entered(body: Node) -> void:
+func _on_body_entered(_body: Node) -> void:
 	if _dead:
 		return
-	# 원웨이 발판은 통과(발판 위 적에게 넘기게). 바닥은 group "ground"(platform 아님)라 여기서 폭발.
-	if body.is_in_group("platform"):
-		return
+	# 벽/바닥/발판/엄폐물/적 어디든 닿으면 폭발 — 예측 궤도(raycast)와 일치시킴(발판 통과 제거).
+	# (예전엔 원웨이 발판을 통과시켜 "궤도는 발판에서 끊기는데 실탄은 뚫고 감" 불일치가 있었음.)
 	explode()
 
 func explode() -> void:
