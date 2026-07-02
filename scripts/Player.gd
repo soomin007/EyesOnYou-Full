@@ -295,10 +295,14 @@ func _handle_input(delta: float) -> void:
 			if _charging and Input.is_action_just_released("skill"):
 				_throw_grenade()
 	if Input.is_action_just_pressed("move_down"):
-		# 바닥: 원웨이 발판 통과. 공중: 글라이드 취소(착지까지 원래 속도 하강).
-		_try_drop_through()
-		if not is_on_floor():
-			_glide_cancelled = true
+		if _charging:
+			# 수류탄 차징 중 ▼ = 투척 취소(충전/쿨다운 소모 없음). 각도 고정이라 ▼가 비어 취소로 씀.
+			_cancel_grenade_charge()
+		else:
+			# 바닥: 원웨이 발판 통과. 공중: 글라이드 취소(착지까지 원래 속도 하강).
+			_try_drop_through()
+			if not is_on_floor():
+				_glide_cancelled = true
 
 func _try_drop_through() -> void:
 	if not is_on_floor():
