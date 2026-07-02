@@ -22,6 +22,15 @@
 - **GDScript: untyped Array/Dictionary 인덱싱 시 명시 타입 선언.** `var x := arr[i]` 대신 `var x: Dictionary = arr[i]`.
   `Array[T]`에 untyped Array(사전 리터럴 값, `Dictionary.get` 결과) 직접 대입 금지(런타임 에러).
 
+- **`bool(null)` 호출 금지 — "Nonexistent 'bool' constructor" 크래시(런타임, `int()` 함정과 동형).**
+  `bool()` 자체는 정상이지만 인자가 **null**이면 Nil→bool 생성자가 없어 죽는다. `Object.get("prop")`는
+  속성이 없으면 *기본값 없이 null*을 반환하므로, `bool(node.get("harmless"))`처럼 존재를 보장 못 하는
+  속성을 `bool()`로 감싸면 그 노드에서 크래시(런타임 에러가 함수 실행을 중단 → 이후 로직 전부 스킵).
+  → 존재 불확실 속성은 `bool()` 없이 **truthiness**로: `if node.get("prop"):`(null은 falsy, 안전). 또는
+  기본값 있는 dict는 `bool(d.get("k", false))`(get에 default가 있으면 null이 안 나와 안전). (2026-07-03
+  DefenseCore가 "enemy" 그룹의 harmless 속성 없는 더미 노드에서 크래시 — `--import`는 통과, **창모드
+  부팅에서만** 잡힘. 함수 본문 런타임 에러는 import 캐시가 놓친다는 기존 교훈 재확인.)
+
 - **`int(배열)`/`int(딕셔너리)` 호출 금지 — "Nonexistent 'int' constructor" 크래시.**
   값이 *개수*가 아니라 *컬렉션*일 때 `int()`로 변환하면 크래시. 적 종류 집계에서 wave의 enemies 값이
   위치 **배열**인데 `int(wen[k]) > 0`으로 개수처럼 다뤄 크래시(RouteMap.gd:240, 2026-06-09).

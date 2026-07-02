@@ -108,6 +108,7 @@ const _ROUTE_TRACKS: Dictionary = {
 	"route_freight_lift": "mid_late",
 	"route_car_cover":  "mid_late",
 	"route_collapse":   "mid_late",
+	"route_core_defense": "mid_late",
 	"route_cooling":    "mid_late",
 	"route_ward":       "mid_late",
 	"route_datacenter": "mid_late",
@@ -784,6 +785,7 @@ func _build_world() -> void:
 	_build_wall(-50.0)
 	_build_wall(STAGE_LENGTH + 50.0)
 	_build_chase_hazard()
+	_build_defense_core()
 
 var locked_door_triggered: bool = false
 
@@ -1600,6 +1602,108 @@ func _ambience_collapse() -> void:
 		lx += rng.randf_range(700.0, 1000.0)
 	_add_lore_label(Vector2(360.0, -30.0), "붕괴 진행 · 대피", Color(0.9, 0.4, 0.25, 0.55), 15)
 
+# ─── 반응로 제어실 (ARENA) — 아레나 방어 맵 시그니처 배경 ───────────
+# ARENA는 _build_indoor_backdrop(HORIZONTAL 전용)를 안 타므로 여기서 챔버 구조를 직접 그린다.
+# 뒷벽 패널 + 지지 리브 + 케이블 트레이 + 좌우 모니터 뱅크 + 천장 트러스/램프 + 바닥 경고 비콘.
+func _ambience_reactor() -> void:
+	var w: float = STAGE_LENGTH        # ARENA = 1920
+	var gy: float = GROUND_Y           # 820
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 617 + 5
+	# 뒷벽 슬래브(도시 실루엣 대체)
+	var wall := ColorRect.new()
+	wall.color = Color(0.10, 0.11, 0.14)
+	wall.position = Vector2(-100.0, -260.0)
+	wall.size = Vector2(w + 200.0, gy + 260.0)
+	wall.z_index = -16
+	add_child(wall)
+	# 지지 리브(세로 기둥) — 일정 간격
+	var rx: float = 80.0
+	while rx < w:
+		var rib := ColorRect.new()
+		rib.color = Color(0.07, 0.08, 0.10)
+		rib.position = Vector2(rx - 9.0, -240.0)
+		rib.size = Vector2(18.0, gy + 240.0)
+		rib.z_index = -15
+		add_child(rib)
+		rx += 240.0
+	# 수평 케이블 트레이/도관 — 벽 위쪽
+	for i in 3:
+		var tray := ColorRect.new()
+		tray.color = Color(0.16, 0.15, 0.12, 0.8)
+		tray.position = Vector2(-100.0, -180.0 + float(i) * 46.0)
+		tray.size = Vector2(w + 200.0, 5.0)
+		tray.z_index = -14
+		add_child(tray)
+	# 천장 트러스 + 매달린 램프
+	var ceil := ColorRect.new()
+	ceil.color = Color(0.06, 0.07, 0.09)
+	ceil.position = Vector2(-100.0, -260.0)
+	ceil.size = Vector2(w + 200.0, 90.0)
+	ceil.z_index = -13
+	add_child(ceil)
+	var lx: float = 240.0
+	while lx < w:
+		var lamp := ColorRect.new()
+		lamp.color = Color(0.85, 0.90, 1.0, 0.5)
+		lamp.position = Vector2(lx - 30.0, -168.0)
+		lamp.size = Vector2(60.0, 8.0)
+		lamp.z_index = -12
+		add_child(lamp)
+		var cone := Polygon2D.new()
+		cone.color = Color(0.75, 0.82, 0.95, 0.05)
+		cone.polygon = PackedVector2Array([
+			Vector2(lx - 30.0, -160.0), Vector2(lx + 30.0, -160.0),
+			Vector2(lx + 150.0, gy - 40.0), Vector2(lx - 150.0, gy - 40.0)])
+		cone.z_index = -11
+		add_child(cone)
+		lx += 480.0
+	# 좌우 모니터 뱅크 — 깜빡이는 LED 격자
+	for side in [0.0, 1.0]:
+		var mx: float = lerp(120.0, w - 300.0, side)
+		var bank := ColorRect.new()
+		bank.color = Color(0.08, 0.09, 0.12)
+		bank.position = Vector2(mx, -120.0)
+		bank.size = Vector2(180.0, 120.0)
+		bank.z_index = -11
+		add_child(bank)
+		for r in 3:
+			for c in 5:
+				if rng.randf() < 0.55:
+					var led := ColorRect.new()
+					var warm: bool = rng.randf() < 0.3
+					led.color = Color(0.95, 0.55, 0.25, 0.8) if warm else Color(0.40, 0.80, 0.95, 0.8)
+					led.position = Vector2(mx + 16.0 + float(c) * 32.0, -104.0 + float(r) * 36.0)
+					led.size = Vector2(14.0, 10.0)
+					led.z_index = -10
+					add_child(led)
+					var tl := led.create_tween()
+					tl.set_loops()
+					var per: float = rng.randf_range(0.6, 1.6)
+					tl.tween_property(led, "modulate:a", 0.25, per)
+					tl.tween_property(led, "modulate:a", 1.0, per)
+	# 바닥 코어 마운트 광 — 중앙 발광 패널
+	var glowpad := ColorRect.new()
+	glowpad.color = Color(0.20, 0.45, 0.55, 0.10)
+	glowpad.position = Vector2(w * 0.5 - 220.0, gy - 6.0)
+	glowpad.size = Vector2(440.0, 6.0)
+	glowpad.z_index = -7
+	add_child(glowpad)
+	# 코너 경고 비콘(앰버, 맥동) — 방어 구역 신호
+	for side2 in [0.0, 1.0]:
+		var bx: float = lerp(220.0, w - 220.0, side2)
+		var beacon := ColorRect.new()
+		beacon.color = Color(0.95, 0.60, 0.20, 0.55)
+		beacon.position = Vector2(bx - 6.0, gy - 60.0)
+		beacon.size = Vector2(12.0, 60.0)
+		beacon.z_index = -6
+		add_child(beacon)
+		var tb := beacon.create_tween()
+		tb.set_loops()
+		tb.tween_property(beacon, "modulate:a", 0.25, 0.7)
+		tb.tween_property(beacon, "modulate:a", 1.0, 0.7)
+	_add_lore_label(Vector2(w * 0.5 - 120.0, -212.0), "반응로 제어실 · 코어 방어", Color(0.45, 0.82, 0.95, 0.6), 15)
+
 func _build_ground() -> void:
 	var ground := StaticBody2D.new()
 	ground.collision_layer = 1
@@ -1736,6 +1840,19 @@ func _build_chase_hazard() -> void:
 	var hz := ChaseHazard.new()
 	add_child(hz)
 	hz.setup(float(cfg.get("start_x", -300.0)), float(cfg.get("speed", 210.0)), float(cfg.get("max_gap", 700.0)))
+
+# 아레나 방어(DefenseCore 기믹) — MapData "defense_core" = {pos, hp?, radius?, drain?}.
+# 코어 dome 안에 적이 머물면 코어 HP가 깎이고, 0이면 방어 실패(스테이지 실패). 웨이브 전멸이 클리어.
+func _build_defense_core() -> void:
+	var cfg: Dictionary = _map_data.get("defense_core", {})
+	if cfg.is_empty():
+		return
+	var core := DefenseCore.new()
+	add_child(core)
+	core.position = cfg.get("pos", Vector2(960.0, 820.0))
+	core.setup(float(cfg.get("hp", 120.0)), float(cfg.get("radius", 360.0)), float(cfg.get("drain", 6.0)))
+	core.breached.connect(_on_core_breached)
+	_defense_core = core
 
 func _build_platforms_fallback() -> void:
 	# 안전한 일자형 폴백 (튜토리얼/플레이그라운드용)
@@ -2033,6 +2150,8 @@ func _build_route_ambience() -> void:
 			_ambience_gauntlet()
 		"route_collapse":
 			_ambience_collapse()
+		"route_core_defense":
+			_ambience_reactor()
 
 func _ambience_sewers() -> void:
 	# 화면 가장자리 어두운 비네트 (CanvasLayer 위에 띄움) + 바닥 옅은 안개
@@ -3749,6 +3868,7 @@ func _build_rooftops_secret() -> void:
 	)
 
 var _enemies_remaining: int = 0  # ARENA enemy_clear 카운트
+var _defense_core: DefenseCore = null  # 아레나 방어 맵의 코어(있을 때만)
 
 func _build_goal() -> void:
 	match _goal_type:
@@ -3837,6 +3957,9 @@ func _on_arena_cleared() -> void:
 	if goal_reached:
 		return
 	goal_reached = true
+	# 방어 맵 — 코어를 "확보" 상태로 굳혀 잔여 드레인/경보 정지.
+	if _defense_core != null and is_instance_valid(_defense_core):
+		_defense_core.set_secured()
 	# ARENA 클리어 보너스 XP — MapData arena_clear_xp
 	var data: Dictionary = MapData.get_layout(GameState.current_route_id)
 	var bonus_xp: int = int(data.get("arena_clear_xp", 0))
@@ -4073,6 +4196,17 @@ func _show_playground_clear_msg() -> void:
 func _on_player_died() -> void:
 	GameState.register_death()
 	get_tree().change_scene_to_file(SceneRouter.DEATH)
+
+# 코어 함락 = 방어 실패. 플레이어 사망과 동일 경로(재시도)로 처리한다.
+# breached는 DefenseCore._physics_process 안에서 emit되므로 씬 전환은 call_deferred로 한 프레임 미룬다.
+func _on_core_breached() -> void:
+	if goal_reached:
+		return
+	GameState.register_death()
+	# 짧은 붉은 화면 플래시 — 즉시 전환하면 "함락"이 안 읽혀서.
+	_screen_flash(Color(1.0, 0.2, 0.24, 0.7), 0.08, 0.5)
+	SfxPlayer.play("challenge_fail")
+	get_tree().change_scene_to_file.call_deferred(SceneRouter.DEATH)
 
 func _on_player_damaged() -> void:
 	# 도전 방: 1 hit fail — 즉시 stage 스킵 처리.

@@ -53,6 +53,7 @@ static func get_layout(route_id: String) -> Dictionary:
 		"route_freight_lift":  return _freight_lift()
 		"route_car_cover":     return _car_cover()
 		"route_collapse":      return _collapse()
+		"route_core_defense":  return _core_defense()
 	return {}
 
 # ─── 1. 외곽 진입로 (HORIZONTAL, 짧음) ─────────────────────────
@@ -1354,4 +1355,74 @@ static func _collapse() -> Dictionary:
 			"hp_pickups": [Vector2(2550, 560.0)],
 		},
 		"spikes": [],
+	}
+
+# ─── 반응로 제어실 (ARENA, 웨이브) — 아레나 방어 기믹 맵 (막2 s4~5) ─────────
+# 정체성: 중앙의 코어(DefenseCore)를 지킨다. 코어를 둘러싼 침입 dome 안에 적이 머물면 코어 HP가
+#   깎이고 0이면 방어 실패. 적 AI는 무변경(플레이어를 쫓음) — 플레이어가 코어 곁(중앙)에 서면 적이
+#   dome로 몰려든다 → 자리를 못 비우고 양 측면을 막아야 한다. datacenter(자유 사냥 kill-all)와 정반대.
+# 역할 분리: 근접(patrol/bomber/shield)=지면으로 들어와 코어 위협 / 원거리(sniper 발판·drone)=플레이어 압박.
+# 클리어=웨이브 3 전멸(ENEMY_CLEAR). 실패=코어 함락. 램프: risk3(막2 고조).
+static func _core_defense() -> Dictionary:
+	return {
+		"world_type":   "ARENA",
+		"world_size":   Vector2(1920.0, 900.0),
+		"player_start": Vector2(960.0, 760.0),   # 코어 곁(베이스)에서 시작
+		"goal_type":    "ENEMY_CLEAR",
+		"goal_pos":     Vector2.ZERO,
+		"camera_mode":  "FIXED",
+		"ground_y":     820.0,
+		# 지켜야 할 코어 — 중앙 지면. dome 반경 360(=x 600..1320). 적은 이 밖에서 스폰해 안으로 밀려온다.
+		"defense_core": {"pos": Vector2(960.0, 820.0), "hp": 120.0, "radius": 360.0, "drain": 6.0},
+		"platforms": [
+			# 좌우 상단 저격 발판(dome 밖, 중앙과 수평거리 700) — 플레이어만 압박, 코어는 못 깎음.
+			{"pos": Vector2(260, 560),  "w": 200.0},
+			{"pos": Vector2(1660, 560), "w": 200.0},
+			# dome 가장자리 근처 낮은 발판 — 플레이어 발판전/사격 각. 지면 적은 안 오름(플레이어 전용).
+			{"pos": Vector2(560, 690),  "w": 150.0},
+			{"pos": Vector2(1360, 690), "w": 150.0},
+		],
+		# waves: 방어 압박이 단계적으로 고조. 모두 dome 밖(x<600 또는 x>1320)에서 스폰해 밀려온다.
+		"waves": [
+			{
+				"trigger": "immediate",
+				"banner":  "WAVE 1",
+				"enemies": {
+					"patrol": [Vector2(220, 790.0), Vector2(1700, 790.0)],
+				},
+			},
+			{
+				"trigger": "prev_half",   # 1웨이브 절반 처치 시 — 근접 러셔 + 저격 도입
+				"banner":  "WAVE 2",
+				"enemies": {
+					"bomber": [Vector2(200, 790.0), Vector2(1720, 790.0)],
+					"sniper": [Vector2(260, 530.0)],
+				},
+			},
+			{
+				"trigger": "prev_clear",  # 2웨이브 전멸 시 — 최고조: 방패병 + 순찰 + 저격 + 드론
+				"banner":  "FINAL WAVE",
+				"enemies": {
+					"shield": [Vector2(1720, 790.0)],
+					"patrol": [Vector2(220, 790.0), Vector2(1700, 790.0)],
+					"sniper": [Vector2(1660, 530.0)],
+					"drone":  [Vector2(960, 220.0)],
+				},
+			},
+		],
+		# 폴백 enemies (waves 미인식 환경에서도 비슷한 도전이 되도록 합집합 유지)
+		"enemies": {
+			"patrol": [Vector2(220, 790.0), Vector2(1700, 790.0)],
+			"sniper": [Vector2(260, 530.0), Vector2(1660, 530.0)],
+			"drone":  [Vector2(960, 220.0)],
+			"bomber": [Vector2(200, 790.0), Vector2(1720, 790.0)],
+			"shield": [Vector2(1720, 790.0)],
+		},
+		"rewards": {
+			# dome 밖 발판 위 소량 보상(코어 곁을 오래 비우지 않게 dome 근처엔 안 둠).
+			"xp_orbs":    [Vector2(260, 520.0), Vector2(1660, 520.0)],
+			"hp_pickups": [Vector2(960, 640.0)],   # 코어 바로 뒤 위 — 방어 중 회복
+		},
+		"spikes": [],
+		"arena_clear_xp": 4,
 	}
