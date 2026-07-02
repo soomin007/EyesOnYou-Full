@@ -28,7 +28,7 @@ const DROP_THROUGH_DURATION: float = 0.25  # 플랫폼 통과 예외 유지 시�
 # 점프 입력 관용(플랫포머 표준). coyote = 가장자리에서 막 떨어진 직후에도 지상 점프 허용,
 # jump buffer = 착지 직전 누른 점프 입력을 기억해 착지 순간 발동. 둘 다 "분명 점프했는데
 # 안 올라가짐"(2차 피드백 다수) 해소용 — 원인은 docs/design/known_issues.md 참조.
-const COYOTE_TIME: float = 0.10
+const COYOTE_TIME: float = 0.05
 const JUMP_BUFFER_TIME: float = 0.10
 
 # 충전형 방패(barrier) — SkillTreeData.barrier 라인.

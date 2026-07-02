@@ -262,17 +262,14 @@ static func _subway() -> Dictionary:
 			{"pos": Vector2(1600, 220), "w": 700.0},
 			{"pos": Vector2(2700, 220), "w": 700.0},
 			{"pos": Vector2(3800, 220), "w": 700.0},
-			{"pos": Vector2(4900, 220), "w": 500.0},
 			# 지붕 진입 발판 (객차 측면)
 			{"pos": Vector2(560, 320),  "w": 60.0},
 			{"pos": Vector2(1560, 320), "w": 60.0},
 			{"pos": Vector2(2660, 320), "w": 60.0},
-			{"pos": Vector2(3760, 320), "w": 60.0},
 			# 지면 잔해
 			{"pos": Vector2(1380, 380), "w": 100.0},
 			{"pos": Vector2(2480, 380), "w": 100.0},
 			{"pos": Vector2(3580, 380), "w": 100.0},
-			{"pos": Vector2(4680, 380), "w": 100.0},
 		],
 		"enemies": {
 			"patrol": [Vector2(800, 420.0), Vector2(2000, 420.0), Vector2(3200, 420.0), Vector2(4400, 420.0)],
@@ -293,7 +290,6 @@ static func _subway() -> Dictionary:
 			{"x": 1550, "y": 238.0, "dir": "down", "mode": "triggered", "trigger_id": "tw1", "burst": 3},
 			{"x": 1780, "y": 238.0, "dir": "down", "mode": "triggered", "trigger_id": "tw1", "burst": 3},
 			{"x": 2800, "y": 238.0, "dir": "down", "interval": 1.6, "phase": 0.6},    # 지붕3 밑 (주기)
-			{"x": 3760, "y": 414.0, "dir": "up",   "interval": 1.8, "phase": 0.3},    # 바닥 포탑 (지붕 진입 발판 견제)
 		],
 		"tripwires": [
 			# 통로 가로지르는 세로 레이저 — 밟으면 앞쪽 triggered 포탑(tw1) 발동.
@@ -1281,7 +1277,7 @@ static func _car_cover() -> Dictionary:
 		"world_size":   Vector2(3000.0, 720.0),
 		"player_start": Vector2(130.0, 540.0),
 		"goal_type":    "POSITION",
-		"goal_pos":     Vector2(2860.0, 540.0),
+		"goal_pos":     Vector2(2960.0, 540.0),   # 포탑(2900) 너머 오른쪽 = 좌향 사선 밖(출구에선 안 맞음)
 		"camera_mode":  "HORIZONTAL",
 		"platforms": [],
 		# 바닥(y=600)에 늘어선 정비 차량 = 엄폐물 행. 사이 트로프가 안전지대, 차량 넘기가 노출.
@@ -1302,6 +1298,7 @@ static func _car_cover() -> Dictionary:
 			"drone": [], "bomber": [], "shield": [],
 		},
 		# 발사 함정 — 오른쪽 벽에서 통로를 왼쪽으로 훑어 먼 쪽 차량부터 침식(목표 근처 노출 압박).
+		# 출구(2960)는 이 포탑(2900)의 오른쪽 = 좌향 탄이 안 닿음. "마지막 포탑을 지나 탈출".
 		"traps": [
 			{"x": 2900.0, "y": 560.0, "dir": "left", "interval": 1.8, "phase": 0.0, "telegraph": 0.6, "dmg": 1},
 		],
