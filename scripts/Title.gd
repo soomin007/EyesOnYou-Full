@@ -36,6 +36,8 @@ func _ready() -> void:
 	_build_description_panel()
 	_build_patch_panel()
 	_set_state(STATE_MAIN)
+	# 폰(키보드 없음)용 디버그 잠금 해제 — 좌상단 숨은 영역 연속 탭. _set_state 뒤에 추가해 최상위(입력 우선).
+	_build_debug_hotzone()
 
 func _build_description_panel() -> void:
 	# STATE_MODE에서만 보이는 우측 회색 설명 박스. 포커스에 따라 동적 갱신.
@@ -317,6 +319,43 @@ func _input(event: InputEvent) -> void:
 
 const _DEBUG_CODE: String = "snu"
 var _debug_input_buffer: String = ""
+
+# 폰용 디버그 잠금 해제 — 좌상단 숨은 hot-zone을 빠르게 연속 탭(안드로이드 "빌드 번호 7번 탭" 방식).
+# gui_input으로 받아 좌표 공간/스케일 문제 없이 동작. 데스크톱은 "snu" 키 시퀀스와 병행(둘 다 유효).
+const _DEBUG_TAP_TARGET: int = 7
+const _DEBUG_TAP_WINDOW_MS: int = 2000  # 이 간격 넘게 뜸하면 카운트 리셋(우발 방지)
+var _debug_hotzone: Control = null
+var _debug_tap_count: int = 0
+var _debug_tap_last_ms: int = 0
+
+func _build_debug_hotzone() -> void:
+	_debug_hotzone = Control.new()
+	_debug_hotzone.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_debug_hotzone.position = Vector2.ZERO
+	_debug_hotzone.custom_minimum_size = Vector2(120, 120)
+	_debug_hotzone.size = Vector2(120, 120)
+	# PASS = 뒤 요소를 막지 않고 관찰만(빈 코너라도 gui_input은 받음). 탭=emulate 좌클릭으로 들어옴.
+	_debug_hotzone.mouse_filter = Control.MOUSE_FILTER_PASS
+	_debug_hotzone.gui_input.connect(_on_debug_hotzone_input)
+	add_child(_debug_hotzone)
+
+func _on_debug_hotzone_input(event: InputEvent) -> void:
+	if GameState.debug_unlocked:
+		return
+	if not (event is InputEventMouseButton):
+		return
+	var mb := event as InputEventMouseButton
+	if not (mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT):
+		return
+	var now: int = Time.get_ticks_msec()
+	if now - _debug_tap_last_ms > _DEBUG_TAP_WINDOW_MS:
+		_debug_tap_count = 0
+	_debug_tap_last_ms = now
+	_debug_tap_count += 1
+	if _debug_tap_count >= _DEBUG_TAP_TARGET:
+		_debug_tap_count = 0
+		GameState.debug_unlocked = true
+		_show_debug_unlock_toast()
 
 func _track_debug_unlock_sequence(ev: InputEventKey) -> void:
 	if GameState.debug_unlocked:
