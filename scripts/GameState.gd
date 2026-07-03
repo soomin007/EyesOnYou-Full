@@ -154,6 +154,8 @@ var endings_seen: Array = []
 var playthrough_count: int = 0
 # 이스터에그 — 황금 희귀 개체 누적 처치 수(숨은 스탯). settings.cfg에 영속.
 var shiny_kills: int = 0
+# 이스터에그 — 숨은 대체 색(스킨) 잠금 해제. 코나미 코드(데스크톱) 또는 황금 3처치(폰)로. 영속.
+var alt_skin_unlocked: bool = false
 
 func _input(event: InputEvent) -> void:
 	# 입력 모드 자동 감지. autoload Node여서 모든 InputEvent를 받는다.
@@ -716,6 +718,7 @@ func load_settings() -> void:
 		endings_seen.append(str(ev))
 	playthrough_count = int(cf.get_value("flags", "playthrough_count", 0))
 	shiny_kills = int(cf.get_value("flags", "shiny_kills", 0))
+	alt_skin_unlocked = bool(cf.get_value("flags", "alt_skin_unlocked", false))
 	screen_brightness = clampf(float(cf.get_value("access", "brightness", 1.0)), 0.5, 1.5)
 	sfx_captions = bool(cf.get_value("access", "sfx_captions", false))
 	fullscreen = bool(cf.get_value("display", "fullscreen", false))
@@ -764,6 +767,7 @@ func save_settings() -> void:
 	cf.set_value("flags", "endings_seen", endings_seen)
 	cf.set_value("flags", "playthrough_count", playthrough_count)
 	cf.set_value("flags", "shiny_kills", shiny_kills)
+	cf.set_value("flags", "alt_skin_unlocked", alt_skin_unlocked)
 	cf.set_value("access", "brightness", screen_brightness)
 	cf.set_value("access", "sfx_captions", sfx_captions)
 	cf.set_value("display", "fullscreen", fullscreen)

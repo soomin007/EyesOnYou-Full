@@ -63,6 +63,10 @@ const _HIT_SLOWMO_SCALE: float = 0.4
 var slowmo_active: bool = false
 var jumps_used: int = 0
 var shots_fired: int = 0   # 이 스테이지 발포 수(스테이지마다 새 Player라 0에서 시작). 평화주의 이스터에그 판정.
+# 이스터에그 — 숨은 대체 색(스킨). 잠금 해제 시 visual.modulate로 시안 틴트 적용.
+# 플래시(부활 등)가 visual.modulate를 리셋할 때 흰색이 아니라 이 값으로 되돌려 스킨이 유지되게 한다.
+const ALT_SKIN_TINT: Color = Color(0.68, 1.0, 1.22)
+var _skin_tint: Color = Color(1, 1, 1)
 var _coyote_t: float = 0.0       # 바닥을 떠난 뒤 지상 점프가 아직 유효한 잔여 시간
 var _jump_buffer_t: float = 0.0  # 착지 직전 누른 점프 입력을 기억하는 잔여 시간
 # 글라이드 취소 래치 — 공중에서 아래키를 누르면 켜지고, *착지할 때까지* 글라이드가 꺼진다(사용자 요청:
@@ -112,6 +116,10 @@ func _ready() -> void:
 	add_child(listener)
 	listener.make_current()
 	visual = CharacterArt.build_player(self)
+	# 이스터에그 — 대체 색 잠금 해제 시 시안 틴트 적용(visual.modulate). 이후 플래시 리셋도 이 값으로.
+	if GameState.alt_skin_unlocked and visual != null:
+		_skin_tint = ALT_SKIN_TINT
+		visual.modulate = _skin_tint
 	torso = visual.get_node_or_null("Torso")
 	if torso != null:
 		arm_front = torso.get_node_or_null("ArmFront")
@@ -695,7 +703,7 @@ func _show_shield_flash() -> void:
 	# 방어막 발동 — 강한 흰 플래시 + 확장하는 후광 (한 번에 인지되도록 강화).
 	if visual != null:
 		visual.modulate = Color(3.5, 3.5, 4.0)
-		create_tween().tween_property(visual, "modulate", Color(1, 1, 1), 0.6)
+		create_tween().tween_property(visual, "modulate", _skin_tint, 0.6)
 	var halo := Polygon2D.new()
 	halo.color = Color(1.0, 1.0, 1.2, 0.85)
 	var pts: Array = []

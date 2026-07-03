@@ -3584,6 +3584,10 @@ func _reward_shiny_kill(pos: Vector2) -> void:
 	_spawn_shiny_orb(pos)
 	_show_shiny_toast(pos)
 	GameState.shiny_kills += 1
+	# 폰 경로 — 키보드 없는 기기에서도 코나미 대신 황금 3처치로 숨은 색 잠금 해제.
+	if GameState.shiny_kills >= 3 and not GameState.alt_skin_unlocked:
+		GameState.alt_skin_unlocked = true
+		_show_veil_subtitle("황금을 세 번 알아봤어요. 숨겨둔 색을 드릴게요.", 3.0)
 	GameState.save_settings()
 	SfxPlayer.play_at("bestiary_first_seen", pos)
 

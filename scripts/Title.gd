@@ -316,6 +316,41 @@ func _input(event: InputEvent) -> void:
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		_track_debug_unlock_sequence(event as InputEventKey)
+		_track_konami(event as InputEventKey)
+
+# 이스터에그 — 코나미 코드(↑↑↓↓←→←→ B A)로 숨은 대체 색 잠금 해제(데스크톱 키보드).
+# 폰(키보드 없음)은 황금 3처치로 대신 열린다(Stage._reward_shiny_kill). 추적만 하고 입력은 소비 안 함.
+const _KONAMI: Array = [KEY_UP, KEY_UP, KEY_DOWN, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_LEFT, KEY_RIGHT, KEY_B, KEY_A]
+var _konami_idx: int = 0
+
+func _track_konami(ev: InputEventKey) -> void:
+	if GameState.alt_skin_unlocked:
+		return
+	if ev.keycode == int(_KONAMI[_konami_idx]):
+		_konami_idx += 1
+		if _konami_idx >= _KONAMI.size():
+			_konami_idx = 0
+			GameState.alt_skin_unlocked = true
+			GameState.save_settings()
+			_show_skin_unlock_toast()
+	else:
+		# 틀리면 리셋(단, 방금 키가 첫 키와 같으면 진행도 1로 유지).
+		_konami_idx = 1 if ev.keycode == int(_KONAMI[0]) else 0
+
+func _show_skin_unlock_toast() -> void:
+	var toast := Label.new()
+	toast.text = "숨은 색 잠금 해제: VEIL 프로토콜 (다음 플레이부터 적용)"
+	toast.add_theme_font_size_override("font_size", 14)
+	toast.add_theme_color_override("font_color", Color(0.55, 0.92, 1.0))
+	toast.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	toast.add_theme_constant_override("outline_size", 3)
+	toast.position = Vector2(20, 648)
+	toast.size = Vector2(700, 24)
+	add_child(toast)
+	var tw := toast.create_tween()
+	tw.tween_interval(2.8)
+	tw.tween_property(toast, "modulate:a", 0.0, 0.6)
+	tw.tween_callback(toast.queue_free)
 
 const _DEBUG_CODE: String = "snu"
 var _debug_input_buffer: String = ""
