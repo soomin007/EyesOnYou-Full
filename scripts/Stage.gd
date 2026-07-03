@@ -3510,6 +3510,10 @@ func _on_boss_killed(at_position: Vector2) -> void:
 	else:
 		_show_veil_subtitle("처리됐어요, 요원.\n회수 대상이 바로 여기 있어요.\n끝까지 같이 가요. 제가 보는 한.", 3.4)
 
+# 이스터에그 — 황금 희귀 개체(shiny). 적 스폰당 확률·보너스 오브 가치.
+const SHINY_CHANCE: float = 0.015
+const SHINY_ORB_VALUE: int = 5
+
 func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1) -> void:
 	var e := CharacterBody2D.new()
 	e.set_script(load("res://scripts/Enemy.gd"))
@@ -3534,6 +3538,10 @@ func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1) -> void:
 		col.position = Vector2(0, -20.0)
 	col.shape = shape
 	e.add_child(col)
+	# 이스터에그 — 낮은 확률로 황금 희귀 개체(shiny). add_child(→_ready) 전에 켜야 오라가 생성됨.
+	# 연습장(playground)에선 테스트 노이즈 방지로 제외.
+	var shiny: bool = (not GameState.playground_active) and randf() < SHINY_CHANCE
+	e.set("shiny", shiny)
 	add_child(e)
 	e.global_position = pos
 	# 측면 단독 둥지 저격수(회피 전용) 태깅 — VEIL이 "정면으론 못 잡는다"를 짚어주는 대상.
@@ -3542,10 +3550,12 @@ func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1) -> void:
 		e.set_meta("avoid_only", true)
 	if wave_idx >= 0:
 		e.set_meta("wave_idx", wave_idx)
-	e.killed.connect(_on_enemy_killed.bind(wave_idx))
+	e.killed.connect(_on_enemy_killed.bind(wave_idx, shiny))
 
-func _on_enemy_killed(at_position: Vector2, wave_idx: int = -1) -> void:
+func _on_enemy_killed(at_position: Vector2, wave_idx: int = -1, shiny: bool = false) -> void:
 	_spawn_orb(at_position + Vector2(0, -20.0))
+	if shiny:
+		_reward_shiny_kill(at_position + Vector2(0, -20.0))
 	# 웨이브 모드: 처치된 적의 웨이브 카운트 감소 + 다음 웨이브 트리거 검사
 	if wave_idx >= 0 and wave_idx < _wave_alive_count.size():
 		_wave_alive_count[wave_idx] -= 1
@@ -3567,6 +3577,50 @@ func _can_arena_clear() -> bool:
 		if not bool(spawned):
 			return false
 	return true
+
+# 황금 희귀 개체 처치 보상 — 황금 보너스 오브 + 떠오르는 라벨 + 누적 카운터(영속).
+func _reward_shiny_kill(pos: Vector2) -> void:
+	_spawn_shiny_orb(pos)
+	_show_shiny_toast(pos)
+	GameState.shiny_kills += 1
+	GameState.save_settings()
+	SfxPlayer.play_at("bestiary_first_seen", pos)
+
+func _spawn_shiny_orb(pos: Vector2) -> void:
+	var orb := Node2D.new()
+	orb.set_script(load("res://scripts/ExpOrb.gd"))
+	var halo := ColorRect.new()
+	halo.color = Color(1.0, 0.85, 0.35, 0.20)
+	halo.position = Vector2(-15.0, -15.0)
+	halo.size = Vector2(30.0, 30.0)
+	halo.z_index = -1
+	orb.add_child(halo)
+	var sprite := ColorRect.new()
+	sprite.name = "Sprite"
+	sprite.color = Color(1.0, 0.82, 0.26)
+	sprite.size = Vector2(16.0, 16.0)
+	sprite.position = Vector2(-8.0, -8.0)
+	sprite.pivot_offset = Vector2(8.0, 8.0)
+	sprite.rotation = deg_to_rad(45.0)
+	orb.add_child(sprite)
+	add_child(orb)
+	orb.global_position = pos
+	orb.set("value", SHINY_ORB_VALUE)   # 일반 1 → 황금 5 (흡인/충돌은 일반 오브와 동일)
+
+func _show_shiny_toast(pos: Vector2) -> void:
+	var lbl := Label.new()
+	lbl.text = "황금 개체"
+	lbl.add_theme_font_size_override("font_size", 15)
+	lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.35))
+	lbl.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.9))
+	lbl.add_theme_constant_override("outline_size", 3)
+	lbl.z_index = 40
+	add_child(lbl)
+	lbl.global_position = pos + Vector2(-24.0, -40.0)
+	var tw := lbl.create_tween()
+	tw.tween_property(lbl, "global_position:y", lbl.global_position.y - 26.0, 0.9)
+	tw.parallel().tween_property(lbl, "modulate:a", 0.0, 0.9)
+	tw.tween_callback(lbl.queue_free)
 
 func _spawn_orb(pos: Vector2, static_placement: bool = false, attract_range: float = -1.0, is_gate: bool = false) -> void:
 	# static_placement=true면 bounce 스킵 — 분기 보상으로 미리 배치된 orb는 그 자리에 그대로 둠.

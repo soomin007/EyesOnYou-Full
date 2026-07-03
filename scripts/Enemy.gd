@@ -139,6 +139,21 @@ var shield_dir_lock_timer: float = 0.0
 
 var encountered: bool = false
 var visual: Node2D
+# 이스터에그 — 황금 희귀 개체(shiny). Stage._spawn_enemy가 낮은 확률로 켠다. 처치 시 보너스 XP.
+# 색은 visual/self modulate가 텔레그래프·피격 플래시로 흰색 리셋되므로, 독립된 오라 자식으로 표현.
+var shiny: bool = false
+
+# 황금 오라 — modulate와 무관한 별도 발광(피격/텔레그래프 색 변화에 안 덮임).
+class _ShinyAura extends Node2D:
+	var t: float = 0.0
+	func _process(delta: float) -> void:
+		t += delta
+		queue_redraw()
+	func _draw() -> void:
+		var pulse: float = 0.5 + 0.5 * sin(t * 3.0)
+		var a: float = lerp(0.14, 0.30, pulse)
+		draw_circle(Vector2.ZERO, 27.0, Color(1.0, 0.82, 0.30, a * 0.5))
+		draw_circle(Vector2.ZERO, 16.0, Color(1.0, 0.90, 0.48, a))
 
 func _ready() -> void:
 	add_to_group("enemy")
@@ -171,6 +186,11 @@ func _ready() -> void:
 				visual.scale = Vector2(1.4, 1.4)
 	fire_timer = _sniper_interval()
 	drone_bomb_cd = 1.2  # 스폰 직후 즉시 폭격 방지
+	if shiny:
+		var aura := _ShinyAura.new()
+		aura.position = Vector2(0.0, -22.0)  # 몸통 중앙 근처(지면형 발 기준 위)
+		aura.z_index = -1                    # 캐릭터 아트 뒤
+		add_child(aura)
 	# 지면형 적은 spawn pos가 발판 살짝 위/아래여도 발판 top에 정확히 붙도록 snap.
 	# (drone은 공중 상시라 snap 안 함. 첫 frame 뒤로 미루기 위해 call_deferred)
 	if enemy_type != EnemyType.DRONE:

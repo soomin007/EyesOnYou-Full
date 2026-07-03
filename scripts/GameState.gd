@@ -150,6 +150,8 @@ var visited_arcturus: bool = false
 var endings_seen: Array = []
 # 엔딩까지 도달한 완주 횟수 — settings.cfg에 영속.
 var playthrough_count: int = 0
+# 이스터에그 — 황금 희귀 개체 누적 처치 수(숨은 스탯). settings.cfg에 영속.
+var shiny_kills: int = 0
 
 func _input(event: InputEvent) -> void:
 	# 입력 모드 자동 감지. autoload Node여서 모든 InputEvent를 받는다.
@@ -709,6 +711,7 @@ func load_settings() -> void:
 	for ev in cf.get_value("flags", "endings_seen", []):
 		endings_seen.append(str(ev))
 	playthrough_count = int(cf.get_value("flags", "playthrough_count", 0))
+	shiny_kills = int(cf.get_value("flags", "shiny_kills", 0))
 	screen_brightness = clampf(float(cf.get_value("access", "brightness", 1.0)), 0.5, 1.5)
 	sfx_captions = bool(cf.get_value("access", "sfx_captions", false))
 	fullscreen = bool(cf.get_value("display", "fullscreen", false))
@@ -756,6 +759,7 @@ func save_settings() -> void:
 	cf.set_value("flags", "visited_arcturus", visited_arcturus)
 	cf.set_value("flags", "endings_seen", endings_seen)
 	cf.set_value("flags", "playthrough_count", playthrough_count)
+	cf.set_value("flags", "shiny_kills", shiny_kills)
 	cf.set_value("access", "brightness", screen_brightness)
 	cf.set_value("access", "sfx_captions", sfx_captions)
 	cf.set_value("display", "fullscreen", fullscreen)
