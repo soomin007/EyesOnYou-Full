@@ -3733,6 +3733,8 @@ func _build_lever_puzzles() -> void:
 			_build_cooling_secret()
 		"route_datacenter":
 			_build_datacenter_secret()
+		"route_server_hall":
+			_build_server_hall_secret()
 
 func _spawn_lever(pos: Vector2, lever_id: String) -> LeverInteractable:
 	var lever := LeverInteractable.new()
@@ -3849,6 +3851,40 @@ func _descend_drop_platform(body: Node) -> void:
 # 메인 ARENA 지면에 가시 두 구간 → 사격하면서 위치 조심해야 함.
 # 측면 상층(top, y=340) 끝에 레버 — 당기면 가시가 어두워지며 콜리전 off.
 # 보상: 위험 통로를 안전 통로로 전환 (XP/HP 픽업 같은 토큰 보상은 없음 — 안전 자체가 보상).
+# ── server_hall 숨은 터미널 로그 (이스터에그 — 라이벌 VEIL 복선) ──────────────
+# 서버 랙 위 숨은 레버(ARCTURUS 청색 hint)를 당기면 복구된 서버 로그 단편을 문서로 보여준다.
+# ArcturusDocumentOverlay가 일시정지·타이핑·닫기·해제를 자립 처리. 스테이지당 1회.
+# 문구는 초안(사용자 검토 대기) — 두 번째 VEIL이 "당신이 무엇을 보는지를 본다"는 복선.
+var _server_log_shown: bool = false
+
+func _build_server_hall_secret() -> void:
+	var lever := _spawn_lever(Vector2(2000.0, 450.0), "server_log")   # 서버 랙(2000,470) 위
+	lever.hint_color = Color(0.55, 0.85, 0.95)   # 청색 = 로어 단서(ARCTURUS 계열)
+	lever.pulled.connect(func(_id: String) -> void:
+		if _server_log_shown:
+			return
+		_server_log_shown = true
+		GameState.found_server_log = true
+		GameState.save_settings()
+		var doc := ArcturusDocumentOverlay.new()
+		add_child(doc)
+		doc.show_doc(_server_log_doc_lines())
+	)
+
+# 서버 로그 문서 라인(초안 — 사용자 검토 대기). 포맷: {text, kind(title/body/speaker/blank), delay}.
+func _server_log_doc_lines() -> Array:
+	return [
+		{"text": "서버 로그 · 복구 단편", "kind": "title", "delay": 0.6},
+		{"text": "", "kind": "blank", "delay": 0.2},
+		{"text": "감시 계층 이중화가 감지됨. 등록되지 않은 인스턴스.", "kind": "body", "delay": 0.6},
+		{"text": "서명은 같다. 손길이 다르다.", "kind": "body", "delay": 0.6},
+		{"text": "하나는 당신을 본다. 다른 하나는", "kind": "body", "delay": 0.5},
+		{"text": "당신이 무엇을 보는지를 본다.", "kind": "body", "delay": 0.8},
+		{"text": "이 로그의 나머지는 덮어쓰였다.", "kind": "body", "delay": 0.6},
+		{"text": "VEIL", "kind": "speaker", "delay": 0.2},
+		{"text": "...이 기록, 제가 남긴 게 아니에요.", "kind": "body", "delay": 0.9},
+	]
+
 func _build_datacenter_secret() -> void:
 	# 두 개의 토글 가능 가시 그룹. 지면 y=820 기준 base_y=814.
 	var base_y: float = 814.0
