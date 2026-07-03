@@ -18,7 +18,6 @@ var _layer: CanvasLayer = null
 var _card: Control = null
 var _font: Font = null
 var _portrait: bool = false
-var _lock_tried: bool = false
 var _touch_cached: int = -1  # -1 미판정, 0 아님, 1 터치 기기
 var _portrait_paused: bool = false  # 세로 전환으로 우리가 건 pause인지 — 우리 것만 해제
 
@@ -110,25 +109,45 @@ func _process(_delta: float) -> void:
 		win.content_scale_factor = target
 
 func _input(event: InputEvent) -> void:
-	# 브라우저는 사용자 제스처 핸들러 안에서만 fullscreen/orientation lock을 허용한다 → 첫 입력에 1회 시도.
-	if _lock_tried:
+	# 자동 전체화면(설정 auto_fullscreen). 브라우저는 사용자 제스처 핸들러 안에서만 fullscreen/orientation
+	# lock을 허용하므로 입력(터치/클릭/키 누름) 이벤트에서 시도한다. 1회성이 아니라 "전체화면이 아니면
+	# 매 입력마다 재시도" → 사용자가 전체화면을 빠져나가도 다음 입력에 다시 들어간다(otherside 방식).
+	if not GameState.auto_fullscreen:
 		return
-	var pressed: bool = false
+	if not _is_press(event):
+		return
+	_enter_fullscreen()
+
+func _is_press(event: InputEvent) -> bool:
 	if event is InputEventScreenTouch:
-		pressed = (event as InputEventScreenTouch).pressed
-	elif event is InputEventMouseButton:
-		pressed = (event as InputEventMouseButton).pressed
-	if pressed:
-		_lock_tried = true
+		return (event as InputEventScreenTouch).pressed
+	if event is InputEventMouseButton:
+		return (event as InputEventMouseButton).pressed
+	if event is InputEventKey:
+		var k := event as InputEventKey
+		return k.pressed and not k.echo
+	return false
+
+func _enter_fullscreen() -> void:
+	if OS.has_feature("web"):
 		_try_web_landscape()
+		return
+	# 네이티브 — 데스크톱 키보드까지 매 입력 전체화면은 과하니 터치 기기(모바일 네이티브)만.
+	if not is_touch_device():
+		return
+	var mode: int = DisplayServer.window_get_mode()
+	if mode != DisplayServer.WINDOW_MODE_FULLSCREEN and mode != DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 
 func _try_web_landscape() -> void:
 	if not OS.has_feature("web"):
 		return
 	# documentElement를 풀스크린으로 만든 뒤 가로로 잠근다(canvas 요소 선택 실패를 피함).
+	# 이미 전체화면이면 즉시 반환(재요청으로 인한 깜빡임/에러 방지) → 매 입력 호출돼도 무해.
 	# 실패(iOS Safari 등 orientation.lock 미지원)는 조용히 무시 — 세로 안내로 폴백.
 	var js: String = """
 	(function(){
+	  if (document.fullscreenElement || document.webkitFullscreenElement) { return; }
 	  var lock = function(){
 	    try { if (screen.orientation && screen.orientation.lock) { screen.orientation.lock('landscape').catch(function(){}); } } catch(e){}
 	  };

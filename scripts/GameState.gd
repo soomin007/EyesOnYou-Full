@@ -104,6 +104,9 @@ var sfx_captions: bool = false       # 효과음 자막 (무음 플레이 대응
 # 디스플레이 — settings.cfg에 영속. 환경 설정이라 reset()에서 안 지움.
 # 웹에선 창 크기는 브라우저 캔버스가 정하므로 무의미 → 전체화면 토글만 적용.
 var fullscreen: bool = false
+# 입력이 들어오면 자동으로 전체화면 전환(모바일 웹에서 브라우저 UI로 화면이 잘리는 것 완화).
+# OrientationGuard._input이 이 값을 보고 입력마다(전체화면 아닐 때) 재시도. 기본 켜짐, 토글로 끔.
+var auto_fullscreen: bool = true
 var window_size_index: int = 0       # WINDOW_SIZES 인덱스 (창모드일 때만)
 const WINDOW_SIZES: Array[Vector2i] = [
 	Vector2i(1280, 720),
@@ -709,6 +712,7 @@ func load_settings() -> void:
 	screen_brightness = clampf(float(cf.get_value("access", "brightness", 1.0)), 0.5, 1.5)
 	sfx_captions = bool(cf.get_value("access", "sfx_captions", false))
 	fullscreen = bool(cf.get_value("display", "fullscreen", false))
+	auto_fullscreen = bool(cf.get_value("display", "auto_fullscreen", true))
 	window_size_index = clampi(int(cf.get_value("display", "window_size_index", 0)), 0, WINDOW_SIZES.size() - 1)
 	if version < SETTINGS_VERSION:
 		# 구 스키마 — 키바인드 폐기, project.godot + Main.gd 기본값 유지
@@ -755,6 +759,7 @@ func save_settings() -> void:
 	cf.set_value("access", "brightness", screen_brightness)
 	cf.set_value("access", "sfx_captions", sfx_captions)
 	cf.set_value("display", "fullscreen", fullscreen)
+	cf.set_value("display", "auto_fullscreen", auto_fullscreen)
 	cf.set_value("display", "window_size_index", window_size_index)
 	cf.set_value("audio", "bgm", bgm_volume)
 	cf.set_value("audio", "sfx", sfx_volume)

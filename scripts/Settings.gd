@@ -94,14 +94,16 @@ func _ready() -> void:
 	tabs.focus_mode = Control.FOCUS_NONE
 	v.add_child(tabs)
 
-	tabs.add_child(_build_keybind_tab())
-	tabs.add_child(_build_av_tab())
-	tabs.add_child(_build_accessibility_tab())
-	tabs.add_child(_build_credits_tab())
+	# 탭 내용을 ScrollContainer로 감싼다 — 작은 화면(모바일 확대)에서 탭 영역이 짧아져도 내용이 잘리지
+	# 않고 스크롤된다. TabContainer 탭 제목 = 자식 노드 이름이라 _scroll_wrap이 이름을 보존한다.
+	tabs.add_child(_scroll_wrap(_build_keybind_tab()))
+	tabs.add_child(_scroll_wrap(_build_av_tab()))
+	tabs.add_child(_scroll_wrap(_build_accessibility_tab()))
+	tabs.add_child(_scroll_wrap(_build_credits_tab()))
 	# 디버그 탭은 잠금 해제(GameState.debug_unlocked) 시에만 노출.
 	# 잠금 해제는 Title 화면에서 비밀 키 시퀀스 "snu" 입력으로.
 	if GameState.debug_unlocked:
-		tabs.add_child(_build_debug_tab())
+		tabs.add_child(_scroll_wrap(_build_debug_tab()))
 
 	var divider2 := ColorRect.new()
 	divider2.color = Color(0.55, 0.62, 0.78, 0.30)
@@ -126,6 +128,10 @@ func _ready() -> void:
 		var first_btns: Array = key_buttons.get(str(ACTIONS[0]["id"]), [])
 		if first_btns.size() > 0 and first_btns[0] is Button:
 			GameState.arm_focus_with_delay(self, first_btns[0])
+	# 패널을 화면 크기에 맞춘다(모바일 확대에서 닫기 버튼 잘림 방지). content_scale_factor는
+	# OrientationGuard가 한 프레임 뒤 적용할 수 있어 size_changed로도 재적용.
+	get_viewport().size_changed.connect(_fit_to_viewport)
+	_fit_to_viewport.call_deferred()
 
 func _build_keybind_tab() -> Control:
 	var outer := MarginContainer.new()
@@ -345,6 +351,7 @@ func _build_av_tab() -> Control:
 # 화면 섹션 — 전체화면 토글 + 창 크기 프리셋. 값은 GameState에 영속, apply_display_settings로 즉시 반영.
 # 웹에선 창 크기를 브라우저가 정하므로 전체화면 토글과 안내만 노출.
 var _fullscreen_toggle: CheckButton
+var _auto_fs_toggle: CheckButton
 var _size_buttons: Array = []
 
 func _make_display_section() -> Control:
@@ -368,6 +375,25 @@ func _make_display_section() -> Control:
 	_fullscreen_toggle.toggled.connect(_on_fullscreen_toggled)
 	fs_row.add_child(_fullscreen_toggle)
 	v.add_child(fs_row)
+
+	# 자동 전체화면 — 입력 시 자동으로 전체화면 전환(모바일 웹에서 브라우저 UI로 화면 잘림 완화).
+	# OrientationGuard._input이 이 설정을 보고 입력마다(전체화면 아닐 때) 재시도한다.
+	var af_row := HBoxContainer.new()
+	af_row.add_theme_constant_override("separation", 14)
+	var af_l := Label.new()
+	af_l.text = "입력 시 자동 전체화면"
+	af_l.custom_minimum_size = Vector2(180, 28)
+	af_l.add_theme_font_size_override("font_size", 14)
+	af_l.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
+	af_l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	af_row.add_child(af_l)
+	_auto_fs_toggle = CheckButton.new()
+	_auto_fs_toggle.button_pressed = GameState.auto_fullscreen
+	_auto_fs_toggle.text = "켜짐" if GameState.auto_fullscreen else "꺼짐"
+	_auto_fs_toggle.add_theme_font_size_override("font_size", 14)
+	_auto_fs_toggle.toggled.connect(_on_auto_fullscreen_toggled)
+	af_row.add_child(_auto_fs_toggle)
+	v.add_child(af_row)
 
 	# 웹: 창 크기는 브라우저 캔버스가 정함 → 프리셋 버튼 없이 안내만.
 	if OS.has_feature("web"):
@@ -429,6 +455,42 @@ func _on_fullscreen_toggled(pressed: bool) -> void:
 	GameState.save_settings()
 	SfxPlayer.play("ui_slider_tick")
 	_refresh_size_buttons()
+
+func _on_auto_fullscreen_toggled(pressed: bool) -> void:
+	GameState.auto_fullscreen = pressed
+	if _auto_fs_toggle != null:
+		_auto_fs_toggle.text = "켜짐" if pressed else "꺼짐"
+	GameState.save_settings()
+	SfxPlayer.play("ui_slider_tick")
+
+# 탭 내용을 세로 스크롤 컨테이너로 감싼다 — 작은 화면에서 탭 영역이 짧아도 내용을 스크롤로 볼 수 있게.
+# TabContainer 탭 제목은 자식 노드 이름이라 원래 이름을 스크롤 컨테이너로 옮겨 보존한다.
+func _scroll_wrap(content: Control) -> ScrollContainer:
+	var sc := ScrollContainer.new()
+	sc.name = content.name
+	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	sc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sc.add_child(content)
+	return sc
+
+# 패널을 현재 화면(뷰포트)에 맞춘다. 모바일 확대(content_scale_factor)에서 논리 화면이 작아지면
+# 고정 크기 패널(760×580)이 화면을 넘겨 아래(닫기 버튼)가 잘렸다. 폭은 캡, 세로는 탭 최소높이를 줄여
+# 내용 총합이 화면을 안 넘게 한다(패널 높이는 내용이 결정 → 항상 화면 안). 데스크톱은 기존과 동일(탭 380).
+var _last_fit_vp: Vector2 = Vector2.ZERO
+
+func _fit_to_viewport() -> void:
+	if panel == null:
+		return
+	var vs: Vector2 = get_viewport_rect().size
+	if vs == _last_fit_vp:
+		return
+	_last_fit_vp = vs
+	# 폭 캡(세로 높이 floor는 0 → 내용이 높이를 결정하게, 안 그러면 580 floor가 작은 화면서 잘림 유발).
+	panel.custom_minimum_size = Vector2(minf(760.0, maxf(vs.x - 24.0, 300.0)), 0.0)
+	# 탭 최소높이 = 화면높이 - 고정요소(~286: 제목/구분선/힌트/버튼바/여백/separation). 130~380 클램프.
+	if tabs != null:
+		tabs.custom_minimum_size.y = clampf(vs.y - 286.0, 130.0, 380.0)
 
 func _on_window_size_pressed(index: int) -> void:
 	GameState.window_size_index = index
@@ -714,6 +776,9 @@ func _set_all_buttons_disabled(value: bool) -> void:
 			(b as Button).disabled = value
 
 func _process(delta: float) -> void:
+	# content_scale_factor를 OrientationGuard가 프레임 뒤 바꿀 수 있어 매 프레임 패널 맞춤 재확인
+	# (_fit_to_viewport는 뷰포트 크기 변화 시에만 실제 재배치 → 저렴).
+	_fit_to_viewport()
 	# 위/아래 hold 연속 이동 — Godot 기본 ui_up/down은 echo로 자동 반복되지 않음.
 	if capturing_action != "":
 		return
