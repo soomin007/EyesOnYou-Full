@@ -176,6 +176,11 @@ func _physics_process(delta: float) -> void:
 		_coyote_t = COYOTE_TIME
 	else:
 		_coyote_t = maxf(_coyote_t - delta, 0.0)
+		# 코요테가 소진됐는데 아직 점프를 안 썼으면(=걸어서 떨어짐), 지상 점프를 '쓴 것'으로 처리.
+		# 안 하면 jumps_used=0이 남아 한참 뒤에 눌러도 공중 점프 스택이 그대로라 과하게 관대함
+		# (사용자 보고: "0.5초 뒤에도 더블점프됨"). 더블점프 1회는 남아 공중 리커버리는 유지.
+		if _coyote_t <= 0.0 and jumps_used == 0:
+			jumps_used = 1
 	# 발걸음 SFX — 지면에서 충분한 속도로 이동 중일 때만 일정 간격으로.
 	if on_floor_now and absf(velocity.x) > 30.0:
 		_step_t += delta
