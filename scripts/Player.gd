@@ -62,6 +62,7 @@ const _HIT_SLOWMO_DURATION: float = 0.35
 const _HIT_SLOWMO_SCALE: float = 0.4
 var slowmo_active: bool = false
 var jumps_used: int = 0
+var shots_fired: int = 0   # 이 스테이지 발포 수(스테이지마다 새 Player라 0에서 시작). 평화주의 이스터에그 판정.
 var _coyote_t: float = 0.0       # 바닥을 떠난 뒤 지상 점프가 아직 유효한 잔여 시간
 var _jump_buffer_t: float = 0.0  # 착지 직전 누른 점프 입력을 기억하는 잔여 시간
 # 글라이드 취소 래치 — 공중에서 아래키를 누르면 켜지고, *착지할 때까지* 글라이드가 꺼진다(사용자 요청:
@@ -376,6 +377,7 @@ func _try_attack() -> void:
 	var fb_tier: int = GameState.get_skill_tier("fire_boost")
 	var cd_mult: float = 0.70 if fb_tier >= 2 else 1.0
 	attack_cd = ATTACK_COOLDOWN * cd_mult
+	shots_fired += 1   # 이스터에그(평화주의) 판정용 — 이 스테이지에서 발포했는가
 	if fb_tier >= 2:
 		sprint_t = _SPRINT_DURATION
 	_show_muzzle_flash()

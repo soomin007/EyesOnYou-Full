@@ -70,6 +70,8 @@ var truth_seen: bool = false
 # 막1→막2 문턱(B-4) — 런에서 드론이 처음 등장하는 맵(막2+)에 들어서면 VEIL이 1회 반응. 막1=인간 경비만이라
 # 첫 드론 = 시설 내부 진입의 페이오프. 런 단위 비영속(reset/start_main_game 해제) — 재개 시 1회 재발동은 무해.
 var drone_intro_seen: bool = false
+# 이스터에그 — 평화주의(발포 0 클리어) VEIL 대사를 이번 런에 이미 띄웠는가(런당 1회). 비영속, reset에서 초기화.
+var pacifist_line_shown: bool = false
 
 # 막3 핵심부(lab) 보스 처치 후 데이터 회수 연출 → "처리 선택"(DisposalChoiceOverlay)에서 고른 값.
 # 엔딩 9개의 처리 축(반출/파기/은닉/잔류). 런 단위 — reset()/start_main_game()에서 해제, run.cfg 영속.
@@ -257,6 +259,7 @@ func reset() -> void:
 	veil_reversal_pending = false
 	truth_seen = false
 	drone_intro_seen = false
+	pacifist_line_shown = false
 	disposal_choice = ""
 	# 디버그 연습장 플래그 누수 차단 — 연습장을 종료 버튼 아닌 경로(ESC→타이틀 등)로 빠져나오면
 	# playground_active가 true로 남아, 다음 일반 모드 클리어가 _trigger_stage_clear에서 연습장 분기로
@@ -294,6 +297,7 @@ func start_main_game() -> void:
 	veil_reversal_pending = false
 	truth_seen = false
 	drone_intro_seen = false
+	pacifist_line_shown = false
 	disposal_choice = ""
 	playground_active = false  # 연습장 플래그 누수 차단(디버그→일반 모드) — reset()과 동일 방어.
 	_reset_perf_metrics()

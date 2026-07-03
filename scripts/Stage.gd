@@ -3543,6 +3543,7 @@ func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1) -> void:
 	var shiny: bool = (not GameState.playground_active) and randf() < SHINY_CHANCE
 	e.set("shiny", shiny)
 	add_child(e)
+	_had_enemies = true   # 이스터에그(평화주의) — 적이 있던 맵에서만 인정
 	e.global_position = pos
 	# 측면 단독 둥지 저격수(회피 전용) 태깅 — VEIL이 "정면으론 못 잡는다"를 짚어주는 대상.
 	# (kind 1 = sniper. nest_snipers 맵에선 모든 저격수가 둥지.)
@@ -3923,6 +3924,7 @@ func _build_rooftops_secret() -> void:
 
 var _enemies_remaining: int = 0  # ARENA enemy_clear 카운트
 var _defense_core: DefenseCore = null  # 아레나 방어 맵의 코어(있을 때만)
+var _had_enemies: bool = false   # 이 스테이지에 적이 스폰됐는가(평화주의 이스터에그 판정)
 
 func _build_goal() -> void:
 	match _goal_type:
@@ -4049,6 +4051,19 @@ func _play_clear_player_fx() -> void:
 	rtw.tween_property(ring, "modulate:a", 0.0, 0.55)
 	rtw.chain().tween_callback(ring.queue_free)
 
+# 평화주의 이스터에그 판정 — 통과형(POSITION) 맵에 적이 있었는데 한 발도 안 쐈고, 런당 첫 인정일 때.
+# ENEMY_CLEAR/보스는 안 쏘고 클리어가 불가/무의미해 제외. 서사용 맵(탈출로·??? 방)도 제외.
+func _check_pacifist_clear() -> bool:
+	if GameState.pacifist_line_shown or GameState.playground_active:
+		return false
+	if _goal_type != "POSITION" or not _had_enemies or challenge_active:
+		return false
+	if GameState.current_route_id in ["route_escape", "route_hidden"]:
+		return false
+	if player == null or not is_instance_valid(player):
+		return false
+	return int(player.get("shots_fired")) == 0
+
 func _trigger_stage_clear() -> void:
 	if GameState.playground_active:
 		# 연습장에선 자동 진행 안 함 — 패널에서 직접 다음 stage/route 선택
@@ -4084,6 +4099,11 @@ func _begin_clear_sequence() -> void:
 			o.global_position = player.global_position + Vector2(randf_range(-60.0, 60.0), -90.0)
 	var is_arena: bool = challenge_active or _goal_type == "ENEMY_CLEAR"
 	var delay: float = 2.6 if is_arena else 1.0
+	# 이스터에그(평화주의) — 적이 있던 통과형 맵을 한 발도 안 쏘고 클리어. 런당 1회 VEIL 인정.
+	if _check_pacifist_clear():
+		GameState.pacifist_line_shown = true
+		delay = maxf(delay, 3.2)   # 대사 읽을 여유
+		_show_veil_subtitle("한 발도 쏘지 않고 지나갔어요. 그것도 하나의 답이에요.", 3.0)
 	# 막3 핵심부(lab)는 클리어 후 회수 문서 연출(ArcturusDocumentOverlay, layer 25)이 화면을 덮으므로
 	# 클리어 페이드(layer 38)를 깔면 문서를 가린다 → lab은 페이드 생략(문서 자체 배경으로 어두워짐).
 	if GameState.current_route_id != "route_lab":
