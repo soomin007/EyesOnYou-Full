@@ -5,20 +5,8 @@ extends Node
 # 토글 버튼은 항상 떠 있고, 패널은 클릭 시 펼쳐짐.
 # 항목을 누르면 GameState 값을 갱신하고 scene을 reload.
 
-const ROUTE_OPTIONS: Array = [
-	{"id": "route_back_alley", "label": "외곽"},
-	{"id": "route_rooftops",   "label": "옥상"},
-	{"id": "route_sewers",     "label": "배수로"},
-	{"id": "route_subway",     "label": "지하철"},
-	{"id": "route_cooling",    "label": "냉각"},
-	{"id": "route_watchtower", "label": "감시탑"},
-	{"id": "route_ward",       "label": "병동"},
-	{"id": "route_datacenter", "label": "데이터"},
-	{"id": "route_escape",     "label": "탈출로"},
-	{"id": "route_lab",        "label": "핵심부"},
-	{"id": "route_blackout",   "label": "도전"},
-	{"id": "route_hidden",     "label": "???"},
-]
+# 루트 목록은 RouteData.ALL_ROUTES 단일 소스에서 파생한다(_build_route_section). 예전엔 여기에 12개를
+# 하드코딩해서 새 맵(반응로 제어실·붕괴 갱도 등 17종)이 연습장에 안 뜨는 문제가 있었다(2026-07-04 수정).
 
 # 스킬 라인 — 연습장에서 티어 자유 조정용(짧은 라벨).
 const SKILL_LINES: Array = [
@@ -77,7 +65,7 @@ func _open_panel() -> void:
 	panel.add_child(v)
 
 	v.add_child(_build_stage_row())
-	v.add_child(_build_route_row())
+	v.add_child(_build_route_section())
 	v.add_child(_build_int_row("Risk", "current_route_risk", _on_risk_pressed))
 	v.add_child(_build_int_row("Reward", "current_route_reward", _on_reward_pressed))
 	v.add_child(_build_veil_row())
@@ -120,21 +108,36 @@ func _build_stage_row() -> HBoxContainer:
 		hb.add_child(b)
 	return hb
 
-func _build_route_row() -> HBoxContainer:
+# 루트 목록 — RouteData.ALL_ROUTES 전체(29종)를 스크롤 가능한 그리드로. 맵이 늘어도 자동 반영되고,
+# 세로로 길어져도 스크롤 박스 안에 갇혀 패널(및 "연습장 종료" 버튼)이 화면 밖으로 안 밀린다.
+func _build_route_section() -> HBoxContainer:
 	var hb := HBoxContainer.new()
 	hb.add_theme_constant_override("separation", 6)
 	hb.add_child(_make_row_label("루트"))
-	for opt in ROUTE_OPTIONS:
-		var d: Dictionary = opt
-		var rid: String = str(d.get("id", ""))
+	var sc := ScrollContainer.new()
+	sc.custom_minimum_size = Vector2(560, 122)
+	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	sc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	var grid := GridContainer.new()
+	grid.columns = 5
+	grid.add_theme_constant_override("h_separation", 6)
+	grid.add_theme_constant_override("v_separation", 6)
+	for r in RouteData.ALL_ROUTES:
+		var route: Dictionary = r
+		var rid: String = str(route.get("id", ""))
+		if rid == "":
+			continue
 		var b := Button.new()
-		b.text = str(d.get("label", rid))
-		b.custom_minimum_size = Vector2(70, 28)
-		b.add_theme_font_size_override("font_size", 13)
+		b.text = str(route.get("name", rid))
+		b.custom_minimum_size = Vector2(104, 28)
+		b.add_theme_font_size_override("font_size", 12)
+		b.clip_text = true
 		if GameState.current_route_id == rid:
 			b.disabled = true
 		b.pressed.connect(_on_route_pressed.bind(rid))
-		hb.add_child(b)
+		grid.add_child(b)
+	sc.add_child(grid)
+	hb.add_child(sc)
 	return hb
 
 func _build_int_row(label_text: String, prop_name: String, cb: Callable) -> HBoxContainer:

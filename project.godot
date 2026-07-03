@@ -23,6 +23,7 @@ BgmPlayer="*res://scripts/BgmPlayer.gd"
 SfxPlayer="*res://scripts/SfxPlayer.gd"
 Accessibility="*res://scripts/Accessibility.gd"
 OrientationGuard="*res://scripts/OrientationGuard.gd"
+DebugOverlay="*res://scripts/DebugOverlay.gd"
 
 [display]
 
