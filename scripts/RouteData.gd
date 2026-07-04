@@ -475,6 +475,21 @@ const ALL_ROUTES: Array = [
 		"entry_comment": "감시 빔이 쓸어요. 빔이 지날 땐 사각에 숨어요. 지나가면 움직여요. 갭에서 멈추면 노출돼요.",
 		"stage_color": Color(0.12, 0.09, 0.10),
 	},
+	{
+		"id": "route_holdout",
+		"name": "저지선",
+		"description": "발각된 통제 구역. 부서지는 바리케이드 뒤에서 밀려오는 경비를 저지한다. 바리케이드는 영원하지 않다.",
+		"risk": 3,
+		"reward": 3,
+		"hidden": false,
+		"unique": false,
+		# 막2 부서지는 엄폐 농성(pop-and-shoot) 기믹 맵 — risk3라 s3 금지, 전개·고조(s4~5)에.
+		"min_stage": 4, "max_stage": 5,
+		"tags": ["전투", "근접"],
+		"veil_comment": "바리케이드 뒤에서 버텨요. 몸을 내밀어 쏘고 다시 숨어요. 엄폐는 갉여요. 부서지기 전에 정리해요.",
+		"entry_comment": "저지선이에요. 밀려와요. 엄폐 뒤에서 쏘고 숨어요. 포탑이 엄폐를 갉아요. 오래 못 버텨요.",
+		"stage_color": Color(0.13, 0.10, 0.09),
+	},
 ]
 
 # 스토리 모드 — 5스테이지 고정 스케줄. 드론·도전·??? 맵 모두 빼고 핵심 동선만.

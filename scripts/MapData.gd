@@ -55,6 +55,7 @@ static func get_layout(route_id: String) -> Dictionary:
 		"route_collapse":      return _collapse()
 		"route_core_defense":  return _core_defense()
 		"route_scanner_sweep": return _scanner_sweep()
+		"route_holdout":       return _holdout()
 	return {}
 
 # ─── 1. 외곽 진입로 (HORIZONTAL, 짧음) ─────────────────────────
@@ -1464,4 +1465,82 @@ static func _scanner_sweep() -> Dictionary:
 			"hp_pickups": [Vector2(1780, 540.0)],
 		},
 		"spikes": [],
+	}
+
+# ─── 저지선 (ARENA, 웨이브) — 부서지는 엄폐 농성(pop-and-shoot) 기믹 맵 (막2 s4~5) ─────────
+# 정체성: 부서지는 바리케이드(DestructibleCover) 뒤에서 몸을 내밀어 쏘고 숨으며(pop-and-shoot) 밀려오는
+#   웨이브를 저지한다. 좌우 벽 포탑(traps, LoS 무관)이 바리케이드를 지속 사격해 갉아 → 엄폐는 유한 자원.
+#   엄폐가 부서질수록 노출이 커져 후반 긴장이 고조된다. 부서지기 전에 다 정리하는 게 목표.
+# 손맛 차별: datacenter(자유 사냥 이동)·reactor(코어 방어)와 달리 "엄폐에 의존해 한 자리를 버티는" 농성.
+#   근접(patrol/bomber/shield)=엄폐 사이 갭으로 접근 / 원거리(발판 sniper)=엄폐 위 각으로 pop 타이밍 압박.
+# 클리어=웨이브 3 전멸(ENEMY_CLEAR). 램프: risk3(막2 고조).
+static func _holdout() -> Dictionary:
+	return {
+		"world_type":   "ARENA",
+		"world_size":   Vector2(1920.0, 900.0),
+		"player_start": Vector2(960.0, 750.0),   # 중앙 거점
+		"goal_type":    "ENEMY_CLEAR",
+		"goal_pos":     Vector2.ZERO,
+		"camera_mode":  "FIXED",
+		"ground_y":     820.0,
+		# 부서지는 바리케이드 — 안쪽 2개(주 엄폐, hp5) + 바깥 2개(완충, hp4). 좌우 대칭.
+		"destructible_covers": [
+			{"pos": Vector2(740.0, 820.0),  "w": 92.0, "h": 92.0, "hp": 5},
+			{"pos": Vector2(1180.0, 820.0), "w": 92.0, "h": 92.0, "hp": 5},
+			{"pos": Vector2(470.0, 820.0),  "w": 84.0, "h": 78.0, "hp": 4},
+			{"pos": Vector2(1450.0, 820.0), "w": 84.0, "h": 78.0, "hp": 4},
+		],
+		# 좌우 벽 포탑 — 안쪽으로 훑어 바리케이드를 갉는다(LoS 무관). 엄폐 몸통 높이(y782)로 발사.
+		# 엄폐가 다 부서지면 이 탄이 플레이어에게 도달 → "엄폐 소모 = 노출" 압박.
+		"traps": [
+			{"x": 110.0,  "y": 782.0, "dir": "right", "interval": 2.2, "phase": 0.0, "telegraph": 0.7, "dmg": 1},
+			{"x": 1810.0, "y": 782.0, "dir": "left",  "interval": 2.2, "phase": 1.1, "telegraph": 0.7, "dmg": 1},
+		],
+		"platforms": [
+			# 좌우 상단 저격 발판 — 엄폐 위 각으로 플레이어만 압박(pop 타이밍을 좁힘).
+			{"pos": Vector2(340, 520), "w": 170.0},
+			{"pos": Vector2(1580, 520), "w": 170.0},
+		],
+		# waves: 근접 저지가 단계적으로 고조. 좌우 지면(엄폐 사이 갭)으로 밀려온다.
+		"waves": [
+			{
+				"trigger": "immediate",
+				"banner":  "WAVE 1",
+				"enemies": {
+					"patrol": [Vector2(180, 790.0), Vector2(1740, 790.0)],
+				},
+			},
+			{
+				"trigger": "prev_half",   # 1웨이브 절반 처치 시 — 자폭병 러셔 + 저격 도입
+				"banner":  "WAVE 2",
+				"enemies": {
+					"bomber": [Vector2(150, 790.0), Vector2(1770, 790.0)],
+					"sniper": [Vector2(340, 490.0)],
+				},
+			},
+			{
+				"trigger": "prev_clear",  # 2웨이브 전멸 시 — 최고조: 방패병 중앙 돌파 + 순찰 + 저격 양쪽
+				"banner":  "FINAL WAVE",
+				"enemies": {
+					"shield": [Vector2(960, 790.0)],
+					"patrol": [Vector2(180, 790.0), Vector2(1740, 790.0)],
+					"sniper": [Vector2(340, 490.0), Vector2(1580, 490.0)],
+				},
+			},
+		],
+		# 폴백 enemies (waves 미인식 환경에서도 비슷한 도전이 되도록 합집합)
+		"enemies": {
+			"patrol": [Vector2(180, 790.0), Vector2(1740, 790.0)],
+			"bomber": [Vector2(150, 790.0), Vector2(1770, 790.0)],
+			"sniper": [Vector2(340, 490.0), Vector2(1580, 490.0)],
+			"shield": [Vector2(960, 790.0)],
+			"drone":  [],
+		},
+		"rewards": {
+			# 안쪽 엄폐 뒤(안전) xp / 중앙 뒤 hp — 거점을 오래 비우지 않게 중앙 근처에.
+			"xp_orbs":    [Vector2(740, 760.0), Vector2(1180, 760.0)],
+			"hp_pickups": [Vector2(960, 700.0)],
+		},
+		"spikes": [],
+		"arena_clear_xp": 5,
 	}

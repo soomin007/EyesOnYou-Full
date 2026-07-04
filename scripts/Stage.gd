@@ -110,6 +110,7 @@ const _ROUTE_TRACKS: Dictionary = {
 	"route_collapse":   "mid_late",
 	"route_core_defense": "mid_late",
 	"route_scanner_sweep": "mid_late",
+	"route_holdout":     "mid_late",
 	"route_cooling":    "mid_late",
 	"route_ward":       "mid_late",
 	"route_datacenter": "mid_late",
@@ -1758,6 +1759,85 @@ func _ambience_reactor() -> void:
 		tb.tween_property(beacon, "modulate:a", 1.0, 0.7)
 	_add_lore_label(Vector2(w * 0.5 - 120.0, -212.0), "반응로 제어실 · 코어 방어", Color(0.45, 0.82, 0.95, 0.6), 15)
 
+# ─── 저지선 (ARENA) — 부서지는 엄폐 농성 맵 시그니처 배경 ───────────
+# 봉쇄된 통제 구역/로비: 뒷벽 + 좌우 봉쇄 셔터(적이 밀려오는 입구) + 방어 거점 바닥 라인 +
+# 적색 비상 스트로브(발각 경보) + 위험 스트라이프. ARENA라 챔버 구조를 직접 그린다.
+func _ambience_holdout() -> void:
+	var w: float = STAGE_LENGTH        # ARENA = 1920
+	var gy: float = GROUND_Y           # 820
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 829 + 3
+	# 뒷벽 슬래브(봉쇄 콘크리트)
+	var wall := ColorRect.new()
+	wall.color = Color(0.11, 0.10, 0.11)
+	wall.position = Vector2(-100.0, -260.0)
+	wall.size = Vector2(w + 200.0, gy + 260.0)
+	wall.z_index = -16
+	add_child(wall)
+	# 벽면 콘크리트 패널 이음선(세로)
+	var px: float = 160.0
+	while px < w:
+		var seam := ColorRect.new()
+		seam.color = Color(0.07, 0.06, 0.07)
+		seam.position = Vector2(px - 4.0, -240.0)
+		seam.size = Vector2(8.0, gy + 240.0)
+		seam.z_index = -15
+		add_child(seam)
+		px += 300.0
+	# 천장 트러스
+	var ceil := ColorRect.new()
+	ceil.color = Color(0.06, 0.06, 0.07)
+	ceil.position = Vector2(-100.0, -260.0)
+	ceil.size = Vector2(w + 200.0, 96.0)
+	ceil.z_index = -13
+	add_child(ceil)
+	# 좌우 봉쇄 셔터 — 적이 밀려오는 입구(어두운 개구부 + 위험 스트라이프 프레임)
+	for side in [0.0, 1.0]:
+		var door_x: float = lerp(40.0, w - 200.0, side)
+		var opening := ColorRect.new()
+		opening.color = Color(0.03, 0.03, 0.04)
+		opening.position = Vector2(door_x, gy - 220.0)
+		opening.size = Vector2(160.0, 220.0)
+		opening.z_index = -14
+		add_child(opening)
+		# 상단 위험 스트라이프 프레임
+		var frame := ColorRect.new()
+		frame.color = Color(0.85, 0.62, 0.18, 0.7)
+		frame.position = Vector2(door_x, gy - 226.0)
+		frame.size = Vector2(160.0, 8.0)
+		frame.z_index = -12
+		add_child(frame)
+		# 셔터 안 붉은 경보광(맥동) — "여기서 밀려온다"
+		var glow := ColorRect.new()
+		glow.color = Color(0.9, 0.25, 0.2, 0.35)
+		glow.position = Vector2(door_x + 20.0, gy - 200.0)
+		glow.size = Vector2(120.0, 200.0)
+		glow.z_index = -13
+		add_child(glow)
+		var tg := glow.create_tween()
+		tg.set_loops()
+		tg.tween_property(glow, "modulate:a", 0.3, rng.randf_range(0.6, 1.0))
+		tg.tween_property(glow, "modulate:a", 1.0, rng.randf_range(0.6, 1.0))
+	# 방어 거점 바닥 라인(중앙 시안 마킹) — "여기를 지켜라"
+	var hold := ColorRect.new()
+	hold.color = Color(0.35, 0.78, 0.88, 0.16)
+	hold.position = Vector2(w * 0.5 - 260.0, gy - 5.0)
+	hold.size = Vector2(520.0, 5.0)
+	hold.z_index = -1
+	add_child(hold)
+	# 천장 적색 비상 스트로브(발각 경보) — 전역 옅은 적색 맥동
+	var alarm := ColorRect.new()
+	alarm.color = Color(0.85, 0.18, 0.15, 0.06)
+	alarm.position = Vector2(-100.0, -100.0)
+	alarm.size = Vector2(w + 200.0, gy + 100.0)
+	alarm.z_index = -6
+	add_child(alarm)
+	var ta := alarm.create_tween()
+	ta.set_loops()
+	ta.tween_property(alarm, "modulate:a", 0.4, 0.9)
+	ta.tween_property(alarm, "modulate:a", 1.0, 0.9)
+	_add_lore_label(Vector2(w * 0.5 - 110.0, -212.0), "통제 구역 봉쇄 · 저지선", Color(0.9, 0.45, 0.3, 0.6), 15)
+
 func _build_ground() -> void:
 	var ground := StaticBody2D.new()
 	ground.collision_layer = 1
@@ -2259,6 +2339,8 @@ func _build_route_ambience() -> void:
 			_ambience_reactor()
 		"route_scanner_sweep":
 			_ambience_scanner()
+		"route_holdout":
+			_ambience_holdout()
 
 func _ambience_sewers() -> void:
 	# 화면 가장자리 어두운 비네트 (CanvasLayer 위에 띄움) + 바닥 옅은 안개
