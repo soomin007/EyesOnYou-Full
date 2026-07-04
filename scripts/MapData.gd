@@ -54,6 +54,7 @@ static func get_layout(route_id: String) -> Dictionary:
 		"route_car_cover":     return _car_cover()
 		"route_collapse":      return _collapse()
 		"route_core_defense":  return _core_defense()
+		"route_scanner_sweep": return _scanner_sweep()
 	return {}
 
 # ─── 1. 외곽 진입로 (HORIZONTAL, 짧음) ─────────────────────────
@@ -1425,4 +1426,42 @@ static func _core_defense() -> Dictionary:
 		},
 		"spikes": [],
 		"arena_clear_xp": 4,
+	}
+
+# ─── 감시 회랑 (HORIZONTAL) — 쓸어내는 스캔 빔(리듬) 기믹 맵 (막2 s4~5) ─────────
+# 정체성: 수직 스캔 빔(SweepBeam)이 통로를 왼→오로 주기적으로 훑는다. 빔이 지날 때 차폐 니치(감시
+#   사각) 안에 있으면 스캔을 피하고, 노출되면 피해. rest→경고→훑기 리듬 = 예측 가능.
+#   · 빔은 380px/s(플레이어 240보다 빠름) — 앞지르지 못하고 니치로 대피해야. rest(빔 없음) 동안 다음
+#     니치로 달린다. stop-and-go 절제 리듬(collapse의 "계속 달려"와 정반대).
+#   · 세이프 판정은 x밴드(니치)만 — 니치 x구간(±90) 안이면 높이 무관 안전. 니치 사이 갭이 위험 구간.
+# 램프: risk3(막2 고조). 적은 최소(빔이 주역). 배경=감시 스캐너 시그니처(checkpoint 스캔 확장).
+static func _scanner_sweep() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(3800.0, 720.0),
+		"player_start": Vector2(180.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(3700.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		# 수직 스캔 빔 — 왼→오 훑기, rest 후 반복. y_bot은 렌더용(판정은 x밴드).
+		"sweep_beam": {
+			"x_start": -60.0, "x_end": 3860.0, "y_top": -120.0, "y_bot": 640.0,
+			"speed": 380.0, "rest": 1.8, "telegraph": 0.7, "beam_half": 24.0,
+		},
+		# 차폐 니치(세이프 밴드 중심 x) — 빔이 지날 때 이 x구간(±niche_half)에 있으면 스캔 사각.
+		# 첫 니치(480)는 시작점(180) 가까이 둬 첫 빔(rest 1.8+tele 0.7=2.5s) 전에 도달 가능.
+		"cover_niches": [480.0, 900.0, 1340.0, 1780.0, 2220.0, 2660.0, 3100.0, 3520.0],
+		"niche_half": 90.0,
+		"platforms": [],
+		# 최소 — 니치 사이 갭에 배치. 빔 리듬 사이에 처리하거나 지나친다(빔이 주역).
+		"enemies": {
+			"patrol": [Vector2(1120, 540.0), Vector2(2440, 540.0)],
+			"sniper": [], "drone": [], "bomber": [], "shield": [],
+		},
+		"rewards": {
+			# 갭(노출 구간)의 xp = 빔 리듬을 타야 회수 / 니치(1780) 안 hp = 안전 회복.
+			"xp_orbs":    [Vector2(690, 540.0), Vector2(1560, 540.0), Vector2(2000, 540.0), Vector2(2880, 540.0), Vector2(3300, 540.0)],
+			"hp_pickups": [Vector2(1780, 540.0)],
+		},
+		"spikes": [],
 	}

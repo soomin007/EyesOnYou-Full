@@ -109,6 +109,7 @@ const _ROUTE_TRACKS: Dictionary = {
 	"route_car_cover":  "mid_late",
 	"route_collapse":   "mid_late",
 	"route_core_defense": "mid_late",
+	"route_scanner_sweep": "mid_late",
 	"route_cooling":    "mid_late",
 	"route_ward":       "mid_late",
 	"route_datacenter": "mid_late",
@@ -786,6 +787,8 @@ func _build_world() -> void:
 	_build_wall(STAGE_LENGTH + 50.0)
 	_build_chase_hazard()
 	_build_defense_core()
+	_build_cover_niches()
+	_build_sweep_beam()
 
 var locked_door_triggered: bool = false
 
@@ -1602,6 +1605,57 @@ func _ambience_collapse() -> void:
 		lx += rng.randf_range(700.0, 1000.0)
 	_add_lore_label(Vector2(360.0, -30.0), "붕괴 진행 · 대피", Color(0.9, 0.4, 0.25, 0.55), 15)
 
+# ─── 감시 회랑 (HORIZONTAL) — 쓸어내는 스캔 빔 맵 시그니처 배경 ───────────
+# 보안 스캔 시설: 천장 스캔 레일 + 벽면 감시 그리드 + 매달린 감시 렌즈(시안 맥동) + 스캔라인 스트로브.
+# checkpoint 스캐너 정체성 확장. 니치 세이프존 렌더는 _build_cover_niches(기믹 시각)가 담당.
+func _ambience_scanner() -> void:
+	var w: float = STAGE_LENGTH
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 733 + 11
+	# 천장 스캔 레일 — 빔이 매달린 상단 트랙.
+	var rail := ColorRect.new()
+	rail.color = Color(0.14, 0.15, 0.18)
+	rail.position = Vector2(-100.0, -112.0)
+	rail.size = Vector2(w + 200.0, 16.0)
+	rail.z_index = -12
+	add_child(rail)
+	# 벽면 감시 그리드(세로선) — 스캔 격자.
+	var gx: float = 120.0
+	while gx < w:
+		var gl := ColorRect.new()
+		gl.color = Color(0.20, 0.30, 0.34, 0.18)
+		gl.position = Vector2(gx, -96.0)
+		gl.size = Vector2(2.0, GROUND_Y + 56.0)
+		gl.z_index = -11
+		add_child(gl)
+		gx += 160.0
+	# 매달린 감시 렌즈 — 천장의 감시 눈, 시안 발광 맥동.
+	var lx: float = 500.0
+	while lx < w:
+		var lens := ColorRect.new()
+		lens.color = Color(0.35, 0.85, 0.95, 0.5)
+		lens.position = Vector2(lx - 9.0, -98.0)
+		lens.size = Vector2(18.0, 18.0)
+		lens.z_index = -7
+		add_child(lens)
+		var tl := lens.create_tween()
+		tl.set_loops()
+		tl.tween_property(lens, "modulate:a", 0.35, rng.randf_range(0.7, 1.2))
+		tl.tween_property(lens, "modulate:a", 1.0, rng.randf_range(0.7, 1.2))
+		lx += rng.randf_range(520.0, 760.0)
+	# 전역 스캔라인 스트로브(시안) — 감시 활성 분위기.
+	var strobe := ColorRect.new()
+	strobe.color = Color(0.30, 0.80, 0.92, 0.05)
+	strobe.position = Vector2(-100.0, -100.0)
+	strobe.size = Vector2(w + 200.0, GROUND_Y + 100.0)
+	strobe.z_index = -6
+	add_child(strobe)
+	var ts := strobe.create_tween()
+	ts.set_loops()
+	ts.tween_property(strobe, "modulate:a", 0.5, 1.4)
+	ts.tween_property(strobe, "modulate:a", 1.0, 1.4)
+	_add_lore_label(Vector2(360.0, -30.0), "보안 스캔 · 감시 활성", Color(0.4, 0.8, 0.9, 0.55), 15)
+
 # ─── 반응로 제어실 (ARENA) — 아레나 방어 맵 시그니처 배경 ───────────
 # ARENA는 _build_indoor_backdrop(HORIZONTAL 전용)를 안 타므로 여기서 챔버 구조를 직접 그린다.
 # 뒷벽 패널 + 지지 리브 + 케이블 트레이 + 좌우 모니터 뱅크 + 천장 트러스/램프 + 바닥 경고 비콘.
@@ -1853,6 +1907,57 @@ func _build_defense_core() -> void:
 	core.setup(float(cfg.get("hp", 120.0)), float(cfg.get("radius", 360.0)), float(cfg.get("drain", 6.0)))
 	core.breached.connect(_on_core_breached)
 	_defense_core = core
+
+# 감시 스위프 빔(SweepBeam 기믹) — MapData "sweep_beam" + "cover_niches".
+# 수직 스캔 빔이 통로를 주기적으로 훑고, 니치(세이프 밴드) 밖에서 빔에 덮이면 피해.
+func _build_sweep_beam() -> void:
+	var cfg: Dictionary = _map_data.get("sweep_beam", {})
+	if cfg.is_empty():
+		return
+	var niches: Array = _map_data.get("cover_niches", [])
+	var s_half: float = float(_map_data.get("niche_half", 90.0))
+	var beam := SweepBeam.new()
+	add_child(beam)
+	beam.setup(cfg, niches, s_half)
+
+# 차폐 니치 — 빔의 세이프존(비솔리드, 자유 이동). 통로 뒷벽의 오목한 차폐 벽감 + 발밑 사각 마킹.
+# 세이프 판정은 SweepBeam이 x밴드로 하고, 여기선 "여기 서면 스캔 사각"을 읽히게 하는 시각만.
+func _build_cover_niches() -> void:
+	var niches: Array = _map_data.get("cover_niches", [])
+	if niches.is_empty():
+		return
+	var s_half: float = float(_map_data.get("niche_half", 90.0))
+	for nx_raw in niches:
+		var nx: float = float(nx_raw)
+		# 뒷벽 차폐 벽감(오목) — 어두운 리세스.
+		var recess := ColorRect.new()
+		recess.color = Color(0.08, 0.10, 0.12, 0.92)
+		recess.position = Vector2(nx - s_half, GROUND_Y - 210.0)
+		recess.size = Vector2(s_half * 2.0, 210.0)
+		recess.z_index = -8
+		add_child(recess)
+		# 세이프존 경계 기둥(양옆) — 차폐 프레임.
+		for sx in [nx - s_half, nx + s_half]:
+			var post := ColorRect.new()
+			post.color = Color(0.17, 0.19, 0.23)
+			post.position = Vector2(float(sx) - 3.0, GROUND_Y - 210.0)
+			post.size = Vector2(6.0, 210.0)
+			post.z_index = -2
+			add_child(post)
+		# 발밑 세이프 밴드 마킹(시안) — "여기 서면 스캔 사각".
+		var floor_mark := ColorRect.new()
+		floor_mark.color = Color(0.35, 0.85, 0.95, 0.22)
+		floor_mark.position = Vector2(nx - s_half, GROUND_Y - 5.0)
+		floor_mark.size = Vector2(s_half * 2.0, 5.0)
+		floor_mark.z_index = -1
+		add_child(floor_mark)
+		# 상단 차폐 라벨 아이콘 — 사각(감시 사각) 표식.
+		var cap := ColorRect.new()
+		cap.color = Color(0.30, 0.72, 0.82, 0.5)
+		cap.position = Vector2(nx - 10.0, GROUND_Y - 206.0)
+		cap.size = Vector2(20.0, 6.0)
+		cap.z_index = -1
+		add_child(cap)
 
 func _build_platforms_fallback() -> void:
 	# 안전한 일자형 폴백 (튜토리얼/플레이그라운드용)
@@ -2152,6 +2257,8 @@ func _build_route_ambience() -> void:
 			_ambience_collapse()
 		"route_core_defense":
 			_ambience_reactor()
+		"route_scanner_sweep":
+			_ambience_scanner()
 
 func _ambience_sewers() -> void:
 	# 화면 가장자리 어두운 비네트 (CanvasLayer 위에 띄움) + 바닥 옅은 안개
