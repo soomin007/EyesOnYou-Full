@@ -2071,6 +2071,8 @@ func _build_decorations() -> void:
 		x += rng.randf_range(420.0, 720.0)
 
 func _build_hazards() -> void:
+	# §4 거짓 렌더 — 위장 함정(가시를 안전한 바닥으로 렌더 강탈). 일반 spikes와 독립이라 먼저.
+	_build_disguised_spikes()
 	# 가시 함정 — MapData가 명시한 (x, y) 좌표에 배치. y가 없으면 GROUND_Y 폴백.
 	var spikes: Array = _map_data.get("spikes", [])
 	if not spikes.is_empty():
@@ -2239,6 +2241,43 @@ func _on_spike_touched(body: Node, zone: Area2D) -> void:
 			d = int(zone.get_meta("damage", 1))
 		SfxPlayer.play("spike_hit")
 		body.take_hit(d)
+		# §4 위장 함정 — 밟는 순간 거짓이 드러난다(하드 페널티 + 거짓 노출).
+		if is_instance_valid(zone) and zone.has_meta("disguised_ref"):
+			var ds: Node = zone.get_meta("disguised_ref")
+			if is_instance_valid(ds) and ds.has_method("reveal"):
+				ds.call("reveal")
+
+# §4 거짓 렌더 — 위장 함정 빌더. deceit_spikes: [{x, y?, w?, dmg?}]. 진짜 가시(시각+데미지 zone)를
+# _build_spike로 만든 뒤 시각만 숨기고(DisguisedSpike), 항상 켜진 지직거림 tell + 근접/밟기 리빌.
+func _build_disguised_spikes() -> void:
+	var arr: Array = _map_data.get("deceit_spikes", [])
+	if arr.is_empty() or GameState.story_mode:
+		return   # 스토리 모드는 단순화 — 거짓 렌더 제외(deceits와 동형)
+	for entry in arr:
+		var d: Dictionary = entry
+		var sx: float = float(d.get("x", 0.0))
+		var sy: float = float(d.get("y", GROUND_Y - 6.0))
+		var sw: float = float(d.get("w", 120.0))
+		var sd: int = int(d.get("dmg", 2))   # 하드 페널티 기본 dmg2(§4.1), 튜닝 대상
+		# 진짜 가시를 만들고, _build_spike가 self에 붙인 자식(시각 + Area2D zone)을 캡처.
+		var before: int = get_child_count()
+		_build_spike(sx, sw, sy, sd)
+		var visuals: Array = []
+		var zone: Area2D = null
+		for i in range(before, get_child_count()):
+			var n: Node = get_child(i)
+			if n is Area2D:
+				zone = n
+			else:
+				visuals.append(n)
+		# 위장 컨트롤러 — 시각 숨김 + tell + 리빌.
+		var ds := DisguisedSpike.new()
+		add_child(ds)
+		ds.position = Vector2(sx, sy)   # Stage는 원점이라 position=global
+		ds.setup(visuals, sw)
+		# 밟는 순간 정체 노출 — zone에 컨트롤러 참조.
+		if zone != null:
+			zone.set_meta("disguised_ref", ds)
 
 # 토글 가능한 가시 — 시각 + 콜리전을 그룹으로 묶어 한 번에 on/off.
 # datacenter 측면 레버에서 메인 통로 가시를 끄는 데 사용.

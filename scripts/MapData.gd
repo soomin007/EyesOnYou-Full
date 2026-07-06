@@ -793,6 +793,13 @@ static func _server_hall() -> Dictionary:
 			# 반경(340) 안 patrol@3400·sniper@3500 마커가 꺼진다. 부수면 시야 복구("우선 표적").
 			"jammer": [Vector2(3300, 600)],
 		},
+		# §4 거짓 렌더 2번째 타입 — 위장 함정(가시를 안전한 바닥으로 렌더 강탈). rack@2000 직후 개활
+		# 지면, 드론@2500·patrol@2200을 보느라 바닥을 방심하는 지점(위→드론 보는 통과형 특성 이용).
+		# 항상 붉은 지직거림 tell(원거리 가독) + 근접/신뢰 warm 시 리빌 + 밟으면 실제 dmg2(하드 페널티).
+		# server_hall의 deception은 이 1개(재머는 §3 정직-블랙아웃이라 거짓 아님) → 맵당 ≤1(§4.1 드물게).
+		"deceit_spikes": [
+			{"x": 2150, "w": 120, "dmg": 2},
+		],
 		"rewards": {
 			"xp_orbs":    [Vector2(2000, 440), Vector2(3000, 440), Vector2(3500, 438)],
 			"hp_pickups": [Vector2(4050, 440)],
