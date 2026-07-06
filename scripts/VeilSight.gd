@@ -85,16 +85,20 @@ func _build_vignette() -> void:
 func _update_vignette(delta: float) -> void:
 	if _vig_mat == null:
 		return
-	# 재밍 필드 안 = VEIL 없는 날것 시야 → 붕괴 비네트(어둠+시야 축소)를 필드 깊이만큼 켠다.
+	# 재밍 필드 안 = VEIL 없는 날것 시야 → 붕괴 비네트(어둠+시야 축소)를 켠다.
 	var jam: float = _player_jam_intensity()
 	var deg_target: float = 1.0 if _is_degraded() else 0.0
 	var target: float = max(deg_target, jam)
-	_vig = move_toward(_vig, target, delta * 1.4)
+	# 재밍 진입은 빠르게 붕괴시킨다 — 통과 중(빠르게 지나감)에도 확실히 어두워지게(피드백: 옅은 틴트만 보였음).
+	var rate: float = 1.4
+	if target > _vig and jam > deg_target:
+		rate = 5.0
+	_vig = move_toward(_vig, target, delta * rate)
 	_vig_mat.set_shader_parameter("vig", _vig)
 	_vig_mat.set_shader_parameter("time", _t)
-	# 재밍이 자연 붕괴보다 지배적이면 어둠을 살짝 바이올렛으로(라이벌의 소행 구분). 자연 붕괴/블랙아웃은 검정 유지.
+	# 재밍이 자연 붕괴보다 지배적이면 어둠을 바이올렛으로(라이벌의 소행) + 자연 붕괴보다 진하게(블랙아웃 체감).
 	var violet: float = clamp(jam - deg_target, 0.0, 1.0)
-	var dc: Color = Color(0.0, 0.0, 0.02, VIG_DARK_A).lerp(Color(0.14, 0.02, 0.20, VIG_DARK_A), violet)
+	var dc: Color = Color(0.0, 0.0, 0.02, VIG_DARK_A).lerp(Color(0.10, 0.01, 0.16, 0.82), violet)
 	_vig_mat.set_shader_parameter("dark_color", dc)
 
 # ACT3 자막("여기서부터는 잘 안 보여요")과 동기 호출 — 그 순간 마커가 무너진다.
@@ -137,7 +141,8 @@ func _player_jam_intensity() -> float:
 		var r: float = 340.0
 		if jn.has_method("jam_radius"):
 			r = jn.call("jam_radius")
-		out = max(out, clamp(1.0 - jn.global_position.distance_to(ppos) / r, 0.0, 1.0))
+		# 반경 대부분을 "붕괴"로 평탄화 — 바깥 35%만 감쇠. 통과 중에도 확실히 붕괴에 든다(피드백).
+		out = max(out, clamp((r - jn.global_position.distance_to(ppos)) / (r * 0.35), 0.0, 1.0))
 	return out
 
 # 재밍 필드에 처음 들어서면 VEIL이 1회 반응(작가성) — "여기는 제 시야가 안 닿아요".
