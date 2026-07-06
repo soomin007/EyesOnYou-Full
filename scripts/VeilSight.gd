@@ -179,6 +179,8 @@ func _scan_for_call() -> void:
 		var id: int = en.get_instance_id()
 		if _seen.has(id):
 			continue   # 이미 본 위협 — 새로 짚을 게 없음
+		if en.is_in_group("jammer"):
+			continue   # 재머 = VEIL 맹점(§1). 마커도 없고 말로도 안 짚는다
 		if _jammer_suppressing(en, jammers):
 			continue   # 재밍 구역 안 — VEIL이 못 보니 말로도 못 짚는다
 		var spos: Vector2 = xform * wpos
@@ -258,6 +260,8 @@ func _draw() -> void:
 		alive[id] = true
 		if not _seen.has(id):
 			_seen[id] = _t
+		if en.is_in_group("jammer"):
+			continue   # 재머 = VEIL 맹점(§1). 마커 없음 — 밝은 본체+필드 링으로 직접 보인다
 		if _jammer_suppressing(en, jammers):
 			continue   # 재밍 구역 — 마커 소등(라이벌의 손). 필드 링이 이유를 보여준다.
 		# degradation 중 일부 위협은 VEIL이 영영 못 본다 = 요원이 직접 봐야 함 (역전의 실물)
@@ -265,8 +269,6 @@ func _draw() -> void:
 			continue
 		var danger: bool = en.has_method("veil_is_telegraphing") and en.veil_is_telegraphing()
 		var col: Color = WARN if danger else CALM
-		if en.is_in_group("jammer"):
-			col = RIVAL   # 재머 자신은 표시 — 라이벌 색으로 "이게 원인"
 		# 등장 페이드인 — "방금 짚어진" 느낌
 		var appear: float = clamp((_t - float(_seen[id])) / FADE_IN, 0.0, 1.0)
 		var alpha_mul: float = appear
@@ -300,6 +302,35 @@ func _draw() -> void:
 		for k in _seen.keys():
 			if not alive.has(k):
 				_seen.erase(k)
+	# 재밍 구역 안이면 화면에 바이올렛 정적 — "여기선 VEIL 시야가 교란된다"를 체감시킨다(피드백: 마커만 꺼선 안 느껴짐).
+	_draw_jam_overlay(jammers, ppos, view)
+
+# 플레이어가 재머 반경 안일 때 화면 전체 바이올렛 정적/틴트. 강도 = 필드 깊이(중심일수록 강함).
+func _draw_jam_overlay(jammers: Array, ppos: Vector2, view: Vector2) -> void:
+	if jammers.is_empty():
+		return
+	var intensity: float = 0.0
+	for j in jammers:
+		var jn: Node2D = j as Node2D
+		var r: float = 340.0
+		if jn.has_method("jam_radius"):
+			r = jn.call("jam_radius")
+		intensity = max(intensity, clamp(1.0 - jn.global_position.distance_to(ppos) / r, 0.0, 1.0))
+	if intensity <= 0.01:
+		return
+	var vi: Color = RIVAL
+	# 전체 옅은 바이올렛 틴트
+	draw_rect(Rect2(Vector2.ZERO, view), Color(vi.r, vi.g, vi.b, 0.07 * intensity))
+	# 스캔라인 정적(흐르는 가로줄)
+	var n: int = 10
+	for i in range(n):
+		var yy: float = fmod(float(i) * (view.y / float(n)) + _t * 160.0, view.y)
+		var la: float = (0.05 + 0.06 * sin(_t * 30.0 + float(i))) * intensity
+		draw_line(Vector2(0, yy), Vector2(view.x, yy), Color(vi.r, vi.g, vi.b, clamp(la, 0.0, 0.2)), 1.0)
+	# 가끔 굵은 글리치 밴드
+	if fmod(_t * 0.7, 3.0) < 0.25:
+		var by: float = fmod(_t * 500.0, view.y)
+		draw_rect(Rect2(0, by, view.x, 14.0), Color(vi.r, vi.g, vi.b, 0.16 * intensity))
 
 func _draw_reticle(pos: Vector2, col: Color, danger: bool, appear: float) -> void:
 	# 등장 시 살짝 크게 시작해 수축 — 짚어지는 동작감.

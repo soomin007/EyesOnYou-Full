@@ -146,8 +146,9 @@ var bomber_state_timer: float = 0.0
 const SHIELD_DIR_LOCK_DURATION: float = 2.8
 var shield_dir_lock_timer: float = 0.0
 
-# §4 거짓 렌더 — 위장이 벗겨지는 근접 반경(신뢰 warm이면 +60, "신뢰가 지각을 산다" §4.1).
-const DISGUISE_REVEAL_RANGE: float = 120.0
+# §4 거짓 렌더 — 위장이 벗겨지는 근접 반경(바로 옆). 주 리빌은 교전(피격/막힘)이고, 이건 안 쏘고
+# 붙었을 때의 폴백. 넓으면 지직거림 tell을 보기도 전에 벗겨져 무의미해진다(피드백). 신뢰 warm이면 +40.
+const DISGUISE_REVEAL_RANGE: float = 70.0
 
 var encountered: bool = false
 var visual: Node2D
@@ -207,27 +208,32 @@ class _GlitchTell extends Node2D:
 		t += delta
 		queue_redraw()
 	func _draw() -> void:
-		var beat: float = fmod(t, 1.6)
-		if beat > 0.42:
-			return   # 주기적으로 짧게만 번쩍
-		var vis: float = 1.0 - (beat / 0.42)
-		var mul: float = 0.5
+		var beat: float = fmod(t, 1.4)
+		if beat > 0.5:
+			return   # 주기적으로 번쩍(0.5s/1.4s — 조금 더 자주·길게)
+		var vis: float = 1.0 - (beat / 0.5)
+		# 원거리에서도 "저 적은 뭔가 이상하다"가 읽히게 — 범위 넓고 최소 강도 높게(피드백: 너무 좁았음).
+		var mul: float = 0.6
 		if owner_ref != null and owner_ref.has_method("_find_player"):
 			var pl: Node = owner_ref.call("_find_player")
 			if pl != null and is_instance_valid(pl):
 				var d: float = (owner_ref as Node2D).global_position.distance_to((pl as Node2D).global_position)
-				mul = clamp(1.0 - d / 420.0, 0.15, 1.0)
+				mul = clamp(1.0 - d / 800.0, 0.45, 1.0)
 				if GameState.veil_register_band() == "warm":
 					mul = min(1.0, mul + 0.25)
 		var a: float = vis * mul
-		if a < 0.03:
+		if a < 0.04:
 			return
-		var red := Color(1.0, 0.22, 0.28, a * 0.8)
-		for i in range(3):
-			var yy: float = -40.0 + float((int(t * 90.0) + i * 13) % 40)
-			draw_line(Vector2(-16, yy), Vector2(16, yy), red, 1.5)
-		# 살짝 빗나간 붉은 겹침(오프셋 실루엣)
-		draw_rect(Rect2(-15 + sin(t * 30.0) * 2.0, -42, 30, 42), Color(1.0, 0.2, 0.3, a * 0.12), false, 1.0)
+		var red := Color(1.0, 0.20, 0.30, a)
+		# 전신 붉은 오프셋 고스트(크로매틱) — 작은 스캔라인보다 훨씬 멀리서 읽힌다.
+		var ox: float = sin(t * 40.0) * 3.0
+		draw_rect(Rect2(-16.0 + ox, -46.0, 32.0, 46.0), Color(red.r, red.g, red.b, a * 0.30), true)
+		# 붉은 외곽선(실루엣)
+		draw_rect(Rect2(-17.0, -47.0, 34.0, 47.0), Color(red.r, red.g, red.b, a * 0.9), false, 2.0)
+		# 스캔라인 지직거림
+		for i in range(4):
+			var yy: float = -44.0 + float((int(t * 90.0) + i * 12) % 44)
+			draw_line(Vector2(-16, yy), Vector2(16, yy), Color(red.r, red.g, red.b, a * 0.8), 1.5)
 
 func _ready() -> void:
 	add_to_group("enemy")
@@ -401,7 +407,7 @@ func _update_disguise() -> void:
 	if not reveal:
 		var p := _find_player()
 		if p != null:
-			var extra: float = 60.0 if GameState.veil_register_band() == "warm" else 0.0
+			var extra: float = 40.0 if GameState.veil_register_band() == "warm" else 0.0
 			if global_position.distance_to(p.global_position) < DISGUISE_REVEAL_RANGE + extra:
 				reveal = true
 	if reveal:
@@ -988,9 +994,14 @@ func take_damage(amount: int, from_dir: int = 0) -> void:
 	# 방패병 — 정면(enemy.dir이 가리키는 쪽)으로 날아오는 사격은 막힘.
 	# 즉 bullet의 진행 방향(from_dir)과 enemy의 dir이 반대 부호일 때 head-on이라 막음.
 	if enemy_type == EnemyType.SHIELD and from_dir != 0 and _shield_blocks(from_dir):
+		if _disguised:
+			_reveal_disguise()   # 정찰병인 줄 알고 쏜 정면 사격이 튕김 = 정체 노출(§4 교전 리빌)
 		_show_block_spark(from_dir)
 		SfxPlayer.play_at("bullet_deflect_shield", global_position)
 		return
+	# 교전(피격) = 위장이 벗겨지는 주 시점 — 지직거림 tell을 못 봤어도 여기서 정체가 드러난다.
+	if _disguised:
+		_reveal_disguise()
 	# from_dir != 0이면 bullet 명중. 폭발/스킬(from_dir == 0)은 자체 SFX 별도.
 	if from_dir != 0:
 		SfxPlayer.play_at("bullet_impact_enemy", global_position)
