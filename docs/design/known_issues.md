@@ -36,6 +36,13 @@
   위치 **배열**인데 `int(wen[k]) > 0`으로 개수처럼 다뤄 크래시(RouteMap.gd:240, 2026-06-09).
   → 컬렉션 크기는 `arr.size()`. 같은 데이터를 여러 경로에서 셀 땐(enemies/waves) 동일 패턴 유지.
 
+- **Stage 단독 부팅 검증에서 `GameState.reset()`만 하면 `current_route_risk`가 기본값(1)이라 개체수 배율이
+  달라 스폰 수가 실플레이와 다르다.** 재머 검증 하니스에서 server_hall(실제 risk3) patrol 3마리 중 2마리만
+  스폰돼(배율<1로 target 3→2) "적이 빠졌나?"로 오인할 뻔했다(2026-07-06). 원인: `enemy_count_multiplier()`가
+  `current_route_risk`에 의존하는데 route 메타(risk)는 RouteMap 진입 시 세팅되지 지도 로드만으론 안 채워진다.
+  → 스폰 수까지 실플레이와 맞추려면 하니스에서 `GameState.current_route_risk`(+reward/tags)를 해당 route 값으로
+  명시 세팅. 스폰 *경로/타입*만 볼 거면 무관(1마리라도 스폰되면 배선 OK).
+
 - **PowerShell 백그라운드로 godot 실행 시 출력을 `| Out-String`으로 받지 말 것 — 프로세스 종료까지 버퍼링.**
   `... | Out-String`은 파이프 전체를 모은 뒤 한 번에 반환하므로, godot이 도는 동안 output 파일이 계속 비어
   진행 로그를 볼 수 없고, godot이 hang하면 PowerShell도 무한 대기한다(포스터 창모드 렌더가 20분 안 끝남, 2026-06-14).
