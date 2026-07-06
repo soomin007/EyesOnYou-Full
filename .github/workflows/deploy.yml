@@ -77,6 +77,9 @@ jobs:
         run: |
           set -e
           mkdir -p "${BUILD_DIR}"
+          # 임포트 선행 — fresh checkout엔 .godot 캐시가 없어 export가 리소스를 놓칠 수 있다(스킬 권장).
+          # 첫 임포트는 일부 리소스 순서로 실패해도 무방하니 재시도 후 export.
+          godot --headless --import 2>&1 | tail -5 || godot --headless --import 2>&1 | tail -5 || true
           godot --headless --export-release "${EXPORT_PRESET}" "${BUILD_DIR}/index.html"
           # GitHub Pages는 .nojekyll이 있으면 _ 시작 파일도 서빙
           touch "${BUILD_DIR}/.nojekyll"

@@ -100,6 +100,11 @@ func _update_vignette(delta: float) -> void:
 	var violet: float = clamp(jam - deg_target, 0.0, 1.0)
 	var dc: Color = Color(0.0, 0.0, 0.02, VIG_DARK_A).lerp(Color(0.10, 0.01, 0.16, 0.82), violet)
 	_vig_mat.set_shader_parameter("dark_color", dc)
+	# 저-vig 색(calm_color)도 재밍 땐 어둠으로 당긴다 — 안 그러면 낮은 강도에서 시안(평시 VEIL색) 비네트가
+	# 오히려 진해져 "VEIL이 강해진" 느낌이 든다(피드백). 재밍은 시안 단계를 건너뛰고 처음부터 어둡게.
+	var base_calm: Color = Color(CALM.r, CALM.g, CALM.b, VIG_CALM_A)
+	var cc: Color = base_calm.lerp(Color(0.10, 0.01, 0.16, VIG_DARK_A * 0.55), clamp(violet * 1.6, 0.0, 1.0))
+	_vig_mat.set_shader_parameter("calm_color", cc)
 
 # ACT3 자막("여기서부터는 잘 안 보여요")과 동기 호출 — 그 순간 마커가 무너진다.
 func begin_degradation() -> void:
