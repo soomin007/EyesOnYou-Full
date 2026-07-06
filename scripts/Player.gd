@@ -630,6 +630,8 @@ func take_hit(amount: int) -> void:
 	# barrier 소모·hit 카운트가 일어나면 안 됨(사용자 보고: 노란 원 밖인데 방어막이 벗겨짐).
 	if amount <= 0:
 		return
+	if GameState.debug_invincible:
+		return   # 디버그 무적 — 데미지·피격카운트·barrier 소모 전부 스킵
 	if invuln > 0.0:
 		return
 	# 실력 추적 — invuln을 통과한 실제 타격마다 1회 카운트(barrier 흡수·스토리 무피해 포함).

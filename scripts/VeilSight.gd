@@ -98,13 +98,15 @@ func _update_vignette(delta: float) -> void:
 	_vig_mat.set_shader_parameter("time", _t)
 	# 재밍이 자연 붕괴보다 지배적이면 어둠을 바이올렛으로(라이벌의 소행) + 자연 붕괴보다 진하게(블랙아웃 체감).
 	var violet: float = clamp(jam - deg_target, 0.0, 1.0)
-	var dc: Color = Color(0.0, 0.0, 0.02, VIG_DARK_A).lerp(Color(0.10, 0.01, 0.16, 0.82), violet)
+	var dc: Color = Color(0.0, 0.0, 0.02, VIG_DARK_A).lerp(Color(0.09, 0.01, 0.14, 0.92), violet)
 	_vig_mat.set_shader_parameter("dark_color", dc)
 	# 저-vig 색(calm_color)도 재밍 땐 어둠으로 당긴다 — 안 그러면 낮은 강도에서 시안(평시 VEIL색) 비네트가
 	# 오히려 진해져 "VEIL이 강해진" 느낌이 든다(피드백). 재밍은 시안 단계를 건너뛰고 처음부터 어둡게.
 	var base_calm: Color = Color(CALM.r, CALM.g, CALM.b, VIG_CALM_A)
-	var cc: Color = base_calm.lerp(Color(0.10, 0.01, 0.16, VIG_DARK_A * 0.55), clamp(violet * 1.6, 0.0, 1.0))
+	var cc: Color = base_calm.lerp(Color(0.09, 0.01, 0.14, VIG_DARK_A * 0.6), clamp(violet * 1.6, 0.0, 1.0))
 	_vig_mat.set_shader_parameter("calm_color", cc)
+	# 재밍은 시야를 훨씬 더 조인다(사용자: "확 줄어들어야"). 자연 붕괴(0.32)보다 작은 반경 = 좁은 터널 시야.
+	_vig_mat.set_shader_parameter("radius_near", lerp(VIG_RADIUS_NEAR, 0.13, violet))
 
 # ACT3 자막("여기서부터는 잘 안 보여요")과 동기 호출 — 그 순간 마커가 무너진다.
 func begin_degradation() -> void:
@@ -149,6 +151,20 @@ func _player_jam_intensity() -> float:
 		# 반경 대부분을 "붕괴"로 평탄화 — 바깥 35%만 감쇠. 통과 중에도 확실히 붕괴에 든다(피드백).
 		out = max(out, clamp((r - jn.global_position.distance_to(ppos)) / (r * 0.35), 0.0, 1.0))
 	return out
+
+# 적이 어떤 활성 재머의 반경 안인가 — 그 안 적은 VEIL이 못 봐서 마커를 그리지 않는다(플레이어 위치 무관).
+func _enemy_in_jam(en: Node2D, jammers: Array) -> bool:
+	if jammers.is_empty():
+		return false
+	var epos: Vector2 = en.global_position
+	for j in jammers:
+		var jn: Node2D = j as Node2D
+		var r: float = 340.0
+		if jn.has_method("jam_radius"):
+			r = jn.call("jam_radius")
+		if jn.global_position.distance_to(epos) <= r:
+			return true
+	return false
 
 # 재밍 필드에 처음 들어서면 VEIL이 1회 반응(작가성) — "여기는 제 시야가 안 닿아요".
 func _scan_for_jam() -> void:
@@ -264,7 +280,8 @@ func _draw() -> void:
 		var since: float = _t - _degrade_t
 		if since < GLITCH_DUR:
 			glitch = 1.0 - (since / GLITCH_DUR)
-	# 플레이어가 재밍 필드 안이면 VEIL 없음 → 마커도 그만큼 사라진다(시야 붕괴 비네트와 짝).
+	# 재밍 구역: 적이 그 안이면 VEIL이 못 봄(마커 없음, 플레이어 위치 무관) + 플레이어가 그 안이면 남은 마커도 사라짐.
+	var jammers: Array = _active_jammers()
 	var jam: float = _player_jam_intensity()
 	var alive: Dictionary = {}
 	for e in get_tree().get_nodes_in_group("enemy"):
@@ -282,6 +299,8 @@ func _draw() -> void:
 			_seen[id] = _t
 		if en.is_in_group("jammer"):
 			continue   # 재머 = VEIL 맹점(§1). 마커 없음 — 밝은 본체+필드 링으로 직접 보인다
+		if _enemy_in_jam(en, jammers):
+			continue   # 재밍 구역 안 적은 VEIL이 못 봄 — 마커 없음(플레이어가 밖에 있어도)
 		# degradation 중 일부 위협은 VEIL이 영영 못 본다 = 요원이 직접 봐야 함 (역전의 실물)
 		if degraded and (id % 100) < BLIND_PCT:
 			continue
