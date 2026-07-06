@@ -76,6 +76,18 @@ func _open_panel() -> void:
 	v.add_child(_build_baseline_row())
 	v.add_child(_build_skill_quick_row())
 
+	v.add_child(HSeparator.new())
+	var inv_hb := HBoxContainer.new()
+	inv_hb.add_theme_constant_override("separation", 6)
+	inv_hb.add_child(_make_row_label("무적"))
+	var inv_cb := CheckButton.new()
+	inv_cb.text = "피해 무시"
+	inv_cb.button_pressed = GameState.debug_invincible
+	inv_cb.add_theme_font_size_override("font_size", 13)
+	inv_cb.toggled.connect(_on_invincible_toggled)
+	inv_hb.add_child(inv_cb)
+	v.add_child(inv_hb)
+
 	var sep := HSeparator.new()
 	v.add_child(sep)
 	var exit_btn := Button.new()
@@ -83,6 +95,10 @@ func _open_panel() -> void:
 	exit_btn.add_theme_font_size_override("font_size", 13)
 	exit_btn.pressed.connect(_on_exit)
 	v.add_child(exit_btn)
+
+func _on_invincible_toggled(on: bool) -> void:
+	# 무적은 연습장에서만 효과가 있다(Player.take_hit이 playground_active로 가드) — 일반 모드엔 영향 없음.
+	GameState.debug_invincible = on
 
 func _close_panel() -> void:
 	open = false

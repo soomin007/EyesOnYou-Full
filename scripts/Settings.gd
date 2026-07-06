@@ -236,24 +236,6 @@ func _build_debug_tab() -> Control:
 	v.add_theme_constant_override("separation", 14)
 	outer.add_child(v)
 
-	# 무적 모드 (테스트용) — 재머·맵 확인 등을 죽지 않고 편히 하도록.
-	v.add_child(_make_section_header("무적 모드 (테스트)"))
-	var inv_note := Label.new()
-	inv_note.text = "켜면 피해를 받지 않아요. 재머·맵을 편히 확인하려는 테스트용이에요. 세션 한정(게임 재시작 시 꺼짐)."
-	inv_note.add_theme_font_size_override("font_size", 13)
-	inv_note.add_theme_color_override("font_color", Color(0.62, 0.72, 0.85))
-	inv_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	v.add_child(inv_note)
-	var inv_toggle := CheckButton.new()
-	inv_toggle.text = "무적 모드"
-	inv_toggle.button_pressed = GameState.debug_invincible
-	inv_toggle.add_theme_font_size_override("font_size", 14)
-	inv_toggle.toggled.connect(_on_invincible_toggled)
-	v.add_child(inv_toggle)
-	var inv_spacer := Control.new()
-	inv_spacer.custom_minimum_size = Vector2(0, 12)
-	v.add_child(inv_spacer)
-
 	v.add_child(_make_section_header("연습장"))
 
 	var note := Label.new()
@@ -329,9 +311,6 @@ func _on_ending_preview_pressed(ending_id: String) -> void:
 	GameState.visited_arcturus = true
 	get_tree().paused = false
 	get_tree().change_scene_to_file(SceneRouter.ENDING)
-
-func _on_invincible_toggled(on: bool) -> void:
-	GameState.debug_invincible = on
 
 func _on_playground_pressed() -> void:
 	GameState.playground_active = true
