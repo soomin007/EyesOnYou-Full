@@ -105,8 +105,17 @@ func _update_vignette(delta: float) -> void:
 	var base_calm: Color = Color(CALM.r, CALM.g, CALM.b, VIG_CALM_A)
 	var cc: Color = base_calm.lerp(Color(0.09, 0.01, 0.14, VIG_DARK_A * 0.6), clamp(violet * 1.6, 0.0, 1.0))
 	_vig_mat.set_shader_parameter("calm_color", cc)
-	# 재밍은 시야를 훨씬 더 조인다(사용자: "확 줄어들어야"). 자연 붕괴(0.32)보다 작은 반경 = 좁은 터널 시야.
-	_vig_mat.set_shader_parameter("radius_near", lerp(VIG_RADIUS_NEAR, 0.13, violet))
+	# 재밍은 시야를 훨씬 더 조인다(사용자: "확 줄어들어야"). 자연 붕괴(0.32)보다 작은 반경. 완전 근접(violet=1)
+	# 에서도 너무 답답하지 않게 0.20(사용자 조정).
+	_vig_mat.set_shader_parameter("radius_near", lerp(VIG_RADIUS_NEAR, 0.20, violet))
+	# 붕괴 시 시야 중심을 화면 중심이 아니라 플레이어 캐릭터에 맞춘다(사용자 요청). vig만큼 화면중심→플레이어로 보간.
+	var pc: Vector2 = Vector2(0.5, 0.5)
+	if player != null and is_instance_valid(player):
+		var view: Vector2 = get_viewport_rect().size
+		if view.x > 0.0 and view.y > 0.0:
+			var sp: Vector2 = get_viewport().get_canvas_transform() * (player.global_position + Vector2(0.0, -24.0))
+			pc = Vector2(0.5, 0.5).lerp(Vector2(sp.x / view.x, sp.y / view.y), _vig)
+	_vig_mat.set_shader_parameter("vig_center", pc)
 
 # ACT3 자막("여기서부터는 잘 안 보여요")과 동기 호출 — 그 순간 마커가 무너진다.
 func begin_degradation() -> void:

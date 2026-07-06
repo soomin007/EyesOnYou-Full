@@ -11,6 +11,8 @@ uniform vec4 calm_color : source_color = vec4(0.46, 0.86, 1.0, 0.10);
 uniform vec4 dark_color : source_color = vec4(0.0, 0.0, 0.02, 0.66);
 uniform float radius_far = 0.62;   // 기본 — 반경 큼(얇은 가장자리 테두리)
 uniform float radius_near = 0.34;  // 붕괴 — 반경 작음(중앙만 보이는 시야 축소)
+// 비네트 중심(UV). 기본 화면 중심(0.5,0.5). 붕괴 시 VeilSight가 플레이어 캐릭터 위치로 옮긴다.
+uniform vec2 vig_center = vec2(0.5, 0.5);
 
 // 정렬 안 된 해시 디더 — 밴딩을 1/255 수준 노이즈로 흩뜨려 그라데이션을 매끄럽게.
 float dither(vec2 p) {
@@ -18,7 +20,7 @@ float dither(vec2 p) {
 }
 
 void fragment() {
-	vec2 d = UV - vec2(0.5);
+	vec2 d = UV - vig_center;
 	float dist = length(d);
 	float radius = mix(radius_far, radius_near, vig);
 	// 중앙 투명 → 반경에서 불투명. smoothstep으로 부드러운 falloff.

@@ -238,6 +238,12 @@ func controls_hint_line() -> String:
 		action_label("attack", "J"), action_label("dash", "K"),
 		action_label("skill", "L"), action_label("pause", "ESC")]
 
+func _ready() -> void:
+	# 에디터에서 실행하면 디버그 자동 해제 — 개발 중 매번 "snu" 시퀀스를 칠 필요 없게.
+	# 내보낸 릴리스 빌드(웹 등)는 has_feature("editor")=false라 그대로 잠김(일반 플레이어 노출 방지).
+	if OS.has_feature("editor"):
+		debug_unlocked = true
+
 func reset() -> void:
 	current_stage = 0
 	death_count = 0
