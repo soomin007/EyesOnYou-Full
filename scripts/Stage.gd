@@ -3409,7 +3409,7 @@ func _spawn_enemies() -> void:
 # 웨이브 모드 / 일반 모드 공통 — enemies 딕셔너리에서 risk 배율 적용해 spawn.
 # wave_idx: 0+ 면 wave에 속한 적 (kill 시 wave 카운트 감소), -1이면 일반 적.
 func _spawn_from_enemies_dict(enemies: Dictionary, wave_idx: int) -> void:
-	var kind_map: Dictionary = {"patrol": 0, "sniper": 1, "drone": 2, "bomber": 3, "shield": 4}
+	var kind_map: Dictionary = {"patrol": 0, "sniper": 1, "drone": 2, "bomber": 3, "shield": 4, "jammer": 5}
 	var mult: float = GameState.enemy_count_multiplier()
 	for kind_name in enemies.keys():
 		# 스토리 모드 — 드론은 위에서 떨어지는 폭격이라 패턴 인지가 어렵다. 통째로 스킵.
@@ -3424,6 +3424,11 @@ func _spawn_from_enemies_dict(enemies: Dictionary, wave_idx: int) -> void:
 		# 발생 — 우측 둥지 추가 저격수가 시작 지점으로 낙하). 정의된 위치에 정확히 1명씩만.
 		# 사용자 피드백 2026-06-12.
 		if str(kind_name) == "sniper" and bool(_map_data.get("nest_snipers", false)):
+			for p in positions:
+				_spawn_enemy(kind_int, p, wave_idx)
+			continue
+		# 재머는 특정 지점에 놓인 장치 — risk 배율 복제/오프셋 대상이 아니다(nest_snipers와 동형).
+		if str(kind_name) == "jammer":
 			for p in positions:
 				_spawn_enemy(kind_int, p, wave_idx)
 			continue
@@ -3722,6 +3727,10 @@ func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1) -> void:
 	elif kind == 4:
 		shape.size = Vector2(40.0, 56.0)
 		col.position = Vector2(0, -28.0)
+	elif kind == 5:
+		# jammer — 땅에 놓인 방출 장치(대략 44×44). Enemy.gd build_jammer 시각과 맞춤.
+		shape.size = Vector2(44.0, 44.0)
+		col.position = Vector2(0, -22.0)
 	else:
 		shape.size = Vector2(28.0, 40.0)
 		col.position = Vector2(0, -20.0)

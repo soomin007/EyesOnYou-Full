@@ -368,6 +368,54 @@ static func build_shield(parent: Node2D) -> Node2D:
 	]))
 	return root
 
+static func build_jammer(parent: Node2D) -> Node2D:
+	# 라이벌 VEIL의 '손' — 고정형 방출 장치. 바이올렛/마젠타로 VEIL 시안(0.42,0.86,1.0)과 대비.
+	# 발밑 origin(0,0), 대략 x∈[-20,20] y∈[-46,0] (콜리전 44×44에 맞춤).
+	var root := Node2D.new()
+	root.name = "Visual"
+	parent.add_child(root)
+
+	root.add_child(_ellipse(Vector2(0, -1), Vector2(20, 4), Color(0, 0, 0, 0.5)))
+
+	var body := Node2D.new()
+	body.name = "Body"
+	root.add_child(body)
+
+	# 받침대(사다리꼴)
+	_filled(body, Color(0.20, 0.13, 0.28), PackedVector2Array([
+		Vector2(-17, -12), Vector2(17, -12), Vector2(14, 0), Vector2(-14, 0),
+	]))
+	# 몸통 하우징
+	_filled(body, Color(0.33, 0.20, 0.45), PackedVector2Array([
+		Vector2(-13, -30), Vector2(13, -30), Vector2(16, -14), Vector2(-16, -14),
+	]))
+	# 측면 통풍구(어두운 슬릿)
+	_filled(body, Color(0.14, 0.09, 0.20), PackedVector2Array([
+		Vector2(-12, -27), Vector2(-6, -27), Vector2(-6, -17), Vector2(-12, -17),
+	]))
+	_filled(body, Color(0.14, 0.09, 0.20), PackedVector2Array([
+		Vector2(6, -27), Vector2(12, -27), Vector2(12, -17), Vector2(6, -17),
+	]))
+
+	# 방출 코어 — 빛나는 마젠타(중앙 렌즈)
+	_filled_circle(body, Vector2(0, -22), 6.5, Color(0.95, 0.30, 0.92))
+	_filled_circle(body, Vector2(0, -22), 3.2, Color(1.0, 0.78, 1.0))
+
+	# 상단 안테나 마스트
+	_filled(body, Color(0.46, 0.36, 0.56), PackedVector2Array([
+		Vector2(-2, -30), Vector2(2, -30), Vector2(2, -44), Vector2(-2, -44),
+	]))
+	# 방출 헤드(마스트 끝)
+	_filled_circle(body, Vector2(0, -45), 4.0, Color(0.92, 0.42, 1.0))
+	# 좌우 방출 베인(비스듬한 날개)
+	_filled(body, Color(0.40, 0.26, 0.52), PackedVector2Array([
+		Vector2(-13, -30), Vector2(-22, -38), Vector2(-20, -33), Vector2(-12, -27),
+	]))
+	_filled(body, Color(0.40, 0.26, 0.52), PackedVector2Array([
+		Vector2(13, -30), Vector2(22, -38), Vector2(20, -33), Vector2(12, -27),
+	]))
+	return root
+
 static func build_tutorial_dummy(parent: Node2D) -> Node2D:
 	# 사격 연습용 목제 더미. 좌표는 origin(0)이 ground level이라는 전제.
 	# 받침대 바닥 = y=0(지면), 본체는 받침대 위, 머리는 본체 위.

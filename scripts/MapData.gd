@@ -781,6 +781,9 @@ static func _server_hall() -> Dictionary:
 			"sniper": [Vector2(1500, 438), Vector2(3500, 438)],
 			"drone":  [Vector2(2500, 180), Vector2(4050, 180)],
 			"bomber": [], "shield": [],
+			# 라이벌 VEIL 첫 간섭(rival_veil_concept §5·§6, 막3부터). 후반 클러스터 옆에 재밍 장치 —
+			# 반경(340) 안 patrol@3400·sniper@3500 마커가 꺼진다. 부수면 시야 복구("우선 표적").
+			"jammer": [Vector2(3300, 600)],
 		},
 		"rewards": {
 			"xp_orbs":    [Vector2(2000, 440), Vector2(3000, 440), Vector2(3500, 438)],

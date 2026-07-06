@@ -27,6 +27,10 @@ const ENEMIES: Dictionary = {
 		"name": "방패병",
 		"blurb": "정면에 큰 방패. 정면 사격은 튕겨낸다.",
 	},
+	"jammer": {
+		"name": "교란기",
+		"blurb": "고정된 방출 장치. 바이올렛 반경 안에선 VEIL의 표시가 꺼진다. 부수면 시야가 돌아온다.",
+	},
 }
 
 static func get_data(id: String) -> Dictionary:

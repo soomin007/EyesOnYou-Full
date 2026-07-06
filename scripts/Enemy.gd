@@ -2,7 +2,7 @@ extends CharacterBody2D
 
 signal killed(at_position: Vector2)
 
-enum EnemyType { PATROL, SNIPER, DRONE, BOMBER, SHIELD }
+enum EnemyType { PATROL, SNIPER, DRONE, BOMBER, SHIELD, JAMMER }
 enum PatrolState { ROAMING, FIRING, TELEGRAPH, CHARGING, RECOVERING }
 enum BomberState { ROAMING, STALKING, ARMING }
 
@@ -53,6 +53,12 @@ const SHIELD_DETECT_Y: float = 60.0
 const SHIELD_MELEE_RANGE: float = 42.0
 const SHIELD_TOUCH_DAMAGE: int = 1
 const SHIELD_TOUCH_COOLDOWN: float = 0.8
+
+# Jammer — 라이벌 VEIL의 '손'(rival_veil_concept §5 1단). 고정형 방출 장치: 순찰/사격 없이
+# 자기 반경 안의 (재머 아닌) VEIL 마커를 소등한다(VeilSight가 이 반경을 읽어 마커를 끈다).
+# 파괴하면 시야가 돌아온다 = "우선 표적". 능동 공격 없음, 접촉 데미지만(고정이라 회피 쉬움).
+const JAMMER_RADIUS: float = 340.0   # VeilSight 마커 소등 반경 (재밍 필드 = 이 반경의 바이올렛 링)
+const JAMMER_HP: int = 3
 
 # Sniper — 시야가 트여 있을 때만 발사
 const SNIPER_FIRE_INTERVAL: float = 2.6
@@ -155,6 +161,34 @@ class _ShinyAura extends Node2D:
 		draw_circle(Vector2.ZERO, 27.0, Color(1.0, 0.82, 0.30, a * 0.5))
 		draw_circle(Vector2.ZERO, 16.0, Color(1.0, 0.90, 0.48, a))
 
+# 재밍 필드 — 마커가 소등되는 구역을 라이벌 바이올렛 링으로 그린다.
+# 작가성(known_issues): "마커가 그냥 사라진다"가 아니라 "여기가 가로막혔다"로 읽히게, 반경을 눈에 보이게.
+# 중심 = 재머 발밑(local 0,0) — VeilSight 소등 판정도 global_position(발) 기준이라 시각/판정 일치.
+class _JamField extends Node2D:
+	var radius: float = 340.0
+	var owner_ref: Node = null
+	var t: float = 0.0
+	func _process(delta: float) -> void:
+		t += delta
+		if owner_ref != null and owner_ref.get("dead"):
+			visible = false
+			return
+		queue_redraw()
+	func _draw() -> void:
+		var vi: Color = Color(0.80, 0.34, 0.98)          # 라이벌 바이올렛 — VEIL 시안(0.42,0.86,1.0)의 대비
+		var pulse: float = 0.5 + 0.5 * sin(t * 2.2)
+		var edge_a: float = lerp(0.12, 0.24, pulse)
+		# 옅은 채움 — "이 안은 가려졌다"
+		draw_circle(Vector2.ZERO, radius, Color(vi.r, vi.g, vi.b, 0.045))
+		# 경계 링 — 회전 위상의 점선 스캔(교란되는 느낌)
+		var segs: int = 96
+		for i in range(0, segs, 2):
+			var a0: float = float(i) / float(segs) * TAU + t * 0.4
+			var a1: float = float(i + 1) / float(segs) * TAU + t * 0.4
+			draw_arc(Vector2.ZERO, radius, a0, a1, 4, Color(vi.r, vi.g, vi.b, edge_a), 2.0, true)
+		# 안쪽 보조 링
+		draw_arc(Vector2.ZERO, radius * 0.6, 0.0, TAU, 48, Color(vi.r, vi.g, vi.b, edge_a * 0.5), 1.2, true)
+
 func _ready() -> void:
 	add_to_group("enemy")
 	origin_x = global_position.x
@@ -184,6 +218,16 @@ func _ready() -> void:
 			# 사용자: shield 크기 키우기 — 콜리전과 함께 시각도 1.4배.
 			if visual != null:
 				visual.scale = Vector2(1.4, 1.4)
+		EnemyType.JAMMER:
+			hp = JAMMER_HP
+			visual = CharacterArt.build_jammer(self)
+			# VeilSight가 마커 소등 대상 재머를 값싸게 찾도록 전용 그룹에도 등록.
+			add_to_group("jammer")
+			var field := _JamField.new()
+			field.radius = JAMMER_RADIUS
+			field.owner_ref = self
+			field.z_index = -2   # 캐릭터 아트 뒤
+			add_child(field)
 	fire_timer = _sniper_interval()
 	drone_bomb_cd = 1.2  # 스폰 직후 즉시 폭격 방지
 	if shiny:
@@ -262,7 +306,12 @@ func _enemy_id() -> String:
 		EnemyType.DRONE: return "drone"
 		EnemyType.BOMBER: return "bomber"
 		EnemyType.SHIELD: return "shield"
+		EnemyType.JAMMER: return "jammer"
 	return ""
+
+# VeilSight가 마커 소등 반경을 읽는다 (const는 get()으로 못 꺼내므로 메서드로 노출).
+func jam_radius() -> float:
+	return JAMMER_RADIUS
 
 func _flip_visual(facing_left: bool) -> void:
 	if visual != null:

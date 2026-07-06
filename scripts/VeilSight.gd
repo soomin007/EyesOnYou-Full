@@ -21,6 +21,7 @@ var player: Node2D = null
 const DETECT_RADIUS: float = 1400.0           # 이 안의 위협을 VEIL이 본다 (≈ 화면 한 칸)
 const CALM: Color = Color(0.42, 0.86, 1.0)    # 평시 — VEIL 시안 (자막 색과 통일감)
 const WARN: Color = Color(1.0, 0.55, 0.22)    # 공격 임박 — 경고 주황
+const RIVAL: Color = Color(0.80, 0.34, 0.98)  # 재머 마커 — 라이벌 바이올렛(안티-VEIL, rival_veil_concept §5)
 const EDGE_MARGIN: float = 24.0               # 화면 밖 화살표가 가장자리에서 떨어지는 여백 (피드백: 더 붙게 48→24)
 const RETICLE_R: float = 17.0
 const FADE_IN: float = 0.35                    # 마커가 "짚어지는" 등장 시간
@@ -40,6 +41,7 @@ var _t: float = 0.0
 var _seen: Dictionary = {}                    # instance_id → 처음 본 _t (페이드인용)
 var _degrade_t: float = -1.0                  # >=0 이면 ACT3 degradation 진행 중 (시작 시각)
 var _intro_called: bool = false               # "표시해 둘게요" 메타 소개 1회
+var _jam_intro_called: bool = false           # 재밍 필드 첫 진입 시 VEIL 반응 1회(맵당)
 var _last_call_t: float = -999.0
 var _vignette: ColorRect = null               # 비네트 표면 (셰이더가 색/반경/디더를 계산)
 var _vig_mat: ShaderMaterial = null
@@ -102,8 +104,58 @@ func _is_degraded() -> bool:
 func _process(delta: float) -> void:
 	_t += delta
 	_scan_for_call()
+	_scan_for_jam()
 	_update_vignette(delta)
 	queue_redraw()
+
+# 활성(미파괴) 재머 목록 — 마커 소등/서사 반응 판정용. group "jammer".
+func _active_jammers() -> Array:
+	var out: Array = []
+	for j in get_tree().get_nodes_in_group("jammer"):
+		if j is Node2D and is_instance_valid(j) and not (j as Node2D).get("dead"):
+			out.append(j)
+	return out
+
+# en이 (자신이 재머가 아니면서) 어떤 활성 재머의 반경 안이면 마커를 소등한다.
+func _jammer_suppressing(en: Node2D, jammers: Array) -> bool:
+	if jammers.is_empty() or en.is_in_group("jammer"):
+		return false
+	var epos: Vector2 = en.global_position
+	for j in jammers:
+		var jn: Node2D = j as Node2D
+		var r: float = 340.0
+		if jn.has_method("jam_radius"):
+			r = jn.call("jam_radius")
+		if jn.global_position.distance_to(epos) <= r:
+			return true
+	return false
+
+# 재밍 필드에 처음 들어서면 VEIL이 1회 반응(작가성) — "여기는 제 시야가 안 닿아요".
+func _scan_for_jam() -> void:
+	if _jam_intro_called or player == null or not is_instance_valid(player):
+		return
+	if _t < MIN_CALL_TIME:
+		return
+	var jammers: Array = _active_jammers()
+	if jammers.is_empty():
+		return
+	var ppos: Vector2 = player.global_position
+	for j in jammers:
+		var jn: Node2D = j as Node2D
+		var r: float = 340.0
+		if jn.has_method("jam_radius"):
+			r = jn.call("jam_radius")
+		if jn.global_position.distance_to(ppos) <= r:
+			_jam_intro_called = true
+			_last_call_t = _t   # 위협 콜과 겹치지 않게 쿨다운 공유
+			var band: String = GameState.veil_register_band()
+			var line: String
+			if band == "warm":
+				line = "여기... 제 시야가 안 닿아요. 뭔가가 가로막고 있어요. 조심해요."
+			else:
+				line = "이 구역, 시야가 차단됩니다. 무언가 개입하고 있습니다. 직접 확인하십시오."
+			veil_calls_threat.emit(line)
+			return
 
 # 화면 밖에 새로 나타난 위협을 VEIL이 말로 짚는다(레이더 아님의 핵심). 쿨다운/진입보호로 절제.
 func _scan_for_call() -> void:
@@ -114,6 +166,7 @@ func _scan_for_call() -> void:
 	var xform: Transform2D = get_viewport().get_canvas_transform()
 	var view: Vector2 = get_viewport_rect().size
 	var ppos: Vector2 = player.global_position
+	var jammers: Array = _active_jammers()
 	for e in get_tree().get_nodes_in_group("enemy"):
 		if not (e is Node2D):
 			continue
@@ -126,6 +179,8 @@ func _scan_for_call() -> void:
 		var id: int = en.get_instance_id()
 		if _seen.has(id):
 			continue   # 이미 본 위협 — 새로 짚을 게 없음
+		if _jammer_suppressing(en, jammers):
+			continue   # 재밍 구역 안 — VEIL이 못 보니 말로도 못 짚는다
 		var spos: Vector2 = xform * wpos
 		var off: bool = spos.x < 0.0 or spos.x > view.x or spos.y < 0.0 or spos.y > view.y
 		if off:
@@ -188,6 +243,7 @@ func _draw() -> void:
 		var since: float = _t - _degrade_t
 		if since < GLITCH_DUR:
 			glitch = 1.0 - (since / GLITCH_DUR)
+	var jammers: Array = _active_jammers()
 	var alive: Dictionary = {}
 	for e in get_tree().get_nodes_in_group("enemy"):
 		if not (e is Node2D):
@@ -202,11 +258,15 @@ func _draw() -> void:
 		alive[id] = true
 		if not _seen.has(id):
 			_seen[id] = _t
+		if _jammer_suppressing(en, jammers):
+			continue   # 재밍 구역 — 마커 소등(라이벌의 손). 필드 링이 이유를 보여준다.
 		# degradation 중 일부 위협은 VEIL이 영영 못 본다 = 요원이 직접 봐야 함 (역전의 실물)
 		if degraded and (id % 100) < BLIND_PCT:
 			continue
 		var danger: bool = en.has_method("veil_is_telegraphing") and en.veil_is_telegraphing()
 		var col: Color = WARN if danger else CALM
+		if en.is_in_group("jammer"):
+			col = RIVAL   # 재머 자신은 표시 — 라이벌 색으로 "이게 원인"
 		# 등장 페이드인 — "방금 짚어진" 느낌
 		var appear: float = clamp((_t - float(_seen[id])) / FADE_IN, 0.0, 1.0)
 		var alpha_mul: float = appear
