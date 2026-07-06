@@ -12,6 +12,9 @@ enum BomberState { ROAMING, STALKING, ARMING }
 @export var patrol_range: float = 90.0
 @export var hp: int = 2
 @export var harmless: bool = false
+# §4 거짓 렌더(rival_veil_concept) — >=0이면 이 EnemyType처럼 위장 렌더한다. 참 종류·hp·행동 = enemy_type.
+# Stage 스폰(deceits)이 set. 근접/텔레그래프 시 리빌(지직거림 tell → 참 모습). 신뢰가 리빌을 앞당김.
+@export var disguise_as: int = -1
 
 const GRAVITY: float = 1400.0
 const TOUCH_DAMAGE: int = 1
@@ -143,8 +146,13 @@ var bomber_state_timer: float = 0.0
 const SHIELD_DIR_LOCK_DURATION: float = 2.8
 var shield_dir_lock_timer: float = 0.0
 
+# §4 거짓 렌더 — 위장이 벗겨지는 근접 반경(신뢰 warm이면 +60, "신뢰가 지각을 산다" §4.1).
+const DISGUISE_REVEAL_RANGE: float = 120.0
+
 var encountered: bool = false
 var visual: Node2D
+var _disguised: bool = false   # §4 거짓 렌더로 위장 중인가
+var _glitch: Node2D = null     # 지직거림 tell 노드(위장/거짓 렌더 공용)
 # 이스터에그 — 황금 희귀 개체(shiny). Stage._spawn_enemy가 낮은 확률로 켠다. 처치 시 보너스 XP.
 # 색은 visual/self modulate가 텔레그래프·피격 플래시로 흰색 리셋되므로, 독립된 오라 자식으로 표현.
 var shiny: bool = false
@@ -189,6 +197,38 @@ class _JamField extends Node2D:
 		# 안쪽 보조 링
 		draw_arc(Vector2.ZERO, radius * 0.6, 0.0, TAU, 48, Color(vi.r, vi.g, vi.b, edge_a * 0.5), 1.2, true)
 
+# 지직거림 tell — 거짓 렌더가 있는 곳에 뜨는 붉은 글리치(§4.1: 모든 거짓엔 tell이 있어야 한다).
+# 근접·신뢰가 높을수록 또렷(신뢰가 지각을 산다). 대부분 시간엔 거의 안 보이게(남발 금지 §4.1).
+# 위장 적/거짓 함정 공용 프리미티브 — 소유자 몸통(-44..0, ±16)에 겹쳐 그린다.
+class _GlitchTell extends Node2D:
+	var owner_ref: Node = null
+	var t: float = 0.0
+	func _process(delta: float) -> void:
+		t += delta
+		queue_redraw()
+	func _draw() -> void:
+		var beat: float = fmod(t, 1.6)
+		if beat > 0.42:
+			return   # 주기적으로 짧게만 번쩍
+		var vis: float = 1.0 - (beat / 0.42)
+		var mul: float = 0.5
+		if owner_ref != null and owner_ref.has_method("_find_player"):
+			var pl: Node = owner_ref.call("_find_player")
+			if pl != null and is_instance_valid(pl):
+				var d: float = (owner_ref as Node2D).global_position.distance_to((pl as Node2D).global_position)
+				mul = clamp(1.0 - d / 420.0, 0.15, 1.0)
+				if GameState.veil_register_band() == "warm":
+					mul = min(1.0, mul + 0.25)
+		var a: float = vis * mul
+		if a < 0.03:
+			return
+		var red := Color(1.0, 0.22, 0.28, a * 0.8)
+		for i in range(3):
+			var yy: float = -40.0 + float((int(t * 90.0) + i * 13) % 40)
+			draw_line(Vector2(-16, yy), Vector2(16, yy), red, 1.5)
+		# 살짝 빗나간 붉은 겹침(오프셋 실루엣)
+		draw_rect(Rect2(-15 + sin(t * 30.0) * 2.0, -42, 30, 42), Color(1.0, 0.2, 0.3, a * 0.12), false, 1.0)
+
 func _ready() -> void:
 	add_to_group("enemy")
 	origin_x = global_position.x
@@ -228,6 +268,17 @@ func _ready() -> void:
 			field.owner_ref = self
 			field.z_index = -2   # 캐릭터 아트 뒤
 			add_child(field)
+	# §4 거짓 렌더 — 위장 렌더: 참 종류의 hp/행동은 위에서 정해졌고, 시각만 위장 종류로 교체 + 지직거림 tell.
+	if disguise_as >= 0 and disguise_as != enemy_type:
+		_disguised = true
+		if visual != null:
+			visual.free()   # _ready 안이라 즉시 free 안전(1프레임 이중 스프라이트 방지)
+		visual = _build_visual_for(disguise_as)
+		var g := _GlitchTell.new()
+		g.owner_ref = self
+		g.z_index = 3
+		add_child(g)
+		_glitch = g
 	fire_timer = _sniper_interval()
 	drone_bomb_cd = 1.2  # 스폰 직후 즉시 폭격 방지
 	if shiny:
@@ -317,12 +368,68 @@ func _flip_visual(facing_left: bool) -> void:
 	if visual != null:
 		visual.scale.x = -1.0 if facing_left else 1.0
 
+# 지정 종류의 시각을 만든다 — 위장 렌더/리빌 복원 공용. hp·행동은 항상 enemy_type(참)이 결정.
+func _build_visual_for(kind: int) -> Node2D:
+	var v: Node2D = null
+	match kind:
+		EnemyType.PATROL:
+			v = CharacterArt.build_patrol(self)
+			if v != null:
+				v.scale = Vector2(1.3, 1.3)
+		EnemyType.SNIPER:
+			v = CharacterArt.build_sniper(self)
+		EnemyType.DRONE:
+			v = CharacterArt.build_drone(self)
+			if v != null:
+				v.scale = Vector2(1.3, 1.3)
+		EnemyType.BOMBER:
+			v = CharacterArt.build_bomber(self)
+		EnemyType.SHIELD:
+			v = CharacterArt.build_shield(self)
+			if v != null:
+				v.scale = Vector2(1.4, 1.4)
+		EnemyType.JAMMER:
+			v = CharacterArt.build_jammer(self)
+	return v
+
+# §4 거짓 렌더 — 위장이 벗겨지는 조건: (a) 참 종류가 텔레그래프 시작(behavior가 거짓을 배신) 또는
+# (b) 플레이어가 리빌 반경 안(신뢰 warm이면 확대). 둘 다 tell 이후라 fair.
+func _update_disguise() -> void:
+	if not _disguised:
+		return
+	var reveal: bool = veil_is_telegraphing()
+	if not reveal:
+		var p := _find_player()
+		if p != null:
+			var extra: float = 60.0 if GameState.veil_register_band() == "warm" else 0.0
+			if global_position.distance_to(p.global_position) < DISGUISE_REVEAL_RANGE + extra:
+				reveal = true
+	if reveal:
+		_reveal_disguise()
+
+func _reveal_disguise() -> void:
+	if not _disguised:
+		return
+	_disguised = false
+	if visual != null:
+		visual.free()
+	visual = _build_visual_for(enemy_type)   # 참 종류로 복원
+	# 언마스크 — 짧은 바이올렛 글리치 플래시 + 신호음
+	modulate = Color(1.8, 1.4, 1.9)
+	create_tween().tween_property(self, "modulate", Color(1, 1, 1), 0.2)
+	SfxPlayer.play_at("bestiary_first_seen", global_position)
+	if _glitch != null:
+		_glitch.queue_free()
+		_glitch = null
+
 func _physics_process(delta: float) -> void:
 	if dead or not is_inside_tree():
 		return
 	if touch_cd > 0.0:
 		touch_cd -= delta
 	_check_first_encounter()
+	if _disguised:
+		_update_disguise()
 	match enemy_type:
 		EnemyType.PATROL:
 			_tick_patrol(delta)
@@ -342,6 +449,8 @@ func _physics_process(delta: float) -> void:
 # ─── 도감 첫 조우 ───────────────────────────────────────────
 
 func _check_first_encounter() -> void:
+	if _disguised:
+		return   # 위장 중엔 도감 스포일 방지 — 리빌 후 참 종류로 등록
 	if encountered or harmless:
 		return
 	if BestiaryOverlay.is_active():

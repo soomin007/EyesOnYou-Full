@@ -1105,6 +1105,12 @@ static func _control_corridor() -> Dictionary:
 			"bomber": [],
 			"shield": [],
 		},
+		# §4 거짓 렌더(라이벌 VEIL): 정찰병으로 위장한 자폭병. 순찰 무리(2300·3500) 사이에 섞임 —
+		# 멀리선 또 하나의 patrol처럼 보이나, 가까이 가면 지직거림 tell로 정체가 드러난다("적 종류 둔갑").
+		# 막3부터(§6). 무시하고 지나치면 참 종류(자폭병)로 접근·자폭. server_hall 재머와 함께 막3 라이벌 확산.
+		"deceits": [
+			{"pos": Vector2(2650, 600.0), "true": "bomber", "as": "patrol"},
+		],
 		"rewards": {
 			"xp_orbs":    [Vector2(2060, 440.0), Vector2(3060, 438.0), Vector2(3600, 440.0)],
 			"hp_pickups": [Vector2(1080, 440.0)],

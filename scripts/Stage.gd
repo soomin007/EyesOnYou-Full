@@ -3405,6 +3405,20 @@ func _spawn_enemies() -> void:
 		_spawn_enemies_fallback()
 		return
 	_spawn_from_enemies_dict(enemies, -1)
+	_spawn_deceits()
+
+# §4 거짓 렌더 — 위장한 적(참 종류로 스폰 + disguise_as). deceits: [{"pos","true","as"}]. 맵당 소수(드묾).
+func _spawn_deceits() -> void:
+	var deceits: Array = _map_data.get("deceits", [])
+	if deceits.is_empty() or GameState.story_mode:
+		return   # 스토리 모드는 단순화 — 거짓 렌더 제외
+	var kind_map: Dictionary = {"patrol": 0, "sniper": 1, "drone": 2, "bomber": 3, "shield": 4, "jammer": 5}
+	for item in deceits:
+		var d: Dictionary = item
+		var true_kind: int = int(kind_map.get(str(d.get("true", "bomber")), 3))
+		var as_kind: int = int(kind_map.get(str(d.get("as", "patrol")), 0))
+		var pos: Vector2 = d.get("pos", Vector2.ZERO)
+		_spawn_enemy(true_kind, pos, -1, as_kind)
 
 # 웨이브 모드 / 일반 모드 공통 — enemies 딕셔너리에서 risk 배율 적용해 spawn.
 # wave_idx: 0+ 면 wave에 속한 적 (kill 시 wave 카운트 감소), -1이면 일반 적.
@@ -3708,7 +3722,7 @@ func _on_boss_killed(at_position: Vector2) -> void:
 const SHINY_CHANCE: float = 0.015
 const SHINY_ORB_VALUE: int = 5
 
-func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1) -> void:
+func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1, disguise_kind: int = -1) -> void:
 	var e := CharacterBody2D.new()
 	e.set_script(load("res://scripts/Enemy.gd"))
 	e.collision_layer = 4
@@ -3740,6 +3754,7 @@ func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1) -> void:
 	# 연습장(playground)에선 테스트 노이즈 방지로 제외.
 	var shiny: bool = (not GameState.playground_active) and randf() < SHINY_CHANCE
 	e.set("shiny", shiny)
+	e.set("disguise_as", disguise_kind)   # §4 거짓 렌더 — >=0이면 위장 렌더(_ready에서 소비)
 	add_child(e)
 	_had_enemies = true   # 이스터에그(평화주의) — 적이 있던 맵에서만 인정
 	e.global_position = pos
