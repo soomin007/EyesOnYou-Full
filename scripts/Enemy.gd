@@ -213,27 +213,27 @@ class _GlitchTell extends Node2D:
 			return   # 주기적으로 번쩍(0.5s/1.4s — 조금 더 자주·길게)
 		var vis: float = 1.0 - (beat / 0.5)
 		# 원거리에서도 "저 적은 뭔가 이상하다"가 읽히게 — 범위 넓고 최소 강도 높게(피드백: 너무 좁았음).
-		var mul: float = 0.6
+		var mul: float = 0.7
 		if owner_ref != null and owner_ref.has_method("_find_player"):
 			var pl: Node = owner_ref.call("_find_player")
 			if pl != null and is_instance_valid(pl):
 				var d: float = (owner_ref as Node2D).global_position.distance_to((pl as Node2D).global_position)
-				mul = clamp(1.0 - d / 800.0, 0.45, 1.0)
+				mul = clamp(1.0 - d / 850.0, 0.55, 1.0)
 				if GameState.veil_register_band() == "warm":
 					mul = min(1.0, mul + 0.25)
 		var a: float = vis * mul
 		if a < 0.04:
 			return
-		var red := Color(1.0, 0.20, 0.30, a)
-		# 전신 붉은 오프셋 고스트(크로매틱) — 작은 스캔라인보다 훨씬 멀리서 읽힌다.
-		var ox: float = sin(t * 40.0) * 3.0
-		draw_rect(Rect2(-16.0 + ox, -46.0, 32.0, 46.0), Color(red.r, red.g, red.b, a * 0.30), true)
+		var red := Color(1.0, 0.18, 0.30, a)
+		# 전신 붉은 오프셋 고스트(크로매틱) — 작은 스캔라인보다 훨씬 멀리서 읽힌다. 크기·강도 상향(피드백).
+		var ox: float = sin(t * 40.0) * 4.0
+		draw_rect(Rect2(-21.0 + ox, -54.0, 42.0, 56.0), Color(red.r, red.g, red.b, a * 0.42), true)
 		# 붉은 외곽선(실루엣)
-		draw_rect(Rect2(-17.0, -47.0, 34.0, 47.0), Color(red.r, red.g, red.b, a * 0.9), false, 2.0)
+		draw_rect(Rect2(-22.0, -55.0, 44.0, 57.0), Color(red.r, red.g, red.b, a), false, 2.5)
 		# 스캔라인 지직거림
-		for i in range(4):
-			var yy: float = -44.0 + float((int(t * 90.0) + i * 12) % 44)
-			draw_line(Vector2(-16, yy), Vector2(16, yy), Color(red.r, red.g, red.b, a * 0.8), 1.5)
+		for i in range(5):
+			var yy: float = -52.0 + float((int(t * 90.0) + i * 12) % 52)
+			draw_line(Vector2(-21, yy), Vector2(21, yy), Color(red.r, red.g, red.b, a), 2.0)
 
 func _ready() -> void:
 	add_to_group("enemy")

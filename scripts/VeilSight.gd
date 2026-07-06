@@ -85,10 +85,17 @@ func _build_vignette() -> void:
 func _update_vignette(delta: float) -> void:
 	if _vig_mat == null:
 		return
-	var target: float = 1.0 if _is_degraded() else 0.0
+	# 재밍 필드 안 = VEIL 없는 날것 시야 → 붕괴 비네트(어둠+시야 축소)를 필드 깊이만큼 켠다.
+	var jam: float = _player_jam_intensity()
+	var deg_target: float = 1.0 if _is_degraded() else 0.0
+	var target: float = max(deg_target, jam)
 	_vig = move_toward(_vig, target, delta * 1.4)
 	_vig_mat.set_shader_parameter("vig", _vig)
 	_vig_mat.set_shader_parameter("time", _t)
+	# 재밍이 자연 붕괴보다 지배적이면 어둠을 살짝 바이올렛으로(라이벌의 소행 구분). 자연 붕괴/블랙아웃은 검정 유지.
+	var violet: float = clamp(jam - deg_target, 0.0, 1.0)
+	var dc: Color = Color(0.0, 0.0, 0.02, VIG_DARK_A).lerp(Color(0.14, 0.02, 0.20, VIG_DARK_A), violet)
+	_vig_mat.set_shader_parameter("dark_color", dc)
 
 # ACT3 자막("여기서부터는 잘 안 보여요")과 동기 호출 — 그 순간 마커가 무너진다.
 func begin_degradation() -> void:
@@ -116,19 +123,22 @@ func _active_jammers() -> Array:
 			out.append(j)
 	return out
 
-# en이 (자신이 재머가 아니면서) 어떤 활성 재머의 반경 안이면 마커를 소등한다.
-func _jammer_suppressing(en: Node2D, jammers: Array) -> bool:
-	if jammers.is_empty() or en.is_in_group("jammer"):
-		return false
-	var epos: Vector2 = en.global_position
-	for j in jammers:
+# 플레이어가 재머 반경 안에 얼마나 깊이 있는가 (0=밖, 1=중심). 재머 = 라이벌이 강제하는 "VEIL 없는
+# 날것 시야"(§3 진실의 삼각형: 블랙아웃) → 이 값으로 시야 붕괴 비네트를 켜고 마커를 지운다.
+func _player_jam_intensity() -> float:
+	if player == null or not is_instance_valid(player):
+		return 0.0
+	var out: float = 0.0
+	var ppos: Vector2 = player.global_position
+	for j in get_tree().get_nodes_in_group("jammer"):
+		if not (j is Node2D) or not is_instance_valid(j) or (j as Node2D).get("dead"):
+			continue
 		var jn: Node2D = j as Node2D
 		var r: float = 340.0
 		if jn.has_method("jam_radius"):
 			r = jn.call("jam_radius")
-		if jn.global_position.distance_to(epos) <= r:
-			return true
-	return false
+		out = max(out, clamp(1.0 - jn.global_position.distance_to(ppos) / r, 0.0, 1.0))
+	return out
 
 # 재밍 필드에 처음 들어서면 VEIL이 1회 반응(작가성) — "여기는 제 시야가 안 닿아요".
 func _scan_for_jam() -> void:
@@ -163,10 +173,11 @@ func _scan_for_call() -> void:
 		return
 	if _t < MIN_CALL_TIME or (_t - _last_call_t) < CALL_COOLDOWN:
 		return
+	if _player_jam_intensity() > 0.35:
+		return   # 재밍 구역 안 = VEIL 없음 → 말로도 못 짚는다
 	var xform: Transform2D = get_viewport().get_canvas_transform()
 	var view: Vector2 = get_viewport_rect().size
 	var ppos: Vector2 = player.global_position
-	var jammers: Array = _active_jammers()
 	for e in get_tree().get_nodes_in_group("enemy"):
 		if not (e is Node2D):
 			continue
@@ -181,8 +192,6 @@ func _scan_for_call() -> void:
 			continue   # 이미 본 위협 — 새로 짚을 게 없음
 		if en.is_in_group("jammer"):
 			continue   # 재머 = VEIL 맹점(§1). 마커도 없고 말로도 안 짚는다
-		if _jammer_suppressing(en, jammers):
-			continue   # 재밍 구역 안 — VEIL이 못 보니 말로도 못 짚는다
 		var spos: Vector2 = xform * wpos
 		var off: bool = spos.x < 0.0 or spos.x > view.x or spos.y < 0.0 or spos.y > view.y
 		if off:
@@ -245,7 +254,8 @@ func _draw() -> void:
 		var since: float = _t - _degrade_t
 		if since < GLITCH_DUR:
 			glitch = 1.0 - (since / GLITCH_DUR)
-	var jammers: Array = _active_jammers()
+	# 플레이어가 재밍 필드 안이면 VEIL 없음 → 마커도 그만큼 사라진다(시야 붕괴 비네트와 짝).
+	var jam: float = _player_jam_intensity()
 	var alive: Dictionary = {}
 	for e in get_tree().get_nodes_in_group("enemy"):
 		if not (e is Node2D):
@@ -262,8 +272,6 @@ func _draw() -> void:
 			_seen[id] = _t
 		if en.is_in_group("jammer"):
 			continue   # 재머 = VEIL 맹점(§1). 마커 없음 — 밝은 본체+필드 링으로 직접 보인다
-		if _jammer_suppressing(en, jammers):
-			continue   # 재밍 구역 — 마커 소등(라이벌의 손). 필드 링이 이유를 보여준다.
 		# degradation 중 일부 위협은 VEIL이 영영 못 본다 = 요원이 직접 봐야 함 (역전의 실물)
 		if degraded and (id % 100) < BLIND_PCT:
 			continue
@@ -271,7 +279,9 @@ func _draw() -> void:
 		var col: Color = WARN if danger else CALM
 		# 등장 페이드인 — "방금 짚어진" 느낌
 		var appear: float = clamp((_t - float(_seen[id])) / FADE_IN, 0.0, 1.0)
-		var alpha_mul: float = appear
+		var alpha_mul: float = appear * (1.0 - jam)   # 재밍 깊을수록 마커 소거
+		if alpha_mul <= 0.01:
+			continue
 		if degraded:
 			var phase: float = float(id % 997) * 0.0131
 			# 주기의 ~45%는 VEIL이 못 봄 → 마커 꺼짐 (평시 대비 확실히 더 자주)
@@ -302,35 +312,6 @@ func _draw() -> void:
 		for k in _seen.keys():
 			if not alive.has(k):
 				_seen.erase(k)
-	# 재밍 구역 안이면 화면에 바이올렛 정적 — "여기선 VEIL 시야가 교란된다"를 체감시킨다(피드백: 마커만 꺼선 안 느껴짐).
-	_draw_jam_overlay(jammers, ppos, view)
-
-# 플레이어가 재머 반경 안일 때 화면 전체 바이올렛 정적/틴트. 강도 = 필드 깊이(중심일수록 강함).
-func _draw_jam_overlay(jammers: Array, ppos: Vector2, view: Vector2) -> void:
-	if jammers.is_empty():
-		return
-	var intensity: float = 0.0
-	for j in jammers:
-		var jn: Node2D = j as Node2D
-		var r: float = 340.0
-		if jn.has_method("jam_radius"):
-			r = jn.call("jam_radius")
-		intensity = max(intensity, clamp(1.0 - jn.global_position.distance_to(ppos) / r, 0.0, 1.0))
-	if intensity <= 0.01:
-		return
-	var vi: Color = RIVAL
-	# 전체 옅은 바이올렛 틴트
-	draw_rect(Rect2(Vector2.ZERO, view), Color(vi.r, vi.g, vi.b, 0.07 * intensity))
-	# 스캔라인 정적(흐르는 가로줄)
-	var n: int = 10
-	for i in range(n):
-		var yy: float = fmod(float(i) * (view.y / float(n)) + _t * 160.0, view.y)
-		var la: float = (0.05 + 0.06 * sin(_t * 30.0 + float(i))) * intensity
-		draw_line(Vector2(0, yy), Vector2(view.x, yy), Color(vi.r, vi.g, vi.b, clamp(la, 0.0, 0.2)), 1.0)
-	# 가끔 굵은 글리치 밴드
-	if fmod(_t * 0.7, 3.0) < 0.25:
-		var by: float = fmod(_t * 500.0, view.y)
-		draw_rect(Rect2(0, by, view.x, 14.0), Color(vi.r, vi.g, vi.b, 0.16 * intensity))
 
 func _draw_reticle(pos: Vector2, col: Color, danger: bool, appear: float) -> void:
 	# 등장 시 살짝 크게 시작해 수축 — 짚어지는 동작감.
