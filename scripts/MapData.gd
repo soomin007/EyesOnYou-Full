@@ -513,6 +513,7 @@ static func _ward() -> Dictionary:
 # 지면 → step → mid(서버 랙) → step → 상층(드론) 단계화로 도달성 보장.
 # waves 필드가 있으면 Stage._spawn_enemies가 웨이브 모드로 동작 (enemies는 폴백용).
 # 웨이브 트리거: w2=w1 절반 처치 후, w3=w2 전원 처치 후. 모두 처치 시 ENEMY_CLEAR.
+# 라이벌 VEIL: 최종 웨이브에 재머 1기(막3 s6 확산 — server_hall/control_corridor와 함께).
 static func _datacenter() -> Dictionary:
 	return {
 		"world_type":   "ARENA",
@@ -570,6 +571,12 @@ static func _datacenter() -> Dictionary:
 				"enemies": {
 					"bomber": [Vector2(600, 790.0), Vector2(1400, 790.0)],
 					"shield": [Vector2(960, 790.0)],
+					# 라이벌 VEIL 확산(§5·§6, 막3 s6) — server_hall 재머를 ARENA로 옮긴 새 쓰임새.
+					# 절정(근접 웨이브)에 우측 클러스터(shield@960·bomber@1400) 마커가 반경(340) 안에서
+					# 꺼지고 시야가 무너진다. 통과형 복도와 달리 여기선 못 지나치고 갇혀 싸우므로,
+					# ENEMY_CLEAR = 반드시 부숴야 클리어 → "우선 표적" 손맛이 강제된다. 좌측 bomber@600은
+					# 반경 밖이라 유지(비대칭 — 밝은 쪽/가려진 쪽). 막3=드물게(맵당 1기, §4.1 남발 금지).
+					"jammer": [Vector2(1080, 790.0)],
 				},
 			},
 		],
@@ -580,6 +587,7 @@ static func _datacenter() -> Dictionary:
 			"drone":  [Vector2(960, 200.0)],
 			"bomber": [Vector2(600, 790.0), Vector2(1400, 790.0)],
 			"shield": [Vector2(960, 790.0)],
+			"jammer": [Vector2(1080, 790.0)],
 		},
 		"rewards": {"xp_orbs": [], "hp_pickups": []},
 		"spikes": [],
