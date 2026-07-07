@@ -216,6 +216,8 @@ func _route_rival_info(rid: String) -> String:
 		parts.append("재머")
 	if not (layout.get("deceits", []) as Array).is_empty():
 		parts.append("위장 적")
+	if not (layout.get("feigns", []) as Array).is_empty():
+		parts.append("시선 거짓")
 	if not (layout.get("deceit_spikes", []) as Array).is_empty():
 		parts.append("위장 함정")
 	if rid == "route_lab":
