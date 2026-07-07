@@ -124,37 +124,111 @@ func _build_stage_row() -> HBoxContainer:
 		hb.add_child(b)
 	return hb
 
-# 루트 목록 — RouteData.ALL_ROUTES 전체(29종)를 스크롤 가능한 그리드로. 맵이 늘어도 자동 반영되고,
-# 세로로 길어져도 스크롤 박스 안에 갇혀 패널(및 "연습장 종료" 버튼)이 화면 밖으로 안 밀린다.
+# 루트 목록 — RouteData.ALL_ROUTES 전체를 **막(Act)별로 그룹화**해 스크롤 박스에 보인다.
+# 막 경계는 GameState.ACTS(act_for_stage) 단일 소스에서 파생 — 맵이 늘거나 막이 추가돼도 자동 정렬.
+# 라이벌 VEIL 요소(재머/위장/reveal)가 있는 맵은 바이올렛으로 강조 + 툴팁에 상세(사용자: "정돈해서 보여줘").
 func _build_route_section() -> HBoxContainer:
 	var hb := HBoxContainer.new()
 	hb.add_theme_constant_override("separation", 6)
-	hb.add_child(_make_row_label("루트"))
+	var lbl := _make_row_label("루트")
+	lbl.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	hb.add_child(lbl)
 	var sc := ScrollContainer.new()
-	sc.custom_minimum_size = Vector2(560, 122)
+	sc.custom_minimum_size = Vector2(560, 200)
 	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	sc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	var vb := VBoxContainer.new()
+	vb.add_theme_constant_override("separation", 8)
+	# 막별 버킷 — min_stage가 속한 막으로 분류. min_stage 없는 특수(도전방 등)는 별도.
+	var buckets: Array = []
+	for _i in GameState.ACTS.size():
+		buckets.append([])
+	var special: Array = []
+	for r in RouteData.ALL_ROUTES:
+		var route: Dictionary = r
+		if str(route.get("id", "")) == "":
+			continue
+		if not route.has("min_stage"):
+			special.append(route)
+			continue
+		var ai: int = GameState.act_for_stage(int(route.get("min_stage", 0)))
+		if ai >= 0 and ai < buckets.size():
+			buckets[ai].append(route)
+		else:
+			special.append(route)
+	# 각 막 섹션 — 헤더(막 이름 + 스테이지 범위) + 그 막 맵 그리드.
+	var acc: int = 0
+	for ai in GameState.ACTS.size():
+		var adef: Dictionary = GameState.ACTS[ai]
+		var s_from: int = acc + 1
+		acc += int(adef.get("stages", 0))
+		var s_to: int = acc
+		var header: String = "막%d · %s (스%d~%d)" % [ai + 1, str(adef.get("name", "")), s_from, s_to]
+		if not (buckets[ai] as Array).is_empty():
+			vb.add_child(_route_act_section(header, buckets[ai]))
+	if not special.is_empty():
+		vb.add_child(_route_act_section("특수 · 도전/서사", special))
+	sc.add_child(vb)
+	hb.add_child(sc)
+	return hb
+
+# 한 막 섹션 — 헤더 라벨 + 그 막에 속한 맵 버튼 그리드(5열).
+func _route_act_section(header: String, routes: Array) -> VBoxContainer:
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 4)
+	var h := Label.new()
+	h.text = header
+	h.add_theme_font_size_override("font_size", 12)
+	h.add_theme_color_override("font_color", Color(0.60, 0.70, 0.95))
+	col.add_child(h)
 	var grid := GridContainer.new()
 	grid.columns = 5
 	grid.add_theme_constant_override("h_separation", 6)
 	grid.add_theme_constant_override("v_separation", 6)
-	for r in RouteData.ALL_ROUTES:
+	for r in routes:
 		var route: Dictionary = r
 		var rid: String = str(route.get("id", ""))
-		if rid == "":
-			continue
 		var b := Button.new()
 		b.text = str(route.get("name", rid))
 		b.custom_minimum_size = Vector2(104, 28)
 		b.add_theme_font_size_override("font_size", 12)
 		b.clip_text = true
+		# 툴팁 — id·위험/보상·태그(+라이벌 요소). 이름만으론 안 보이는 정보.
+		var rival: String = _route_rival_info(rid)
+		var tip: String = "%s\nrisk %d · reward %d" % [rid, int(route.get("risk", 1)), int(route.get("reward", 1))]
+		if rival != "":
+			tip += "\n라이벌: " + rival
+			b.add_theme_color_override("font_color", Color(0.82, 0.60, 1.0))   # 라이벌 맵 = 바이올렛 강조
+			b.add_theme_color_override("font_hover_color", Color(0.90, 0.72, 1.0))
+		b.tooltip_text = tip
 		if GameState.current_route_id == rid:
 			b.disabled = true
 		b.pressed.connect(_on_route_pressed.bind(rid))
 		grid.add_child(b)
-	sc.add_child(grid)
-	hb.add_child(sc)
-	return hb
+	col.add_child(grid)
+	return col
+
+# 맵에 배치된 라이벌 VEIL 요소를 MapData 레이아웃에서 파생(단일 소스 — 새 배치도 자동 반영).
+func _route_rival_info(rid: String) -> String:
+	var layout: Dictionary = MapData.get_layout(rid)
+	var parts: Array = []
+	if _layout_has_jammer(layout):
+		parts.append("재머")
+	if not (layout.get("deceits", []) as Array).is_empty():
+		parts.append("위장 적")
+	if not (layout.get("deceit_spikes", []) as Array).is_empty():
+		parts.append("위장 함정")
+	if rid == "route_lab":
+		parts.append("SENTINEL reveal")
+	return " / ".join(parts)
+
+func _layout_has_jammer(layout: Dictionary) -> bool:
+	if not (layout.get("enemies", {}).get("jammer", []) as Array).is_empty():
+		return true
+	for w in layout.get("waves", []):
+		if not ((w as Dictionary).get("enemies", {}).get("jammer", []) as Array).is_empty():
+			return true
+	return false
 
 func _build_int_row(label_text: String, prop_name: String, cb: Callable) -> HBoxContainer:
 	var hb := HBoxContainer.new()
