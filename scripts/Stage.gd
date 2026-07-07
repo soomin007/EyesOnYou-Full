@@ -991,6 +991,40 @@ func _show_veil_subtitle(message: String, duration: float, plain_prefix: bool = 
 			l.queue_free()
 	)
 
+# §7 라이벌 VEIL 자막 — 내 VEIL(_show_veil_subtitle, 시안)과 시각적으로 구별. 바이올렛 + 화자 불명("?").
+# 라이벌은 다른 존재라 아직 "VEIL"로 이름 붙지 않는다(§2 정체는 막이 진행되며 한 겹씩 벗겨짐). 대사=플레이스홀더.
+func _show_rival_subtitle(message: String, duration: float) -> void:
+	SfxPlayer.play("veil_subtitle_in")
+	_ensure_subtitle_stack()
+	var l := Label.new()
+	l.text = "?   " + message
+	l.add_theme_font_size_override("font_size", 20)
+	l.add_theme_color_override("font_color", Color(0.80, 0.58, 1.0))   # 라이벌 바이올렛
+	l.add_theme_color_override("font_outline_color", Color(0.05, 0.0, 0.08))
+	l.add_theme_constant_override("outline_size", 4)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.07, 0.02, 0.11, 0.86)   # 어두운 바이올렛 pill
+	sb.set_corner_radius_all(7)
+	sb.border_color = Color(0.55, 0.30, 0.95, 0.85)
+	sb.set_border_width_all(1)
+	sb.content_margin_left = 18.0
+	sb.content_margin_right = 18.0
+	sb.content_margin_top = 8.0
+	sb.content_margin_bottom = 8.0
+	l.add_theme_stylebox_override("normal", sb)
+	l.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.modulate.a = 0.0
+	_subtitle_stack_box.add_child(l)
+	var tw := l.create_tween()
+	tw.tween_property(l, "modulate:a", 1.0, 0.35)
+	tw.tween_interval(duration)
+	tw.tween_property(l, "modulate:a", 0.0, 0.5)
+	tw.tween_callback(func() -> void:
+		if is_instance_valid(l):
+			l.queue_free()
+	)
+
 # 화면에 떠있는 모든 자막 일괄 폐기. ARCTURUS 문서 진입처럼 화면을 깨끗이 비워야
 # 하는 상황에서 호출. paused 동안 멈춘 fade-out이 outro 자막 위에 잔재로 남는 문제
 # 차단(사용자 보고).
@@ -3612,6 +3646,8 @@ var boss_self_destruct_layer: CanvasLayer = null
 var boss_self_destruct_label: Label = null
 var boss_self_destruct_timer_t: float = 0.0
 var boss_clear_dialogue_played: bool = false
+# §7 SENTINEL reveal — 라이벌 첫 발화 비트. 보스 처치 후 정적→라이벌→내 VEIL 동요가 끝나야 회수로 진행.
+var _sentinel_reveal_done: bool = false
 
 func _spawn_boss(boss_meta: Dictionary) -> void:
 	var btype: String = str(boss_meta.get("type", "sentinel"))
@@ -3629,6 +3665,8 @@ func _spawn_boss(boss_meta: Dictionary) -> void:
 	_build_boss_hp_bar()
 	# 보스전 진입 1회성 전투 안내 (피드백: 사격법 혼란). _spawn_boss는 보스당 1회만 호출돼 자연히 1회성.
 	_show_boss_alert("빨간 불빛이 번뜩이면 그 자리를 비켜요. 신호가 멎은 틈에 쏘면 돼요.", Color(0.95, 0.55, 0.55), 4.0)
+	# §7 복선 — 전투 중 가끔 거짓-렌더 tell과 똑같은 지직거림을 흘린다(1회차엔 못 잡고, reveal 후 재해석).
+	_start_boss_glitch_foreshadow()
 
 func _build_boss_hp_bar() -> void:
 	# 화면 상단 중앙 — 보스 HP 게이지. 12칸 단위로 표시.
@@ -3741,21 +3779,64 @@ func _on_boss_killed(at_position: Vector2) -> void:
 			var tw := holder.create_tween()
 			tw.tween_property(holder, "modulate:a", 0.0, 0.6)
 			tw.tween_callback(boss_hp_bar_layer.queue_free)
-	# DESIGN §2.10 보스 처치 대사. 한 호흡(처치 직후 몰아쉬는 한 마디)으로 보이게 multi-line으로.
-	# 막3 재배치(B2): 보스 처치 직후 = 핵심부 안에서 드라이브를 회수하는 비트(이어서 회수 문서 +
-	# 처리 선택). "서버실이 바로 앞" → "회수 비트"로 교정. 스토리 모드는 escape 단계가 뒤에 있음.
-	# 끝줄 "끝까지 같이 가요. 제가 보는 한." = 풀에서 뺀 안심 줄의 새 집(v3 §4). 엔딩에서
-	# 시야가 완전히 끊기며 이 다짐("제가 보는 한")이 회수된다. (문구는 플레이스홀더 — 사용자 검토.)
-	if GameState.is_replay_run():
-		# 다회차 — 클라이맥스에 설명 못 할 찜찜함(미래를 안다고 선언하지 않음). 상호 존대 유지.
-		if GameState.story_mode:
-			_show_veil_subtitle("처리됐어요.\n이상하게 마음이 놓이질 않아요. 이유는 모르겠어요.\n...드라이브, 여기 있어요. 회수해요.", 3.4)
-		else:
-			_show_veil_subtitle("처리됐어요.\n후련해야 하는데, 어쩐지 그렇지가 않네요.\n...드라이브부터 회수해요.", 3.4)
-	elif GameState.story_mode:
-		_show_veil_subtitle("처리됐어요, 요원.\n드라이브부터 회수해요.\n끝까지 같이 가요. 제가 보는 한.", 3.4)
-	else:
-		_show_veil_subtitle("처리됐어요, 요원.\n회수 대상이 바로 여기 있어요.\n끝까지 같이 가요. 제가 보는 한.", 3.4)
+	# §7 SENTINEL = 페이크 보스 reveal — "이긴 순간을 이긴 것 같지 않게". 예전 자신만만한 처치 대사
+	# ("처리됐어요, 회수해요") 대신, 정적 한 박자 → 라이벌 VEIL 첫 발화(§1 맹점의 실연) → 내 VEIL 동요.
+	# 승리 챔은 _begin_clear_sequence(lab)에서 억제되고, 회수(문서+처리선택)는 reveal이 끝난 뒤 이어진다.
+	# (BossSentinel은 §7대로 3막 페이크 보스로 잔류. 대사=플레이스홀더 §7 예시 — 사용자 검토/재작성.)
+	_play_sentinel_reveal()
+
+# §7 SENTINEL reveal 시퀀스 — 정적 → 라이벌 첫 발화(바이올렛, 화자 불명) → 내 VEIL 동요.
+# 완료 시 _sentinel_reveal_done을 켜, _begin_clear_sequence가 회수 단계로 넘어가도록 게이트한다.
+func _play_sentinel_reveal() -> void:
+	# 정적 한 박자 — stage_clear_chime은 lab에서 억제됨(보스 죽는 소리만 여운).
+	await get_tree().create_timer(1.2).timeout
+	# 라이벌 VEIL 첫 발화 — 내 VEIL 어조를 살짝 닮았으나 "얘 누구야?" (대사 플레이스홀더, §7 예시).
+	_show_rival_subtitle("수고했어요, 요원. ...그건 그냥 손이었어요.", 3.2)
+	await get_tree().create_timer(3.9).timeout
+	# 내 VEIL 동요 — §1 맹점 테마의 첫 실연("저는 못 봤어요"). (대사 플레이스홀더.)
+	_show_veil_subtitle("...방금 그거, 제가 아니에요.\n누가... 저는 못 봤어요.", 3.2)
+	await get_tree().create_timer(3.6).timeout
+	_sentinel_reveal_done = true
+
+# §7 복선 — 보스전 중 가끔(랜덤 간격) 거짓-렌더 tell과 같은 붉은-바이올렛 지직거림을 보스에 흘린다.
+# 처치 대사 시작(boss_clear_dialogue_played) 후엔 멈춘다. 타이머는 보스 자식이라 보스와 함께 free.
+func _start_boss_glitch_foreshadow() -> void:
+	if boss == null or not is_instance_valid(boss):
+		return
+	var timer := Timer.new()
+	timer.one_shot = false
+	timer.wait_time = randf_range(7.0, 12.0)
+	boss.add_child(timer)
+	timer.timeout.connect(func() -> void:
+		if boss == null or not is_instance_valid(boss) or boss_clear_dialogue_played:
+			return
+		_boss_glitch_flash()
+		timer.wait_time = randf_range(7.0, 12.0)
+	)
+	timer.start()
+
+# 짧은 붉은-바이올렛 지직거림 오버레이(거짓 렌더 tell과 같은 톤)를 보스 위에 잠깐 얹는다.
+# modulate 기반이 아니라 별도 오버레이 노드라 보스 피격/페이즈 플래시와 충돌하지 않는다(known_issues).
+func _boss_glitch_flash() -> void:
+	if boss == null or not is_instance_valid(boss):
+		return
+	var g := Node2D.new()
+	g.z_index = 40
+	g.global_position = (boss as Node2D).global_position
+	add_child(g)
+	for i in range(5):
+		var r := ColorRect.new()
+		var viol: bool = i % 2 == 0
+		r.color = Color(0.72, 0.42, 1.0, 0.42) if viol else Color(1.0, 0.20, 0.32, 0.46)
+		var ox: float = randf_range(-10.0, 10.0)
+		var oy: float = randf_range(-118.0, 10.0)
+		r.position = Vector2(-70.0 + ox, oy)
+		r.size = Vector2(140.0, randf_range(6.0, 13.0))
+		g.add_child(r)
+	var tw := g.create_tween()
+	tw.tween_interval(0.26)
+	tw.tween_property(g, "modulate:a", 0.0, 0.14)
+	tw.tween_callback(g.queue_free)
 
 # 이스터에그 — 황금 희귀 개체(shiny). 적 스폰당 확률·보너스 오브 가치.
 const SHINY_CHANCE: float = 0.015
@@ -4372,6 +4453,8 @@ func _begin_clear_sequence() -> void:
 	# 도전방은 별도 챔, 일반 stage clear는 stage_clear_chime.
 	if challenge_active and not challenge_failed:
 		SfxPlayer.play("challenge_clear")
+	elif GameState.current_route_id == "route_lab":
+		pass   # §7 SENTINEL reveal — 승리 챔 억제(한 박자 정적). 보스 죽는 소리만 여운으로 남긴다.
 	else:
 		SfxPlayer.play("stage_clear_chime")
 	GameState.restrict_combat_input = true
@@ -4408,6 +4491,13 @@ func _begin_clear_sequence() -> void:
 	# 여기서 대기.
 	while pending_levelup:
 		await get_tree().process_frame
+	# §7 SENTINEL reveal — 라이벌 첫 발화 시퀀스가 끝나야 회수(recovery/처리선택)로 넘어간다.
+	# (lab 전용. 다른 맵은 _sentinel_reveal_done을 안 봐 영향 없음.) guard = 소프트락 방지 상한.
+	if GameState.current_route_id == "route_lab":
+		var reveal_guard: float = 0.0
+		while not _sentinel_reveal_done and reveal_guard < 14.0:
+			await get_tree().process_frame
+			reveal_guard += get_process_delta_time()
 	GameState.restrict_combat_input = false
 	var leveled: bool = GameState.on_stage_clear()
 	# 보스(route_lab) 또는 최종 스테이지 클리어 후엔 위협 없는 마무리라 스킬 선택이 무의미 —
