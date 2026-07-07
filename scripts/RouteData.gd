@@ -17,9 +17,13 @@ extends RefCounted
 #   막2(잠입, s3~5) 팔레트 = **기계·함정 도입**(드론/폭격기/증기/포탑/레이저). 위협의 장치화 = 막2 정체성.
 #     램프 = s3 도입(risk2, 기계 입문) / s4 전개(ward ??? 복선 보장) / s5 고조(risk3 substation·relay + blackout
 #     도전 보장). risk3 맵은 막2 첫 stage(s3) 금지 — 문턱 직후 스파이크 방지.
-#   막3(진실·탈출, s6~8) = 선형 클라이맥스. s6 전투 풀(datacenter/server_hall/control_corridor + ??? 보장)
-#     / s7 lab 보스(단일) / s8 escape 탈출(단일). 시야 붕괴(VeilSight degradation)가 막3 고유 비트.
-#     ★후반 확장 시 라이벌 VEIL 첫 간섭의 씨앗 자리(rival_veil_concept.md, 5막 전제) — 현재는 미구현.
+#   ── 5막 재구조화(2026-07-07) ── 내부 스테이지(0-based):
+#   막3(핵심부, s6~8) = s6~7 전투 풀(datacenter/server_hall/control_corridor + ??? 보장, min6 max7) /
+#     s8 lab SENTINEL 페이크 보스(단일·배타). §7 reveal은 여기서. 처리선택 없이 막4로 계속.
+#   막4(추적, s9~11) = 기존 막2 기믹 맵 B그룹(추격·아레나·엄폐·리듬, min9 max12) — 후반 난이도 램프.
+#   막5(대면, s12~14) = s12 전투(B그룹) / s13 route_core_recovery 회수+처리선택(§8 이주, 단일·배타 —
+#     다음 A4에 라이벌 최종 보스가 여기 얹힘) / s14 escape 탈출(단일·배타·마지막). 시야붕괴 onset=막5(is_late_act).
+#     라이벌 VEIL: 재머·거짓 렌더 3타입(위장 적/함정/시선 거짓)이 막3 전투 풀에, reveal이 s8 lab에.
 
 const ALL_ROUTES: Array = [
 	{
@@ -59,8 +63,8 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		# 지상(rooftops) 직후 깊은 지하로 가는 게 어색해 stage 2 이후로 한정.
-		"min_stage": 2, "max_stage": 3,
+		# 지상(rooftops) 직후 깊은 지하로 가는 게 어색해 stage 2 이후로 한정. 5막: 막1(0-2) 안에 유지.
+		"min_stage": 2, "max_stage": 2,
 		"tags": ["근접전", "어두운_환경", "함정", "전투"],
 		"veil_comment": "지하로 빠지는 길이에요. 함정만 조심하면 빠르고 보상도 커요.",
 		"entry_comment": "아래로 내려가요. 통로 끝에 출구가 있어요. 발 밑 봐요.",
@@ -137,8 +141,8 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		# 막3 진입 전투(핵심부 직전, 시야붕괴 실연). server_hall·??? 와 함께 막3 전투 풀(s6).
-		"min_stage": 6, "max_stage": 6,
+		# 막3 진입 전투(핵심부 직전, 시야붕괴 실연). server_hall·control_corridor·??? 와 함께 막3 전투 풀(s6-7).
+		"min_stage": 6, "max_stage": 7,
 		"tags": ["전투", "드론", "원거리"],
 		"veil_comment": "데이터 센터예요. 드론·저격 동시에 와요. 한 번에 정리해야 빠져요.",
 		"entry_comment": "서버 랙이에요. 위에서 드론, 같은 층에서 저격.",
@@ -152,9 +156,10 @@ const ALL_ROUTES: Array = [
 		"reward": 2,
 		"hidden": false,
 		"unique": false,
-		# 막3 종착(s8) — 핵심부 lab 보스를 처치한 뒤 빠져나가는 마지막 길. 클리어=엔딩.
-		"min_stage": 8, "max_stage": 8,
-		"available_stages": [8],
+		# 막5 종착(s15=내부14) — 회수·처리선택 뒤 빠져나가는 마지막 길. 클리어=에필로그→엔딩.
+		# is_final_stage_done()가 마지막 스테이지를 escape로 인식하므로 반드시 TOTAL_STAGES-1(=14)에 배타 배치.
+		"min_stage": 14, "max_stage": 14,
+		"available_stages": [14],
 		"tags": ["우회", "은폐"],
 		"veil_comment": "비상 탈출로예요. 빨리 빠지면 그만큼 안전해요.",
 		"entry_comment": "조용한 길이에요. 멈추지 말고 빠지면 돼요.",
@@ -169,8 +174,9 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		# 막3 핵심부 보스(s7) — 보스 처치 후 데이터 회수·처리 선택(B2). 클리어 후 s8 탈출로 이어진다.
-		"min_stage": 7, "max_stage": 7,
+		# 막3 SENTINEL 페이크 보스(s9=내부8) — 5막: 처치 후 §7 reveal → 막4로 계속(회수/처리선택은 막5로 이주).
+		# 보스 스테이지라 배타 배치(다른 route가 이 인덱스에 겹치면 보스 우회 가능 — 소프트락/스킵 위험).
+		"min_stage": 8, "max_stage": 8,
 		"tags": ["전투", "드론", "밝은_환경"],
 		"veil_comment": "핵심부예요. 정면 돌파에 드론이 상시 순찰해요. 그만큼 크게 벌어요.",
 		"entry_comment": "핵심부에 들어왔어요. 거리 잘 잡아요.",
@@ -201,10 +207,10 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": true,
 		"unique": true,
-		# 막3 진입 전투 풀의 진실 분기(s6) — 정적 아카이브(VEIL-1 reveal). 클리어 시 truth_seen,
-		# 엔딩 직행 폐기 → s7 lab으로 진행(특수 '진실' 엔딩의 신호).
-		# s6 전투 맵이 3종 초과(control_corridor 추가)라, 진실 분기가 항상 선택 가능하도록 guaranteed.
-		"min_stage": 6, "max_stage": 6,
+		# 막3 진입 전투 풀의 진실 분기 — 정적 아카이브(VEIL-1 reveal). 클리어 시 truth_seen,
+		# 엔딩 직행 폐기 → 다음 스테이지로 진행(특수 '진실' 엔딩의 신호).
+		# 5막: 막3 전투 2스테이지(s6-7=내부6-7). 진실 분기가 항상 선택 가능하도록 첫 전투 스테이지에 guaranteed.
+		"min_stage": 6, "max_stage": 7,
 		"guaranteed_in_stages": [6],
 		"tags": ["우회", "정보"],
 		"veil_comment": "...저도 모르겠어요. 들어가실래요?",
@@ -219,8 +225,8 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		# 막3 진입 전투(핵심부 직전). datacenter·??? 와 함께 막3 전투 풀(s6).
-		"min_stage": 6, "max_stage": 6,
+		# 막3 진입 전투(핵심부 직전). datacenter·control_corridor·??? 와 함께 막3 전투 풀(s6-7).
+		"min_stage": 6, "max_stage": 7,
 		"tags": ["전투", "드론", "원거리"],
 		"veil_comment": "서버 복도예요. 드론이 위, 저격이 랙 위에. 랙을 엄폐로 쓰면서 빠져요.",
 		"entry_comment": "핵심부 직전이에요. 여기만 지나면... 조심해요.",
@@ -308,8 +314,8 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		# 막2 고조(난이도 램프) — risk3(저격+드론 동시). substation과 함께 s3 제외(문턱 직후 스파이크 방지).
-		"min_stage": 4, "max_stage": 5,
+		# 5막: 막4 추적(s10-12) + 막5 전투(s13). risk3 시설맵 B그룹 — 후반 막에 배치(난이도 램프).
+		"min_stage": 9, "max_stage": 12,
 		"tags": ["원거리", "드론", "노출", "전투"],
 		"veil_comment": "중계소예요. 저격이랑 드론이 동시에 와요. 엄폐 짧게, 빠르게.",
 		"entry_comment": "통신 중계기예요. 위아래로 사선이에요. 멈추지 말아요.",
@@ -351,8 +357,8 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		# 막3 전투 풀(s6) — datacenter/server_hall과 같은 통과형. ???(guaranteed)와 함께 선택.
-		"min_stage": 6, "max_stage": 6,
+		# 막3 전투 풀(s6-7) — datacenter/server_hall과 같은 통과형. ???(guaranteed)와 함께 선택.
+		"min_stage": 6, "max_stage": 7,
 		"tags": ["전투", "드론", "원거리"],
 		"veil_comment": "통제실 복도예요. 드론·저격 동시에. 핵심부가 코앞이에요.",
 		"entry_comment": "통제실 직전이에요. 사선 많아요. 엄폐 쓰면서 빠져요.",
@@ -408,8 +414,8 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		# 막2 이동 발판 기믹 맵 — s3(도입) 제외, 전개·고조(s4~5)에. 발판이 동선 주역(act_identity 2번 레버).
-		"min_stage": 4, "max_stage": 5,
+		# 5막: 막4/5 시설 기믹 맵(s9-12). 이동 발판이 동선 주역(act_identity 2번 레버).
+		"min_stage": 9, "max_stage": 12,
 		"tags": ["이동", "함정"],
 		"veil_comment": "화물 리프트예요. 발판이 움직여요. 가장자리에서 잠깐 멈출 때 올라타요. 서두르지 말아요.",
 		"entry_comment": "리프트가 왕복해요. 끝에서 멈출 때 타요. 밑은 스파이크예요. 타이밍이 전부예요.",
@@ -423,8 +429,8 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		# 막2 엄폐 기믹 맵 — risk3라 s3 금지, 전개·고조(s4~5)에. 부서지는 차량이 동선 주역(2번 레버).
-		"min_stage": 4, "max_stage": 5,
+		# 5막: 막4/5 시설 기믹 맵(s9-12). 부서지는 차량 엄폐가 동선 주역(2번 레버).
+		"min_stage": 9, "max_stage": 12,
 		"tags": ["원거리", "이동", "전투"],
 		"veil_comment": "차량 뒤에 붙어서 가요. 넘어갈 때만 저격에 걸려요. 엄폐가 총에 맞으면 부서져요. 머물지 말아요.",
 		"entry_comment": "정비 차량이 엄폐예요. 뒤에 붙으면 저격이 못 봐요. 넘을 때만 노출돼요. 차량은 영원하지 않아요.",
@@ -438,8 +444,8 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		# 막2 강제 전진 기믹 맵 — risk3라 s3 금지, 전개·고조(s4~5)에. 붕괴 벽(추격)이 동선 주역.
-		"min_stage": 4, "max_stage": 5,
+		# 5막: 막4 추적에 어울리는 강제 전진(추격) 기믹 맵(s9-12). 붕괴 벽이 동선 주역.
+		"min_stage": 9, "max_stage": 12,
 		"tags": ["이동", "노출"],
 		"veil_comment": "뒤가 무너져요. 멈추지 말아요. 잔해는 넘고, 계속 앞으로.",
 		"entry_comment": "구조가 버티질 못해요. 붕괴가 따라와요. 멈추면 삼켜져요. 앞으로만.",
@@ -453,8 +459,8 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		# 막2 아레나 방어 기믹 맵 — risk3라 s3 금지, 전개·고조(s4~5)에. 지켜야 할 코어가 동선 주역(2번 레버).
-		"min_stage": 4, "max_stage": 5,
+		# 5막: 막4/5 아레나 방어 기믹 맵(s9-12). 지켜야 할 코어가 동선 주역(2번 레버).
+		"min_stage": 9, "max_stage": 12,
 		"tags": ["전투", "원거리"],
 		"veil_comment": "중앙 코어를 지켜요. 적이 코어 곁에 오래 머물면 코어가 깎여요. 넘어오는 걸 밀어내고 자리를 지켜요.",
 		"entry_comment": "코어 방어예요. 적이 코어 구역에 들어오면 코어가 버티질 못해요. 몰려드는 걸 막고 다 정리하면 끝나요.",
@@ -468,8 +474,8 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		# 막2 쓸어내는(리듬) 기믹 맵 — risk3라 s3 금지, 전개·고조(s4~5)에. 스캔 빔 리듬 회피가 동선 주역.
-		"min_stage": 4, "max_stage": 5,
+		# 5막: 막4/5 쓸어내는(리듬) 기믹 맵(s9-12). 스캔 빔 리듬 회피가 동선 주역.
+		"min_stage": 9, "max_stage": 12,
 		"tags": ["이동", "노출"],
 		"veil_comment": "스캔이 통로를 훑어요. 빔이 올 때 차폐 안에 있어요. 지나가면 다음으로. 리듬을 타요.",
 		"entry_comment": "감시 빔이 쓸어요. 빔이 지날 땐 사각에 숨어요. 지나가면 움직여요. 갭에서 멈추면 노출돼요.",
@@ -483,12 +489,29 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		# 막2 부서지는 엄폐 농성(pop-and-shoot) 기믹 맵 — risk3라 s3 금지, 전개·고조(s4~5)에.
-		"min_stage": 4, "max_stage": 5,
+		# 5막: 막4/5 부서지는 엄폐 농성(pop-and-shoot) 기믹 맵(s9-12).
+		"min_stage": 9, "max_stage": 12,
 		"tags": ["전투", "근접"],
 		"veil_comment": "바리케이드 뒤에서 버텨요. 몸을 내밀어 쏘고 다시 숨어요. 엄폐는 갉여요. 부서지기 전에 정리해요.",
 		"entry_comment": "저지선이에요. 밀려와요. 엄폐 뒤에서 쏘고 숨어요. 포탑이 엄폐를 갉아요. 오래 못 버텨요.",
 		"stage_color": Color(0.13, 0.10, 0.09),
+	},
+	{
+		"id": "route_core_recovery",
+		"name": "핵심 회수",
+		"description": "시설 심장부. 목표 드라이브가 실제로 있는 곳. 회수하고 처리를 정한다.",
+		"risk": 3,
+		"reward": 3,
+		"hidden": false,
+		"unique": false,
+		# 막5 회수 스테이지(s14=내부13) — 전투 통과 후 회수 문서 + 처리 선택(B2, 막3서 이주). Stage가
+		# route id로 트리거. 다음(A4)에 라이벌 최종 보스가 여기 얹힘(SENTINEL이 lab에 얹힌 것과 동형).
+		# 배타 배치(다른 route가 겹치면 엔드게임 우회 가능).
+		"min_stage": 13, "max_stage": 13,
+		"tags": ["전투", "드론", "밝은_환경"],
+		"veil_comment": "드라이브가 여기 있어요. 회수하고, 어떻게 할지 정해요.",
+		"entry_comment": "심장부예요. 회수 대상이 바로 앞이에요.",
+		"stage_color": Color(0.20, 0.16, 0.20),
 	},
 ]
 

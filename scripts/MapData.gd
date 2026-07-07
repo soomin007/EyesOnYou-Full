@@ -35,6 +35,7 @@ static func get_layout(route_id: String) -> Dictionary:
 		"route_datacenter": return _datacenter()
 		"route_escape":     return _escape()
 		"route_lab":        return _lab()
+		"route_core_recovery": return _core_recovery()
 		"route_hidden":     return _hidden()
 		"route_blackout":   return _blackout()
 		"route_server_hall": return _server_hall()
@@ -760,7 +761,7 @@ static func _hidden() -> Dictionary:
 
 # ─── 12. 서버 복도 (HORIZONTAL, 막3 전투 — 핵심부 직전) ────────────────
 # A2 신규 맵. datacenter(ARENA 웨이브)와 달리 긴 통과형 복도 — 드론·저격을 랙(발판)으로
-# 엄폐하며 빠져나간다. 막3 onset(시야붕괴)이 여기서 켜질 수 있다(is_late_act).
+# 엄폐하며 빠져나간다. (5막: 막3=핵심부. 시야붕괴 onset은 이제 막5 is_late_act — 여기선 재머+거짓렌더 담당.)
 static func _server_hall() -> Dictionary:
 	return {
 		"world_type":   "HORIZONTAL",
@@ -1138,6 +1139,39 @@ static func _control_corridor() -> Dictionary:
 		"rewards": {
 			"xp_orbs":    [Vector2(2060, 440.0), Vector2(3060, 438.0), Vector2(3600, 440.0)],
 			"hp_pickups": [Vector2(1080, 440.0)],
+		},
+		"spikes": [],
+	}
+
+# ─── 24. 핵심 회수 (HORIZONTAL, 막5 s13) — 드라이브 회수 직전 마지막 접근 ──
+# 5막 엔드게임 진입. 통과(POSITION)하면 Stage가 회수 문서 + 처리 선택(DisposalChoiceOverlay)을 띄운다
+# (route_core_recovery id로 트리거, 막3 lab서 이주). 라이트 전투. 다음(A4)에 라이벌 최종 보스가 여기 얹힘.
+# NOTE(골격): 시그니처 배경은 후속(라이벌 보스룸 확정 시) — 현재는 실내 backdrop 재사용.
+static func _core_recovery() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(3200.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(3080.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"platforms": [
+			{"pos": Vector2(600, 470),  "w": 220.0},
+			{"pos": Vector2(1100, 470), "w": 200.0},
+			{"pos": Vector2(1600, 470), "w": 220.0},
+			{"pos": Vector2(2100, 470), "w": 200.0},
+			{"pos": Vector2(2600, 470), "w": 220.0},
+			{"pos": Vector2(1350, 560), "w": 120.0},
+		],
+		"enemies": {
+			"patrol": [Vector2(900, 600.0), Vector2(2200, 600.0)],
+			"sniper": [Vector2(1600, 438.0)],
+			"drone":  [Vector2(2100, 180.0)],
+			"bomber": [], "shield": [],
+		},
+		"rewards": {
+			"xp_orbs":    [Vector2(1600, 440.0), Vector2(2600, 440.0)],
+			"hp_pickups": [Vector2(2100, 440.0)],
 		},
 		"spikes": [],
 	}

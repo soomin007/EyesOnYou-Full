@@ -9,19 +9,22 @@ signal skills_changed
 const PAD_AXIS_DEADZONE: float = 0.4
 var last_input_kind: String = "kb"  # "kb" | "pad"
 
-const TOTAL_STAGES: int = 9   # A2: 막1·2=3 + 막3=전투 2(datacenter/server_hall) + 종착 1. ACTS 합과 일치.
-# 막(Act) 정의 — 가변 개수. 본편 확장(A2~)은 ACTS에 막을 추가하거나 막당 stages를 늘려 진행.
-# 불변식: 각 막 stages 합 == TOTAL_STAGES. boss != "" 이면 막 끝 보스 스테이지(A4 전까지 빈 슬롯).
+const TOTAL_STAGES: int = 15   # 5막 골격(2026-07-07): 각 막 3스테이지 × 5 = 15. ACTS 합과 일치.
+# 막(Act) 정의 — 가변 개수. 5막 재구조화(rival_veil_concept §6·§11 골격): 침투/잠입/핵심부(SENTINEL)/
+# 추적/대면(회수·처리·탈출). 불변식: 각 막 stages 합 == TOTAL_STAGES. boss 필드는 문서용(스폰은 MapData 구동).
+# 내부 스테이지(0-based): 막1 0-2 / 막2 3-5 / 막3 6-7 전투+8 SENTINEL(lab) / 막4 9-11 / 막5 12 전투+13 회수+14 탈출.
 const ACTS: Array = [
-	{"id": "act1", "name": "침투", "bgm": "early",      "stages": 3, "boss": ""},
-	{"id": "act2", "name": "잠입", "bgm": "mid_late",   "stages": 3, "boss": ""},
-	{"id": "act3", "name": "진실·탈출", "bgm": "boss",   "stages": 3, "boss": ""},
+	{"id": "act1", "name": "침투",   "bgm": "early",    "stages": 3, "boss": ""},
+	{"id": "act2", "name": "잠입",   "bgm": "mid_late", "stages": 3, "boss": ""},
+	{"id": "act3", "name": "핵심부", "bgm": "boss",     "stages": 3, "boss": "sentinel"},
+	{"id": "act4", "name": "추적",   "bgm": "mid_late", "stages": 3, "boss": ""},
+	{"id": "act5", "name": "대면",   "bgm": "boss",     "stages": 3, "boss": ""},
 ]
 const SCORE_THRESHOLD: int = 4
 const SETTINGS_PATH: String = "user://settings.cfg"
 # 런 진행 저장(이어하기) — 설정과 분리한 별도 파일. 웹에선 user://가 브라우저 IndexedDB에 영속.
 const RUN_PATH: String = "user://run.cfg"
-const RUN_VERSION: int = 3  # 3: 막3 흐름 재배치(전투 s6 / lab 보스 s7 / 탈출 s8) + truth_seen — 구 run.cfg 무효화
+const RUN_VERSION: int = 4  # 4: 5막 재구조화(15스테이지 / 엔드게임 막5 이주) — 구 run.cfg(v3, 9스테이지) 무효화
 # 플레이 피드백 설문(구글 폼). 타이틀·크레딧 끝 메뉴의 "피드백 보내기"가 연다.
 const FEEDBACK_URL: String = "https://forms.gle/byS8EABJitB9r6z88"
 const KEYBIND_ACTIONS: Array[String] = ["move_left", "move_right", "jump", "attack", "dash", "skill", "pause"]

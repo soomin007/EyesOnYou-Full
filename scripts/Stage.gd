@@ -4514,7 +4514,7 @@ func _begin_clear_sequence() -> void:
 	var leveled: bool = GameState.on_stage_clear()
 	# 보스(route_lab) 또는 최종 스테이지 클리어 후엔 위협 없는 마무리라 스킬 선택이 무의미 —
 	# 카드를 건너뛰고 보스 처치 대사/엔딩(서사 비트)이 보상을 대신한다(사용자 피드백 "1+3").
-	var skip_card: bool = GameState.current_route_id == "route_lab" or GameState.is_final_stage_done()
+	var skip_card: bool = GameState.current_route_id == "route_lab" or GameState.current_route_id == "route_core_recovery" or GameState.is_final_stage_done()
 	if leveled and not skip_card:
 		pending_levelup = true
 		get_tree().paused = true
@@ -4545,13 +4545,16 @@ func _on_clear_levelup_picked(_picked_id: String) -> void:
 	_transition_after_clear()
 
 func _transition_after_clear() -> void:
-	# 막3 핵심부(lab): 보스 처치 후 데이터 회수 연출 + 진실 reveal + 처리 선택(B2). 선택 후 다음 스테이지(탈출)로.
-	if GameState.current_route_id == "route_lab":
+	# 5막 엔드게임(§8 이주): 데이터 회수 연출 + 처리 선택(B2)은 막5 회수 스테이지(route_core_recovery)에서.
+	# 스토리 모드는 5스테이지 골격이라 예전대로 보스(lab) 직후에 유지(별도 회수 스테이지 없음).
+	var is_recovery_stage: bool = GameState.current_route_id == "route_core_recovery"
+	var story_boss: bool = GameState.story_mode and GameState.current_route_id == "route_lab"
+	if is_recovery_stage or story_boss:
 		_play_lab_recovery_and_disposal()
 		return
+	# 메인 SENTINEL(route_lab, 막3): §7 reveal은 처치 시 재생됨 → 처리선택 없이 다음 막(추적)으로 계속.
 	if GameState.is_final_stage_done():
-		# 막3 재배치 후 최종 스테이지 = 탈출(escape, 양 모드 공통). 엔딩별 에필로그 1챕터를 거쳐
-		# 엔딩으로 잇는다(???는 더 이상 최종 스테이지가 아니므로 분기 불필요).
+		# 최종 스테이지 = 탈출(escape, 양 모드 공통). 엔딩별 에필로그 1챕터를 거쳐 엔딩으로 잇는다.
 		_play_final_epilogue()
 	else:
 		get_tree().change_scene_to_file(SceneRouter.BRIEFING)
