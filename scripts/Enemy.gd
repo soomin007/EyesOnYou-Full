@@ -15,6 +15,9 @@ enum BomberState { ROAMING, STALKING, ARMING }
 # §4 거짓 렌더(rival_veil_concept) — >=0이면 이 EnemyType처럼 위장 렌더한다. 참 종류·hp·행동 = enemy_type.
 # Stage 스폰(deceits)이 set. 근접/텔레그래프 시 리빌(지직거림 tell → 참 모습). 신뢰가 리빌을 앞당김.
 @export var disguise_as: int = -1
+# §4 거짓 렌더 — 시선 거짓(딴 데 보는 척 기습). true면 patrol이 각성을 숨기고 정지·플레이어 반대로
+# 응시하다(안전해 보임) 근접(FEIGN_AMBUSH_RANGE) 시 홱 돌아 기습(압축 텔레그래프→돌진). Stage(feigns)가 set.
+@export var feign_ambush: bool = false
 
 const GRAVITY: float = 1400.0
 const TOUCH_DAMAGE: int = 1
@@ -32,6 +35,7 @@ const PATROL_RECOVERY: float = 1.0
 # 사용자 피드백: 돌진이 메인이라 거의 항상 돌진으로 가도록 — DETECT 260의 92% 지점.
 # 사격 윈도우는 240~260px 좁게 남겨두어 가끔 한두 발만 쏘게.
 const PATROL_CHARGE_RANGE: float = 240.0
+const FEIGN_AMBUSH_RANGE: float = 170.0   # §4 시선 거짓 — 이 거리 안으로 접근하면 각성(홱 돌아 기습)
 const PATROL_FIRE_INTERVAL: float = 1.5
 const PATROL_FIRE_AIM_TIME: float = 0.7  # 2026-06-06 사용자 피드백 — 1.0은 너무 느슨. 0.7로 살짝 조여 인식/반응을 빠르게 (Sniper와 동일). 여전히 텔레그래프 인지 + 회피 윈도우는 남김.
 # 사격은 비슷한 높이의 표적에만 — 높이 차가 이보다 크면 사격 안 함(2026-06-14). 감시탑 입구처럼
@@ -154,6 +158,7 @@ var encountered: bool = false
 var visual: Node2D
 var _disguised: bool = false   # §4 거짓 렌더로 위장 중인가
 var _glitch: Node2D = null     # 지직거림 tell 노드(위장/거짓 렌더 공용)
+var _feigning: bool = false    # §4 시선 거짓 — 각성을 숨긴 채 딴 데 보는 척 중인가
 # 이스터에그 — 황금 희귀 개체(shiny). Stage._spawn_enemy가 낮은 확률로 켠다. 처치 시 보너스 XP.
 # 색은 visual/self modulate가 텔레그래프·피격 플래시로 흰색 리셋되므로, 독립된 오라 자식으로 표현.
 var shiny: bool = false
@@ -285,6 +290,15 @@ func _ready() -> void:
 		g.z_index = 3
 		add_child(g)
 		_glitch = g
+	# §4 거짓 렌더 — 시선 거짓(딴 데 보는 척 기습). patrol 전용, 위장(_disguised)과 배타(한 적이 종류와
+	# 각성을 동시에 속이면 과함 §4.1). 각성을 숨긴 채 정지·응시하다 근접 시 홱 기습. 지직거림 tell 공유.
+	if feign_ambush and enemy_type == EnemyType.PATROL and not _disguised:
+		_feigning = true
+		var fg := _GlitchTell.new()
+		fg.owner_ref = self
+		fg.z_index = 3
+		add_child(fg)
+		_glitch = fg
 	fire_timer = _sniper_interval()
 	drone_bomb_cd = 1.2  # 스폰 직후 즉시 폭격 방지
 	if shiny:
@@ -428,6 +442,25 @@ func _reveal_disguise() -> void:
 		_glitch.queue_free()
 		_glitch = null
 
+# §4 시선 거짓 — 각성: 딴 데 보는 척을 풀고 홱 돌아 기습(압축 텔레그래프→돌진). tell 제거 + 언마스크.
+func _spring_feign_ambush(p: Node2D) -> void:
+	if not _feigning:
+		return
+	_feigning = false
+	dir = 1 if p.global_position.x > global_position.x else -1   # 홱 돌아 플레이어 향함
+	velocity.x = 0.0
+	_reveal_feign()
+	patrol_state = PatrolState.TELEGRAPH
+	patrol_state_timer = _telegraph_time() * 0.5   # 압축 텔레그래프(기습 — 일반 돌진보다 짧게)
+
+func _reveal_feign() -> void:
+	modulate = Color(1.8, 1.4, 1.9)
+	create_tween().tween_property(self, "modulate", Color(1, 1, 1), 0.2)
+	SfxPlayer.play_at("bestiary_first_seen", global_position)
+	if _glitch != null:
+		_glitch.queue_free()
+		_glitch = null
+
 func _physics_process(delta: float) -> void:
 	if dead or not is_inside_tree():
 		return
@@ -486,6 +519,17 @@ func _tick_patrol(delta: float) -> void:
 		velocity.y = 0.0
 
 	var p := _find_player()
+
+	# §4 시선 거짓 — 딴 데 보는 척: 각성을 숨긴 채 정지하고 플레이어 반대로 응시(안전해 보임).
+	# 근접(FEIGN_AMBUSH_RANGE)하면 홱 돌아 기습. 지직거림 tell이 항상 켜져 있어 fair(주의하면 알아챔).
+	if _feigning:
+		velocity.x = 0.0
+		if p != null:
+			_flip_visual(p.global_position.x > global_position.x)   # 플레이어 반대(딴 데 봄)
+			if global_position.distance_to(p.global_position) <= FEIGN_AMBUSH_RANGE:
+				_spring_feign_ambush(p)
+		move_and_slide()
+		return
 
 	match patrol_state:
 		PatrolState.ROAMING:
