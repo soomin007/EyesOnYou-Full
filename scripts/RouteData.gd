@@ -314,8 +314,8 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		# 5막: 막4 추적(s10-12) + 막5 전투(s13). risk3 시설맵 B그룹 — 후반 막에 배치(난이도 램프).
-		"min_stage": 9, "max_stage": 12,
+		# 막4 램프 s10 전개~막5 s12(act_identity §6): 저격·드론·재머 복합 — s9 도입 금지.
+		"min_stage": 10, "max_stage": 12,
 		"tags": ["원거리", "드론", "노출", "전투"],
 		"veil_comment": "중계소예요. 저격이랑 드론이 동시에 와요. 엄폐 짧게, 빠르게.",
 		"entry_comment": "통신 중계기예요. 위아래로 사선이에요. 멈추지 말아요.",
@@ -414,8 +414,8 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		# 5막: 막4/5 시설 기믹 맵(s9-12). 이동 발판이 동선 주역(act_identity 2번 레버).
-		"min_stage": 9, "max_stage": 12,
+		# 막4 램프 s9-10 도입(act_identity §6): 전투 최소 타이밍 학습 — 막4의 순한 문.
+		"min_stage": 9, "max_stage": 10,
 		"tags": ["이동", "함정"],
 		"veil_comment": "화물 리프트예요. 발판이 움직여요. 가장자리에서 잠깐 멈출 때 올라타요. 서두르지 말아요.",
 		"entry_comment": "리프트가 왕복해요. 끝에서 멈출 때 타요. 밑은 스파이크예요. 타이밍이 전부예요.",
@@ -429,8 +429,8 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		# 5막: 막4/5 시설 기믹 맵(s9-12). 부서지는 차량 엄폐가 동선 주역(2번 레버).
-		"min_stage": 9, "max_stage": 12,
+		# 막4 램프 s10 전개~막5 s12(act_identity §6): 저격 레이스 — 재머 금지 맵(블라인드 unfair).
+		"min_stage": 10, "max_stage": 12,
 		"tags": ["원거리", "이동", "전투"],
 		"veil_comment": "차량 뒤에 붙어서 가요. 넘어갈 때만 저격에 걸려요. 엄폐가 총에 맞으면 부서져요. 머물지 말아요.",
 		"entry_comment": "정비 차량이 엄폐예요. 뒤에 붙으면 저격이 못 봐요. 넘을 때만 노출돼요. 차량은 영원하지 않아요.",
@@ -444,8 +444,8 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		# 5막: 막4 추적에 어울리는 강제 전진(추격) 기믹 맵(s9-12). 붕괴 벽이 동선 주역.
-		"min_stage": 9, "max_stage": 12,
+		# 막4 램프 s11 고조~막5 s12(act_identity §6): 추격 절정 — 막4 "추적"의 시그니처. 재머 금지.
+		"min_stage": 11, "max_stage": 12,
 		"tags": ["이동", "노출"],
 		"veil_comment": "뒤가 무너져요. 멈추지 말아요. 잔해는 넘고, 계속 앞으로.",
 		"entry_comment": "구조가 버티질 못해요. 붕괴가 따라와요. 멈추면 삼켜져요. 앞으로만.",
@@ -459,8 +459,8 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		# 5막: 막4/5 아레나 방어 기믹 맵(s9-12). 지켜야 할 코어가 동선 주역(2번 레버).
-		"min_stage": 9, "max_stage": 12,
+		# 막5 전투 s12 전용(act_identity §7): "코어 방어" 직후 s13 "코어 회수" — 서사 랠리.
+		"min_stage": 12, "max_stage": 12,
 		"tags": ["전투", "원거리"],
 		"veil_comment": "중앙 코어를 지켜요. 적이 코어 곁에 오래 머물면 코어가 깎여요. 넘어오는 걸 밀어내고 자리를 지켜요.",
 		"entry_comment": "코어 방어예요. 적이 코어 구역에 들어오면 코어가 버티질 못해요. 몰려드는 걸 막고 다 정리하면 끝나요.",
@@ -474,8 +474,8 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		# 5막: 막4/5 쓸어내는(리듬) 기믹 맵(s9-12). 스캔 빔 리듬 회피가 동선 주역.
-		"min_stage": 9, "max_stage": 12,
+		# 막4 램프 s9-11(act_identity §6): 리듬 스텔스 — risk3이나 적 2뿐(전투 스파이크 아님)이라 s9 허용.
+		"min_stage": 9, "max_stage": 11,
 		"tags": ["이동", "노출"],
 		"veil_comment": "스캔이 통로를 훑어요. 빔이 올 때 차폐 안에 있어요. 지나가면 다음으로. 리듬을 타요.",
 		"entry_comment": "감시 빔이 쓸어요. 빔이 지날 땐 사각에 숨어요. 지나가면 움직여요. 갭에서 멈추면 노출돼요.",
@@ -489,8 +489,8 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		# 5막: 막4/5 부서지는 엄폐 농성(pop-and-shoot) 기믹 맵(s9-12).
-		"min_stage": 9, "max_stage": 12,
+		# 막4 램프 s11 고조~막5 s12(act_identity §6): 발각 농성 + FINAL WAVE 재머.
+		"min_stage": 11, "max_stage": 12,
 		"tags": ["전투", "근접"],
 		"veil_comment": "바리케이드 뒤에서 버텨요. 몸을 내밀어 쏘고 다시 숨어요. 엄폐는 갉여요. 부서지기 전에 정리해요.",
 		"entry_comment": "저지선이에요. 밀려와요. 엄폐 뒤에서 쏘고 숨어요. 포탑이 엄폐를 갉아요. 오래 못 버텨요.",

@@ -1012,6 +1012,10 @@ static func _relay_station() -> Dictionary:
 			"drone":  [Vector2(1300, 230.0), Vector2(2100, 240.0), Vector2(2900, 230.0)],
 			"bomber": [],
 			"shield": [],
+			# 막4 재머 흔해짐(act_identity §6) — 통신 중계소에 교란 장치(서사 정합). server_hall 패턴:
+			# 후반 클러스터(sniper@2560·drone@2900·patrol@2400) 마커가 반경(340) 안에서 꺼진다.
+			# 전반(sniper@1560·drone@1300/2100)은 마커 유지 — 앞은 밝고 뒤는 깜깜(비대칭, fair).
+			"jammer": [Vector2(2700, 600.0)],
 		},
 		"rewards": {
 			"xp_orbs":    [Vector2(1080, 410.0), Vector2(2060, 410.0), Vector2(3040, 440.0)],
@@ -1146,7 +1150,7 @@ static func _control_corridor() -> Dictionary:
 # ─── 24. 핵심 회수 (HORIZONTAL, 막5 s13) — 드라이브 회수 직전 마지막 접근 ──
 # 5막 엔드게임 진입. 통과(POSITION)하면 Stage가 회수 문서 + 처리 선택(DisposalChoiceOverlay)을 띄운다
 # (route_core_recovery id로 트리거, 막3 lab서 이주). 라이트 전투. 다음(A4)에 라이벌 최종 보스가 여기 얹힘.
-# NOTE(골격): 시그니처 배경은 후속(라이벌 보스룸 확정 시) — 현재는 실내 backdrop 재사용.
+# 시그니처 배경 = Stage._ambience_core_recovery(심장부 수렴 — 격벽 아치·데이터 펄스·코어 글로우).
 static func _core_recovery() -> Dictionary:
 	return {
 		"world_type":   "HORIZONTAL",
@@ -1476,6 +1480,10 @@ static func _core_defense() -> Dictionary:
 					"patrol": [Vector2(220, 790.0), Vector2(1700, 790.0)],
 					"sniper": [Vector2(1660, 530.0)],
 					"drone":  [Vector2(960, 220.0)],
+					# 막5 s12 절정(act_identity §7) — 코어 방어 최고조에서 좌측 시야가 꺼진다. dome 밖
+					# (x480 < dome 좌측 600)이라 코어는 안 깎고, 좌측 진입로(스폰 220~600 구간) 마커만 소등.
+					# 우측은 밝게 유지(비대칭, fair). ENEMY_CLEAR라 반드시 처치("우선 표적").
+					"jammer": [Vector2(480, 790.0)],
 				},
 			},
 		],
@@ -1486,6 +1494,7 @@ static func _core_defense() -> Dictionary:
 			"drone":  [Vector2(960, 220.0)],
 			"bomber": [Vector2(200, 790.0), Vector2(1720, 790.0)],
 			"shield": [Vector2(1720, 790.0)],
+			"jammer": [Vector2(480, 790.0)],
 		},
 		"rewards": {
 			# dome 밖 발판 위 소량 보상(코어 곁을 오래 비우지 않게 dome 근처엔 안 둠).
@@ -1525,6 +1534,9 @@ static func _scanner_sweep() -> Dictionary:
 		"enemies": {
 			"patrol": [Vector2(1120, 540.0), Vector2(2440, 540.0)],
 			"sniper": [], "drone": [], "bomber": [], "shield": [],
+			# 막4 재머 흔해짐(act_identity §6) — 후반 니치(3100) 오염: 대피처에 서면 시야가 꺼진다.
+			# 빔 rest 동안 니치 안에서 부술 수 있어(HP3) fair. 마지막 니치(3520)는 반경(340) 밖 = 탈출구.
+			"jammer": [Vector2(3100, 540.0)],
 		},
 		"rewards": {
 			# 갭(노출 구간)의 xp = 빔 리듬을 타야 회수 / 니치(1780) 안 hp = 안전 회복.
@@ -1592,6 +1604,10 @@ static func _holdout() -> Dictionary:
 					"shield": [Vector2(960, 790.0)],
 					"patrol": [Vector2(180, 790.0), Vector2(1740, 790.0)],
 					"sniper": [Vector2(340, 490.0), Vector2(1580, 490.0)],
+					# 막4 재머 흔해짐(act_identity §6) — datacenter 패턴(절정 웨이브 교란). 우측 바리케이드
+					# (1180·1450) 구간과 우측 저격(1580) 마커가 반경(340) 안에서 꺼진다 — 우측 pop이 블라인드.
+					# 좌측(340·740)은 반경 밖 유지(비대칭, fair). ENEMY_CLEAR라 반드시 처치("우선 표적").
+					"jammer": [Vector2(1240, 790.0)],
 				},
 			},
 		],
@@ -1602,6 +1618,7 @@ static func _holdout() -> Dictionary:
 			"sniper": [Vector2(340, 490.0), Vector2(1580, 490.0)],
 			"shield": [Vector2(960, 790.0)],
 			"drone":  [],
+			"jammer": [Vector2(1240, 790.0)],
 		},
 		"rewards": {
 			# 안쪽 엄폐 뒤(안전) xp / 중앙 뒤 hp — 거점을 오래 비우지 않게 중앙 근처에.

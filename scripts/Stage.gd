@@ -1129,6 +1129,9 @@ func _build_background() -> void:
 	if _ienv != "":
 		_build_indoor_backdrop(_ienv)
 		return
+	# 핵심 회수는 자체 완결 배경(_ambience_core_recovery) — 최심부에 도시 스카이라인은 모순.
+	if GameState.current_route_id == "route_core_recovery":
+		return
 	var rng := RandomNumberGenerator.new()
 	rng.seed = GameState.current_stage * 7919 + 13
 	# 후경 — 멀리, 어두움
@@ -2414,6 +2417,162 @@ func _build_route_ambience() -> void:
 			_ambience_scanner()
 		"route_holdout":
 			_ambience_holdout()
+		"route_core_recovery":
+			_ambience_core_recovery()
+	_apply_act_rival_tint()
+
+# ─── 막4/5 라이벌 침식 — 고유색(바이올렛 캐스트) + 가끔 화면 간섭 플래시 (act_identity §6·§7) ───
+# 막4(추적)부터 라이벌이 렌더를 만지기 시작한다: 월드 전체에 옅은 바이올렛 캐스트(CanvasModulate —
+# HUD·자막은 CanvasLayer라 무관) + 드물게 화면 간섭 밴드. 거짓-렌더 tell(대상 지정·붉은 혼합)과 달리
+# 화면 전체·바이올렛 단독이라 구별된다. 막5(대면)는 캐스트·빈도 모두 강화. 막1~3은 깨끗(대비 좌표).
+func _apply_act_rival_tint() -> void:
+	if GameState.story_mode:
+		return
+	var act: int = GameState.act_for_stage(GameState.current_stage)
+	if act < 3:   # 0-based: 3=막4, 4=막5
+		return
+	var final_act: bool = act >= 4
+	var cast := CanvasModulate.new()
+	cast.color = Color(0.99, 0.88, 1.0) if final_act else Color(1.0, 0.94, 1.0)
+	add_child(cast)
+	var layer := CanvasLayer.new()
+	layer.layer = 1
+	add_child(layer)
+	# 간섭 타이머 — Stage 자식(PAUSABLE)이라 일시정지 중 멈추고 씬 전환과 함께 정리된다.
+	var timer := Timer.new()
+	timer.one_shot = false
+	timer.wait_time = randf_range(14.0, 24.0) if final_act else randf_range(22.0, 34.0)
+	layer.add_child(timer)
+	timer.timeout.connect(func() -> void:
+		if not is_instance_valid(layer):
+			return
+		_rival_interference_flash(layer)
+		timer.wait_time = randf_range(14.0, 24.0) if final_act else randf_range(22.0, 34.0)
+	)
+	timer.start()
+
+# 얇은 바이올렛 가로 밴드 2~3개가 화면을 잠깐 스치는 간섭 플래시(화면 좌표 — 카메라 무관).
+func _rival_interference_flash(layer: CanvasLayer) -> void:
+	var vs: Vector2 = get_viewport().get_visible_rect().size
+	var g := Control.new()
+	g.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(g)
+	for i in range(randi_range(2, 3)):
+		var r := ColorRect.new()
+		r.color = Color(0.72, 0.42, 1.0, randf_range(0.10, 0.20))
+		r.position = Vector2(0.0, randf_range(0.0, vs.y))
+		r.size = Vector2(vs.x, randf_range(3.0, 8.0))
+		r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		g.add_child(r)
+	var tw := g.create_tween()
+	tw.tween_interval(0.14)
+	tw.tween_property(g, "modulate:a", 0.0, 0.16)
+	tw.tween_callback(g.queue_free)
+
+# ─── 핵심 회수 — 시설 심장부 접근 통로 시그니처 (act_identity §7) ───
+# 모든 것이 한 점(코어)으로 수렴하는 그림: 격벽 아치가 갈수록 죄어들고, 벽면 케이블이 우측으로
+# 수렴하며, 그 위를 데이터 펄스가 코어 방향으로 흐른다 — 시안(내 VEIL)과 바이올렛(라이벌)이
+# 같은 심장에서 나온다. 우측 끝 코어 글로우는 느리게 맥동(박동). 향후 14-1/14-2 2막 구성(컨셉
+# §7.1)의 밑칠 — 코어는 "저 너머"로만 암시한다.
+func _ambience_core_recovery() -> void:
+	var w: float = STAGE_LENGTH
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 719 + 13
+	# 뒷벽·천장 슬래브 — 심부 격납 톤(어두운 바이올렛 혼입).
+	var wall := ColorRect.new()
+	wall.color = Color(0.09, 0.07, 0.12)
+	wall.position = Vector2(-200.0, -300.0)
+	wall.size = Vector2(w + 400.0, GROUND_Y + 360.0)
+	wall.z_index = -18
+	add_child(wall)
+	var ceil_r := ColorRect.new()
+	ceil_r.color = Color(0.05, 0.04, 0.08)
+	ceil_r.position = Vector2(-200.0, -300.0)
+	ceil_r.size = Vector2(w + 400.0, 214.0)
+	ceil_r.z_index = -17
+	add_child(ceil_r)
+	# 격벽 아치(보안 게이트 프레임) — 코어에 가까워질수록 간격이 좁아지는 "죄어드는" 리듬.
+	var arch_x: float = 240.0
+	var arch_gap: float = 560.0
+	var arch_i: int = 0
+	while arch_x < w:
+		var post_col := Color(0.13, 0.10, 0.18)
+		for sx in [arch_x - 34.0, arch_x + 34.0]:
+			var post := ColorRect.new()
+			post.color = post_col
+			post.position = Vector2(sx - 10.0, -86.0)
+			post.size = Vector2(20.0, GROUND_Y + 86.0)
+			post.z_index = -15
+			add_child(post)
+		var lintel := ColorRect.new()
+		lintel.color = post_col.lightened(0.10)
+		lintel.position = Vector2(arch_x - 50.0, -86.0)
+		lintel.size = Vector2(100.0, 16.0)
+		lintel.z_index = -15
+		add_child(lintel)
+		# 아치 상태등 — 시안/바이올렛 교대(두 존재가 같은 곳을 가리킨다).
+		var lamp := ColorRect.new()
+		var viol: bool = arch_i % 2 == 1
+		lamp.color = Color(0.72, 0.42, 1.0, 0.75) if viol else Color(0.40, 0.90, 1.0, 0.75)
+		lamp.position = Vector2(arch_x - 5.0, -64.0)
+		lamp.size = Vector2(10.0, 6.0)
+		lamp.z_index = -14
+		add_child(lamp)
+		arch_x += arch_gap
+		arch_gap = maxf(360.0, arch_gap - 45.0)
+		arch_i += 1
+	# 케이블 다발 — 좌측 상·하단에서 우측 한 점(코어)으로 수렴하는 사선(Polygon2D 얇은 쿼드).
+	var converge := Vector2(w + 80.0, 340.0)
+	var cable_starts: Array = [-70.0, -28.0, GROUND_Y - 36.0, GROUND_Y + 6.0]
+	for i in cable_starts.size():
+		var sy: float = cable_starts[i]
+		var th: float = 5.0
+		var cable := Polygon2D.new()
+		cable.color = Color(0.16, 0.12, 0.22, 0.85)
+		cable.polygon = PackedVector2Array([
+			Vector2(-200.0, sy), converge,
+			converge + Vector2(0.0, th), Vector2(-200.0, sy + th),
+		])
+		cable.z_index = -13
+		add_child(cable)
+		# 데이터 펄스 — 케이블을 따라 코어 방향으로 흐르는 광점. 시안/바이올렛 혼재.
+		for p in 2:
+			var pulse := ColorRect.new()
+			var viol2: bool = (i + p) % 2 == 0
+			pulse.color = Color(0.72, 0.42, 1.0, 0.9) if viol2 else Color(0.40, 0.90, 1.0, 0.9)
+			pulse.size = Vector2(12.0, th)
+			pulse.z_index = -12
+			add_child(pulse)
+			var start := Vector2(-100.0, sy)
+			var tw := pulse.create_tween()
+			tw.set_loops()
+			tw.tween_interval(rng.randf_range(0.2, 2.4))
+			tw.tween_property(pulse, "position", converge, rng.randf_range(5.0, 9.0)).from(start)
+	# 코어 글로우 — 우측 끝 세로 워시 3겹 + 느린 맥동(심장 박동).
+	var glow_steps: Array = [
+		{"x": w - 260.0, "a": 0.05},
+		{"x": w - 140.0, "a": 0.10},
+		{"x": w - 60.0,  "a": 0.16},
+	]
+	for gdef in glow_steps:
+		var gd: Dictionary = gdef
+		var glow := ColorRect.new()
+		glow.color = Color(0.80, 0.58, 1.0, float(gd["a"]))
+		glow.position = Vector2(float(gd["x"]), -300.0)
+		glow.size = Vector2(w + 200.0 - float(gd["x"]), GROUND_Y + 360.0)
+		glow.z_index = -11
+		add_child(glow)
+	var heart := ColorRect.new()
+	heart.color = Color(0.92, 0.80, 1.0, 0.12)
+	heart.position = Vector2(w - 30.0, -300.0)
+	heart.size = Vector2(230.0, GROUND_Y + 360.0)
+	heart.z_index = -11
+	add_child(heart)
+	var htw := heart.create_tween()
+	htw.set_loops()
+	htw.tween_property(heart, "modulate:a", 0.45, 1.15)
+	htw.tween_property(heart, "modulate:a", 1.0, 1.25)
+	_add_lore_label(Vector2(360.0, -30.0), "최심부 · 코어 격납 구역", Color(0.80, 0.58, 1.0, 0.45), 15)
 
 func _ambience_sewers() -> void:
 	# 화면 가장자리 어두운 비네트 (CanvasLayer 위에 띄움) + 바닥 옅은 안개
