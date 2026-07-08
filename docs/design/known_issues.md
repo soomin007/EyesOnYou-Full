@@ -55,6 +55,12 @@
   → 스폰 수까지 실플레이와 맞추려면 하니스에서 `GameState.current_route_risk`(+reward/tags)를 해당 route 값으로
   명시 세팅. 스폰 *경로/타입*만 볼 거면 무관(1마리라도 스폰되면 배선 OK).
 
+- **PowerShell은 GUI 빌드 Godot.exe를 기다리지 않는다 — `*>` 리다이렉트여도 즉시 반환해 순차 실행이 겹친다.**
+  `godot --import; godot --windowed ...`를 PowerShell 한 줄로 돌리면 import가 끝나기 전에 창모드가 떠
+  둘이 동시 실행됐고(2026-07-08), `$LASTEXITCODE`도 비었다(대기 안 함). 파이프(`2>&1 | Select-String`)로
+  받을 때만 우연히 기다린다. → **godot 실행은 Bash 도구로**(자식 프로세스 종료를 항상 대기). PowerShell을
+  써야 하면 `Start-Process -Wait`.
+
 - **PowerShell 백그라운드로 godot 실행 시 출력을 `| Out-String`으로 받지 말 것 — 프로세스 종료까지 버퍼링.**
   `... | Out-String`은 파이프 전체를 모은 뒤 한 번에 반환하므로, godot이 도는 동안 output 파일이 계속 비어
   진행 로그를 볼 수 없고, godot이 hang하면 PowerShell도 무한 대기한다(포스터 창모드 렌더가 20분 안 끝남, 2026-06-14).
