@@ -18,6 +18,11 @@ const V_BOT: float = 820.0
 
 var speed: float = 210.0
 var max_gap: float = 700.0
+# 캡 추격 속도 상한 — 이전엔 max_gap 초과 시 벽을 플레이어 뒤로 *즉시 스냅*해서, 대시 순간 벽이
+# 플레이어 속도를 그대로 미러링하는 게 들켰다(사용자 체감 2026-08-10 "대시 쓰니 같이 빨리 옴").
+# 이제 상한 속도로만 따라붙는다: 대시(720)로는 잠깐 거리를 벌 수 있지만 달리기(240)보다 빨라
+# 몇 초 안에 자연스럽게 회수된다. 체감상 "벽이 꾸준히 밀고 온다"로만 읽히게.
+const CATCHUP_SPEED: float = 340.0
 var _edge_x: float = -300.0       # 선두(치명) edge의 월드 x
 var _dmg_cd: float = 0.0
 
@@ -35,9 +40,10 @@ func _physics_process(delta: float) -> void:
 	var p: Node = get_tree().get_first_node_in_group("player")
 	if p != null and p is Node2D:
 		var px: float = (p as Node2D).global_position.x
-		# 너무 뒤처지지 않게 캡 — 상시 위협 유지.
+		# 너무 뒤처지지 않게 캡 — 상시 위협 유지. 스냅 대신 상한 속도 추격(위 CATCHUP_SPEED 주석).
 		if px - _edge_x > max_gap:
-			_edge_x = px - max_gap
+			var target_x: float = px - max_gap
+			_edge_x = minf(_edge_x + (CATCHUP_SPEED - speed) * delta, target_x)
 		# 선두 안쪽으로 삼켜짐 → 치명.
 		_dmg_cd -= delta
 		if px < _edge_x - GRACE and _dmg_cd <= 0.0:
