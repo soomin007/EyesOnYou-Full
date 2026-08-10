@@ -117,16 +117,25 @@ const _ROUTE_TRACKS: Dictionary = {
 	"route_server_hall": "mid_late",
 	"route_blackout":   "mid_late",
 	"route_escape":     "mid_late",
-	"route_lab":        "boss",
-	# 막5 회수 — 사전 누락으로 "early"(Cold Gear) 폴백이 재생되던 버그(2026-08-10 발견). 클라이맥스라
-	# 잠정 boss(Chrome Grit). 막4/5 전용 신곡(pursuit/confront) 도입 시 막 기반 선곡으로 재배선 예정.
-	"route_core_recovery": "boss",
+	# lab(SENTINEL 보스) = confront(Violet Signal) — 0~25s 빌드업에 보스 인트로 컷씬을 정렬(2026-08-10).
+	# §7 reveal(처치 직후 라이벌 첫 발화)까지 라이벌 테마가 이어져 "라이벌이 지켜보던 판"의 데뷔 무대가 된다.
+	"route_lab":        "confront",
 	"route_hidden":     "hidden",
 }
 
 func _apply_bgm_for_current_route() -> void:
-	var track: String = str(_ROUTE_TRACKS.get(GameState.current_route_id, "early"))
-	BgmPlayer.play(track)
+	var rid: String = GameState.current_route_id
+	# 특수 라우트(보스/히든)는 막 무관 우선.
+	if rid == "route_lab" or rid == "route_hidden":
+		BgmPlayer.play(str(_ROUTE_TRACKS.get(rid, "early")))
+		return
+	# 막4+(라이벌 영역)는 막 기반 선곡(GameState.ACTS.bgm) — 막4/5에 겹쳐 등장하는 라우트가
+	# 스테이지에 따라 자동 분기(pursuit/confront)하고, 신규 라우트가 매핑 누락으로 "early" 폴백되던
+	# 함정(known_issues, core_recovery 사례)도 이 구간에선 원천 차단된다. 막1~3은 라우트 매핑 유지.
+	if not GameState.story_mode and GameState.act_for_stage(GameState.current_stage) >= 3:
+		BgmPlayer.play(str(GameState.act_def(GameState.current_stage).get("bgm", "mid_late")))
+		return
+	BgmPlayer.play(str(_ROUTE_TRACKS.get(rid, "early")))
 
 func _load_world_meta() -> void:
 	# MapData를 먼저 한 번 lookup해서 세계 차원·골·카메라 모드 결정.
@@ -3276,7 +3285,7 @@ func _build_hud() -> void:
 	xp_bar = ProgressBar.new()
 	xp_bar.custom_minimum_size = Vector2(184.0, 7.0)
 	xp_bar.show_percentage = false
-	xp_bar.max_value = float(GameState.XP_PER_LEVEL)
+	xp_bar.max_value = float(GameState.xp_to_next())
 	var _xp_bg := StyleBoxFlat.new()
 	_xp_bg.bg_color = Color(0.10, 0.12, 0.16, 0.85)
 	_xp_bg.set_corner_radius_all(3)
@@ -3429,9 +3438,9 @@ func _update_cd_slot(slot: Control, remaining: float, max_cd: float) -> void:
 
 func _refresh_hud() -> void:
 	hp_label.text = "HP  %s" % _hearts(GameState.player_hp, GameState.player_max_hp)
-	xp_label.text = "LV %d   XP %d/%d" % [GameState.player_level, GameState.player_xp, GameState.XP_PER_LEVEL]
+	xp_label.text = "LV %d   XP %d/%d" % [GameState.player_level, GameState.player_xp, GameState.xp_to_next()]
 	if xp_bar != null and is_instance_valid(xp_bar):
-		xp_bar.max_value = float(GameState.XP_PER_LEVEL)
+		xp_bar.max_value = float(GameState.xp_to_next())
 		xp_bar.value = float(GameState.player_xp)
 	var marks: Array = []
 	if GameState.is_high_risk():
@@ -3837,10 +3846,18 @@ func _spawn_boss(boss_meta: Dictionary) -> void:
 	boss.self_destruct_started.connect(_on_boss_self_destruct_started)
 	boss.self_destruct_disarmed.connect(_on_boss_self_destruct_disarmed)
 	_build_boss_hp_bar()
-	# 보스전 진입 1회성 전투 안내 (피드백: 사격법 혼란). _spawn_boss는 보스당 1회만 호출돼 자연히 1회성.
-	_show_boss_alert("빨간 불빛이 번뜩이면 그 자리를 비켜요. 신호가 멎은 틈에 쏘면 돼요.", Color(0.95, 0.55, 0.55), 4.0)
+	# 플레이어 성장 스케일(2026-08-10) — 15스테이지 확장으로 s8 시점 화력이 원 설계(9스테이지)보다
+	# 높아 보스가 너무 빨리 녹는다는 피드백. 공격 계열 티어 합 × 2 HP 가산(상한 +12 → 최대 36).
+	if not GameState.story_mode:
+		var off_tiers: int = GameState.get_skill_tier("fire_boost") + GameState.get_skill_tier("multishot") + GameState.get_skill_tier("explosive")
+		boss.apply_hp_bonus(mini(off_tiers * 2, 12))
+	# 보스전 진입 안내 — 본편은 인트로 컷씬의 VEIL 대사가 대신한다(중복 방지). 스토리 모드는 인트로가
+	# 없으므로 기존 1회성 안내 유지(피드백: 사격법 혼란).
+	if GameState.story_mode:
+		_show_boss_alert("빨간 불빛이 번뜩이면 그 자리를 비켜요. 신호가 멎은 틈에 쏘면 돼요.", Color(0.95, 0.55, 0.55), 4.0)
 	# §7 복선 — 전투 중 가끔 거짓-렌더 tell과 똑같은 지직거림을 흘린다(1회차엔 못 잡고, reveal 후 재해석).
 	_start_boss_glitch_foreshadow()
+	_play_boss_intro()
 
 func _build_boss_hp_bar() -> void:
 	# 화면 상단 중앙 — 보스 HP 게이지. 12칸 단위로 표시.
@@ -3874,7 +3891,8 @@ func _refresh_boss_hp_bar() -> void:
 		return
 	if boss_hp_bar_fill == null:
 		return
-	var ratio: float = clamp(float(boss.get("hp")) / float(BossSentinel.HP_MAX), 0.0, 1.0)
+	# 분모는 인스턴스 max_hp — 성장 스케일(apply_hp_bonus)·스토리 축소가 반영된 실제 최대치.
+	var ratio: float = clamp(float(boss.get("hp")) / maxf(float(boss.get("max_hp")), 1.0), 0.0, 1.0)
 	boss_hp_bar_fill.size.x = 400.0 * ratio
 	# 페이즈에 따라 색 변화
 	var ph: int = int(boss.get("phase"))
@@ -3892,6 +3910,101 @@ func _on_boss_phase_changed(new_phase: int) -> void:
 			_show_boss_alert("패턴이 바뀌었어요. 양쪽 조심해요.", Color(1.0, 0.78, 0.40), 3.0)
 		3:
 			_show_boss_alert("불안정해졌어요. 거리 두고 빠르게.", Color(1.0, 0.45, 0.45), 3.0)
+
+# ─── 보스 인트로 컷씬(2026-08-10 사용자 제안) — Violet Signal 빌드업(0~25s)에 맞춘 대사 비트 ───
+# 보스 AI 정지(intro_hold) + 전투 입력 잠금 + 레터박스 + SENTINEL/VEIL 대사. 점프/사격/확인 키로
+# 스킵 가능, 스킵·재도전 시 BGM을 비트 시작(25s)으로 점프해 늘어짐 방지. 대사=플레이스홀더(사용자 재작성).
+const BOSS_INTRO_MUSIC_KICK: float = 25.0
+# 스킵은 이벤트 기반(_input) — 폴링(is_action_just_pressed)은 코루틴 재개 순서에 따라 한 프레임짜리
+# just-pressed를 놓칠 수 있다(하니스에서 합성 입력 미검출로 확인, 2026-08-10).
+var _boss_intro_active: bool = false
+var _boss_intro_skip: bool = false
+
+func _input(event: InputEvent) -> void:
+	if _boss_intro_active and not _boss_intro_skip:
+		if event.is_action_pressed("jump") or event.is_action_pressed("attack") \
+				or event.is_action_pressed("ui_accept") or event.is_action_pressed("ui_skip") \
+				or OrientationGuard.is_tap(event):
+			_boss_intro_skip = true
+			get_viewport().set_input_as_handled()
+
+func _play_boss_intro() -> void:
+	if boss == null or not is_instance_valid(boss):
+		return
+	if GameState.story_mode:
+		return
+	if GameState.boss_intro_seen_run:
+		# 죽고 재도전 — 인트로 반복은 늘어진다. 음악이 아직 빌드업 구간일 때만 비트로 점프.
+		if BgmPlayer.get_current_position() < BOSS_INTRO_MUSIC_KICK:
+			BgmPlayer.seek_current(BOSS_INTRO_MUSIC_KICK)
+		return
+	GameState.boss_intro_seen_run = true
+	_boss_intro_active = true
+	_boss_intro_skip = false
+	boss.set("intro_hold", true)
+	GameState.restrict_combat_input = true
+	# 레터박스 상하 바 — 시네마틱 신호.
+	var bars := CanvasLayer.new()
+	bars.layer = 30
+	add_child(bars)
+	var vs: Vector2 = get_viewport().get_visible_rect().size
+	for is_top in [true, false]:
+		var bar := ColorRect.new()
+		bar.color = Color(0.0, 0.0, 0.0, 0.92)
+		bar.position = Vector2(0.0, 0.0) if is_top else Vector2(0.0, vs.y - 64.0)
+		bar.size = Vector2(vs.x, 64.0)
+		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		bar.modulate.a = 0.0
+		bars.add_child(bar)
+		var tw := bar.create_tween()
+		tw.tween_property(bar, "modulate:a", 1.0, 0.5)
+	_run_boss_intro_beats(bars)
+
+# 대사 비트 — 합계 ~22.8s(+페이드)라 미스킵 시 전투 개시가 음악 킥(25s)과 맞물린다.
+func _run_boss_intro_beats(bars: CanvasLayer) -> void:
+	var skipped: bool = await _boss_intro_wait(1.4)
+	if not skipped:
+		_show_boss_alert("침입자 식별. 회수 권한: 없음.", Color(1.0, 0.45, 0.40), 5.0)
+		skipped = await _boss_intro_wait(5.6)
+	if not skipped:
+		_show_boss_alert("격리 프로토콜 SENTINEL, 기동.", Color(1.0, 0.45, 0.40), 5.0)
+		skipped = await _boss_intro_wait(5.6)
+	if not skipped:
+		_show_veil_subtitle("커요. 그래도 눈은 제가 돼 드릴게요. 빨간 신호가 멎은 틈에 쏴요.", 5.4)
+		skipped = await _boss_intro_wait(6.2)
+	if not skipped:
+		_show_boss_alert("제거를 시작한다.", Color(1.0, 0.30, 0.28), 3.0)
+		skipped = await _boss_intro_wait(4.0)
+	_end_boss_intro(bars, skipped)
+
+# sec 동안 대기 — _input이 세운 스킵 플래그를 매 프레임 확인. 스킵 시 true.
+# (씬 전환/보스 소멸 시에도 안전 종료.)
+func _boss_intro_wait(sec: float) -> bool:
+	var t: float = 0.0
+	while t < sec:
+		await get_tree().process_frame
+		if not is_inside_tree() or boss == null or not is_instance_valid(boss):
+			return true
+		t += get_process_delta_time()
+		if _boss_intro_skip:
+			return true
+	return false
+
+func _end_boss_intro(bars: CanvasLayer, skipped: bool) -> void:
+	_boss_intro_active = false
+	GameState.restrict_combat_input = false
+	if boss != null and is_instance_valid(boss):
+		boss.set("intro_hold", false)
+	if skipped:
+		BgmPlayer.seek_current(BOSS_INTRO_MUSIC_KICK)
+	if bars != null and is_instance_valid(bars):
+		for c in bars.get_children():
+			if c is CanvasItem:
+				var tw := (c as CanvasItem).create_tween()
+				tw.tween_property(c, "modulate:a", 0.0, 0.4)
+		var cleanup := bars.create_tween()
+		cleanup.tween_interval(0.5)
+		cleanup.tween_callback(bars.queue_free)
 
 func _on_boss_self_destruct_started() -> void:
 	# 화면 전체 경고 — 큰 카운트다운 라벨

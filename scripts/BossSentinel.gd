@@ -55,6 +55,11 @@ const SUMMON_DRONE_HP: int = 1
 const SUMMON_PATROL_HP: int = 2
 
 var hp: int = HP_MAX
+var max_hp: int = HP_MAX          # HP 게이지 분모 — 성장 스케일(apply_hp_bonus)·스토리 축소 반영
+var p2_threshold: int = HP_PHASE2
+var p3_threshold: int = HP_PHASE3
+# 인트로 홀드 — Stage 보스 인트로 컷씬(BGM 빌드업 구간) 동안 AI 정지. Stage가 켜고 끈다.
+var intro_hold: bool = false
 var phase: int = 1
 # 스토리 모드 — _ready에서 GameState 보고 결정. true면 P2/P3 전환·잔당 소환 모두 생략.
 var story_simplified: bool = false
@@ -89,6 +94,7 @@ func _ready() -> void:
 	collision_mask = 1
 	story_simplified = GameState.story_mode
 	if story_simplified:
+		max_hp = HP_MAX_STORY
 		hp = HP_MAX_STORY
 	# 콜리전 — 피격 면적 확대(피드백: 보스가 잘 안 맞음). 시각 2.5배와 같은 비율(56×40→70×50).
 	# 상단 발판 위로 올라가지 않도록 mask=1만.
@@ -122,6 +128,10 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	if dead:
+		return
+	# 인트로 컷씬 동안 완전 정지 — 공격/이동/접촉 판정 없음(플레이어가 대사를 읽는 시간).
+	if intro_hold:
+		velocity = Vector2.ZERO
 		return
 	touch_cd = max(0.0, touch_cd - delta)
 	# 자폭 카운트다운 진행 — 일반 AI 대신 천천히 따라오며 추락 + 파지직.
@@ -294,6 +304,17 @@ func _find_player() -> Node2D:
 			return n as Node2D
 	return null
 
+# 플레이어 성장 스케일(2026-08-10) — 15스테이지 확장으로 s8 시점 화력이 원 설계(9스테이지)보다 높아
+# 보스가 너무 빨리 녹는다는 피드백. 공격 계열 티어에 비례한 HP 가산 + 페이즈 임계도 같은 비율(2/3·1/3)
+# 유지. 자폭 버퍼(HP_SELF_DESTRUCT)는 절대값 유지 — 연출 보장 목적이라 스케일 불필요.
+func apply_hp_bonus(bonus: int) -> void:
+	if bonus <= 0 or story_simplified:
+		return
+	max_hp = HP_MAX + bonus
+	hp = max_hp
+	p2_threshold = HP_PHASE2 + int(round(float(bonus) * 2.0 / 3.0))
+	p3_threshold = HP_PHASE3 + int(round(float(bonus) / 3.0))
+
 func take_damage(amount: int, _from_dir: int = 0) -> void:
 	if dead:
 		return
@@ -309,11 +330,11 @@ func take_damage(amount: int, _from_dir: int = 0) -> void:
 	_flash_hit()
 	if hp > 0:
 		SfxPlayer.play_at("boss_hurt", global_position)
-	# 페이즈 전환 검사 — 자폭 진입 후에는 페이즈 재전환 안 함.
+	# 페이즈 전환 검사 — 자폭 진입 후에는 페이즈 재전환 안 함. 임계는 성장 스케일 반영 인스턴스 값.
 	if not story_simplified:
-		if phase < 2 and hp <= HP_PHASE2:
+		if phase < 2 and hp <= p2_threshold:
 			_transition_to(2)
-		elif phase < 3 and hp <= HP_PHASE3:
+		elif phase < 3 and hp <= p3_threshold:
 			_transition_to(3)
 	# 자폭 트리거 — HP 임계 이하로 떨어지면 카운트다운 시작. 버퍼(HP_SELF_DESTRUCT)를 둬
 	# 트리거와 동시에 hp가 0이 되어 즉사하는 걸 방지. 진입하면 위 무적으로 항상 끝까지 자폭한다.

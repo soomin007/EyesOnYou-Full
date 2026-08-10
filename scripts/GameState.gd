@@ -17,8 +17,10 @@ const ACTS: Array = [
 	{"id": "act1", "name": "침투",   "bgm": "early",    "stages": 3, "boss": ""},
 	{"id": "act2", "name": "잠입",   "bgm": "mid_late", "stages": 3, "boss": ""},
 	{"id": "act3", "name": "핵심부", "bgm": "boss",     "stages": 3, "boss": "sentinel"},
-	{"id": "act4", "name": "추적",   "bgm": "mid_late", "stages": 3, "boss": ""},
-	{"id": "act5", "name": "대면",   "bgm": "boss",     "stages": 3, "boss": ""},
+	# 막4/5 bgm은 실데이터(2026-08-10, act4_bgm_plan §4) — Stage._apply_bgm_for_current_route가
+	# 막4+에서 이 필드로 선곡한다(막1~3은 라우트 매핑 유지, 막1~3 bgm 필드는 문서용).
+	{"id": "act4", "name": "추적",   "bgm": "pursuit",  "stages": 3, "boss": ""},
+	{"id": "act5", "name": "대면",   "bgm": "confront", "stages": 3, "boss": ""},
 ]
 const SCORE_THRESHOLD: int = 4
 const SETTINGS_PATH: String = "user://settings.cfg"
@@ -108,6 +110,10 @@ const OVERFLOW_SCORE_BONUS: int = 500
 # 확장 구간이 드러난다(사용자 제안 2026-08-10). 첫 공개 글리치 연출을 1회만 틀기 위한 플래그.
 # 런 단위, run.cfg 영속(이어하기 재진입 시 연출 반복 방지).
 var map_extension_seen: bool = false
+
+# 보스 인트로(막3 lab, Violet Signal 빌드업 컷씬)를 이번 런에서 봤는가 — 죽고 재도전 시 인트로를
+# 생략하고 음악만 비트 구간으로 점프하기 위한 세션 플래그. reset()/start_main_game()에서 해제.
+var boss_intro_seen_run: bool = false
 
 var tutorial_done: bool = false
 var bgm_volume: float = 1.0
@@ -283,6 +289,7 @@ func reset() -> void:
 	player_level = 1
 	overflow_hp_bonus = 0
 	map_extension_seen = false
+	boss_intro_seen_run = false
 	story_mode = false
 	veil_degraded = false
 	veil_reversal_pending = false
@@ -323,6 +330,7 @@ func start_main_game() -> void:
 	player_level = 1
 	overflow_hp_bonus = 0
 	map_extension_seen = false
+	boss_intro_seen_run = false
 	skills = STARTING_SKILLS.duplicate()
 	veil_degraded = false
 	veil_reversal_pending = false
@@ -486,14 +494,20 @@ func enemy_count_multiplier() -> float:
 		3: return 1.5
 	return 1.1
 
+# 레벨업 필요 XP — 레벨 5마다 +1(사용자 제안 2026-08-10): L1~4=8, L5~9=9, L10~14=10, L15~19=11...
+# 15스테이지 확장으로 만렙(24픽)이 s10쯤 오던 것을 뒤로 늦추고, 보스(s8) 시점 화력 램프도 완만하게.
+func xp_to_next() -> int:
+	return XP_PER_LEVEL + player_level / 5
+
 func add_xp(amount: int, apply_risk_bonus: bool = true) -> bool:
 	# high-risk 루트(risk=3)에서 적 처치 XP +50% (스테이지 클리어 보상은 apply_risk_bonus=false로 호출).
 	var gain: int = amount
 	if apply_risk_bonus and current_route_risk >= 3:
 		gain = int(round(float(amount) * 1.5))
 	player_xp += gain
-	if player_xp >= XP_PER_LEVEL:
-		player_xp -= XP_PER_LEVEL
+	var need: int = xp_to_next()
+	if player_xp >= need:
+		player_xp -= need
 		player_level += 1
 		return true
 	return false

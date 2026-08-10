@@ -5,22 +5,32 @@ extends Node
 #   main_theme    : Glass Protocol — 타이틀/튜토리얼/크레딧 (느린 BPM, 메인 테마)
 #   early         : Cold Gear      — 외곽/외벽 초중반 맵 (BPM ↑)
 #   mid_late      : Cold Wire      — 중후반 맵 (BPM ↑↑)
-#   boss          : Chrome Grit    — 보스전 (가장 빠른 BPM)
+#   boss          : Chrome Grit    — (구 보스전. 현재 미사용 — 재배치 후보. lab은 confront로 이관)
+#   pursuit       : Broken Wire    — 막4 추적(라이벌 영역, 쫓기는 결. 2026-08-10)
+#   confront      : Violet Signal  — 막3 lab 보스전 + 막5 대면(0~25s 빌드업 = 보스 인트로 컷씬 구간)
 #   hidden        : Gravity Static — ??? 방
 #
-# Suno로 생성된 4트랙(메인→보스)은 BPM이 점진적으로 빨라지게 배치된 시리즈.
-# 게임 진행 흐름과 매칭 — 사용자 의도를 BGM 트랙 순서로 살림.
+# Suno로 생성된 트랙 시리즈 — 진행할수록 BPM이 빨라지고, 막4/5(라이벌 영역)는 같은 산업 전자 톤에
+# 디튠·정전기 이질감을 섞은 변절 파트(act4_bgm_plan.md). 선곡: 막1~3=라우트 매핑, 막4+=막(ACTS.bgm) 기반.
 
 const TRACKS: Dictionary = {
 	"main_theme":    "res://assets/bgm/Glass Protocol.mp3",
 	"early":         "res://assets/bgm/Cold Gear.mp3",
 	"mid_late":      "res://assets/bgm/Cold Wire.mp3",
 	"boss":          "res://assets/bgm/Chrome Grit.mp3",
+	"pursuit":       "res://assets/bgm/Broken Wire.mp3",
+	"confront":      "res://assets/bgm/Violet Signal.mp3",
 	"hidden":        "res://assets/bgm/Gravity Static.mp3",
 	"ending_a":      "res://assets/bgm/Ending A.mp3",
 	"ending_b":      "res://assets/bgm/Ending B.mp3",
 	"ending_c":      "res://assets/bgm/Ending C.mp3",
 	"ending_d":      "res://assets/bgm/Ending D.mp3",
+}
+
+# 루프 복귀 지점(초) — confront는 0~25s가 조용한 빌드업(보스 인트로 전용)이라, 곡이 끝나고
+# 반복될 때 빌드업으로 돌아가면 전투 중 김이 빠진다 → 비트 시작 지점으로 복귀.
+const LOOP_OFFSETS: Dictionary = {
+	"confront": 25.0,
 }
 
 const FADE_IN: float = 1.2
@@ -64,9 +74,10 @@ func play(track_id: String) -> void:
 	var stream: AudioStream = load(path) as AudioStream
 	if stream == null:
 		return
-	# MP3는 명시적으로 loop=true 지정해야 자동 반복.
+	# MP3는 명시적으로 loop=true 지정해야 자동 반복. 트랙별 루프 복귀 지점(LOOP_OFFSETS) 반영.
 	if stream is AudioStreamMP3:
 		(stream as AudioStreamMP3).loop = true
+		(stream as AudioStreamMP3).loop_offset = float(LOOP_OFFSETS.get(track_id, 0.0))
 	_current_track = track_id
 	var next_idx: int = (_active_idx + 1) % 2
 	var prev: AudioStreamPlayer = _players[_active_idx]
@@ -85,6 +96,20 @@ func play(track_id: String) -> void:
 		_tween_out.tween_property(prev, "volume_db", SILENT_DB, FADE_OUT)
 		_tween_out.tween_callback(Callable(prev, "stop"))
 	_active_idx = next_idx
+
+# 현재 트랙의 재생 위치 이동/조회 — 보스 인트로 스킵·재도전 시 빌드업(0~25s) 건너뛰기용.
+func seek_current(sec: float) -> void:
+	if _current_track == "" or _active_idx >= _players.size():
+		return
+	var p: AudioStreamPlayer = _players[_active_idx]
+	if p.playing:
+		p.seek(sec)
+
+func get_current_position() -> float:
+	if _current_track == "" or _active_idx >= _players.size():
+		return 0.0
+	var p: AudioStreamPlayer = _players[_active_idx]
+	return p.get_playback_position() if p.playing else 0.0
 
 func stop() -> void:
 	_current_track = ""

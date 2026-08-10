@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://du58wyakkahx4"
+path="res://.godot/imported/Broken Wire.mp3-e922c36ad18e349413b154d7ff2efea2.mp3str"
+
+[deps]
+
+source_file="res://assets/bgm/Broken Wire.mp3"
+dest_files=["res://.godot/imported/Broken Wire.mp3-e922c36ad18e349413b154d7ff2efea2.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4
