@@ -118,6 +118,9 @@ const _ROUTE_TRACKS: Dictionary = {
 	"route_blackout":   "mid_late",
 	"route_escape":     "mid_late",
 	"route_lab":        "boss",
+	# 막5 회수 — 사전 누락으로 "early"(Cold Gear) 폴백이 재생되던 버그(2026-08-10 발견). 클라이맥스라
+	# 잠정 boss(Chrome Grit). 막4/5 전용 신곡(pursuit/confront) 도입 시 막 기반 선곡으로 재배선 예정.
+	"route_core_recovery": "boss",
 	"route_hidden":     "hidden",
 }
 
@@ -3436,7 +3439,8 @@ func _refresh_hud() -> void:
 	if GameState.is_high_reward():
 		marks.append("[고보상]")
 	var marker: String = ("  " + " ".join(marks)) if marks.size() > 0 else ""
-	stage_label.text = "STAGE %d/%d%s" % [GameState.current_stage + 1, GameState.effective_total_stages(), marker]
+	# 표시용 총계 — 막1~3 동안 막4/5 확장을 숨긴다(노드맵 반전 공개와 동일 소스).
+	stage_label.text = "STAGE %d/%d%s" % [GameState.current_stage + 1, GameState.displayed_total_stages(), marker]
 	# 맵 이름 — RouteData에서 lookup. 튜토리얼/플레이그라운드 등 route_id 없으면 빈 문자열.
 	var route_name: String = ""
 	for r in RouteData.ALL_ROUTES:
@@ -4650,9 +4654,11 @@ func _begin_clear_sequence() -> void:
 		GameState.pacifist_line_shown = true
 		delay = maxf(delay, 3.2)   # 대사 읽을 여유
 		_show_veil_subtitle("한 발도 쏘지 않고 지나갔어요. 그것도 하나의 답이에요.", 3.0)
-	# 막3 핵심부(lab)는 클리어 후 회수 문서 연출(ArcturusDocumentOverlay, layer 25)이 화면을 덮으므로
-	# 클리어 페이드(layer 38)를 깔면 문서를 가린다 → lab은 페이드 생략(문서 자체 배경으로 어두워짐).
-	if GameState.current_route_id != "route_lab":
+	# 회수 문서 연출(ArcturusDocumentOverlay, layer 25)이 클리어 후 화면을 덮는 맵은 클리어 페이드
+	# (layer 38)가 문서를 가린다 → 페이드 생략(문서 자체 배경으로 어두워짐). 엔드게임 막5 이주 후
+	# 문서는 core_recovery에서 뜨는데 lab만 가드해 문서가 검게 덮였던 회귀(사용자 보고 2026-08-10).
+	var doc_next: bool = GameState.current_route_id == "route_lab" or GameState.current_route_id == "route_core_recovery"
+	if not doc_next:
 		_do_clear_fade(delay)
 	await get_tree().create_timer(delay).timeout
 	# 보스 처치 직후 보스가 떨군 orb로 mid-stage 레벨업이 떠있을 수 있다. 그 사이에

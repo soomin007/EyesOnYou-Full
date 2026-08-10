@@ -97,6 +97,17 @@ var player_hp: int = 3
 var player_xp: int = 0
 var player_level: int = 1
 const XP_PER_LEVEL: int = 8
+# 만렙(모든 스킬 라인 T3) 이후 레벨업 보상 — 15스테이지 확장으로 s10쯤 만렙에 닿으면 레벨업이
+# 무보상이 되는 문제(사용자 보고 2026-08-10). 스킬 카드 대신 오버플로 카드 1장: 예비 장갑
+# (최대 체력 +1, 상한 OVERFLOW_HP_CAP회) → 상한 뒤엔 점수. 런 단위, run.cfg 영속.
+var overflow_hp_bonus: int = 0
+const OVERFLOW_HP_CAP: int = 2
+const OVERFLOW_SCORE_BONUS: int = 500
+
+# 노드맵 막4/5 반전 공개 — 막1~3 동안 노드맵·헤더가 막3 끝(9스테이지)까지만 보이다가 막4 진입 시
+# 확장 구간이 드러난다(사용자 제안 2026-08-10). 첫 공개 글리치 연출을 1회만 틀기 위한 플래그.
+# 런 단위, run.cfg 영속(이어하기 재진입 시 연출 반복 방지).
+var map_extension_seen: bool = false
 
 var tutorial_done: bool = false
 var bgm_volume: float = 1.0
@@ -270,6 +281,8 @@ func reset() -> void:
 	player_hp = 3
 	player_xp = 0
 	player_level = 1
+	overflow_hp_bonus = 0
+	map_extension_seen = false
 	story_mode = false
 	veil_degraded = false
 	veil_reversal_pending = false
@@ -308,6 +321,8 @@ func start_main_game() -> void:
 	player_hp = player_max_hp
 	player_xp = 0
 	player_level = 1
+	overflow_hp_bonus = 0
+	map_extension_seen = false
 	skills = STARTING_SKILLS.duplicate()
 	veil_degraded = false
 	veil_reversal_pending = false
@@ -578,6 +593,36 @@ func is_late_act(stage: int) -> bool:
 func effective_total_stages() -> int:
 	return STORY_TOTAL_STAGES if story_mode else TOTAL_STAGES
 
+# 막1~3의 내부 stage 수(=막4 시작 index) — 노드맵 반전 공개의 기준점.
+func stages_through_act3() -> int:
+	var acc: int = 0
+	for i in mini(3, ACTS.size()):
+		acc += int(ACTS[i]["stages"])
+	return acc
+
+# 표시용 총 스테이지 — 막1~3 동안은 막3 끝(9)까지만 보여준다. 막4/5 확장 구간은 막4 진입에서야
+# 드러난다(반전 공개, 사용자 제안 2026-08-10). UI(헤더/노드맵) 전용 — 로직 판정은
+# effective_total_stages()를 그대로 쓴다.
+func displayed_total_stages() -> int:
+	if story_mode:
+		return STORY_TOTAL_STAGES
+	if current_stage >= stages_through_act3():
+		return TOTAL_STAGES
+	return stages_through_act3()
+
+# 만렙 이후 레벨업 보상 지급 — LevelUpOverlay 오버플로 카드에서 호출. 반환: 지급 종류("hp"|"score").
+func grant_overflow_reward() -> String:
+	if overflow_hp_bonus < OVERFLOW_HP_CAP:
+		overflow_hp_bonus += 1
+		player_max_hp += 1
+		player_hp = min(player_hp + 1, player_max_hp)
+		return "hp"
+	score += OVERFLOW_SCORE_BONUS
+	return "score"
+
+func has_overflow_hp_room() -> bool:
+	return overflow_hp_bonus < OVERFLOW_HP_CAP
+
 func is_final_stage_done() -> bool:
 	return current_stage >= effective_total_stages()
 
@@ -626,6 +671,8 @@ func save_run() -> void:
 	cf.set_value("run", "player_hp", player_hp)
 	cf.set_value("run", "player_xp", player_xp)
 	cf.set_value("run", "player_level", player_level)
+	cf.set_value("run", "overflow_hp_bonus", overflow_hp_bonus)
+	cf.set_value("run", "map_extension_seen", map_extension_seen)
 	cf.set_value("run", "story_mode", story_mode)
 	cf.set_value("run", "veil_degraded", veil_degraded)
 	cf.set_value("run", "veil_reversal_pending", veil_reversal_pending)
@@ -689,6 +736,8 @@ func load_run() -> bool:
 	player_hp = int(cf.get_value("run", "player_hp", player_max_hp))
 	player_xp = int(cf.get_value("run", "player_xp", 0))
 	player_level = int(cf.get_value("run", "player_level", 1))
+	overflow_hp_bonus = int(cf.get_value("run", "overflow_hp_bonus", 0))
+	map_extension_seen = bool(cf.get_value("run", "map_extension_seen", false))
 	story_mode = bool(cf.get_value("run", "story_mode", false))
 	veil_degraded = bool(cf.get_value("run", "veil_degraded", false))
 	veil_reversal_pending = bool(cf.get_value("run", "veil_reversal_pending", false))

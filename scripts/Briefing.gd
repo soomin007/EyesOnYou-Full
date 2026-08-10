@@ -39,7 +39,8 @@ func _ready() -> void:
 	var intro: bool = (GameState.current_stage == 0)
 	visual.visible = true
 	mission_visual.visible = intro
-	stage_label.text = "STAGE %d / %d" % [GameState.current_stage + 1, GameState.effective_total_stages()]
+	# 표시용 총계 — 막1~3 동안 막4/5 확장을 숨긴다(노드맵 반전 공개와 동일 소스).
+	stage_label.text = "STAGE %d / %d" % [GameState.current_stage + 1, GameState.displayed_total_stages()]
 	lines = _build_lines()
 	GameState.input_kind_changed.connect(_on_input_kind_changed)
 	_build_tip_label()

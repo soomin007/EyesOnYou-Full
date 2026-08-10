@@ -4,6 +4,9 @@ extends RefCounted
 # 레벨업 시 호출. 스킬 3장 중 1장 선택 → on_picked.call(picked_id) 실행 후 오버레이 자동 정리.
 # Stage / Tutorial 양쪽에서 동일하게 사용.
 
+# 만렙(모든 라인 T3) 오버플로 보상 카드의 특수 id — _finish가 add_skill 대신 grant_overflow_reward.
+const OVERFLOW_PICK_ID: String = "__overflow"
+
 static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks: Array = []) -> CanvasLayer:
 	# advice: Dictionary {"line": String, "family": String} 권장.
 	# 호환성: String을 받으면 line만 있는 dict로 처리 (튜토리얼 등 family 없음).
@@ -17,6 +20,27 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 		advice_skill_id = str((advice as Dictionary).get("skill_id", ""))
 	elif advice is String:
 		advice_line = advice as String
+	# 픽 산출을 UI보다 먼저 — 만렙(모든 라인 T3)이면 스킬 카드가 0장이라 조용히 닫혔고, 레벨업이
+	# 무보상으로 보였다(사용자 보고 2026-08-10). 오버플로 보상 카드 1장으로 대체한다.
+	var overflow_mode: bool = false
+	var picks: Array
+	if forced_picks.size() > 0:
+		picks = forced_picks
+	else:
+		picks = SkillSystem.roll_choices(GameState.skills, 3, GameState.current_route_id)
+		if picks.size() == 0:
+			overflow_mode = true
+			if GameState.has_overflow_hp_room():
+				picks = [{"id": OVERFLOW_PICK_ID, "name": "예비 장갑", "family": "", "tier": 0,
+					"desc": "모든 스킬이 최고 단계예요. 최대 체력이 1 올라요."}]
+			else:
+				picks = [{"id": OVERFLOW_PICK_ID, "name": "전술 기록", "family": "", "tier": 0,
+					"desc": "모든 스킬이 최고 단계예요. 점수를 %d 더 받아요." % GameState.OVERFLOW_SCORE_BONUS}]
+	if overflow_mode:
+		# 만렙 상태에선 추천 멘트가 가리킬 스킬 카드가 없다 — 혼란 방지로 멘트/추천 생략.
+		advice_line = ""
+		advice_family = ""
+		advice_skill_id = ""
 	SfxPlayer.play("levelup")
 	var layer := CanvasLayer.new()
 	layer.layer = 40
@@ -45,7 +69,7 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 	center.add_child(v)
 
 	var title := Label.new()
-	title.text = "LEVEL UP   스킬을 선택해요"
+	title.text = "LEVEL UP   보상을 받아요" if overflow_mode else "LEVEL UP   스킬을 선택해요"
 	title.add_theme_font_size_override("font_size", 24)
 	title.add_theme_color_override("font_color", Color(0.95, 0.95, 0.95))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -76,12 +100,8 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 	hb.alignment = BoxContainer.ALIGNMENT_CENTER
 	v.add_child(hb)
 
-	var picks: Array
-	if forced_picks.size() > 0:
-		picks = forced_picks
-	else:
-		picks = SkillSystem.roll_choices(GameState.skills, 3, GameState.current_route_id)
 	if picks.size() == 0:
+		# 안전판 — forced_picks가 비는 등 예외 경로(일반 만렙은 위에서 오버플로 카드로 대체됨).
 		host.add_child(layer)
 		_finish(layer, "", on_picked)
 		return layer
@@ -119,13 +139,15 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 		content.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		content.process_mode = Node.PROCESS_MODE_ALWAYS
 
-		var icon := SkillIcon.new()
-		icon.skill_id = sid
-		icon.family = family
-		icon.custom_minimum_size = Vector2(52, 52)
-		icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		icon.process_mode = Node.PROCESS_MODE_ALWAYS
-		content.add_child(icon)
+		# 오버플로 카드는 스킬이 아니라 아이콘/티어 pip 생략(SkillIcon이 모르는 id).
+		if sid != OVERFLOW_PICK_ID:
+			var icon := SkillIcon.new()
+			icon.skill_id = sid
+			icon.family = family
+			icon.custom_minimum_size = Vector2(52, 52)
+			icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+			icon.process_mode = Node.PROCESS_MODE_ALWAYS
+			content.add_child(icon)
 
 		var name_lbl := Label.new()
 		if family != "":
@@ -139,18 +161,19 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 
 		# 티어 pip(●●○) — "T2" 텍스트 대신 시각화. 새 스킬이 아니라 *레벨업*임을 한눈에(피드백:
 		# "T1/T2 말고 동그라미 n개로"). 채운 동그라미=이번에 도달할 티어 / 빈 동그라미=남은 상위 티어.
-		var _line: Dictionary = SkillTreeData.find_line(sid)
-		var _tiers: Array = _line.get("tiers", [])
-		var max_tier: int = _tiers.size() if _tiers.size() > 0 else tier
-		var pip_lbl := Label.new()
-		pip_lbl.text = "●".repeat(tier) + "○".repeat(maxi(max_tier - tier, 0))
-		pip_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		pip_lbl.add_theme_font_size_override("font_size", 16)
-		pip_lbl.add_theme_color_override("font_color", Color(0.95, 0.78, 0.35))
-		pip_lbl.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.6))
-		pip_lbl.add_theme_constant_override("outline_size", 3)
-		pip_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		content.add_child(pip_lbl)
+		if sid != OVERFLOW_PICK_ID:
+			var _line: Dictionary = SkillTreeData.find_line(sid)
+			var _tiers: Array = _line.get("tiers", [])
+			var max_tier: int = _tiers.size() if _tiers.size() > 0 else tier
+			var pip_lbl := Label.new()
+			pip_lbl.text = "●".repeat(tier) + "○".repeat(maxi(max_tier - tier, 0))
+			pip_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			pip_lbl.add_theme_font_size_override("font_size", 16)
+			pip_lbl.add_theme_color_override("font_color", Color(0.95, 0.78, 0.35))
+			pip_lbl.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.6))
+			pip_lbl.add_theme_constant_override("outline_size", 3)
+			pip_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			content.add_child(pip_lbl)
 
 		var desc_lbl := Label.new()
 		desc_lbl.text = str(skill.get("desc", ""))
@@ -191,7 +214,11 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 	return layer
 
 static func _finish(layer: CanvasLayer, picked_id: String, on_picked: Callable) -> void:
-	if picked_id != "":
+	if picked_id == OVERFLOW_PICK_ID:
+		# 만렙 오버플로 보상 — 스킬 대신 예비 장갑(최대 HP +1, 상한 후 점수).
+		SfxPlayer.play("skill_pick")
+		GameState.grant_overflow_reward()
+	elif picked_id != "":
 		SfxPlayer.play("skill_pick")
 		GameState.add_skill(picked_id)
 	if on_picked.is_valid():

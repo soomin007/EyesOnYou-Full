@@ -33,7 +33,8 @@ func _ready() -> void:
 	# 자동저장 — 스테이지 사이(다음 루트 선택 직전)의 깨끗한 스냅샷. 웹에서 닫아도 "이어하기"로 복귀.
 	# (이 시점 불변식: route_history.size() == current_stage)
 	GameState.save_run()
-	stage_label.text = "STAGE %d / %d   루트 선택" % [GameState.current_stage + 1, GameState.effective_total_stages()]
+	# 표시용 총계(displayed_total_stages) — 막1~3 동안 "…/ 9"로 보여 막4/5 확장을 숨긴다(반전 공개).
+	stage_label.text = "STAGE %d / %d   루트 선택" % [GameState.current_stage + 1, GameState.displayed_total_stages()]
 	subtitle_label.text = "● 위험도 · 보상(경험치)   ·   ? 미상"
 	pool = RouteData.get_route_pool_for_stage(GameState.current_stage, GameState.route_history)
 	var rec: Dictionary = RouteData.choose_veil_recommendation_with_reason(pool)
@@ -171,10 +172,24 @@ const PROG_DONE_TEXT: Color = Color(0.58, 0.66, 0.62)
 const PROG_DONE_LINE: Color = Color(0.34, 0.50, 0.44)
 const PROG_FUTURE: Color = Color(0.40, 0.43, 0.50)      # 미상 단계 (흐릿)
 const PROG_FUTURE_LINE: Color = Color(0.24, 0.26, 0.32)
+# 막4/5 확장 구간(반전 공개 후) — 라이벌 바이올렛 계열(간섭 플래시 0.72,0.42,1.0과 같은 축).
+const PROG_RIVAL_DOT: Color = Color(0.72, 0.42, 1.0)
+const PROG_RIVAL_TEXT: Color = Color(0.60, 0.44, 0.78)
+const PROG_RIVAL_LINE: Color = Color(0.40, 0.27, 0.55)
 
 func _build_progress_strip() -> void:
 	var total: int = GameState.effective_total_stages()
 	var cur: int = GameState.current_stage
+	# 반전 공개(사용자 제안 2026-08-10) — 막1~3 동안은 막3 끝(9단계)까지만 그린다(런이 9에서 끝나는
+	# 것처럼). 막4 진입부터 확장 구간(막4/5)이 라이벌 바이올렛으로 드러나고, 첫 공개 1회는 글리치
+	# 페이드인. 가로 잘림 해결 겸: 15노드 × 88px는 1280을 넘친다 — 공개 후엔 컴팩트 폭으로 그린다.
+	var ext_start: int = total
+	var shown: int = total
+	if not GameState.story_mode:
+		ext_start = GameState.stages_through_act3()
+		if cur < ext_start:
+			shown = mini(ext_start, total)
+	var compact: bool = shown > 12
 	var strip := CenterContainer.new()
 	strip.name = "ProgressStrip"
 	strip.anchor_left = 0.0
@@ -188,15 +203,21 @@ func _build_progress_strip() -> void:
 	row.add_theme_constant_override("separation", 0)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	strip.add_child(row)
-	for i in total:
+	for i in shown:
+		var is_ext: bool = i >= ext_start
 		if i > 0:
 			# i단계로 들어가는 연결선 — 그 단계에 도달했으면(i <= cur) "지나온" 색.
-			row.add_child(_make_progress_connector(i <= cur))
-		row.add_child(_make_progress_node(i, cur))
+			row.add_child(_make_progress_connector(i <= cur, compact, is_ext))
+		row.add_child(_make_progress_node(i, cur, compact, is_ext))
+	# 막4 첫 진입 — 숨어 있던 확장 구간의 첫 공개 글리치 연출(런당 1회, run.cfg 영속로 재개 시 반복 방지).
+	if shown > ext_start and not GameState.map_extension_seen:
+		GameState.map_extension_seen = true
+		GameState.save_run()
+		_play_extension_reveal(row, ext_start)
 
-func _make_progress_node(i: int, cur: int) -> Control:
+func _make_progress_node(i: int, cur: int, compact: bool, rival: bool) -> Control:
 	var box := VBoxContainer.new()
-	box.custom_minimum_size = Vector2(88, 0)
+	box.custom_minimum_size = Vector2(68 if compact else 88, 0)
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
 	box.add_theme_constant_override("separation", 2)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -208,12 +229,12 @@ func _make_progress_node(i: int, cur: int) -> Control:
 	name_l.add_theme_font_size_override("font_size", 11)
 	name_l.clip_text = true
 	if i < cur:
-		# 지나온 단계 — 선택했던 맵 이름 표시.
+		# 지나온 단계 — 선택했던 맵 이름 표시. 확장 구간은 라이벌 바이올렛.
 		var rid: String = str(GameState.route_history[i]) if i < GameState.route_history.size() else ""
 		dot.text = "●"
-		dot.add_theme_color_override("font_color", PROG_DONE_DOT)
+		dot.add_theme_color_override("font_color", PROG_RIVAL_DOT if rival else PROG_DONE_DOT)
 		name_l.text = RouteData.name_for_id(rid)
-		name_l.add_theme_color_override("font_color", PROG_DONE_TEXT)
+		name_l.add_theme_color_override("font_color", PROG_RIVAL_TEXT if rival else PROG_DONE_TEXT)
 	elif i == cur:
 		# 지금 고르는 단계 — VEIL 신뢰 톤색으로 강조. (◆는 폰트에 없어 깨질 수 있어 ●로, 색으로 구분.)
 		var tone: Color = GameState.veil_tone_color()
@@ -222,27 +243,30 @@ func _make_progress_node(i: int, cur: int) -> Control:
 		name_l.text = "지금"
 		name_l.add_theme_color_override("font_color", tone)
 	else:
-		# 아직 모르는 앞 단계.
+		# 아직 모르는 앞 단계. 확장 구간은 흐릿한 바이올렛 — "저긴 뭔가 다르다".
 		dot.text = "○"
-		dot.add_theme_color_override("font_color", PROG_FUTURE)
+		dot.add_theme_color_override("font_color", PROG_RIVAL_TEXT if rival else PROG_FUTURE)
 		name_l.text = "?"
-		name_l.add_theme_color_override("font_color", PROG_FUTURE)
+		name_l.add_theme_color_override("font_color", PROG_RIVAL_TEXT if rival else PROG_FUTURE)
 	box.add_child(dot)
 	box.add_child(name_l)
 	return box
 
-func _make_progress_connector(done: bool) -> Control:
+func _make_progress_connector(done: bool, compact: bool, rival: bool) -> Control:
 	# 노드와 같은 2단 구조(선 / 빈칸)로 만들어 점·이름 행 높이를 맞춘다.
 	# 연결선은 글자("──", box-drawing)가 아니라 ColorRect로 그린다 — 번들 폰트(Pretendard)에
 	# box-drawing 글리프가 없어 두부(□)로 깨졌음(사용자 보고 2026-06-25).
 	var box := VBoxContainer.new()
-	box.custom_minimum_size = Vector2(24, 0)
+	box.custom_minimum_size = Vector2(14 if compact else 24, 0)
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
 	box.add_theme_constant_override("separation", 2)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var line := ColorRect.new()
-	line.custom_minimum_size = Vector2(20, 2)
-	line.color = PROG_DONE_LINE if done else PROG_FUTURE_LINE
+	line.custom_minimum_size = Vector2(10 if compact else 20, 2)
+	var lc: Color = PROG_DONE_LINE if done else PROG_FUTURE_LINE
+	if rival:
+		lc = PROG_RIVAL_LINE
+	line.color = lc
 	line.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var spacer := Label.new()
@@ -251,6 +275,22 @@ func _make_progress_connector(done: bool) -> Control:
 	box.add_child(line)
 	box.add_child(spacer)
 	return box
+
+# 막4 첫 진입 — 숨어 있던 확장 노드/연결선이 지직거리며 드러나는 1회 연출(간섭 플래시와 같은 문법).
+# row 자식은 node0, conn, node1, conn, ... 교차 배치라 확장 시작 자식 index = ext_start*2 - 1(그 앞 연결선부터).
+func _play_extension_reveal(row: HBoxContainer, ext_start: int) -> void:
+	var kids: Array = row.get_children()
+	var first_child: int = maxi(ext_start * 2 - 1, 0)
+	for ci in range(first_child, kids.size()):
+		var c: CanvasItem = kids[ci] as CanvasItem
+		if c == null:
+			continue
+		c.modulate.a = 0.0
+		var tw := c.create_tween()
+		tw.tween_interval(0.55 + 0.05 * float(ci - first_child))
+		tw.tween_property(c, "modulate:a", 1.0, 0.1)
+		tw.tween_property(c, "modulate:a", 0.3, 0.07)
+		tw.tween_property(c, "modulate:a", 1.0, 0.1)
 
 func _build_node_buttons() -> void:
 	for child in nodes_container.get_children():
