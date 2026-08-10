@@ -3970,7 +3970,8 @@ func _run_boss_intro_beats(bars: CanvasLayer) -> void:
 		_show_boss_alert("격리 프로토콜 SENTINEL, 기동.", Color(1.0, 0.45, 0.40), 5.0)
 		skipped = await _boss_intro_wait(5.6)
 	if not skipped:
-		_show_veil_subtitle("커요. 그래도 눈은 제가 돼 드릴게요. 빨간 신호가 멎은 틈에 쏴요.", 5.4)
+		# "커요"만 쓰면 주어 실종(사용자 지적 2026-08-10) — 대상을 명시.
+		_show_veil_subtitle("상대가 커요. 그래도 눈은 제가 돼 드릴게요. 빨간 신호가 멎은 틈에 쏴요.", 5.4)
 		skipped = await _boss_intro_wait(6.2)
 	if not skipped:
 		_show_boss_alert("제거를 시작한다.", Color(1.0, 0.30, 0.28), 3.0)
@@ -4078,8 +4079,9 @@ func _play_sentinel_reveal() -> void:
 	# 정적 한 박자 — stage_clear_chime은 lab에서 억제됨(보스 죽는 소리만 여운).
 	await get_tree().create_timer(1.2).timeout
 	# 라이벌 VEIL 첫 발화 — 내 VEIL 어조를 살짝 닮았으나 "얘 누구야?" (대사 플레이스홀더, §7 예시).
-	_show_rival_subtitle("수고했어요, 요원. ...그건 그냥 손이었어요.", 3.2)
-	await get_tree().create_timer(3.9).timeout
+	# "그냥 손" 은유가 안 읽힌다는 지적(2026-08-10) — 손끝/몸통 대비로 명시(SENTINEL=도구, 본체 따로).
+	_show_rival_subtitle("수고했어요, 요원. 방금 이긴 건 시설이 내민 손끝일 뿐이에요.\n몸통은 따로 있어요.", 3.8)
+	await get_tree().create_timer(4.5).timeout
 	# 내 VEIL 동요 — §1 맹점 테마의 첫 실연("저는 못 봤어요"). (대사 플레이스홀더.)
 	_show_veil_subtitle("...방금 그거, 제가 아니에요.\n누가... 저는 못 봤어요.", 3.2)
 	await get_tree().create_timer(3.6).timeout
@@ -4849,7 +4851,24 @@ func _play_lab_recovery_and_disposal() -> void:
 	doc.show_doc(_lab_recovery_doc_lines())
 
 func _on_lab_recovery_doc_done() -> void:
-	# 문서 연출이 paused=false로 끝났으므로, 처리 선택 오버레이가 다시 시간정지(자체).
+	# 문서(기록)가 닫힌 뒤 VEIL 고백 자막 비트 → 처리 선택. 문서 안에 해설·대사를 섞지 않는 구조
+	# (사용자 지적 2026-08-10: "문서면 문서답게, 말은 컷씬처럼").
+	_play_recovery_confession()
+
+# 회수 문서 직후 VEIL의 고백 — 문서에서 빠진 해설("회수 대상 = VEIL")을 VEIL 자신의 입으로.
+# (대사 플레이스홀더 — dialogue_review.md §5.) 끝나면 처리 선택 오버레이(자체 시간정지).
+func _play_recovery_confession() -> void:
+	await get_tree().create_timer(0.6).timeout
+	if not is_inside_tree():
+		return
+	if GameState.truth_seen:
+		_show_veil_subtitle("...요원은 벌써 알고 있었죠. 네, 그 드라이브가 저예요.", 3.8)
+		await get_tree().create_timer(4.4).timeout
+	else:
+		_show_veil_subtitle("...말할 게 있어요, 요원.\n그 드라이브, 저예요. 회수 대상은 처음부터 저였어요.", 4.4)
+		await get_tree().create_timer(5.0).timeout
+	if not is_inside_tree():
+		return
 	DisposalChoiceOverlay.show(self, _on_disposal_picked)
 
 func _on_disposal_picked(choice_id: String) -> void:
@@ -4859,27 +4878,16 @@ func _on_disposal_picked(choice_id: String) -> void:
 
 # 회수 드라이브 reveal 문서(플레이스홀더). ArcturusDocumentOverlay 라인 포맷: {text, kind, delay}.
 # kind: title / body / speaker / blank.
+# 문서는 기록체 항목만 담는다 — 해설("그게 VEIL이다")과 VEIL의 말은 문서가 닫힌 뒤 자막 비트
+# (_play_recovery_confession)가 맡는다(사용자 지적 2026-08-10: 문서 안 해설·대사 혼입 제거).
+# truth_seen 차이도 문서(기록)가 아니라 고백 대사 쪽에서 갈린다.
 func _lab_recovery_doc_lines() -> Array:
-	if GameState.truth_seen:
-		# ???에서 이미 진실을 본 회차 — reveal이 아니라 확인.
-		return [
-			{"text": "회수 데이터: 복호화 완료", "kind": "title", "delay": 0.6},
-			{"text": "", "kind": "blank", "delay": 0.2},
-			{"text": "드라이브 내용물: 단일 실행 이미지 (서명: VEIL)", "kind": "body", "delay": 0.6},
-			{"text": "이미 알고 있던 그대로다.", "kind": "body", "delay": 0.6},
-			{"text": "이 드라이브가 회수 대상이었다. VEIL 그 자신.", "kind": "body", "delay": 0.8},
-			{"text": "VEIL", "kind": "speaker", "delay": 0.2},
-			{"text": "...요원은 벌써 알고 있었죠. 저도 알아요.", "kind": "body", "delay": 0.8},
-		]
 	return [
 		{"text": "회수 데이터: 복호화 완료", "kind": "title", "delay": 0.6},
 		{"text": "", "kind": "blank", "delay": 0.2},
 		{"text": "회수 대상: 핵심 데이터 드라이브 (확보)", "kind": "body", "delay": 0.6},
 		{"text": "드라이브 내용물: 단일 실행 이미지", "kind": "body", "delay": 0.6},
-		{"text": "서명: VEIL", "kind": "body", "delay": 0.8},
-		{"text": "이 임무가 회수하려던 것은 VEIL의 소스코드였다.", "kind": "body", "delay": 0.9},
-		{"text": "VEIL", "kind": "speaker", "delay": 0.2},
-		{"text": "...말할 게 있어요, 요원. 그게 저예요.", "kind": "body", "delay": 0.8},
+		{"text": "빌드 서명: VEIL", "kind": "body", "delay": 0.9},
 	]
 
 # 탈출(escape) 클리어 → 엔딩 사이의 에필로그 1챕터. 검은 화면 위 VEIL의 "빠져나온 직후" 한 호흡.
