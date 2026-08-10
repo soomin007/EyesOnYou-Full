@@ -1355,6 +1355,8 @@ static func _car_cover() -> Dictionary:
 		"goal_type":    "POSITION",
 		"goal_pos":     Vector2(2960.0, 540.0),   # 포탑(2900) 너머 오른쪽 = 좌향 사선 밖(출구에선 안 맞음)
 		"camera_mode":  "HORIZONTAL",
+		# 엘리트 잠금 — 저격 레이스 맵이라 강화 개체가 unfair(재머 금지와 같은 원칙).
+		"elite_chance": 0.0,
 		"platforms": [],
 		# 바닥(y=600)에 늘어선 정비 차량 = 엄폐물 행. 사이 트로프가 안전지대, 차량 넘기가 노출.
 		"destructible_covers": [
@@ -1399,6 +1401,8 @@ static func _collapse() -> Dictionary:
 		"goal_type":    "POSITION",
 		"goal_pos":     Vector2(4080.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
+		# 엘리트 잠금 — 강제 전진 중 "멈춰서 대처"가 불가능해 강화 개체가 unfair(재머 금지와 같은 원칙).
+		"elite_chance": 0.0,
 		# 강제 전진 추격 벽 — 뒤에서 전진(플레이어보다 느리되 700px 캡으로 상시 위협).
 		"chase_hazard": {"start_x": -300.0, "speed": 210.0, "max_gap": 700.0},
 		# 선택 상단 경로(원웨이 발판) — XP 보상, 추격 중 오르는 리스크.

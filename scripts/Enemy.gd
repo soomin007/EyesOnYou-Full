@@ -18,6 +18,9 @@ enum BomberState { ROAMING, STALKING, ARMING }
 # §4 거짓 렌더 — 시선 거짓(딴 데 보는 척 기습). true면 patrol이 각성을 숨기고 정지·플레이어 반대로
 # 응시하다(안전해 보임) 근접(FEIGN_AMBUSH_RANGE) 시 홱 돌아 기습(압축 텔레그래프→돌진). Stage(feigns)가 set.
 @export var feign_ambush: bool = false
+# 엘리트(라이벌의 군대, elite_enemies_plan.md) — Stage._spawn_enemy가 add_child 전에 켠다.
+# HP·템포 강화 + 바이올렛 고정 계급장(_EliteCrest). 텔레그래프 시간은 불변(§0.2 인지 계약).
+@export var elite: bool = false
 
 const GRAVITY: float = 1400.0
 const TOUCH_DAMAGE: int = 1
@@ -94,6 +97,23 @@ const DRONE_BOMB_Y_MAX: float = 240.0
 # 도감 — 화면 안에 들어와야 트리거되도록 거리/높이 제한
 const ENCOUNTER_X_LIMIT: float = 480.0
 const ENCOUNTER_Y_LIMIT: float = 280.0
+
+# ─── 엘리트 수치(elite_enemies_plan.md §2) — HP는 _ready에서 오버라이드 ───
+const ELITE_PATROL_SPEED: float = 85.0
+const ELITE_PATROL_CHARGE_SPEED: float = 330.0
+const ELITE_PATROL_RECOVERY: float = 0.6
+const ELITE_PATROL_BURST_GAP: float = 0.15       # 2연 버스트 간격 — 수평탄이라 점프 하나로 함께 회피
+const ELITE_SNIPER_AIM: float = 0.55
+const ELITE_SNIPER_INTERVAL: float = 1.9          # risk3 0.7배 곱해도 1.33s — 회피 가능선
+const ELITE_DRONE_SPEED: float = 125.0
+const ELITE_DRONE_BOMB_INTERVAL: float = 2.8      # 2연 투하 보상으로 사이클은 완만
+const ELITE_DRONE_SECOND_DROP_GAP: float = 0.25
+const ELITE_DRONE_SECOND_DROP_SPREAD: float = 40.0  # 2발째 좌우 분산 — "그 자리 탈출"이 답
+const ELITE_BOMBER_STALK_MULT: float = 1.8
+const ELITE_BOMBER_DETECT_X: float = 420.0
+const ELITE_BOMBER_BLAST_RADIUS: float = 85.0
+const ELITE_SHIELD_LOCK: float = 2.2              # 대시 쿨(0.7)의 3배 유지 — 측면 창 보존
+const ELITE_VIOLET: Color = Color(0.72, 0.42, 1.0)  # 라이벌 바이올렛 축(간섭 플래시와 동일)
 
 var origin_x: float = 0.0
 var dir: int = 1
@@ -240,6 +260,19 @@ class _GlitchTell extends Node2D:
 			var yy: float = -52.0 + float((int(t * 90.0) + i * 12) % 52)
 			draw_line(Vector2(-21, yy), Vector2(21, yy), Color(red.r, red.g, red.b, a), 2.0)
 
+# 엘리트 계급장 — 항상 켜진 고정 기하(머리 위 셰브론 2단 + 발밑 링). 깜빡이지 않는다:
+# "지직이면 거짓(_GlitchTell), 고정 기호면 정예"의 시각 문법(elite_enemies_plan.md §3).
+# modulate 함정 회피 — 텔레그래프/피격 플래시가 visual을 리셋해도 독립 자식이라 불변.
+class _EliteCrest extends Node2D:
+	func _draw() -> void:
+		var vi: Color = Color(0.72, 0.42, 1.0, 0.95)
+		for i in 2:
+			var y: float = -64.0 - float(i) * 9.0
+			draw_polyline(PackedVector2Array([
+				Vector2(-9.0, y), Vector2(0.0, y - 7.0), Vector2(9.0, y),
+			]), vi, 2.5, true)
+		draw_arc(Vector2.ZERO, 20.0, 0.0, TAU, 40, Color(vi.r, vi.g, vi.b, 0.55), 1.6, true)
+
 func _ready() -> void:
 	add_to_group("enemy")
 	origin_x = global_position.x
@@ -299,6 +332,17 @@ func _ready() -> void:
 		fg.z_index = 3
 		add_child(fg)
 		_glitch = fg
+	# 엘리트(라이벌의 군대) — HP 오버라이드(§2, bomber는 1 유지 = 원거리 1샷 정답 보존) + 계급장.
+	# 위장/시선 거짓과는 스폰 단계에서 배타(Stage 가드) — 계급장이 위장을 깨는 모순 방지.
+	if elite:
+		match enemy_type:
+			EnemyType.PATROL: hp = 4
+			EnemyType.SNIPER: hp = 2
+			EnemyType.DRONE: hp = 2
+			EnemyType.SHIELD: hp = 5
+		var crest := _EliteCrest.new()
+		crest.z_index = 3
+		add_child(crest)
 	fire_timer = _sniper_interval()
 	drone_bomb_cd = 1.2  # 스폰 직후 즉시 폭격 방지
 	if shiny:
@@ -351,7 +395,8 @@ func _patrol_fire_interval() -> float:
 	return PATROL_FIRE_INTERVAL * (0.7 if GameState.is_high_risk() else 1.0)
 
 func _sniper_interval() -> float:
-	var base: float = SNIPER_FIRE_INTERVAL * (0.7 if GameState.is_high_risk() else 1.0)
+	var interval: float = ELITE_SNIPER_INTERVAL if elite else SNIPER_FIRE_INTERVAL
+	var base: float = interval * (0.7 if GameState.is_high_risk() else 1.0)
 	if _is_nest_sniper():
 		base *= NEST_SNIPER_INTERVAL_MUL
 	return base
@@ -365,10 +410,38 @@ func _eff_sniper_range() -> float:
 	return NEST_SNIPER_RANGE if _is_nest_sniper() else SNIPER_RANGE
 
 func _eff_sniper_aim_time() -> float:
-	return NEST_SNIPER_AIM_TIME if _is_nest_sniper() else SNIPER_AIM_TIME
+	if _is_nest_sniper():
+		return NEST_SNIPER_AIM_TIME
+	return ELITE_SNIPER_AIM if elite else SNIPER_AIM_TIME
 
 func _drone_bomb_interval() -> float:
-	return DRONE_BOMB_INTERVAL * (0.7 if GameState.is_high_risk() else 1.0)
+	var interval: float = ELITE_DRONE_BOMB_INTERVAL if elite else DRONE_BOMB_INTERVAL
+	return interval * (0.7 if GameState.is_high_risk() else 1.0)
+
+# ─── 엘리트 유효치(elite_enemies_plan.md §2) — 텔레그래프 "시간"은 어디에도 안 건드림(§0.2) ───
+func _eff_patrol_speed() -> float:
+	return ELITE_PATROL_SPEED if elite else PATROL_SPEED
+
+func _eff_patrol_charge_speed() -> float:
+	return ELITE_PATROL_CHARGE_SPEED if elite else PATROL_CHARGE_SPEED
+
+func _eff_patrol_recovery() -> float:
+	return ELITE_PATROL_RECOVERY if elite else PATROL_RECOVERY
+
+func _eff_drone_speed() -> float:
+	return ELITE_DRONE_SPEED if elite else DRONE_SPEED
+
+func _eff_bomber_stalk_mult() -> float:
+	return ELITE_BOMBER_STALK_MULT if elite else 1.4
+
+func _eff_bomber_detect_x() -> float:
+	return ELITE_BOMBER_DETECT_X if elite else BOMBER_DETECT_X
+
+func _eff_bomber_blast_radius() -> float:
+	return ELITE_BOMBER_BLAST_RADIUS if elite else BOMBER_BLAST_RADIUS
+
+func _eff_shield_lock() -> float:
+	return ELITE_SHIELD_LOCK if elite else SHIELD_DIR_LOCK_DURATION
 
 func _enemy_id() -> String:
 	match enemy_type:
@@ -506,9 +579,12 @@ func _check_first_encounter() -> void:
 		return
 	encountered = true
 	var id: String = _enemy_id()
-	if not GameState.mark_enemy_seen(id):
-		return  # 이미 본 적이라 카드 안 띄움
-	BestiaryOverlay.show_card(stage_node, id)
+	if GameState.mark_enemy_seen(id):
+		# 기반 타입 카드 우선 — 같은 조우에서 elite 카드까지 겹치면 과함(다음 조우로 미룸).
+		BestiaryOverlay.show_card(stage_node, id)
+		return
+	if elite and GameState.mark_enemy_seen("elite"):
+		BestiaryOverlay.show_card(stage_node, "elite")
 
 # ─── Patrol ─────────────────────────────────────────────────
 
@@ -533,7 +609,7 @@ func _tick_patrol(delta: float) -> void:
 
 	match patrol_state:
 		PatrolState.ROAMING:
-			velocity.x = float(dir) * PATROL_SPEED
+			velocity.x = float(dir) * _eff_patrol_speed()
 			if global_position.x > origin_x + patrol_range:
 				dir = -1
 			elif global_position.x < origin_x - patrol_range:
@@ -546,7 +622,7 @@ func _tick_patrol(delta: float) -> void:
 			elif is_on_floor() and not _has_ground_ahead(dir):
 				dir = -dir
 				edge_flip_cd = EDGE_FLIP_COOLDOWN
-				velocity.x = float(dir) * PATROL_SPEED
+				velocity.x = float(dir) * _eff_patrol_speed()
 			if not harmless and p != null and _player_in_charge_range(p):
 				dir = 1 if p.global_position.x > global_position.x else -1
 				velocity.x = 0.0
@@ -575,9 +651,11 @@ func _tick_patrol(delta: float) -> void:
 				if visual != null:
 					visual.modulate = Color(1, 1, 1)
 				if patrol_fire_armed:
-					# 발사 순간
+					# 발사 순간 — 엘리트는 2연 버스트(수평탄이라 점프 하나로 함께 회피 가능, §2).
 					if p != null and not harmless:
 						_patrol_fire(p)
+						if elite:
+							_schedule_elite_second_shot()
 					patrol_fire_armed = false
 					patrol_state_timer = _patrol_fire_interval()
 				else:
@@ -605,13 +683,13 @@ func _tick_patrol(delta: float) -> void:
 				patrol_state = PatrolState.CHARGING
 				patrol_state_timer = PATROL_CHARGE_DURATION
 		PatrolState.CHARGING:
-			velocity.x = float(dir) * PATROL_CHARGE_SPEED
+			velocity.x = float(dir) * _eff_patrol_charge_speed()
 			patrol_state_timer -= delta
 			# 가장자리 도달 시 즉시 RECOVERING — 빠른 속도라 lookahead 80px
 			var charge_edge_fall: bool = is_on_floor() and not _has_ground_ahead(dir, EDGE_LOOKAHEAD_X_FAST)
 			if is_on_wall() or charge_edge_fall or patrol_state_timer <= 0.0:
 				patrol_state = PatrolState.RECOVERING
-				patrol_state_timer = PATROL_RECOVERY
+				patrol_state_timer = _eff_patrol_recovery()
 				velocity.x = 0.0
 		PatrolState.RECOVERING:
 			velocity.x = 0.0
@@ -639,6 +717,16 @@ func _patrol_fire(p: Node2D) -> void:
 	b.velocity = Vector2(float(dir), 0.0) * EnemyBullet.BASE_SPEED
 	b.global_position = global_position + Vector2(float(dir) * 8.0, muzzle_y)
 	get_parent().add_child(b)
+
+# 엘리트 patrol 2연 버스트의 2발째 — 짧은 지연 뒤 생존/트리 확인 후 발사(콜백 안전 가드, known_issues).
+func _schedule_elite_second_shot() -> void:
+	get_tree().create_timer(ELITE_PATROL_BURST_GAP).timeout.connect(func() -> void:
+		if not is_instance_valid(self) or dead or not is_inside_tree():
+			return
+		var p2 := _find_player()
+		if p2 != null and not harmless:
+			_patrol_fire(p2)
+	)
 
 # ─── Sniper ─────────────────────────────────────────────────
 
@@ -734,21 +822,28 @@ func _tick_drone(delta: float) -> void:
 	if hover_ok and drone_bomb_cd <= 0.0 and not harmless:
 		velocity = Vector2.ZERO
 		_drop_bomb()
+		# 엘리트 — 2연 투하(2발째 좌우 분산): "그 자리 탈출"이 답이 되게(§2).
+		if elite:
+			get_tree().create_timer(ELITE_DRONE_SECOND_DROP_GAP).timeout.connect(func() -> void:
+				if not is_instance_valid(self) or dead or not is_inside_tree():
+					return
+				_drop_bomb(randf_range(-ELITE_DRONE_SECOND_DROP_SPREAD, ELITE_DRONE_SECOND_DROP_SPREAD))
+			)
 		drone_bomb_cd = _drone_bomb_interval()
 	else:
 		var target: Vector2 = player.global_position + Vector2(0, DRONE_HOVER_OFFSET_Y)
 		var to: Vector2 = target - global_position
 		if to.length() > 6.0:
-			velocity = to.normalized() * DRONE_SPEED
+			velocity = to.normalized() * _eff_drone_speed()
 			_flip_visual((player.global_position.x - global_position.x) < 0.0)
 		else:
 			velocity = Vector2.ZERO
 	move_and_slide()
 
-func _drop_bomb() -> void:
+func _drop_bomb(offset_x: float = 0.0) -> void:
 	SfxPlayer.play_at("enemy_drone_drop", global_position)
 	var b := Bomb.new()
-	b.global_position = global_position + Vector2(0, 8)
+	b.global_position = global_position + Vector2(offset_x, 8)
 	get_parent().add_child(b)
 
 # 드론 spawn 시 한 번만 호출 — AudioStreamPlayer2D를 자식으로 부착하고 loop 재생 시작.
@@ -821,7 +916,7 @@ func _tick_bomber(delta: float) -> void:
 				bomber_state = BomberState.ROAMING
 			else:
 				dir = 1 if p.global_position.x > global_position.x else -1
-				velocity.x = float(dir) * BOMBER_SPEED * 1.4
+				velocity.x = float(dir) * BOMBER_SPEED * _eff_bomber_stalk_mult()
 				if is_on_wall():
 					velocity.x = 0.0
 				# 가장자리 — STALKING 빠름 → fast lookahead
@@ -855,15 +950,16 @@ func _tick_bomber(delta: float) -> void:
 func _bomber_in_detect_range(p: Node2D) -> bool:
 	var dx: float = abs(p.global_position.x - global_position.x)
 	var dy: float = abs(p.global_position.y - global_position.y)
-	return dx <= BOMBER_DETECT_X and dy <= BOMBER_DETECT_Y
+	return dx <= _eff_bomber_detect_x() and dy <= BOMBER_DETECT_Y
 
 func _bomber_explode() -> void:
 	if dead:
 		return
 	SfxPlayer.play_at("enemy_bomber_explode", global_position)
-	# 폭발 데미지 — 반경 안의 플레이어에게
+	# 폭발 데미지 — 반경 안의 플레이어에게 (반경은 엘리트 유효치)
+	var br: float = _eff_bomber_blast_radius()
 	var p := _find_player()
-	if p != null and global_position.distance_to(p.global_position) <= BOMBER_BLAST_RADIUS:
+	if p != null and global_position.distance_to(p.global_position) <= br:
 		if p.has_method("take_hit"):
 			p.take_hit(BOMBER_BLAST_DAMAGE)
 	# 시각 효과
@@ -873,7 +969,7 @@ func _bomber_explode() -> void:
 	var pts: Array = []
 	for i in 24:
 		var a: float = float(i) * TAU / 24.0
-		pts.append(Vector2(cos(a) * BOMBER_BLAST_RADIUS, sin(a) * BOMBER_BLAST_RADIUS))
+		pts.append(Vector2(cos(a) * br, sin(a) * br))
 	blast.polygon = PackedVector2Array(pts)
 	blast.global_position = global_position
 	blast.scale = Vector2(0.2, 0.2)
@@ -907,7 +1003,7 @@ func _tick_shield(delta: float) -> void:
 		var desired_dir: int = 1 if p.global_position.x > global_position.x else -1
 		if desired_dir != dir and shield_dir_lock_timer <= 0.0:
 			dir = desired_dir
-			shield_dir_lock_timer = SHIELD_DIR_LOCK_DURATION
+			shield_dir_lock_timer = _eff_shield_lock()
 
 	# 근접 시에만 추격 이동. 그 외에는 좁은 범위 patrol.
 	if not harmless and p != null and _shield_player_nearby(p):
@@ -1043,6 +1139,13 @@ func take_damage(amount: int, from_dir: int = 0) -> void:
 		_show_block_spark(from_dir)
 		SfxPlayer.play_at("bullet_deflect_shield", global_position)
 		return
+	# 엘리트 방패병 — 폭발 면역(§2, 사용자 제안: 만능이 된 수류탄을 라이벌이 학습해 카운터).
+	# from_dir == 0 = 폭발/스킬류(수류탄. Bullet은 항상 dir을 넘긴다). 측면 사격 정답은 그대로.
+	# tell = 방패 전체 바이올렛 번쩍 + deflect SFX — "안 통한다"가 즉시 읽히게.
+	if elite and enemy_type == EnemyType.SHIELD and from_dir == 0:
+		_show_explosion_immune_flash()
+		SfxPlayer.play_at("bullet_deflect_shield", global_position)
+		return
 	# 교전(피격) = 위장이 벗겨지는 주 시점 — 지직거림 tell을 못 봤어도 여기서 정체가 드러난다.
 	if _disguised:
 		_reveal_disguise()
@@ -1056,6 +1159,19 @@ func take_damage(amount: int, from_dir: int = 0) -> void:
 		_die()
 	else:
 		SfxPlayer.play_at("enemy_hurt", global_position)
+
+# 엘리트 방패병 폭발 무효 tell — 몸 전체가 라이벌 바이올렛으로 잠깐 번쩍(독립 자식이라 modulate 무관).
+func _show_explosion_immune_flash() -> void:
+	var f := Polygon2D.new()
+	f.color = Color(ELITE_VIOLET.r, ELITE_VIOLET.g, ELITE_VIOLET.b, 0.6)
+	f.polygon = PackedVector2Array([
+		Vector2(-20.0, -58.0), Vector2(20.0, -58.0), Vector2(20.0, 2.0), Vector2(-20.0, 2.0),
+	])
+	f.z_index = 4
+	add_child(f)
+	var tw := f.create_tween()
+	tw.tween_property(f, "color:a", 0.0, 0.25)
+	tw.tween_callback(f.queue_free)
 
 func _show_block_spark(from_dir: int) -> void:
 	# 방패 막힘 — 노란 짧은 라인이 방패 면(enemy.dir 쪽 외곽)에서 튀는 효과

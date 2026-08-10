@@ -31,6 +31,11 @@ const ENEMIES: Dictionary = {
 		"name": "교란기",
 		"blurb": "고정된 방출 장치. 바이올렛 반경 안에선 VEIL의 표시가 꺼진다. 부수면 시야가 돌아온다.",
 	},
+	# 엘리트(라이벌의 군대) — 타입 무관 단일 카드. 첫 조우 시 기반 타입 카드가 우선(Enemy._check_first_encounter).
+	"elite": {
+		"name": "강화 개체",
+		"blurb": "보랏빛 계급장을 단 개체. 다른 신호를 받는다. 더 빠르고, 더 오래 버틴다. 상대하는 법은 같다.",
+	},
 }
 
 static func get_data(id: String) -> Dictionary:

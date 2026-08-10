@@ -4131,6 +4131,25 @@ func _boss_glitch_flash() -> void:
 const SHINY_CHANCE: float = 0.015
 const SHINY_ORB_VALUE: int = 5
 
+# 엘리트(라이벌의 군대, elite_enemies_plan.md §4) — 막4부터 확률 승격. 라이벌이 시설 유닛을
+# 물들여 군대를 만드는 중이라는 서사 = 스테이지 램프. risk3은 소폭 가산(개체수 배율로 모수가 이미 큼).
+# 맵당 상한 = "전원 엘리트" 클러스터 차단 안전핀.
+const ELITE_CHANCES_BY_STAGE: Dictionary = {9: 0.05, 10: 0.12, 11: 0.18, 12: 0.30}
+const ELITE_RISK3_BONUS: float = 0.05
+const ELITE_CAP_ACT4: int = 2
+const ELITE_CAP_ACT5: int = 4
+var _elite_spawned: int = 0
+
+func _elite_chance_here() -> float:
+	# MapData "elite_chance" 오버라이드(unfair 맵 0 잠금 / 세트피스 확정 배치) > 스테이지 램프.
+	var override_v: float = float(_map_data.get("elite_chance", -1.0))
+	if override_v >= 0.0:
+		return override_v
+	var base: float = float(ELITE_CHANCES_BY_STAGE.get(GameState.current_stage, 0.0))
+	if base > 0.0 and GameState.is_high_risk():
+		base += ELITE_RISK3_BONUS
+	return base
+
 func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1, disguise_kind: int = -1, feign: bool = false) -> void:
 	var e := CharacterBody2D.new()
 	e.set_script(load("res://scripts/Enemy.gd"))
@@ -4165,6 +4184,17 @@ func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1, disguise_kind: in
 	e.set("shiny", shiny)
 	e.set("disguise_as", disguise_kind)   # §4 거짓 렌더 — >=0이면 위장 렌더(_ready에서 소비)
 	e.set("feign_ambush", feign)          # §4 시선 거짓 — true면 딴 데 보는 척 기습(patrol, _ready에서 소비)
+	# 엘리트 롤 — 제외: 재머(라이벌의 "손"은 별개 문법) · 둥지 저격수(등반 완화 튜닝 역행) ·
+	# 위장/시선 거짓(이중 기만 금지 §4.1, 계급장이 위장을 깨는 모순) · 스토리/연습장.
+	var elite: bool = false
+	if kind != 5 and disguise_kind < 0 and not feign \
+			and not (kind == 1 and bool(_map_data.get("nest_snipers", false))) \
+			and not GameState.story_mode and not GameState.playground_active:
+		var cap: int = ELITE_CAP_ACT5 if GameState.act_for_stage(GameState.current_stage) >= 4 else ELITE_CAP_ACT4
+		if _elite_spawned < cap and randf() < _elite_chance_here():
+			elite = true
+			_elite_spawned += 1
+	e.set("elite", elite)
 	add_child(e)
 	_had_enemies = true   # 이스터에그(평화주의) — 적이 있던 맵에서만 인정
 	e.global_position = pos
@@ -4174,10 +4204,13 @@ func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1, disguise_kind: in
 		e.set_meta("avoid_only", true)
 	if wave_idx >= 0:
 		e.set_meta("wave_idx", wave_idx)
-	e.killed.connect(_on_enemy_killed.bind(wave_idx, shiny))
+	e.killed.connect(_on_enemy_killed.bind(wave_idx, shiny, elite))
 
-func _on_enemy_killed(at_position: Vector2, wave_idx: int = -1, shiny: bool = false) -> void:
+func _on_enemy_killed(at_position: Vector2, wave_idx: int = -1, shiny: bool = false, elite: bool = false) -> void:
 	_spawn_orb(at_position + Vector2(0, -20.0))
+	# 엘리트 — 오브 1개 추가(총 가치 2, 위험 증가에 보상 동행 §2).
+	if elite:
+		_spawn_orb(at_position + Vector2(14.0, -26.0))
 	if shiny:
 		_reward_shiny_kill(at_position + Vector2(0, -20.0))
 	# 웨이브 모드: 처치된 적의 웨이브 카운트 감소 + 다음 웨이브 트리거 검사
