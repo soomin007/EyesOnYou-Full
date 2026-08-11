@@ -334,6 +334,10 @@
   스테이지 자식이라 pause 주체를 찾기 어려웠다). 실게임은 Main 경유라 무관한 하니스 인공물. →
   Stage를 띄우는 하니스는 IgShotter처럼 `GameState.seen_enemies`를 미리 채운다. **신규 도감 id를
   추가하면(예: "elite") 이 prefill 목록도 함께** — 기존 5종만 채우면 새 id에서 재발한다.
+  추가 주의 2건(2026-08-11 세션 3): ⓐ prefill로 목록을 *대입*하면 실사용자 settings.cfg의 다른 도감
+  항목이 in-memory에서 사라진 채로 하니스 중 저장(mark_enemy_seen이 새 id 추가 시 save)될 수 있다 —
+  가능하면 대입 대신 누락분 append, 그리고 하니스 전 settings.cfg 백업. ⓑ `_check_first_encounter`는
+  `harmless` 개체를 제외한다 — 조우/도감 검증용 스폰은 harmless=false로 둘 것(true면 조용히 미발동).
 
 - **곱셈 modulate로는 붉은/어두운 바탕을 금색으로 만들 수 없다 — 가산(ADD) 블렌드 오버레이로.**
   shiny 몸통에 금 틴트(1.5,1.24,0.55)를 곱해도 빨강×금=주황일 뿐이다(곱셈은 채널을 더 못 늘림).
