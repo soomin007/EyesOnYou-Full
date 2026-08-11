@@ -101,9 +101,11 @@ var player_level: int = 1
 const XP_PER_LEVEL: int = 8
 # 만렙(모든 스킬 라인 T3) 이후 레벨업 보상 — 15스테이지 확장으로 s10쯤 만렙에 닿으면 레벨업이
 # 무보상이 되는 문제(사용자 보고 2026-08-10). 스킬 카드 대신 오버플로 카드 1장: 예비 장갑
-# (최대 체력 +1, 상한 OVERFLOW_HP_CAP회) → 상한 뒤엔 점수. 런 단위, run.cfg 영속.
+# (최대 체력 +1, 상한 OVERFLOW_HP_CAP회) → 상한 뒤엔 응급 처치(체력 회복) → 가득이면 점수 폴백
+# (점수는 인게임에 안 보여 빈 보상이라는 피드백 2026-08-11 — 체감형 우선). 런 단위, run.cfg 영속.
 var overflow_hp_bonus: int = 0
 const OVERFLOW_HP_CAP: int = 2
+const OVERFLOW_HEAL_AMOUNT: int = 2
 const OVERFLOW_SCORE_BONUS: int = 500
 
 # 노드맵 막4/5 반전 공개 — 막1~3 동안 노드맵·헤더가 막3 끝(9스테이지)까지만 보이다가 막4 진입 시
@@ -156,6 +158,11 @@ var debug_unlocked: bool = false
 # 디버그 무적 — 테스트용(재머/맵 확인 등). 켜면 Player.take_hit이 데미지를 무시. 세션 한정, reset에서 안 지움
 # (맵을 바꿔가며 테스트하는 동안 유지). debug_unlocked일 때만 Settings 디버그 탭에서 토글.
 var debug_invincible: bool = false
+
+# 디버그 엘리트 강제 — 연습장 한정(Stage._spawn_enemy가 playground_active일 때만 참조).
+# 실런은 확률 램프(s9 5%→s12 30%)라 전 타입을 못 만날 수 있다는 피드백(2026-08-11) 보완.
+# 무적과 같은 규칙: 세션 한정, reset에서 안 지움.
+var debug_force_elite: bool = false
 
 # ??? 맵 진행 중 Player 입력 제한 (이동/점프만 허용, 공격/대시/스킬 비활성)
 var restrict_combat_input: bool = false
@@ -494,10 +501,11 @@ func enemy_count_multiplier() -> float:
 		3: return 1.5
 	return 1.1
 
-# 레벨업 필요 XP — 레벨 5마다 +1(사용자 제안 2026-08-10): L1~4=8, L5~9=9, L10~14=10, L15~19=11...
-# 15스테이지 확장으로 만렙(24픽)이 s10쯤 오던 것을 뒤로 늦추고, 보스(s8) 시점 화력 램프도 완만하게.
+# 레벨업 필요 XP — 레벨 2마다 +1(2026-08-11 상향: 레벨 5마다로도 s8 보스 전에 공격 3계열 만렙,
+# 보스전이 싱겁다는 실플레이 피드백): L1=8, L2~3=9, L4~5=10, L6~7=11 ... 레벨 10 도달까지 약 19% 감속,
+# 후반은 더 크게 벌어져 만렙(24픽)이 뒤로 밀린다. 보스 HP 성장 스케일 상한 12→16과 짝.
 func xp_to_next() -> int:
-	return XP_PER_LEVEL + player_level / 5
+	return XP_PER_LEVEL + player_level / 2
 
 func add_xp(amount: int, apply_risk_bonus: bool = true) -> bool:
 	# high-risk 루트(risk=3)에서 적 처치 XP +50% (스테이지 클리어 보상은 apply_risk_bonus=false로 호출).
@@ -624,13 +632,17 @@ func displayed_total_stages() -> int:
 		return TOTAL_STAGES
 	return stages_through_act3()
 
-# 만렙 이후 레벨업 보상 지급 — LevelUpOverlay 오버플로 카드에서 호출. 반환: 지급 종류("hp"|"score").
+# 만렙 이후 레벨업 보상 지급 — LevelUpOverlay 오버플로 카드에서 호출. 반환: 지급 종류("hp"|"heal"|"score").
+# 우선순위: 최대 체력(상한까지) → 응급 처치(회복 여지 있으면) → 점수(가득일 때만 폴백).
 func grant_overflow_reward() -> String:
 	if overflow_hp_bonus < OVERFLOW_HP_CAP:
 		overflow_hp_bonus += 1
 		player_max_hp += 1
 		player_hp = min(player_hp + 1, player_max_hp)
 		return "hp"
+	if player_hp < player_max_hp:
+		heal_player(OVERFLOW_HEAL_AMOUNT)
+		return "heal"
 	score += OVERFLOW_SCORE_BONUS
 	return "score"
 

@@ -88,6 +88,17 @@ func _open_panel() -> void:
 	inv_hb.add_child(inv_cb)
 	v.add_child(inv_hb)
 
+	var el_hb := HBoxContainer.new()
+	el_hb.add_theme_constant_override("separation", 6)
+	el_hb.add_child(_make_row_label("엘리트"))
+	var el_cb := CheckButton.new()
+	el_cb.text = "강제 승격 (전 타입 체험)"
+	el_cb.button_pressed = GameState.debug_force_elite
+	el_cb.add_theme_font_size_override("font_size", 13)
+	el_cb.toggled.connect(_on_force_elite_toggled)
+	el_hb.add_child(el_cb)
+	v.add_child(el_hb)
+
 	var sep := HSeparator.new()
 	v.add_child(sep)
 	var exit_btn := Button.new()
@@ -99,6 +110,12 @@ func _open_panel() -> void:
 func _on_invincible_toggled(on: bool) -> void:
 	# 무적은 연습장에서만 효과가 있다(Player.take_hit이 playground_active로 가드) — 일반 모드엔 영향 없음.
 	GameState.debug_invincible = on
+
+func _on_force_elite_toggled(on: bool) -> void:
+	# 실런은 확률 램프(s9 5%→s12 30%)라 엘리트 전 타입을 못 만날 수 있다(2026-08-11 피드백).
+	# 연습장 한정 강제 승격 — 켠 뒤 맵을 다시 진입하면 적용. 재머/둥지 저격수/위장·시선 거짓
+	# 제외는 실런과 동일(Stage._spawn_enemy 가드). 일반 모드엔 영향 없음(playground_active 가드).
+	GameState.debug_force_elite = on
 
 func _close_panel() -> void:
 	open = false

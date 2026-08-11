@@ -30,12 +30,17 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 		picks = SkillSystem.roll_choices(GameState.skills, 3, GameState.current_route_id)
 		if picks.size() == 0:
 			overflow_mode = true
+			# 카드 종류는 GameState.grant_overflow_reward 우선순위와 동일하게 산출: 최대 체력 →
+			# 응급 처치(회복 여지) → 점수 폴백(가득일 때만 — 점수가 빈 보상으로 읽힌 피드백 2026-08-11).
 			if GameState.has_overflow_hp_room():
 				picks = [{"id": OVERFLOW_PICK_ID, "name": "예비 장갑", "family": "", "tier": 0,
 					"desc": "모든 스킬이 최고 단계예요. 최대 체력이 1 올라요."}]
+			elif GameState.player_hp < GameState.player_max_hp:
+				picks = [{"id": OVERFLOW_PICK_ID, "name": "응급 처치", "family": "", "tier": 0,
+					"desc": "모든 스킬이 최고 단계예요. 체력을 %d 회복해요." % GameState.OVERFLOW_HEAL_AMOUNT}]
 			else:
 				picks = [{"id": OVERFLOW_PICK_ID, "name": "전술 기록", "family": "", "tier": 0,
-					"desc": "모든 스킬이 최고 단계예요. 점수를 %d 더 받아요." % GameState.OVERFLOW_SCORE_BONUS}]
+					"desc": "모든 스킬이 최고 단계예요. 점수를 %d 더 받아요. 점수는 화면 오른쪽 위에 보여요." % GameState.OVERFLOW_SCORE_BONUS}]
 	if overflow_mode:
 		# 만렙 상태에선 추천 멘트가 가리킬 스킬 카드가 없다 — 혼란 방지로 멘트/추천 생략.
 		advice_line = ""
@@ -215,7 +220,7 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 
 static func _finish(layer: CanvasLayer, picked_id: String, on_picked: Callable) -> void:
 	if picked_id == OVERFLOW_PICK_ID:
-		# 만렙 오버플로 보상 — 스킬 대신 예비 장갑(최대 HP +1, 상한 후 점수).
+		# 만렙 오버플로 보상 — 스킬 대신 예비 장갑(최대 HP +1) → 응급 처치(회복) → 점수 폴백.
 		SfxPlayer.play("skill_pick")
 		GameState.grant_overflow_reward()
 	elif picked_id != "":

@@ -22,6 +22,7 @@ var stage_label: Label
 var map_label: Label   # 현재 맵(루트) 이름 — HUD 상단
 var trust_label: Label # VEIL 신뢰도 게이지 — HUD 상단
 var skill_label: Label
+var score_label: Label # 점수 — 우상단 VEIL 눈 아래(점수 보상이 인게임에 안 보인다는 피드백, 2026-08-11)
 var levelup_overlay: CanvasLayer
 var goal_reached: bool = false
 var pending_levelup: bool = false
@@ -2547,19 +2548,23 @@ func _ambience_core_recovery() -> void:
 		])
 		cable.z_index = -13
 		add_child(cable)
-		# 데이터 펄스 — 케이블을 따라 코어 방향으로 흐르는 광점. 시안/바이올렛 혼재.
-		for p in 2:
-			var pulse := ColorRect.new()
-			var viol2: bool = (i + p) % 2 == 0
-			pulse.color = Color(0.72, 0.42, 1.0, 0.9) if viol2 else Color(0.40, 0.90, 1.0, 0.9)
-			pulse.size = Vector2(12.0, th)
-			pulse.z_index = -12
-			add_child(pulse)
-			var start := Vector2(-100.0, sy)
-			var tw := pulse.create_tween()
-			tw.set_loops()
-			tw.tween_interval(rng.randf_range(0.2, 2.4))
-			tw.tween_property(pulse, "position", converge, rng.randf_range(5.0, 9.0)).from(start)
+		# 데이터 펄스 — 케이블을 따라 코어 방향으로 흐르는 빛줄기. 시안/바이올렛 혼재.
+		# 천장 케이블(위 2가닥)에만 — 지면 높이 케이블의 밝은 광점(12×5, 알파 0.9, 총알급 속도)이
+		# 몸통 높이를 날아 시안 티어 총알과 오인됐다(2026-08-11 피드백). 가늘고 긴 저알파 스트릭 +
+		# 감속으로 "배관 속 신호"로만 읽히게.
+		if sy < 0.0:
+			for p in 2:
+				var pulse := ColorRect.new()
+				var viol2: bool = (i + p) % 2 == 0
+				pulse.color = Color(0.72, 0.42, 1.0, 0.32) if viol2 else Color(0.40, 0.90, 1.0, 0.32)
+				pulse.size = Vector2(26.0, 3.0)
+				pulse.z_index = -12
+				add_child(pulse)
+				var start := Vector2(-100.0, sy)
+				var tw := pulse.create_tween()
+				tw.set_loops()
+				tw.tween_interval(rng.randf_range(0.2, 2.4))
+				tw.tween_property(pulse, "position", converge, rng.randf_range(9.0, 14.0)).from(start)
 	# 코어 글로우 — 우측 끝 세로 워시 3겹 + 느린 맥동(심장 박동).
 	var glow_steps: Array = [
 		{"x": w - 260.0, "a": 0.05},
@@ -3341,6 +3346,18 @@ func _build_hud() -> void:
 	eye_cap.size = Vector2(54.0, 14.0)
 	eye_cap.position = Vector2(-54.0 - 18.0, 70.0)
 	hud.add_child(eye_cap)
+	# 점수 — VEIL 눈 아래 상시 표시. 스테이지 클리어 가산·만렙 오버플로 '전술 기록'이 어디에도
+	# 안 보여 빈 보상으로 읽히던 문제(2026-08-11 피드백).
+	score_label = Label.new()
+	score_label.add_theme_font_size_override("font_size", 12)
+	score_label.add_theme_color_override("font_color", Color(0.75, 0.80, 0.88, 0.9))
+	score_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
+	score_label.add_theme_constant_override("outline_size", 3)
+	score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	score_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	score_label.size = Vector2(100.0, 14.0)
+	score_label.position = Vector2(-95.0, 90.0)
+	hud.add_child(score_label)
 
 	var bottom := MarginContainer.new()
 	bottom.add_theme_constant_override("margin_left", 24)
@@ -3439,6 +3456,8 @@ func _update_cd_slot(slot: Control, remaining: float, max_cd: float) -> void:
 func _refresh_hud() -> void:
 	hp_label.text = "HP  %s" % _hearts(GameState.player_hp, GameState.player_max_hp)
 	xp_label.text = "LV %d   XP %d/%d" % [GameState.player_level, GameState.player_xp, GameState.xp_to_next()]
+	if score_label != null and is_instance_valid(score_label):
+		score_label.text = "SCORE %d" % GameState.score
 	if xp_bar != null and is_instance_valid(xp_bar):
 		xp_bar.max_value = float(GameState.xp_to_next())
 		xp_bar.value = float(GameState.player_xp)
@@ -3724,8 +3743,9 @@ func _spawn_from_enemies_dict(enemies: Dictionary, wave_idx: int) -> void:
 var _waves_data: Array = []
 var _wave_initial_count: Array = []  # 각 웨이브 spawn 직후 적 수 (risk mult 반영)
 var _wave_alive_count: Array = []    # 현재 살아있는 적 수
-var _wave_spawned: Array = []        # bool — spawn 이미 됐는지
+var _wave_spawned: Array = []        # bool — spawn 이미 됐는지(예고 시작 시점에 set — 중복 트리거 방지)
 var _wave_banners_played: Array = [] # bool — 배너 표시 여부
+var _wave_pending_spawns: int = 0    # 예고(텔레그래프) 중이라 아직 투입 전인 웨이브 수 — 조기 클리어 방지
 
 func _init_waves(waves: Array) -> void:
 	_waves_data = waves
@@ -3733,11 +3753,40 @@ func _init_waves(waves: Array) -> void:
 	_wave_alive_count.clear()
 	_wave_spawned.clear()
 	_wave_banners_played.clear()
+	_wave_pending_spawns = 0
 	for i in waves.size():
 		_wave_initial_count.append(0)
 		_wave_alive_count.append(0)
 		_wave_spawned.append(false)
 		_wave_banners_played.append(false)
+
+# 증원 스폰 예고 — 스폰 지점 바닥의 경고 셰브론 + 차단문 개방 광선. lifetime 뒤 스스로 소멸.
+class _WaveSpawnTelegraph extends Node2D:
+	var lifetime: float = 0.85
+	var t: float = 0.0
+	func _ready() -> void:
+		z_index = 5
+	func _process(delta: float) -> void:
+		t += delta
+		if t >= lifetime:
+			queue_free()
+			return
+		queue_redraw()
+	func _draw() -> void:
+		var k: float = clampf(t / maxf(lifetime, 0.01), 0.0, 1.0)
+		var blink: float = 0.55 + 0.45 * sin(t * 26.0)
+		var col := Color(1.0, 0.32, 0.30, (0.35 + 0.45 * k) * blink)
+		# 바닥 경고 셰브론(∨ 두 겹) — "여기로 온다"
+		for i in 2:
+			var off: float = -8.0 - float(i) * 10.0
+			draw_polyline(PackedVector2Array([
+				Vector2(-14.0, off - 8.0), Vector2(0.0, off), Vector2(14.0, off - 8.0),
+			]), col, 3.0)
+		# 개방 광선 — 차단문이 열리는 세로 빛기둥(점점 밝아짐)
+		var beam := Color(1.0, 0.55, 0.40, 0.10 + 0.22 * k)
+		draw_rect(Rect2(Vector2(-10.0, -86.0), Vector2(20.0, 86.0)), beam, true)
+
+const WAVE_SPAWN_TELEGRAPH: float = 0.85
 
 func _spawn_wave(idx: int) -> void:
 	if idx < 0 or idx >= _waves_data.size():
@@ -3745,6 +3794,35 @@ func _spawn_wave(idx: int) -> void:
 	if _wave_spawned[idx]:
 		return
 	_wave_spawned[idx] = true
+	# 증원(두 번째 웨이브부터)은 예고 후 투입 — 배너와 함께 스폰 지점 경고 텔레그래프를 먼저 보여줘
+	# "어디서 오는지"를 읽게 한다(충원 연출 피드백 2026-08-11). 첫 웨이브는 입장 직후라 즉시.
+	if idx >= 1:
+		if not _wave_banners_played[idx]:
+			_wave_banners_played[idx] = true
+			_show_wave_banner(str(_waves_data[idx].get("banner", "WAVE %d" % (idx + 1))))
+		_telegraph_wave_spawn(idx)
+		return
+	_do_spawn_wave(idx)
+
+func _telegraph_wave_spawn(idx: int) -> void:
+	_wave_pending_spawns += 1
+	var wave: Dictionary = _waves_data[idx]
+	var enemies: Dictionary = wave.get("enemies", {})
+	SfxPlayer.play("hatch_open")   # 차단문 개방음 — 증원 투입 신호
+	for kind_name in enemies.keys():
+		var positions: Array = enemies[kind_name]
+		for p in positions:
+			var tel := _WaveSpawnTelegraph.new()
+			tel.lifetime = WAVE_SPAWN_TELEGRAPH
+			tel.position = p
+			add_child(tel)
+	# pause 존중 타이머(process_always=false). Stage가 해제되면 메서드 Callable은 자동 무효 —
+	# 람다를 쓰면 freed self 참조 크래시 위험이 있어 반드시 메서드 bind로 연결.
+	get_tree().create_timer(WAVE_SPAWN_TELEGRAPH, false).timeout.connect(_do_spawn_wave.bind(idx))
+
+func _do_spawn_wave(idx: int) -> void:
+	if idx >= 1:
+		_wave_pending_spawns = maxi(0, _wave_pending_spawns - 1)
 	var before: int = get_tree().get_nodes_in_group("enemy").size()
 	var wave: Dictionary = _waves_data[idx]
 	var enemies: Dictionary = wave.get("enemies", {})
@@ -3758,10 +3836,6 @@ func _spawn_wave(idx: int) -> void:
 	# 후속 웨이브 spawn 수를 누적. (idx==0은 _setup이 측정 전이라 카운트 누적 X)
 	if idx >= 1:
 		_enemies_remaining += spawned
-	# 웨이브 배너 (idx 0은 입장 직후라 생략, idx>=1만 표시)
-	if idx >= 1 and not _wave_banners_played[idx]:
-		_wave_banners_played[idx] = true
-		_show_wave_banner(str(wave.get("banner", "WAVE %d" % (idx + 1))))
 
 func _show_wave_banner(text: String) -> void:
 	var layer := CanvasLayer.new()
@@ -3847,10 +3921,11 @@ func _spawn_boss(boss_meta: Dictionary) -> void:
 	boss.self_destruct_disarmed.connect(_on_boss_self_destruct_disarmed)
 	_build_boss_hp_bar()
 	# 플레이어 성장 스케일(2026-08-10) — 15스테이지 확장으로 s8 시점 화력이 원 설계(9스테이지)보다
-	# 높아 보스가 너무 빨리 녹는다는 피드백. 공격 계열 티어 합 × 2 HP 가산(상한 +12 → 최대 36).
+	# 높아 보스가 너무 빨리 녹는다는 피드백. 공격 계열 티어 합 × 2 HP 가산.
+	# 상한 12→16(2026-08-11): XP 곡선 상향과 짝 — 공격 만렙 도달 시에도 보스전이 싱겁지 않게(최대 40).
 	if not GameState.story_mode:
 		var off_tiers: int = GameState.get_skill_tier("fire_boost") + GameState.get_skill_tier("multishot") + GameState.get_skill_tier("explosive")
-		boss.apply_hp_bonus(mini(off_tiers * 2, 12))
+		boss.apply_hp_bonus(mini(off_tiers * 2, 16))
 	# 보스전 진입 안내 — 본편은 인트로 컷씬의 VEIL 대사가 대신한다(중복 방지). 스토리 모드는 인트로가
 	# 없으므로 기존 1회성 안내 유지(피드백: 사격법 혼란).
 	if GameState.story_mode:
@@ -3871,9 +3946,12 @@ func _build_boss_hp_bar() -> void:
 	boss_hp_label.text = "SENTINEL"
 	boss_hp_label.add_theme_font_size_override("font_size", 14)
 	boss_hp_label.add_theme_color_override("font_color", Color(0.95, 0.55, 0.55))
-	boss_hp_label.position = Vector2(560.0, 60.0)
-	boss_hp_label.size = Vector2(160.0, 20.0)
-	boss_hp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	# 게이지 왼쪽 나란히 — 중앙 상단(560,60)은 HUD 2행(SKILL 목록)이 길어지면 겹친다
+	# (보스전쯤엔 스킬이 많아 반드시 겹침, 2026-08-11 피드백). 위(HUD ~y71)·아래(경고 96·자폭 110)
+	# 모두 선점돼 있어 바 옆이 유일한 빈 자리.
+	boss_hp_label.position = Vector2(320.0, 77.0)
+	boss_hp_label.size = Vector2(112.0, 20.0)
+	boss_hp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	holder.add_child(boss_hp_label)
 	var bg := ColorRect.new()
 	bg.color = Color(0.08, 0.06, 0.08, 0.85)
@@ -4184,16 +4262,26 @@ func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1, disguise_kind: in
 	e.set("shiny", shiny)
 	e.set("disguise_as", disguise_kind)   # §4 거짓 렌더 — >=0이면 위장 렌더(_ready에서 소비)
 	e.set("feign_ambush", feign)          # §4 시선 거짓 — true면 딴 데 보는 척 기습(patrol, _ready에서 소비)
+	# 농성(웨이브) 맵 사냥 모드 — waves_hunt 맵의 지상 적(patrol/bomber/shield)은 감지 범위 밖에서도
+	# 플레이어를 향해 전진하고 엄폐를 타넘는다(저지선: 좌우 스폰이 감지 밖 + 엄폐 솔리드에 막혀
+	# 스폰 지점만 순찰하던 버그, 2026-08-11). 위장/시선 거짓은 "평범해 보여야" 해서 제외.
+	if bool(_map_data.get("waves_hunt", false)) and kind in [0, 3, 4] \
+			and disguise_kind < 0 and not feign:
+		e.set("hunt", true)
 	# 엘리트 롤 — 제외: 재머(라이벌의 "손"은 별개 문법) · 둥지 저격수(등반 완화 튜닝 역행) ·
-	# 위장/시선 거짓(이중 기만 금지 §4.1, 계급장이 위장을 깨는 모순) · 스토리/연습장.
+	# 위장/시선 거짓(이중 기만 금지 §4.1, 계급장이 위장을 깨는 모순) · 스토리.
+	# 연습장은 기본 제외(테스트 노이즈), 단 "엘리트 강제" 토글이면 전원 승격(전 타입 체험용).
 	var elite: bool = false
 	if kind != 5 and disguise_kind < 0 and not feign \
 			and not (kind == 1 and bool(_map_data.get("nest_snipers", false))) \
-			and not GameState.story_mode and not GameState.playground_active:
-		var cap: int = ELITE_CAP_ACT5 if GameState.act_for_stage(GameState.current_stage) >= 4 else ELITE_CAP_ACT4
-		if _elite_spawned < cap and randf() < _elite_chance_here():
-			elite = true
-			_elite_spawned += 1
+			and not GameState.story_mode:
+		if GameState.playground_active:
+			elite = GameState.debug_force_elite
+		else:
+			var cap: int = ELITE_CAP_ACT5 if GameState.act_for_stage(GameState.current_stage) >= 4 else ELITE_CAP_ACT4
+			if _elite_spawned < cap and randf() < _elite_chance_here():
+				elite = true
+				_elite_spawned += 1
 	e.set("elite", elite)
 	add_child(e)
 	_had_enemies = true   # 이스터에그(평화주의) — 적이 있던 맵에서만 인정
@@ -4227,6 +4315,10 @@ func _on_enemy_killed(at_position: Vector2, wave_idx: int = -1, shiny: bool = fa
 # 일반 ARENA에서는 _enemies_remaining만 보면 됨.
 func _can_arena_clear() -> bool:
 	if _enemies_remaining > 0:
+		return false
+	# 예고(텔레그래프) 중인 증원이 있으면 대기 — _wave_spawned는 예고 시작 시점에 켜지므로
+	# 이 가드가 없으면 예고 0.85s 사이에 남은 적 0으로 조기 클리어된다.
+	if _wave_pending_spawns > 0:
 		return false
 	if _waves_data.is_empty():
 		return true

@@ -141,6 +141,12 @@ func _has_ground_ahead(check_dir: int, lookahead: float = EDGE_LOOKAHEAD_X) -> b
 	var hit: Dictionary = space.intersect_ray(query)
 	return not hit.is_empty()
 
+# 사냥 모드 — 진행 방향 벽(부서지는 엄폐 등)에 막히면 반전 대신 짧은 도약으로 타넘는다.
+# 지면+벽 접촉일 때만 발동, 도약 중(공중)엔 재발동 없음.
+func _try_hunt_hop() -> void:
+	if is_on_floor() and is_on_wall():
+		velocity.y = HUNT_HOP_VELOCITY
+
 var patrol_state: int = PatrolState.ROAMING
 var patrol_state_timer: float = 0.0
 # FIRING phase 구분 — true면 조준 중(timer가면 발사), false면 쿨다운 중(timer가면 다시 조준 시작).
@@ -183,6 +189,17 @@ var _feigning: bool = false    # §4 시선 거짓 — 각성을 숨긴 채 딴 
 # 색은 visual/self modulate가 텔레그래프·피격 플래시로 흰색 리셋되므로, 독립된 오라 자식으로 표현.
 var shiny: bool = false
 
+# 농성(웨이브) 맵 사냥 모드 — Stage가 waves_hunt 맵의 지상 적(patrol/bomber/shield)에 켠다.
+# 감지 범위 밖에서도 플레이어 쪽으로 전진하고, 진행 방향 벽(부서지는 엄폐 등)은 반전 대신
+# 짧은 도약으로 타넘는다. (저지선: 좌우 스폰 적이 감지 260px 밖 + 엄폐 솔리드에 막혀
+# 스폰 지점만 순찰하던 버그의 해법, 2026-08-11 피드백.)
+var hunt: bool = false
+const HUNT_HOP_VELOCITY: float = -520.0   # 엄폐 최고 92px < 도약 ~123px
+
+# 지속 기본 틴트 — 텔레그래프/조준 점멸이 리셋할 목표색(기본 흰색). shiny는 금빛으로 바꿔
+# 몸통 자체가 항상 황금이게 한다(known_issues 함정의 ⓑ 해법: 리셋 목표를 틴트 값으로).
+var _base_tint: Color = Color(1, 1, 1)
+
 # 황금 오라 — modulate와 무관한 별도 발광(피격/텔레그래프 색 변화에 안 덮임).
 class _ShinyAura extends Node2D:
 	var t: float = 0.0
@@ -191,9 +208,42 @@ class _ShinyAura extends Node2D:
 		queue_redraw()
 	func _draw() -> void:
 		var pulse: float = 0.5 + 0.5 * sin(t * 3.0)
-		var a: float = lerp(0.14, 0.30, pulse)
-		draw_circle(Vector2.ZERO, 27.0, Color(1.0, 0.82, 0.30, a * 0.5))
-		draw_circle(Vector2.ZERO, 16.0, Color(1.0, 0.90, 0.48, a))
+		var a: float = lerp(0.22, 0.44, pulse)
+		# 발광 이중 원 + 맥동 링 — "더 황금스럽게" 피드백(2026-08-11)으로 기존보다 넓고 밝게.
+		draw_circle(Vector2.ZERO, 34.0, Color(1.0, 0.80, 0.26, a * 0.4))
+		draw_circle(Vector2.ZERO, 18.0, Color(1.0, 0.90, 0.48, a))
+		draw_arc(Vector2.ZERO, 30.0 + 3.0 * pulse, 0.0, TAU, 40, Color(1.0, 0.88, 0.40, a * 0.8), 1.5, true)
+		# 회전 반짝이 4점 — 납작한 궤도(원근감)를 도는 작은 마름모.
+		for i in 4:
+			var ang: float = t * 1.6 + TAU * float(i) / 4.0
+			var c: Vector2 = Vector2(cos(ang), sin(ang) * 0.55) * 30.0
+			var s: float = 2.6 + 1.4 * sin(t * 5.0 + float(i) * 1.7)
+			draw_colored_polygon(PackedVector2Array([
+				c + Vector2(0, -s), c + Vector2(s, 0), c + Vector2(0, s), c + Vector2(-s, 0),
+			]), Color(1.0, 0.95, 0.62, 0.85))
+
+# 황금 글린트 — 몸통 위 가산 혼합(ADD) 금빛 워시 + 주기적 사선 스윕. modulate는 곱셈이라
+# 붉은 유니폼이 금색이 될 수 없다(빨강×금=주황) — 가산이라야 어떤 바탕색 위에서도 노랗게 뜬다.
+class _ShinyGlint extends Node2D:
+	var t: float = 0.0
+	func _ready() -> void:
+		var m := CanvasItemMaterial.new()
+		m.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+		material = m
+	func _process(delta: float) -> void:
+		t += delta
+		queue_redraw()
+	func _draw() -> void:
+		var pulse: float = 0.5 + 0.5 * sin(t * 3.0)
+		var a: float = lerp(0.14, 0.26, pulse)
+		draw_rect(Rect2(Vector2(-13.0, -46.0), Vector2(26.0, 44.0)), Color(0.95, 0.72, 0.18, a), true)
+		# 사선 글린트 스윕 — 금속 광택처럼 1.6s마다 몸통을 훑는 밝은 금띠.
+		var ph: float = fmod(t, 1.6) / 1.6
+		if ph < 0.35:
+			var k: float = ph / 0.35
+			var x: float = lerp(-16.0, 16.0, k)
+			var ga: float = 0.55 * (1.0 - absf(k - 0.5) * 2.0)
+			draw_line(Vector2(x - 6.0, -48.0), Vector2(x + 6.0, -2.0), Color(1.0, 0.95, 0.55, ga), 3.0)
 
 # 재밍 필드 — 마커가 소등되는 구역을 라이벌 바이올렛 링으로 그린다.
 # 작가성(known_issues): "마커가 그냥 사라진다"가 아니라 "여기가 가로막혔다"로 읽히게, 반경을 눈에 보이게.
@@ -350,6 +400,14 @@ func _ready() -> void:
 		aura.position = Vector2(0.0, -22.0)  # 몸통 중앙 근처(지면형 발 기준 위)
 		aura.z_index = -1                    # 캐릭터 아트 뒤
 		add_child(aura)
+		# 몸통 금빛 — 점멸/조준 리셋 목표를 이 틴트로 바꿔 유지("오라만으론 황금이 약하다", 2026-08-11).
+		_base_tint = Color(1.5, 1.24, 0.55)
+		if visual != null:
+			visual.modulate = _base_tint
+		# 가산 글린트 — 붉은 유니폼 위에서도 금빛이 뜨게(곱셈 틴트의 한계 보완).
+		var glint := _ShinyGlint.new()
+		glint.z_index = 2
+		add_child(glint)
 	# 지면형 적은 spawn pos가 발판 살짝 위/아래여도 발판 top에 정확히 붙도록 snap.
 	# (drone은 공중 상시라 snap 안 함. 첫 frame 뒤로 미루기 위해 call_deferred)
 	if enemy_type != EnemyType.DRONE:
@@ -609,20 +667,27 @@ func _tick_patrol(delta: float) -> void:
 
 	match patrol_state:
 		PatrolState.ROAMING:
-			velocity.x = float(dir) * _eff_patrol_speed()
-			if global_position.x > origin_x + patrol_range:
-				dir = -1
-			elif global_position.x < origin_x - patrol_range:
-				dir = 1
-			if is_on_wall():
-				dir = -dir
-			# 발판 가장자리 감지 — 떨어지지 않게 진행 방향에 ground 없으면 반전
-			if edge_flip_cd > 0.0:
-				edge_flip_cd -= delta
-			elif is_on_floor() and not _has_ground_ahead(dir):
-				dir = -dir
-				edge_flip_cd = EDGE_FLIP_COOLDOWN
+			if hunt and p != null and not harmless:
+				# 사냥 모드 — 순찰 범위/벽 반전 무시, 플레이어 쪽으로 전진. 벽(엄폐)은 타넘기.
+				# 가장자리 검사도 생략(농성 맵은 평지 + 엄폐 꼭대기 통과라 낙하가 안전).
+				dir = 1 if p.global_position.x > global_position.x else -1
 				velocity.x = float(dir) * _eff_patrol_speed()
+				_try_hunt_hop()
+			else:
+				velocity.x = float(dir) * _eff_patrol_speed()
+				if global_position.x > origin_x + patrol_range:
+					dir = -1
+				elif global_position.x < origin_x - patrol_range:
+					dir = 1
+				if is_on_wall():
+					dir = -dir
+				# 발판 가장자리 감지 — 떨어지지 않게 진행 방향에 ground 없으면 반전
+				if edge_flip_cd > 0.0:
+					edge_flip_cd -= delta
+				elif is_on_floor() and not _has_ground_ahead(dir):
+					dir = -dir
+					edge_flip_cd = EDGE_FLIP_COOLDOWN
+					velocity.x = float(dir) * _eff_patrol_speed()
 			if not harmless and p != null and _player_in_charge_range(p):
 				dir = 1 if p.global_position.x > global_position.x else -1
 				velocity.x = 0.0
@@ -646,10 +711,10 @@ func _tick_patrol(delta: float) -> void:
 				if int(patrol_state_timer * 10.0) % 2 == 0:
 					visual.modulate = Color(1.4, 1.4, 0.85)
 				else:
-					visual.modulate = Color(1, 1, 1)
+					visual.modulate = _base_tint
 			if patrol_state_timer <= 0.0:
 				if visual != null:
-					visual.modulate = Color(1, 1, 1)
+					visual.modulate = _base_tint
 				if patrol_fire_armed:
 					# 발사 순간 — 엘리트는 2연 버스트(수평탄이라 점프 하나로 함께 회피 가능, §2).
 					if p != null and not harmless:
@@ -676,10 +741,10 @@ func _tick_patrol(delta: float) -> void:
 				if int(patrol_state_timer * 10.0) % 2 == 0:
 					visual.modulate = Color(1.6, 0.55, 0.55)
 				else:
-					visual.modulate = Color(1, 1, 1)
+					visual.modulate = _base_tint
 			if patrol_state_timer <= 0.0:
 				if visual != null:
-					visual.modulate = Color(1, 1, 1)
+					visual.modulate = _base_tint
 				patrol_state = PatrolState.CHARGING
 				patrol_state_timer = PATROL_CHARGE_DURATION
 		PatrolState.CHARGING:
@@ -895,20 +960,26 @@ func _tick_bomber(delta: float) -> void:
 
 	match bomber_state:
 		BomberState.ROAMING:
-			velocity.x = float(dir) * BOMBER_SPEED
-			if global_position.x > origin_x + patrol_range:
-				dir = -1
-			elif global_position.x < origin_x - patrol_range:
-				dir = 1
-			if is_on_wall():
-				dir = -dir
-			# 발판 가장자리 감지
-			if edge_flip_cd > 0.0:
-				edge_flip_cd -= delta
-			elif is_on_floor() and not _has_ground_ahead(dir):
-				dir = -dir
-				edge_flip_cd = EDGE_FLIP_COOLDOWN
+			if hunt and p != null and not harmless:
+				# 사냥 모드 — 감지 밖에서도 플레이어 쪽으로 전진(농성 맵 "밀려온다" 압박). 벽은 타넘기.
+				dir = 1 if p.global_position.x > global_position.x else -1
 				velocity.x = float(dir) * BOMBER_SPEED
+				_try_hunt_hop()
+			else:
+				velocity.x = float(dir) * BOMBER_SPEED
+				if global_position.x > origin_x + patrol_range:
+					dir = -1
+				elif global_position.x < origin_x - patrol_range:
+					dir = 1
+				if is_on_wall():
+					dir = -dir
+				# 발판 가장자리 감지
+				if edge_flip_cd > 0.0:
+					edge_flip_cd -= delta
+				elif is_on_floor() and not _has_ground_ahead(dir):
+					dir = -dir
+					edge_flip_cd = EDGE_FLIP_COOLDOWN
+					velocity.x = float(dir) * BOMBER_SPEED
 			if not harmless and p != null and _bomber_in_detect_range(p):
 				bomber_state = BomberState.STALKING
 		BomberState.STALKING:
@@ -918,9 +989,13 @@ func _tick_bomber(delta: float) -> void:
 				dir = 1 if p.global_position.x > global_position.x else -1
 				velocity.x = float(dir) * BOMBER_SPEED * _eff_bomber_stalk_mult()
 				if is_on_wall():
-					velocity.x = 0.0
-				# 가장자리 — STALKING 빠름 → fast lookahead
-				if is_on_floor() and not _has_ground_ahead(dir, EDGE_LOOKAHEAD_X_FAST):
+					if hunt:
+						_try_hunt_hop()   # 사냥 모드 — 엄폐에 막혀 멈추지 않고 타넘는다
+					else:
+						velocity.x = 0.0
+				# 가장자리 — STALKING 빠름 → fast lookahead. 사냥 모드는 낙하 안전(평지 농성 맵)이라 생략
+				# (엄폐 꼭대기에서 아래 지면이 lookahead 밖이라 동결되는 것 방지).
+				if not hunt and is_on_floor() and not _has_ground_ahead(dir, EDGE_LOOKAHEAD_X_FAST):
 					velocity.x = 0.0
 				var d2: float = global_position.distance_to(p.global_position)
 				if d2 <= BOMBER_ARM_RANGE:
@@ -939,7 +1014,7 @@ func _tick_bomber(delta: float) -> void:
 				if int(bomber_state_timer * freq) % 2 == 0:
 					visual.modulate = Color(1.8, 0.45, 0.45)
 				else:
-					visual.modulate = Color(1, 1, 1)
+					visual.modulate = _base_tint
 			if bomber_state_timer <= 0.0:
 				_bomber_explode()
 				return
@@ -1014,15 +1089,20 @@ func _tick_shield(delta: float) -> void:
 			velocity.x = 0.0
 	else:
 		# 평소 순찰. dir은 player 방향으로 잠겨 있으니, patrol_range를 벗어나면 제자리에 멈춤.
+		# 사냥 모드는 범위 무시하고 전진(정면 잠금 회전 로직은 위 공유), 벽(엄폐)은 타넘기.
 		var px: float = global_position.x
-		if (dir > 0 and px > origin_x + patrol_range) or (dir < 0 and px < origin_x - patrol_range):
+		if hunt and p != null and not harmless:
+			velocity.x = float(dir) * SHIELD_SPEED * 0.8
+			_try_hunt_hop()
+		elif (dir > 0 and px > origin_x + patrol_range) or (dir < 0 and px < origin_x - patrol_range):
 			velocity.x = 0.0
 		else:
 			velocity.x = float(dir) * SHIELD_SPEED * 0.8
-		if is_on_wall():
+		if is_on_wall() and not hunt:
 			velocity.x = 0.0
 	# 가장자리 — 추격이든 순찰이든 떨어지지 않게 정지 (방패병은 정면 잠김이라 dir 반전 어색).
-	if is_on_floor() and not _has_ground_ahead(dir):
+	# 사냥 모드는 생략 — 평지 농성 맵 + 엄폐 꼭대기 통과 시 동결 방지.
+	if not hunt and is_on_floor() and not _has_ground_ahead(dir):
 		velocity.x = 0.0
 
 	_flip_visual(dir < 0)
