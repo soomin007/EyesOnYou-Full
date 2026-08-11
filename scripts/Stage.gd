@@ -3391,8 +3391,9 @@ func _build_hud() -> void:
 	var cd_row := HBoxContainer.new()
 	cd_row.add_theme_constant_override("separation", 18)
 	bottom_v.add_child(cd_row)
-	cd_attack_slot = _make_cd_slot("사격", CD_BAR_WIDTH_SHORT)
-	cd_dash_slot = _make_cd_slot("대시", CD_BAR_WIDTH_SHORT)
+	# 액센트 = 각 동작의 인게임 색(2026-08-11 "특성에 맞게"): 사격=탄환 노랑, 대시=잔상 시안.
+	cd_attack_slot = _make_cd_slot("사격", CD_BAR_WIDTH_SHORT, Color(1.0, 0.90, 0.45))
+	cd_dash_slot = _make_cd_slot("대시", CD_BAR_WIDTH_SHORT, Color(0.55, 0.90, 1.0))
 	cd_skill_slot = _make_cd_slot("스킬")
 	cd_barrier_slot = _make_barrier_slot()
 	# 스킬 슬롯에만 충전 점 추가 — explosive T3에서 2개 보유 가능.
@@ -3429,9 +3430,11 @@ func _build_hud() -> void:
 func _keys_hint_text() -> String:
 	return GameState.controls_hint_line()
 
-func _make_cd_slot(label_text: String, bar_width: float = CD_BAR_WIDTH) -> Control:
+func _make_cd_slot(label_text: String, bar_width: float = CD_BAR_WIDTH, accent: Color = Color(0.55, 0.95, 0.65)) -> Control:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 3)
+	# 슬롯 고유 액센트 — 준비 상태 색이자 게이지 정체성(쿨다운 중엔 같은 색을 어둡게).
+	v.set_meta("accent", accent)
 	var l := Label.new()
 	l.text = label_text
 	l.add_theme_font_size_override("font_size", 11)
@@ -3443,7 +3446,7 @@ func _make_cd_slot(label_text: String, bar_width: float = CD_BAR_WIDTH) -> Contr
 	bar_bg.size = Vector2(bar_width, 6)
 	var bar_fill := ColorRect.new()
 	bar_fill.name = "Fill"
-	bar_fill.color = Color(0.55, 0.95, 0.65)
+	bar_fill.color = accent
 	bar_fill.position = Vector2.ZERO
 	bar_fill.size = Vector2(bar_width, 6)
 	bar_bg.add_child(bar_fill)
@@ -3464,10 +3467,11 @@ func _update_cd_slot(slot: Control, remaining: float, max_cd: float) -> void:
 		ratio = 1.0 - clamp(remaining / max_cd, 0.0, 1.0)
 	# 슬롯마다 바 길이가 다르다(짧은 쿨=짧은 바) — 상수 대신 실제 배경 폭 기준.
 	fill.size.x = bar_bg.size.x * ratio
+	var accent: Color = slot.get_meta("accent", Color(0.55, 0.95, 0.65))
 	if ratio >= 1.0:
-		fill.color = Color(0.55, 0.95, 0.65)  # 준비
+		fill.color = accent                       # 준비 — 고유색 밝게
 	else:
-		fill.color = Color(0.55, 0.78, 0.95)  # 쿨다운 중
+		fill.color = accent.darkened(0.45)        # 쿨다운 중 — 같은 색 어둡게(정체성 유지)
 
 func _refresh_hud() -> void:
 	hp_label.text = "HP  %s" % _hearts(GameState.player_hp, GameState.player_max_hp)
@@ -3498,15 +3502,19 @@ func _refresh_hud() -> void:
 	if trust_label != null:
 		trust_label.text = "VEIL " + GameState.veil_trust_gauge_dots()
 		trust_label.add_theme_color_override("font_color", GameState.veil_tone_color())
-	if GameState.skills.size() > 0:
-		var names: Array = []
-		for sid in GameState.skills:
-			var tier: int = int(GameState.skills[sid])
-			var skill: Dictionary = SkillSystem.find_by_id(str(sid), tier)
-			var display: String = str(skill.get("name", sid))
-			if tier > 1:
-				display += " T%d" % tier
-			names.append(display)
+	var names: Array = []
+	for sid in GameState.skills:
+		# 대시·이중점프(베이스라인)는 기본 조작 — 스킬 보유 목록에서 제외(2026-08-11 피드백:
+		# 시작부터 항상 떠 있어 "스킬로 넣었나" 혼란. 트리 화면의 "(기본)" 표기는 유지).
+		if SkillTreeData.BASELINE.has(str(sid)):
+			continue
+		var tier: int = int(GameState.skills[sid])
+		var skill: Dictionary = SkillSystem.find_by_id(str(sid), tier)
+		var display: String = str(skill.get("name", sid))
+		if tier > 1:
+			display += " T%d" % tier
+		names.append(display)
+	if names.size() > 0:
 		skill_label.text = "SKILL  " + ", ".join(names)
 	else:
 		skill_label.text = "SKILL"
@@ -4420,9 +4428,10 @@ func _spawn_orb(pos: Vector2, static_placement: bool = false, attract_range: flo
 	add_child(orb)
 	orb.global_position = pos
 	if static_placement:
-		# bounce 스킵 — 즉시 attract 단계로
+		# bounce 스킵 — 즉시 attract 단계로. placed = 클리어 환급 제외(가서 먹어야 하는 보상).
 		orb.set("spawn_anim_t", 1.0)
 		orb.set("bounce_velocity", Vector2.ZERO)
+		orb.set("placed", true)
 	if is_gate:
 		orb.set("is_gate", true)
 		orb.set("value", 3)          # 일반 1 → 게이트 3 (게이트당 6 ≈ 거의 1레벨)
@@ -4894,16 +4903,19 @@ func _begin_clear_sequence() -> void:
 	var _is_arena_fx: bool = challenge_active or _goal_type == "ENEMY_CLEAR"
 	if not _is_arena_fx and GameState.current_route_id != "route_lab":
 		_play_clear_player_fx()
-	# 남은 XP orb를 player 근처로 텔레포트 → 자동 흡수 (PICKUP_RANGE 내).
-	# 궤적 라인을 함께 그려 "저기 있던 미수집 보상이 회수됐다"는 인과를 보여준다
-	# (순간 등장이 버그로 읽힌 피드백 2026-08-11 — 배수로에서 안 먹은 분기 오브가 출구 위에 출현).
+	# 남은 "처치 드롭" XP orb만 player 근처로 텔레포트 → 자동 흡수 (PICKUP_RANGE 내).
+	# 원 목적: 도전방 마지막 처치 직후 못 주운 드롭 구제. 배치형 보상(분기·게이트·레버, placed)은
+	# 제외 — "가서 먹어야" 의미가 있는 유인 설계인데 환급이 무력화시켰다(사용자 지적 2026-08-11:
+	# 게이트 오브는 삼단점프를 찍게 하는 유인책. 안 먹은 배치 보상은 그 자리에 남고 그냥 잃는다).
 	if player != null and is_instance_valid(player):
 		for orb in get_tree().get_nodes_in_group("exp_orb"):
 			if not (orb is Node2D) or orb.is_queued_for_deletion():
 				continue
 			var o := orb as Node2D
+			if o.get("placed"):
+				continue
 			var from_pos: Vector2 = o.global_position
-			# bounce 단계 스킵 + 플레이어 근처로 이동
+			# bounce 단계 스킵 + 플레이어 근처로 이동. 궤적 라인으로 회수 인과 표시.
 			o.set("spawn_anim_t", 1.0)
 			o.global_position = player.global_position + Vector2(randf_range(-60.0, 60.0), -90.0)
 			_spawn_recall_streak(from_pos, o.global_position)
@@ -5235,11 +5247,11 @@ func _tick_trap_warning() -> void:
 					_show_veil_subtitle("앞에 함정이 있는 것 같아요. 잘 안 보여요. 발밑·천장 조심해요.", 3.4)
 				else:
 					# 런당 2회까지만 — 함정 맵마다 같은 멘트가 반복돼 지겹다는 피드백(2026-08-11).
-					# 붕괴 경고는 상황성(그 맵의 시야 상태)이라 제한 없이 유지.
+					# 붕괴 경고는 상황성(그 맵의 시야 상태)이라 제한 없이 유지. 어투 = 전술 보고체.
 					if GameState.trap_warn_count >= 2:
 						return
 					GameState.trap_warn_count += 1
-					_show_veil_subtitle("저 포탑은 못 부숴요. 타이밍 보고 지나가요.", 3.2)
+					_show_veil_subtitle("저 포탑은 파괴할 수 없습니다. 발사 간격을 읽고 통과하십시오.", 3.2)
 				return
 
 # 측면 단독 둥지 저격수(회피 전용)에 처음 가까워지면 VEIL이 1회 안내 — "정면으론 못 잡으니

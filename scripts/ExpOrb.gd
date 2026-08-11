@@ -15,6 +15,9 @@ var attract_range: float = PICKUP_RANGE
 var value: int = VALUE
 # 글라이드 게이트 보상 여부 — true면 벽/바닥 너머로는 흡인되지 않는다(직접 알코브에 도달해야 획득).
 var is_gate: bool = false
+# 미리 배치된 보상(분기·게이트·레버) 여부 — 클리어 환급(Stage._begin_clear_sequence) 제외 대상.
+# 배치 보상은 "가서 먹어야" 의미가 있다(안 먹으면 그냥 잃음). 환급은 처치 드롭 전용(2026-08-11).
+var placed: bool = false
 
 func _ready() -> void:
 	add_to_group("exp_orb")

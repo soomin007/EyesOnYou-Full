@@ -645,13 +645,14 @@ func _check_first_encounter() -> void:
 		return
 	encountered = true
 	# 특별 개체 조우 — VEIL 한마디(각 런당 1회, 2026-08-11 사용자 제안). 황금=희귀 반응 /
-	# 엘리트="다른 신호" 복선(라이벌의 군대 §6). 문구는 dialogue_review.md 검토 대상.
+	# 엘리트="다른 신호" 복선(라이벌의 군대 §6). 어투 = 간결한 전술 보고체(사용자 지시 2026-08-11:
+	# 해요체 남발이 "유치원 교사" 같다 — AI 전술 요원의 짧은 보고로). 문구는 dialogue_review §8 검토 대상.
 	if shiny and not GameState.shiny_line_shown:
 		GameState.shiny_line_shown = true
-		stage_node.call("_show_veil_subtitle", "잠깐, 저 금빛 개체는 뭐죠? 제 기록에 없는 사양이에요. 놓치면 아까워요.", 4.0)
+		stage_node.call("_show_veil_subtitle", "미확인 개체 포착. 데이터베이스에 없는 사양입니다. 회수 가치가 높습니다.", 4.0)
 	elif elite and not GameState.elite_line_shown:
 		GameState.elite_line_shown = true
-		stage_node.call("_show_veil_subtitle", "저 보라색 계급장, 시설 편제에 없어요. 다른 신호를 받고 있어요. 조심해요.", 4.2)
+		stage_node.call("_show_veil_subtitle", "저 계급장은 시설 편제에 없습니다. 외부 신호 수신 중. 교전에 주의하십시오.", 4.2)
 	var id: String = _enemy_id()
 	if GameState.mark_enemy_seen(id):
 		# 기반 타입 카드 우선 — 같은 조우에서 elite 카드까지 겹치면 과함(다음 조우로 미룸).
@@ -1265,11 +1266,12 @@ func take_damage(amount: int, from_dir: int = 0) -> void:
 		_show_explosion_immune_flash()
 		SfxPlayer.play_at("bullet_deflect_shield", global_position)
 		# 상황 멘트(런당 1회) — "저 방패병은 폭발 면역" 류의 맥락 안내(2026-08-11 사용자 제안).
+		# 어투 = 간결한 전술 보고체(해요체 "흘려요"가 유치하다는 지적으로 재작성).
 		if not GameState.shield_immune_line_shown:
 			GameState.shield_immune_line_shown = true
 			var sn := get_tree().get_first_node_in_group("stage")
 			if sn != null:
-				sn.call("_show_veil_subtitle", "저 방패병, 폭발을 그냥 흘려요. 정면 말고 옆이나 뒤에서 쏴요.", 3.8)
+				sn.call("_show_veil_subtitle", "폭발 피해 무효 확인. 저 방패병은 측면과 후방 사격만 유효합니다.", 3.8)
 		return
 	# 교전(피격) = 위장이 벗겨지는 주 시점 — 지직거림 tell을 못 봤어도 여기서 정체가 드러난다.
 	if _disguised:
