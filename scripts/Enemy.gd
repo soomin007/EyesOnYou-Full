@@ -226,6 +226,8 @@ class _ShinyAura extends Node2D:
 # 붉은 유니폼이 금색이 될 수 없다(빨강×금=주황) — 가산이라야 어떤 바탕색 위에서도 노랗게 뜬다.
 class _ShinyGlint extends Node2D:
 	var t: float = 0.0
+	# 몸통 워시 영역 — 지면형(발 원점) 기본. 드론 등 중심 원점 개체는 스폰 측에서 교체.
+	var body_rect: Rect2 = Rect2(-13.0, -46.0, 26.0, 44.0)
 	func _ready() -> void:
 		var m := CanvasItemMaterial.new()
 		m.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
@@ -236,14 +238,14 @@ class _ShinyGlint extends Node2D:
 	func _draw() -> void:
 		var pulse: float = 0.5 + 0.5 * sin(t * 3.0)
 		var a: float = lerp(0.14, 0.26, pulse)
-		draw_rect(Rect2(Vector2(-13.0, -46.0), Vector2(26.0, 44.0)), Color(0.95, 0.72, 0.18, a), true)
+		draw_rect(body_rect, Color(0.95, 0.72, 0.18, a), true)
 		# 사선 글린트 스윕 — 금속 광택처럼 1.6s마다 몸통을 훑는 밝은 금띠.
 		var ph: float = fmod(t, 1.6) / 1.6
 		if ph < 0.35:
 			var k: float = ph / 0.35
-			var x: float = lerp(-16.0, 16.0, k)
+			var x: float = lerp(body_rect.position.x - 3.0, body_rect.end.x + 3.0, k)
 			var ga: float = 0.55 * (1.0 - absf(k - 0.5) * 2.0)
-			draw_line(Vector2(x - 6.0, -48.0), Vector2(x + 6.0, -2.0), Color(1.0, 0.95, 0.55, ga), 3.0)
+			draw_line(Vector2(x - 6.0, body_rect.position.y - 2.0), Vector2(x + 6.0, body_rect.end.y + 2.0), Color(1.0, 0.95, 0.55, ga), 3.0)
 
 # 재밍 필드 — 마커가 소등되는 구역을 라이벌 바이올렛 링으로 그린다.
 # 작가성(known_issues): "마커가 그냥 사라진다"가 아니라 "여기가 가로막혔다"로 읽히게, 반경을 눈에 보이게.
@@ -385,19 +387,24 @@ func _ready() -> void:
 	# 엘리트(라이벌의 군대) — HP 오버라이드(§2, bomber는 1 유지 = 원거리 1샷 정답 보존) + 계급장.
 	# 위장/시선 거짓과는 스폰 단계에서 배타(Stage 가드) — 계급장이 위장을 깨는 모순 방지.
 	if elite:
+		# HP 상향(2026-08-11: "엘리트가 강한 느낌이 안 든다" — 금방 죽어 강화 패턴을 못 보여줌.
+		# bomber는 1 유지 = 원거리 1샷 정답 보존).
 		match enemy_type:
-			EnemyType.PATROL: hp = 4
-			EnemyType.SNIPER: hp = 2
-			EnemyType.DRONE: hp = 2
-			EnemyType.SHIELD: hp = 5
+			EnemyType.PATROL: hp = 6
+			EnemyType.SNIPER: hp = 3
+			EnemyType.DRONE: hp = 3
+			EnemyType.SHIELD: hp = 7
 		var crest := _EliteCrest.new()
 		crest.z_index = 3
 		add_child(crest)
 	fire_timer = _sniper_interval()
 	drone_bomb_cd = 1.2  # 스폰 직후 즉시 폭격 방지
 	if shiny:
+		# 드론은 콜리전·시각이 몸 중심(0,0) 기준이라 지면형 발 기준 오프셋을 쓰면 오라가 위로
+		# 어긋난다(2026-08-11 사용자 보고) — 공중형은 중심 정렬.
+		var is_air: bool = enemy_type == EnemyType.DRONE
 		var aura := _ShinyAura.new()
-		aura.position = Vector2(0.0, -22.0)  # 몸통 중앙 근처(지면형 발 기준 위)
+		aura.position = Vector2.ZERO if is_air else Vector2(0.0, -22.0)
 		aura.z_index = -1                    # 캐릭터 아트 뒤
 		add_child(aura)
 		# 몸통 금빛 — 점멸/조준 리셋 목표를 이 틴트로 바꿔 유지("오라만으론 황금이 약하다", 2026-08-11).
@@ -407,6 +414,7 @@ func _ready() -> void:
 		# 가산 글린트 — 붉은 유니폼 위에서도 금빛이 뜨게(곱셈 틴트의 한계 보완).
 		var glint := _ShinyGlint.new()
 		glint.z_index = 2
+		glint.body_rect = Rect2(-17.0, -17.0, 34.0, 34.0) if is_air else Rect2(-13.0, -46.0, 26.0, 44.0)
 		add_child(glint)
 	# 지면형 적은 spawn pos가 발판 살짝 위/아래여도 발판 top에 정확히 붙도록 snap.
 	# (drone은 공중 상시라 snap 안 함. 첫 frame 뒤로 미루기 위해 call_deferred)
@@ -636,6 +644,14 @@ func _check_first_encounter() -> void:
 	if stage_node == null:
 		return
 	encountered = true
+	# 특별 개체 조우 — VEIL 한마디(각 런당 1회, 2026-08-11 사용자 제안). 황금=희귀 반응 /
+	# 엘리트="다른 신호" 복선(라이벌의 군대 §6). 문구는 dialogue_review.md 검토 대상.
+	if shiny and not GameState.shiny_line_shown:
+		GameState.shiny_line_shown = true
+		stage_node.call("_show_veil_subtitle", "잠깐, 저 금빛 개체는 뭐죠? 제 기록에 없는 사양이에요. 놓치면 아까워요.", 4.0)
+	elif elite and not GameState.elite_line_shown:
+		GameState.elite_line_shown = true
+		stage_node.call("_show_veil_subtitle", "저 보라색 계급장, 시설 편제에 없어요. 다른 신호를 받고 있어요. 조심해요.", 4.2)
 	var id: String = _enemy_id()
 	if GameState.mark_enemy_seen(id):
 		# 기반 타입 카드 우선 — 같은 조우에서 elite 카드까지 겹치면 과함(다음 조우로 미룸).
@@ -872,6 +888,15 @@ func _clear_aim() -> void:
 
 # ─── Drone ──────────────────────────────────────────────────
 
+# 드론 산개/각 잡기(2026-08-11) — 전 드론이 플레이어 머리 바로 위 한 점에 정직하게 뭉쳐,
+# 발판을 지붕 삼아 그 밑에서 수류탄으로 농사짓는 전략이 지배적이던 문제.
+# ⓐ 평시(쿨다운)엔 개체별 측면 오프셋에서 대기 — 뭉침·광역 몰살 방지.
+# ⓑ 폭탄이 준비되고 시야(LoS)가 열려 있을 때만 머리 위로 파고들어 투하 — "파고들면 온다"가 읽힘.
+# ⓒ 플레이어가 지붕 아래면(LoS 차단) 투하 낭비 대신 측면 대기 — 지붕은 유효 엄폐로 유지하되
+#    드론이 한 점에 떠 주는 공짜 표적은 없앤다. (스토리 모드는 드론 스폰 자체가 스킵이라 무관.)
+var _hover_side: float = 1.0 if randf() < 0.5 else -1.0   # 개체별 대기 측면
+var _hover_gap: float = randf_range(100.0, 170.0)          # 개체별 대기 거리
+
 func _tick_drone(delta: float) -> void:
 	if drone_bomb_cd > 0.0:
 		drone_bomb_cd -= delta
@@ -884,7 +909,8 @@ func _tick_drone(delta: float) -> void:
 	# 호버 SFX는 AudioStreamPlayer2D loop라 매 tick 별도 트리거 불필요.
 	# 슬라이더 볼륨만 동기화.
 	_sync_hover_audio_volume()
-	if hover_ok and drone_bomb_cd <= 0.0 and not harmless:
+	var los_clear: bool = _drone_sees_player(player)
+	if hover_ok and drone_bomb_cd <= 0.0 and not harmless and los_clear:
 		velocity = Vector2.ZERO
 		_drop_bomb()
 		# 엘리트 — 2연 투하(2발째 좌우 분산): "그 자리 탈출"이 답이 되게(§2).
@@ -896,7 +922,12 @@ func _tick_drone(delta: float) -> void:
 			)
 		drone_bomb_cd = _drone_bomb_interval()
 	else:
-		var target: Vector2 = player.global_position + Vector2(0, DRONE_HOVER_OFFSET_Y)
+		# 목표 — 투하 준비 + 시야 열림: 머리 위 / 그 외: 개체별 측면 오프셋 대기.
+		var target: Vector2
+		if drone_bomb_cd <= 0.0 and los_clear and not harmless:
+			target = player.global_position + Vector2(0, DRONE_HOVER_OFFSET_Y)
+		else:
+			target = player.global_position + Vector2(_hover_side * _hover_gap, DRONE_HOVER_OFFSET_Y)
 		var to: Vector2 = target - global_position
 		if to.length() > 6.0:
 			velocity = to.normalized() * _eff_drone_speed()
@@ -904,6 +935,14 @@ func _tick_drone(delta: float) -> void:
 		else:
 			velocity = Vector2.ZERO
 	move_and_slide()
+
+# 드론→플레이어 시야 — 사이에 지형(layer 1: 바닥/발판)이 있으면 폭탄이 지붕에 낭비된다.
+func _drone_sees_player(p: Node2D) -> bool:
+	var space := get_world_2d().direct_space_state
+	var query := PhysicsRayQueryParameters2D.create(global_position, p.global_position + Vector2(0.0, -20.0), 1)
+	query.exclude = [self]
+	var hit: Dictionary = space.intersect_ray(query)
+	return hit.is_empty()
 
 func _drop_bomb(offset_x: float = 0.0) -> void:
 	SfxPlayer.play_at("enemy_drone_drop", global_position)
@@ -1225,6 +1264,12 @@ func take_damage(amount: int, from_dir: int = 0) -> void:
 	if elite and enemy_type == EnemyType.SHIELD and from_dir == 0:
 		_show_explosion_immune_flash()
 		SfxPlayer.play_at("bullet_deflect_shield", global_position)
+		# 상황 멘트(런당 1회) — "저 방패병은 폭발 면역" 류의 맥락 안내(2026-08-11 사용자 제안).
+		if not GameState.shield_immune_line_shown:
+			GameState.shield_immune_line_shown = true
+			var sn := get_tree().get_first_node_in_group("stage")
+			if sn != null:
+				sn.call("_show_veil_subtitle", "저 방패병, 폭발을 그냥 흘려요. 정면 말고 옆이나 뒤에서 쏴요.", 3.8)
 		return
 	# 교전(피격) = 위장이 벗겨지는 주 시점 — 지직거림 tell을 못 봤어도 여기서 정체가 드러난다.
 	if _disguised:
@@ -1240,18 +1285,52 @@ func take_damage(amount: int, from_dir: int = 0) -> void:
 	else:
 		SfxPlayer.play_at("enemy_hurt", global_position)
 
-# 엘리트 방패병 폭발 무효 tell — 몸 전체가 라이벌 바이올렛으로 잠깐 번쩍(독립 자식이라 modulate 무관).
+# 엘리트 방패병 폭발 무효 tell — 몸 전체 바이올렛 번쩍 + 확산 링 + "무효" 라벨.
+# (플래시만으론 폭발 이펙트에 묻혀 안 읽힌다는 피드백 2026-08-11로 강화.)
 func _show_explosion_immune_flash() -> void:
 	var f := Polygon2D.new()
-	f.color = Color(ELITE_VIOLET.r, ELITE_VIOLET.g, ELITE_VIOLET.b, 0.6)
+	f.color = Color(ELITE_VIOLET.r, ELITE_VIOLET.g, ELITE_VIOLET.b, 0.8)
 	f.polygon = PackedVector2Array([
 		Vector2(-20.0, -58.0), Vector2(20.0, -58.0), Vector2(20.0, 2.0), Vector2(-20.0, 2.0),
 	])
 	f.z_index = 4
 	add_child(f)
 	var tw := f.create_tween()
-	tw.tween_property(f, "color:a", 0.0, 0.25)
+	tw.tween_property(f, "color:a", 0.0, 0.35)
 	tw.tween_callback(f.queue_free)
+	# 확산 링 — 폭발 연기 위에서도 "무효 판정"이 도드라지게.
+	var ring := _ImmuneRing.new()
+	ring.position = Vector2(0.0, -28.0)
+	ring.z_index = 5
+	add_child(ring)
+	# "무효" 라벨 — 위로 떠오르며 사라짐.
+	var lbl := Label.new()
+	lbl.text = "무효"
+	lbl.add_theme_font_size_override("font_size", 16)
+	lbl.add_theme_color_override("font_color", Color(0.85, 0.55, 1.0))
+	lbl.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+	lbl.add_theme_constant_override("outline_size", 4)
+	lbl.position = Vector2(-18.0, -92.0)
+	lbl.z_index = 5
+	add_child(lbl)
+	var ltw := lbl.create_tween()
+	ltw.tween_property(lbl, "position:y", -116.0, 0.6)
+	ltw.parallel().tween_property(lbl, "modulate:a", 0.0, 0.6)
+	ltw.tween_callback(lbl.queue_free)
+
+# 폭발 무효 확산 링 — 바이올렛 원이 커지며 사라짐. 스스로 소멸.
+class _ImmuneRing extends Node2D:
+	var t: float = 0.0
+	func _process(delta: float) -> void:
+		t += delta
+		if t >= 0.45:
+			queue_free()
+			return
+		queue_redraw()
+	func _draw() -> void:
+		var k: float = t / 0.45
+		var r: float = lerp(20.0, 66.0, k)
+		draw_arc(Vector2.ZERO, r, 0.0, TAU, 40, Color(0.72, 0.42, 1.0, 0.85 * (1.0 - k)), 3.0, true)
 
 func _show_block_spark(from_dir: int) -> void:
 	# 방패 막힘 — 노란 짧은 라인이 방패 면(enemy.dir 쪽 외곽)에서 튀는 효과

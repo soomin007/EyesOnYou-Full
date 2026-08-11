@@ -77,6 +77,14 @@ var truth_seen: bool = false
 var drone_intro_seen: bool = false
 # 이스터에그 — 평화주의(발포 0 클리어) VEIL 대사를 이번 런에 이미 띄웠는가(런당 1회). 비영속, reset에서 초기화.
 var pacifist_line_shown: bool = false
+# 특별 개체 조우 VEIL 한마디 — 황금(shiny)/엘리트 각각 런당 1회(2026-08-11 사용자 제안).
+# 엘리트 대사는 "다른 신호" 복선(라이벌의 군대, rival_veil_concept §6). 비영속, reset에서 초기화.
+var shiny_line_shown: bool = false
+var elite_line_shown: bool = false
+# 엘리트 방패병 폭발 무효를 처음 목격했을 때 VEIL 상황 멘트(런당 1회) — "상황에 맞는 멘트" 피드백.
+var shield_immune_line_shown: bool = false
+# 포탑 "못 부숴요" 안내 발화 횟수 — 런당 2회까지만(함정 맵마다 반복돼 지겹다는 피드백 2026-08-11).
+var trap_warn_count: int = 0
 
 # 막3 핵심부(lab) 보스 처치 후 데이터 회수 연출 → "처리 선택"(DisposalChoiceOverlay)에서 고른 값.
 # 엔딩 9개의 처리 축(반출/파기/은닉/잔류). 런 단위 — reset()/start_main_game()에서 해제, run.cfg 영속.
@@ -259,7 +267,9 @@ func action_label(action: String, fallback: String = "?") -> String:
 func controls_hint_line() -> String:
 	if is_pad_mode():
 		return "좌스틱/D-Pad 이동   A 점프   ↓ 내려가기   X/RT 사격   B/RB 대시   Y 스킬   START 일시정지"
-	return "%s/%s 이동   %s 점프   %s 내려가기   %s 사격   %s 대시   %s 스킬   %s 일시정지" % [
+	# 일시정지는 보조 키 P 병기 — 웹 전체화면에서 ESC는 브라우저가 먼저 소비(전체화면 해제)해
+	# 한 번에 안 열리므로 P를 상시 보강(Main._bind_pause_fallback)하고 안내에도 노출.
+	return "%s/%s 이동   %s 점프   %s 내려가기   %s 사격   %s 대시   %s 스킬   %s·P 일시정지" % [
 		action_label("move_left", "A"), action_label("move_right", "D"),
 		action_label("jump", "W"), action_label("move_down", "S"),
 		action_label("attack", "J"), action_label("dash", "K"),
@@ -303,6 +313,10 @@ func reset() -> void:
 	truth_seen = false
 	drone_intro_seen = false
 	pacifist_line_shown = false
+	shiny_line_shown = false
+	elite_line_shown = false
+	shield_immune_line_shown = false
+	trap_warn_count = 0
 	disposal_choice = ""
 	# 디버그 연습장 플래그 누수 차단 — 연습장을 종료 버튼 아닌 경로(ESC→타이틀 등)로 빠져나오면
 	# playground_active가 true로 남아, 다음 일반 모드 클리어가 _trigger_stage_clear에서 연습장 분기로
@@ -344,6 +358,10 @@ func start_main_game() -> void:
 	truth_seen = false
 	drone_intro_seen = false
 	pacifist_line_shown = false
+	shiny_line_shown = false
+	elite_line_shown = false
+	shield_immune_line_shown = false
+	trap_warn_count = 0
 	disposal_choice = ""
 	playground_active = false  # 연습장 플래그 누수 차단(디버그→일반 모드) — reset()과 동일 방어.
 	_reset_perf_metrics()
@@ -501,11 +519,11 @@ func enemy_count_multiplier() -> float:
 		3: return 1.5
 	return 1.1
 
-# 레벨업 필요 XP — 레벨 2마다 +1(2026-08-11 상향: 레벨 5마다로도 s8 보스 전에 공격 3계열 만렙,
-# 보스전이 싱겁다는 실플레이 피드백): L1=8, L2~3=9, L4~5=10, L6~7=11 ... 레벨 10 도달까지 약 19% 감속,
-# 후반은 더 크게 벌어져 만렙(24픽)이 뒤로 밀린다. 보스 HP 성장 스케일 상한 12→16과 짝.
+# 레벨업 필요 XP — 8 + 레벨×3/4(2026-08-11 2차 상향: 레벨÷2로도 "여전히 빠르다" 실플레이 피드백).
+# L1=8(튜토리얼 레벨업 스텝 보존), L2=9, L4=11, L6=12, L8=14, L10=15, L12=17, L16=20 ...
+# 초반은 원곡선과 같고 중후반이 무거워져 만렙(24픽)·오버플로 도달이 확 밀린다. 보스 HP 캡 16과 짝.
 func xp_to_next() -> int:
-	return XP_PER_LEVEL + player_level / 2
+	return XP_PER_LEVEL + player_level * 3 / 4
 
 func add_xp(amount: int, apply_risk_bonus: bool = true) -> bool:
 	# high-risk 루트(risk=3)에서 적 처치 XP +50% (스테이지 클리어 보상은 apply_risk_bonus=false로 호출).

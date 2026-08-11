@@ -7,6 +7,7 @@ func _ready() -> void:
 	GameState.load_settings()
 	_bind_default_mouse_inputs()
 	_bind_wasd_to_ui()
+	_bind_pause_fallback()
 	GameState.apply_display_settings()
 	Accessibility.apply()
 	GameState.reset()
@@ -24,6 +25,11 @@ func _bind_default_mouse_inputs() -> void:
 		return
 	_ensure_mouse_event("attack", MOUSE_BUTTON_LEFT)
 	_ensure_mouse_event("skill", MOUSE_BUTTON_RIGHT)
+
+# P를 일시정지 보조 키로 상시 보강(2026-08-11 피드백) — 웹 전체화면에서 ESC는 브라우저가 먼저
+# 소비(전체화면 해제)해 일시정지가 한 번에 안 열린다. 핵심 조작 보강 패턴(cfg가 잃어도 복구).
+func _bind_pause_fallback() -> void:
+	_ensure_key_event("pause", KEY_P)
 
 func _ensure_mouse_event(action: String, btn: int) -> void:
 	if not InputMap.has_action(action):

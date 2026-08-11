@@ -45,6 +45,9 @@ var cd_skill_slot: Control
 var cd_barrier_slot: Control  # 에너지 방어막 — 충전 progress(헥스 + 남은 초), 완료 시 청록 가득
 var cd_shield_slot: Control   # 비상 부활 — T3 재충전 카운트다운(없으면 ✓), 미보유 시 숨김
 const CD_BAR_WIDTH: float = 90.0
+# 초단위 쿨(사격 연사·대시)은 짧은 바 — 긴 타이머(스킬·방어막·부활)와 같은 길이면 과장돼 보인다
+# (사용자: "굳이 이렇게 길게 똑같이?" 2026-08-11). 길이 자체가 쿨 체급을 말하게.
+const CD_BAR_WIDTH_SHORT: float = 44.0
 
 func _ready() -> void:
 	add_to_group("stage")
@@ -971,18 +974,10 @@ func _ensure_subtitle_stack() -> void:
 	_subtitle_stack_box.add_theme_constant_override("separation", 6)
 	holder.add_child(_subtitle_stack_box)
 
-func _show_veil_subtitle(message: String, duration: float, plain_prefix: bool = false, fast_in: bool = false) -> void:
+func _show_veil_subtitle(message: String, duration: float, _plain_prefix: bool = false, fast_in: bool = false) -> void:
 	SfxPlayer.play("veil_subtitle_in")
 	_ensure_subtitle_stack()
-	var l := Label.new()
-	# plain_prefix=true: VEIL-1/VEIL-2 시퀀스(??? 방 등) 끝에 현재 VEIL이 이어 말할 때 시각 일관성용 — em dash 제거.
-	l.text = ("VEIL\n" if plain_prefix else "VEIL   ") + message
-	l.add_theme_font_size_override("font_size", 20)
-	l.add_theme_color_override("font_color", Color(0.80, 0.92, 1.0))
-	l.add_theme_color_override("font_outline_color", Color(0, 0, 0))
-	l.add_theme_constant_override("outline_size", 4)
 	# 어두운 반투명 pill 배경 — 게임 화면 위에서 또렷하게(사용자: 대사 인지 안 됨).
-	# 내용 폭만큼만 감싸고 가운데 정렬 (SHRINK_CENTER).
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0.03, 0.05, 0.09, 0.82)
 	sb.set_corner_radius_all(7)
@@ -990,18 +985,15 @@ func _show_veil_subtitle(message: String, duration: float, plain_prefix: bool = 
 	sb.content_margin_right = 18.0
 	sb.content_margin_top = 8.0
 	sb.content_margin_bottom = 8.0
-	l.add_theme_stylebox_override("normal", sb)
-	l.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	l.modulate.a = 0.0
-	_subtitle_stack_box.add_child(l)
-	var tw := l.create_tween()
-	tw.tween_property(l, "modulate:a", 1.0, 0.12 if fast_in else 0.3)
+	var pill := _build_speaker_pill("VEIL", Color(0.42, 0.86, 1.0), message, Color(0.90, 0.96, 1.0), sb)
+	_subtitle_stack_box.add_child(pill)
+	var tw := pill.create_tween()
+	tw.tween_property(pill, "modulate:a", 1.0, 0.12 if fast_in else 0.3)
 	tw.tween_interval(duration)
-	tw.tween_property(l, "modulate:a", 0.0, 0.5)
+	tw.tween_property(pill, "modulate:a", 0.0, 0.5)
 	tw.tween_callback(func() -> void:
-		if is_instance_valid(l):
-			l.queue_free()
+		if is_instance_valid(pill):
+			pill.queue_free()
 	)
 
 # §7 라이벌 VEIL 자막 — 내 VEIL(_show_veil_subtitle, 시안)과 시각적으로 구별. 바이올렛 + 화자 불명("?").
@@ -1009,12 +1001,6 @@ func _show_veil_subtitle(message: String, duration: float, plain_prefix: bool = 
 func _show_rival_subtitle(message: String, duration: float) -> void:
 	SfxPlayer.play("veil_subtitle_in")
 	_ensure_subtitle_stack()
-	var l := Label.new()
-	l.text = "?   " + message
-	l.add_theme_font_size_override("font_size", 20)
-	l.add_theme_color_override("font_color", Color(0.80, 0.58, 1.0))   # 라이벌 바이올렛
-	l.add_theme_color_override("font_outline_color", Color(0.05, 0.0, 0.08))
-	l.add_theme_constant_override("outline_size", 4)
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0.07, 0.02, 0.11, 0.86)   # 어두운 바이올렛 pill
 	sb.set_corner_radius_all(7)
@@ -1024,19 +1010,48 @@ func _show_rival_subtitle(message: String, duration: float) -> void:
 	sb.content_margin_right = 18.0
 	sb.content_margin_top = 8.0
 	sb.content_margin_bottom = 8.0
-	l.add_theme_stylebox_override("normal", sb)
-	l.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	l.modulate.a = 0.0
-	_subtitle_stack_box.add_child(l)
-	var tw := l.create_tween()
-	tw.tween_property(l, "modulate:a", 1.0, 0.35)
+	var pill := _build_speaker_pill("?", Color(0.85, 0.50, 1.0), message, Color(0.92, 0.84, 1.0), sb)
+	_subtitle_stack_box.add_child(pill)
+	var tw := pill.create_tween()
+	tw.tween_property(pill, "modulate:a", 1.0, 0.35)
 	tw.tween_interval(duration)
-	tw.tween_property(l, "modulate:a", 0.0, 0.5)
+	tw.tween_property(pill, "modulate:a", 0.0, 0.5)
 	tw.tween_callback(func() -> void:
-		if is_instance_valid(l):
-			l.queue_free()
+		if is_instance_valid(pill):
+			pill.queue_free()
 	)
+
+# 자막 pill 공통 빌더 — 화자명과 대사를 분리해 색·아웃라인·구분선으로 구별(화자 "?"·"VEIL"이
+# 대사와 붙어 문장처럼 읽힌다는 피드백 2026-08-11). 화자명=진한 고유색, 대사=밝은 본문색.
+func _build_speaker_pill(speaker: String, sp_color: Color, message: String, msg_color: Color, sb: StyleBoxFlat) -> PanelContainer:
+	var pill := PanelContainer.new()
+	pill.add_theme_stylebox_override("panel", sb)
+	pill.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	pill.modulate.a = 0.0
+	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 10)
+	pill.add_child(hb)
+	var name_l := Label.new()
+	name_l.text = speaker
+	name_l.add_theme_font_size_override("font_size", 20)
+	name_l.add_theme_color_override("font_color", sp_color)
+	name_l.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+	name_l.add_theme_constant_override("outline_size", 6)
+	name_l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	hb.add_child(name_l)
+	var divider := ColorRect.new()
+	divider.color = Color(sp_color.r, sp_color.g, sp_color.b, 0.55)
+	divider.custom_minimum_size = Vector2(2.0, 20.0)
+	divider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	hb.add_child(divider)
+	var msg_l := Label.new()
+	msg_l.text = message
+	msg_l.add_theme_font_size_override("font_size", 20)
+	msg_l.add_theme_color_override("font_color", msg_color)
+	msg_l.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+	msg_l.add_theme_constant_override("outline_size", 4)
+	hb.add_child(msg_l)
+	return pill
 
 # 화면에 떠있는 모든 자막 일괄 폐기. ARCTURUS 문서 진입처럼 화면을 깨끗이 비워야
 # 하는 상황에서 호출. paused 동안 멈춘 fade-out이 outro 자막 위에 잔재로 남는 문제
@@ -3376,8 +3391,8 @@ func _build_hud() -> void:
 	var cd_row := HBoxContainer.new()
 	cd_row.add_theme_constant_override("separation", 18)
 	bottom_v.add_child(cd_row)
-	cd_attack_slot = _make_cd_slot("사격")
-	cd_dash_slot = _make_cd_slot("대시")
+	cd_attack_slot = _make_cd_slot("사격", CD_BAR_WIDTH_SHORT)
+	cd_dash_slot = _make_cd_slot("대시", CD_BAR_WIDTH_SHORT)
 	cd_skill_slot = _make_cd_slot("스킬")
 	cd_barrier_slot = _make_barrier_slot()
 	# 스킬 슬롯에만 충전 점 추가 — explosive T3에서 2개 보유 가능.
@@ -3414,7 +3429,7 @@ func _build_hud() -> void:
 func _keys_hint_text() -> String:
 	return GameState.controls_hint_line()
 
-func _make_cd_slot(label_text: String) -> Control:
+func _make_cd_slot(label_text: String, bar_width: float = CD_BAR_WIDTH) -> Control:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 3)
 	var l := Label.new()
@@ -3424,13 +3439,13 @@ func _make_cd_slot(label_text: String) -> Control:
 	v.add_child(l)
 	var bar_bg := ColorRect.new()
 	bar_bg.color = Color(0.14, 0.16, 0.20)
-	bar_bg.custom_minimum_size = Vector2(CD_BAR_WIDTH, 6)
-	bar_bg.size = Vector2(CD_BAR_WIDTH, 6)
+	bar_bg.custom_minimum_size = Vector2(bar_width, 6)
+	bar_bg.size = Vector2(bar_width, 6)
 	var bar_fill := ColorRect.new()
 	bar_fill.name = "Fill"
 	bar_fill.color = Color(0.55, 0.95, 0.65)
 	bar_fill.position = Vector2.ZERO
-	bar_fill.size = Vector2(CD_BAR_WIDTH, 6)
+	bar_fill.size = Vector2(bar_width, 6)
 	bar_bg.add_child(bar_fill)
 	v.add_child(bar_bg)
 	return v
@@ -3447,7 +3462,8 @@ func _update_cd_slot(slot: Control, remaining: float, max_cd: float) -> void:
 	var ratio: float = 1.0
 	if max_cd > 0.0:
 		ratio = 1.0 - clamp(remaining / max_cd, 0.0, 1.0)
-	fill.size.x = CD_BAR_WIDTH * ratio
+	# 슬롯마다 바 길이가 다르다(짧은 쿨=짧은 바) — 상수 대신 실제 배경 폭 기준.
+	fill.size.x = bar_bg.size.x * ratio
 	if ratio >= 1.0:
 		fill.color = Color(0.55, 0.95, 0.65)  # 준비
 	else:
@@ -4879,14 +4895,18 @@ func _begin_clear_sequence() -> void:
 	if not _is_arena_fx and GameState.current_route_id != "route_lab":
 		_play_clear_player_fx()
 	# 남은 XP orb를 player 근처로 텔레포트 → 자동 흡수 (PICKUP_RANGE 내).
+	# 궤적 라인을 함께 그려 "저기 있던 미수집 보상이 회수됐다"는 인과를 보여준다
+	# (순간 등장이 버그로 읽힌 피드백 2026-08-11 — 배수로에서 안 먹은 분기 오브가 출구 위에 출현).
 	if player != null and is_instance_valid(player):
 		for orb in get_tree().get_nodes_in_group("exp_orb"):
 			if not (orb is Node2D) or orb.is_queued_for_deletion():
 				continue
 			var o := orb as Node2D
+			var from_pos: Vector2 = o.global_position
 			# bounce 단계 스킵 + 플레이어 근처로 이동
 			o.set("spawn_anim_t", 1.0)
 			o.global_position = player.global_position + Vector2(randf_range(-60.0, 60.0), -90.0)
+			_spawn_recall_streak(from_pos, o.global_position)
 	var is_arena: bool = challenge_active or _goal_type == "ENEMY_CLEAR"
 	var delay: float = 2.6 if is_arena else 1.0
 	# 이스터에그(평화주의) — 적이 있던 통과형 맵을 한 발도 안 쏘고 클리어. 런당 1회 VEIL 인정.
@@ -4927,6 +4947,18 @@ func _begin_clear_sequence() -> void:
 		levelup_overlay = LevelUpOverlay.show(self, advice, _on_clear_levelup_picked)
 	else:
 		_transition_after_clear()
+
+# 클리어 오브 회수 궤적 — 원위치→회수 지점을 잇는 금빛 라인이 잠깐 떴다 사라진다.
+func _spawn_recall_streak(from_pos: Vector2, to_pos: Vector2) -> void:
+	var line := Line2D.new()
+	line.points = PackedVector2Array([from_pos, to_pos])
+	line.width = 2.0
+	line.default_color = Color(1.0, 0.90, 0.45, 0.55)
+	line.z_index = 20
+	add_child(line)
+	var tw := line.create_tween()
+	tw.tween_property(line, "modulate:a", 0.0, 0.45)
+	tw.tween_callback(line.queue_free)
 
 # 화면 전체 검은색 페이드 — duration의 후반 60% 시간 동안 0 → 0.85로 진행.
 # 다음 씬 전환 전에 정리되지 않으니 자연스럽게 검은 화면 → BRIEFING/STAGE 전환.
@@ -5202,6 +5234,11 @@ func _tick_trap_warning() -> void:
 				if GameState.veil_degraded:
 					_show_veil_subtitle("앞에 함정이 있는 것 같아요. 잘 안 보여요. 발밑·천장 조심해요.", 3.4)
 				else:
+					# 런당 2회까지만 — 함정 맵마다 같은 멘트가 반복돼 지겹다는 피드백(2026-08-11).
+					# 붕괴 경고는 상황성(그 맵의 시야 상태)이라 제한 없이 유지.
+					if GameState.trap_warn_count >= 2:
+						return
+					GameState.trap_warn_count += 1
 					_show_veil_subtitle("저 포탑은 못 부숴요. 타이밍 보고 지나가요.", 3.2)
 				return
 

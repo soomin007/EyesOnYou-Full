@@ -116,6 +116,16 @@ func _input(event: InputEvent) -> void:
 		return
 	if not _is_press(event):
 		return
+	# ESC는 재진입 트리거에서 제외(2026-08-11) — "빠져나가려는" 키인데 여기서 다시 전체화면에
+	# 넣으면 웹에서 ESC(브라우저 전체화면 해제)→ESC(일시정지)가 재진입과 겹쳐 성가시다.
+	if event is InputEventKey:
+		var k := event as InputEventKey
+		if k.keycode == KEY_ESCAPE or k.physical_keycode == KEY_ESCAPE:
+			return
+	# 일시정지/설정 등 메뉴가 열려 있는 동안(paused)에도 강제 재진입하지 않는다.
+	var tree := get_tree()
+	if tree != null and tree.paused:
+		return
 	_enter_fullscreen()
 
 func _is_press(event: InputEvent) -> bool:
