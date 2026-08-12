@@ -165,8 +165,10 @@ func _update_lights() -> void:
 		SfxPlayer.play("light_clunk", 2.0)
 		break
 
-# 전등 밝기(0~1) — 점등 직후 플리커 → 안정 후 미세한 형광등 떨림. 목격 비트에선 세계가
-# 뒤로 물러나도록 감광(코어만 남는다). 렌더러가 매 프레임 호출(결정적 — randf 금지).
+# 전등 밝기(0~1) — 점등은 완만한 단일 램프(블룸), 안정 후 미세한 형광등 숨결.
+# ⚠ 고대비 스트로브 금지 — 초기 구현(21Hz 점멸)이 광과민성 발작 위험 + 눈 피로로 반려됨
+# (사용자 2026-08-12). 점등 임팩트는 사운드(light_clunk)와 시야 킥이 담당한다.
+# 목격 비트에선 세계가 뒤로 물러나도록 감광(코어만 남는다). 렌더러가 매 프레임 호출(결정적).
 func lamp_intensity(idx: int) -> float:
 	var st: Dictionary = _light_states[idx]
 	if not bool(st.get("on", false)):
@@ -175,8 +177,7 @@ func lamp_intensity(idx: int) -> float:
 	var settle: float = 0.92 + 0.08 * sin(_elapsed * 2.3 + float(idx) * 1.7)
 	var v: float = settle
 	if tt < 0.45:
-		var strobe: float = 1.0 if fmod(tt * 21.0 + float(idx) * 0.63, 1.0) > 0.38 else 0.12
-		v = lerpf(strobe, settle, tt / 0.45)
+		v = lerpf(0.30, settle, tt / 0.45)
 	if _phase == "witness" or _phase == "done":
 		v *= 1.0 - 0.45 * clampf(_witness_t / 2.0, 0.0, 1.0)
 	return v
@@ -480,8 +481,9 @@ class _TunnelView:
 			return
 		var s: float = focal / d
 		var pos := _proj(0.0, 26.0, d, cx, cy, focal)
-		var wprog: float = float(t.witness_progress())
-		var pulse: float = 0.85 + 0.15 * sin(float(t._elapsed) * (1.6 + wprog * 1.2))
+		# 맥동은 얕고 느리게 — 목격 지점에서 화면을 채운 글로우가 ±15%로 출렁이면 "번쩍번쩍"
+		# 읽힘(사용자 반려 2026-08-12). 가속 없이 ±5% 고정, 심박은 크기 아니라 존재감으로.
+		var pulse: float = 0.94 + 0.05 * sin(float(t._elapsed) * 1.3)
 		var r_base: float = 130.0 * s * pulse
 		# 지지 케이블 실루엣 — 천장에서 코어로 수렴.
 		var cable_col := Color(0.03, 0.03, 0.05, clampf(vis * 0.8, 0.0, 0.8))
