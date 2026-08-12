@@ -650,6 +650,12 @@ static func choose_veil_recommendation_with_reason(pool: Array) -> Dictionary:
 		if pool.size() > 0:
 			return {"id": pool[0].get("id", ""), "reason": ""}
 		return {"id": "", "reason": ""}
+	# 후보가 하나뿐인 배타 스테이지(lab s8 · core_recovery s13 · escape s14)엔 고를 게 없다 —
+	# 실력 기반 사유("위험해도 크게 버는 길" 등)가 강제 진행 맵에 붙으면 모순(사용자 보고
+	# 2026-08-12: 비상 탈출로에 고위험 고보상 멘트). reason을 비우면 RouteMap이 ★추천 대신
+	# 그 맵 고유 veil_comment를 보여준다.
+	if candidates.size() == 1:
+		return {"id": candidates[0].get("id", ""), "reason": ""}
 	# 모드 — 데이터 없으면 first(첫 스테이지), 아니면 실력 tier.
 	var mode: String = GameState.competence_tier()
 	if GameState.recent_stage_hits.is_empty():
