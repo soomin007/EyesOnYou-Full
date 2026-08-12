@@ -5,6 +5,18 @@ static func build(_owner: Node, on_resume: Callable, on_settings: Callable, on_t
 	var layer := CanvasLayer.new()
 	layer.layer = 50
 	layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	# 일시정지 동안 BGM 덕킹(-12dB 먹먹) — 사망 화면과 동일 문법(사용자 지적 2026-08-12:
+	# 일시정지에 덕킹 부재). 해제는 tree_exited 훅 — 계속하기/설정/타이틀 등 어떤 경로로
+	# 닫혀도(씬 전환 포함) 레이어가 트리를 떠나는 순간 원복이 보장된다(paused 안전판과 동형).
+	BgmPlayer.set_ducked(true)
+	layer.tree_exited.connect(func() -> void:
+		var tree := Engine.get_main_loop() as SceneTree
+		if tree == null or tree.root == null:
+			return   # 앱 종료 중 — autoload가 먼저 해제됐을 수 있음
+		var bgm := tree.root.get_node_or_null("BgmPlayer")
+		if bgm != null:
+			bgm.set_ducked(false)
+	)
 
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.78)

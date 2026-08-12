@@ -4256,7 +4256,8 @@ func _elite_chance_here() -> float:
 		base += ELITE_RISK3_BONUS
 	return base
 
-func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1, disguise_kind: int = -1, feign: bool = false) -> void:
+# 반환: 생성된 적 노드 — 호출자가 후처리(14-1 제어 노드 HP 오버라이드 등)에 쓸 수 있다(대부분 무시).
+func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1, disguise_kind: int = -1, feign: bool = false) -> CharacterBody2D:
 	var e := CharacterBody2D.new()
 	e.set_script(load("res://scripts/Enemy.gd"))
 	e.collision_layer = 4
@@ -4325,6 +4326,7 @@ func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1, disguise_kind: in
 	if wave_idx >= 0:
 		e.set_meta("wave_idx", wave_idx)
 	e.killed.connect(_on_enemy_killed.bind(wave_idx, shiny, elite))
+	return e
 
 func _on_enemy_killed(at_position: Vector2, wave_idx: int = -1, shiny: bool = false, elite: bool = false) -> void:
 	_spawn_orb(at_position + Vector2(0, -20.0))
@@ -4347,7 +4349,7 @@ func _on_enemy_killed(at_position: Vector2, wave_idx: int = -1, shiny: bool = fa
 				call_deferred("_start_rival_p2")
 				return
 			elif _rival_phase == 1:
-				call_deferred("_finish_rival_p2")
+				call_deferred("_advance_rival_p2")
 				return
 		if _can_arena_clear():
 			call_deferred("_on_arena_cleared")
@@ -4378,14 +4380,20 @@ func _can_arena_clear() -> bool:
 # 흐름 유지). 가짜 클리어 + P3(거짓 VEIL 분신전)은 다음 단계(③)에서 이 뒤에 끼어든다.
 # 대사 = 라이벌 말투 A(결이 어긋난 정중함)·VEIL 보고체, 전부 플레이스홀더(dialogue_review).
 var _rival_phase: int = 0            # 0=P1(웨이브) 1=P2(빙의) 2=완료
+var _rival_p2_stage: int = 0         # P2 내부 진행: 0=노드A 1=노드B(+증원)
 var _rival_hold: bool = false        # P2 종료 연출 동안 클리어 보류
 var _rival_p2_props: Array = []      # P2 소환물(포탑·위장 함정 zone/컨트롤러) — 종료 시 정리
 var _rival_cast: CanvasModulate = null   # P2 소등 캐스트
+var _rival_fx_layer: CanvasLayer = null  # 간섭 플래시용 레이어(보스전 내내 유지)
+const RIVAL_NODE_HP: int = 10        # 제어 노드 — 재머 기본(3)보다 단단(보스 앵커, P2 길이의 몸통)
 
 func _rival_boss_active() -> bool:
 	return bool(_map_data.get("rival_boss", false))
 
 func _init_rival_boss() -> void:
+	_rival_fx_layer = CanvasLayer.new()
+	_rival_fx_layer.layer = 12
+	add_child(_rival_fx_layer)
 	# 페이즈 체크포인트(§7.2 확정: 하드코어 지양) — P2 도달 후 사망 재시도는 P1을 건너뛰고 곧장 P2.
 	if GameState.rival_phase_reached >= 1:
 		for e in get_tree().get_nodes_in_group("enemy"):
@@ -4399,9 +4407,16 @@ func _init_rival_boss() -> void:
 	get_tree().create_timer(1.0, false).timeout.connect(_rival_intro_line)
 	get_tree().create_timer(4.6, false).timeout.connect(_rival_intro_veil_line)
 
+# 화면 간섭 플래시 — 라이벌의 존재감 비트(입장·페이즈 전환·노드 파괴·퇴장에서 호출).
+func _rival_beat_flash() -> void:
+	if _rival_fx_layer != null and is_instance_valid(_rival_fx_layer):
+		_rival_interference_flash(_rival_fx_layer)
+
 func _rival_intro_line() -> void:
 	if not is_inside_tree() or goal_reached:
 		return
+	_rival_beat_flash()
+	_camera_shake(5.0, 0.25)
 	_show_rival_subtitle("어서 오세요, 요원. 여기서부터는 제 구역입니다.", 3.2)
 
 func _rival_intro_veil_line() -> void:
@@ -4413,8 +4428,11 @@ func _start_rival_p2() -> void:
 	if _rival_phase != 0 or goal_reached or not is_inside_tree():
 		return
 	_rival_phase = 1
+	_rival_p2_stage = 0
 	GameState.rival_phase_reached = 1
 	SfxPlayer.play("boss_phase_change")
+	_rival_beat_flash()
+	_camera_shake(10.0, 0.4)
 	_show_rival_subtitle("병사들이 아깝네요. 그럼, 방하고 싸워 보시죠.", 3.4)
 	get_tree().create_timer(3.8, false).timeout.connect(_rival_p2_objective_line)
 	# 소등 — 완만한 감광(고대비 점멸 금지, known_issues 광과민성 기준).
@@ -4444,15 +4462,58 @@ func _start_rival_p2() -> void:
 		for p in parts:
 			if p != null:
 				_rival_p2_props.append(p)
-	# 제어 노드 2기 — 측면 발판 위 재머(§5 "라이벌의 손"). 전부 부수면 방 해방.
-	_spawn_enemy(5, Vector2(430.0, 610.0))
-	_spawn_enemy(5, Vector2(1490.0, 610.0))
-	_enemies_remaining += 2
+	# 제어 노드 A — 좌측 발판(§5 "라이벌의 손"). 순차 노출: A 파괴 → B + 증원("사실상 없는
+	# 수준으로 짧다" 피드백 2026-08-12 — P2를 2박자로 늘리고 노드를 단단하게).
+	var node_a := _spawn_enemy(5, Vector2(430.0, 610.0))
+	node_a.set("hp", RIVAL_NODE_HP)
+	_enemies_remaining += 1
 
 func _rival_p2_objective_line() -> void:
 	if not is_inside_tree() or goal_reached or _rival_phase != 1:
 		return
-	_show_veil_subtitle("구조물 제어권 상실. 측면 발판의 방출 장치가 앵커입니다. 부수십시오.", 3.4)
+	_show_veil_subtitle("구조물 제어권 상실. 좌측 발판의 방출 장치가 앵커입니다. 부수십시오.", 3.4)
+
+# P2 진행 — 노드 하나가 죽어 전장이 비면 호출: A 단계면 B(+증원) 노출, B 단계면 종료.
+func _advance_rival_p2() -> void:
+	if _rival_phase != 1 or goal_reached or not is_inside_tree():
+		return
+	if _rival_p2_stage == 0:
+		_rival_p2_second()
+	else:
+		_finish_rival_p2()
+
+# P2 2박자 — 노드 B(우측) 노출 + 엘리트 증원 2기(양측, 텔레그래프 후 투입).
+func _rival_p2_second() -> void:
+	_rival_p2_stage = 1
+	_rival_beat_flash()
+	_camera_shake(8.0, 0.35)
+	SfxPlayer.play("boss_alert_text")
+	_show_rival_subtitle("하나는 내드리죠. 방은 아직 제 겁니다.", 3.0)
+	get_tree().create_timer(1.6, false).timeout.connect(_rival_p2_second_veil_line)
+	# 증원 예고 — 웨이브 증원과 같은 문법(셰브론 + 개방음), 0.85s 뒤 투입.
+	_rival_hold = true
+	for p in [Vector2(180.0, 790.0), Vector2(1740.0, 790.0)]:
+		var tel := _WaveSpawnTelegraph.new()
+		tel.lifetime = WAVE_SPAWN_TELEGRAPH
+		tel.position = p
+		add_child(tel)
+	SfxPlayer.play("hatch_open")
+	get_tree().create_timer(WAVE_SPAWN_TELEGRAPH, false).timeout.connect(_rival_p2_second_spawn)
+
+func _rival_p2_second_veil_line() -> void:
+	if not is_inside_tree() or goal_reached or _rival_phase != 1:
+		return
+	_show_veil_subtitle("앵커 파괴 확인. 반대편에 새 앵커. 증원 접근 중입니다.", 3.2)
+
+func _rival_p2_second_spawn() -> void:
+	if _rival_phase != 1 or goal_reached or not is_inside_tree():
+		return
+	var node_b := _spawn_enemy(5, Vector2(1490.0, 610.0))
+	node_b.set("hp", RIVAL_NODE_HP)
+	_spawn_enemy(0, Vector2(180.0, 790.0))
+	_spawn_enemy(0, Vector2(1740.0, 790.0))
+	_enemies_remaining += 3
+	_rival_hold = false
 
 func _finish_rival_p2() -> void:
 	if _rival_phase != 1 or goal_reached or not is_inside_tree():
@@ -4460,6 +4521,7 @@ func _finish_rival_p2() -> void:
 	_rival_phase = 2
 	_rival_hold = true
 	GameState.rival_phase_reached = 0   # 정복 — 체크포인트 경계 해제(지속 플래그 원칙)
+	_rival_beat_flash()
 	# 조명 복구 + 소환물 정리(포탑 정지·위장 함정 무장 해제).
 	if _rival_cast != null and is_instance_valid(_rival_cast):
 		var tw := _rival_cast.create_tween()

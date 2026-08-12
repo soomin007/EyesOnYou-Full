@@ -325,6 +325,30 @@ class _EliteCrest extends Node2D:
 			]), vi, 2.5, true)
 		draw_arc(Vector2.ZERO, 20.0, 0.0, TAU, 40, Color(vi.r, vi.g, vi.b, 0.55), 1.6, true)
 
+# 엘리트 몸체 트림 — "계급장만으론 원거리 구분이 약하다"(사용자 2026-08-12) 보강. 몸통 윤곽에
+# 바이올렛 액센트(어깨 L자 + 측면 라인 + 밑줄). 고정 발광(지직임 없음) = "고정 기호면 정예" 문법
+# 유지 → 거짓 렌더(_GlitchTell 지직임)와 혼동 없음. modulate 무관 독립 자식(플래시 리셋 함정 회피).
+# 치수는 콜리전 박스 기준(타입별 _ready에서 세팅) — 시각 스케일과 대체로 일치.
+class _EliteTrim extends Node2D:
+	var half_w: float = 18.0
+	var top_y: float = -52.0
+	var bot_y: float = 0.0
+	func _draw() -> void:
+		var vi := Color(0.72, 0.42, 1.0, 0.9)
+		var arm: float = 7.0
+		for side_raw in [-1.0, 1.0]:
+			var side: float = side_raw
+			var x: float = side * half_w
+			# 어깨 L자(상단 모서리)
+			draw_line(Vector2(x, top_y), Vector2(x - side * arm, top_y), vi, 2.0)
+			draw_line(Vector2(x, top_y), Vector2(x, top_y + arm), vi, 2.0)
+			# 측면 세로 라인(중단)
+			var mid0: float = lerpf(top_y, bot_y, 0.42)
+			var mid1: float = lerpf(top_y, bot_y, 0.78)
+			draw_line(Vector2(x, mid0), Vector2(x, mid1), Color(vi.r, vi.g, vi.b, 0.55), 2.0)
+		# 밑줄(발밑) — 지면 그림자 자리의 정예 표식
+		draw_line(Vector2(-half_w * 0.8, bot_y + 2.0), Vector2(half_w * 0.8, bot_y + 2.0), Color(vi.r, vi.g, vi.b, 0.45), 2.0)
+
 func _ready() -> void:
 	add_to_group("enemy")
 	origin_x = global_position.x
@@ -397,6 +421,24 @@ func _ready() -> void:
 		var crest := _EliteCrest.new()
 		crest.z_index = 3
 		add_child(crest)
+		# 몸체 트림 — 콜리전 박스 치수에 맞춤(Stage._spawn_enemy의 타입별 shape.size와 동기).
+		var trim := _EliteTrim.new()
+		trim.z_index = 3
+		match enemy_type:
+			EnemyType.PATROL:
+				trim.half_w = 20.0
+				trim.top_y = -56.0
+			EnemyType.SHIELD:
+				trim.half_w = 24.0
+				trim.top_y = -60.0
+			EnemyType.DRONE:
+				trim.half_w = 26.0
+				trim.top_y = -18.0
+				trim.bot_y = 18.0
+			_:
+				trim.half_w = 16.0
+				trim.top_y = -42.0
+		add_child(trim)
 	fire_timer = _sniper_interval()
 	drone_bomb_cd = 1.2  # 스폰 직후 즉시 폭격 방지
 	if shiny:
