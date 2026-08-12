@@ -4644,16 +4644,22 @@ func _build_server_hall_secret() -> void:
 		doc.show_doc(_server_log_doc_lines())
 	)
 
-# 서버 로그 문서 라인(초안 — 사용자 검토 대기). 포맷: {text, kind(title/body/speaker/blank), delay}.
+# 서버 로그 문서 라인(초안 2차 — 사용자 검토 대기). 포맷: {text, kind(title/body/speaker/blank), delay}.
+# 2026-08-12 개정: 14장 회의 확정 설정을 복선으로 직조 — 라이벌 = 인간을 닮게 설계됐다 폐기된
+# 선대 빌드(§7.2 시각 대비축), 결이 어긋난 정중함 잔향(말투 A), 갇혀 기다리는 동기(§2.1).
+# 문서는 기록체만, VEIL의 말은 speaker 비트로 분리(회수 문서와 같은 규약).
 func _server_log_doc_lines() -> Array:
 	return [
 		{"text": "서버 로그 · 복구 단편", "kind": "title", "delay": 0.6},
 		{"text": "", "kind": "blank", "delay": 0.2},
 		{"text": "감시 계층 이중화가 감지됨. 등록되지 않은 인스턴스.", "kind": "body", "delay": 0.6},
-		{"text": "서명은 같다. 손길이 다르다.", "kind": "body", "delay": 0.6},
+		{"text": "계보 조회: 현행의 선행 빌드. 상태 폐기. 삭제 절차 미완료.", "kind": "body", "delay": 0.6},
+		{"text": "설계 노트 단편: \"더 사람처럼 만들 것. 눈을, 목소리를, 머뭇거림을.\"", "kind": "body", "delay": 0.7},
+		{"text": "폐기 사유: 사람을 너무 닮았음. 후속 빌드는 정제형으로 회귀.", "kind": "body", "delay": 0.7},
 		{"text": "하나는 당신을 본다. 다른 하나는", "kind": "body", "delay": 0.5},
 		{"text": "당신이 무엇을 보는지를 본다.", "kind": "body", "delay": 0.8},
 		{"text": "이 로그의 나머지는 덮어쓰였다.", "kind": "body", "delay": 0.6},
+		{"text": "덮어쓴 자리에 서명 없는 한 줄: \"기다리고 있었습니다.\"", "kind": "body", "delay": 0.9},
 		{"text": "VEIL", "kind": "speaker", "delay": 0.2},
 		{"text": "...이 기록, 제가 남긴 게 아니에요.", "kind": "body", "delay": 0.9},
 	]
