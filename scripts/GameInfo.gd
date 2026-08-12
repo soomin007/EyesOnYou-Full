@@ -11,6 +11,13 @@ extends RefCounted
 # 최신순(맨 위가 최신). date = 표시용, items = 변경점 줄.
 const PATCH_NOTES: Array = [
 	{
+		"date": "2026-08-12",
+		"title": "숨겨진 색 켜고 끄기",
+		"items": [
+			"숨겨진 색(황금 보상)을 얻은 뒤에는 설정의 그래픽/사운드 탭에서 입을지 정할 수 있어요.",
+		],
+	},
+	{
 		"date": "2026-08-11",
 		"title": "농성 맵·적 지능·성장 조정",
 		"items": [

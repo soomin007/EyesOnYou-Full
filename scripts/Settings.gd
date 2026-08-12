@@ -342,6 +342,31 @@ func _build_av_tab() -> Control:
 
 	v.add_child(_make_display_section())
 
+	# 숨은 스킨 토글 — 해금한 사람에게만 보인다(비해금자에겐 스포일러라 숨김).
+	# 황금 3처치/코나미로 해금되면 캐릭터가 시작부터 시안 틴트라 "왜 파랗지?" 혼란이
+	# 있었음(사용자 2026-08-12) — 해금은 유지한 채 입을지만 고른다.
+	if GameState.alt_skin_unlocked:
+		var skin_section := VBoxContainer.new()
+		skin_section.add_theme_constant_override("separation", 10)
+		v.add_child(skin_section)
+		skin_section.add_child(_make_section_header("캐릭터"))
+		var sk_row := HBoxContainer.new()
+		sk_row.add_theme_constant_override("separation", 14)
+		var sk_l := Label.new()
+		sk_l.text = "숨겨진 색 (황금 보상)"
+		sk_l.custom_minimum_size = Vector2(180, 28)
+		sk_l.add_theme_font_size_override("font_size", 14)
+		sk_l.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
+		sk_l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		sk_row.add_child(sk_l)
+		_skin_toggle = CheckButton.new()
+		_skin_toggle.button_pressed = GameState.alt_skin_enabled
+		_skin_toggle.text = "켜짐" if GameState.alt_skin_enabled else "꺼짐"
+		_skin_toggle.add_theme_font_size_override("font_size", 14)
+		_skin_toggle.toggled.connect(_on_skin_toggled)
+		sk_row.add_child(_skin_toggle)
+		skin_section.add_child(sk_row)
+
 	var section_b := VBoxContainer.new()
 	section_b.add_theme_constant_override("separation", 10)
 	v.add_child(section_b)
@@ -354,6 +379,7 @@ func _build_av_tab() -> Control:
 # 웹에선 창 크기를 브라우저가 정하므로 전체화면 토글과 안내만 노출.
 var _fullscreen_toggle: CheckButton
 var _auto_fs_toggle: CheckButton
+var _skin_toggle: CheckButton
 var _size_buttons: Array = []
 
 func _make_display_section() -> Control:
@@ -462,6 +488,14 @@ func _on_auto_fullscreen_toggled(pressed: bool) -> void:
 	GameState.auto_fullscreen = pressed
 	if _auto_fs_toggle != null:
 		_auto_fs_toggle.text = "켜짐" if pressed else "꺼짐"
+	GameState.save_settings()
+	SfxPlayer.play("ui_slider_tick")
+
+# 숨은 스킨(대체 색) 입기 토글 — 해금 플래그는 건드리지 않는다. 다음 스테이지 진입부터 반영.
+func _on_skin_toggled(pressed: bool) -> void:
+	GameState.alt_skin_enabled = pressed
+	if _skin_toggle != null:
+		_skin_toggle.text = "켜짐" if pressed else "꺼짐"
 	GameState.save_settings()
 	SfxPlayer.play("ui_slider_tick")
 

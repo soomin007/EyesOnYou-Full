@@ -116,8 +116,9 @@ func _ready() -> void:
 	add_child(listener)
 	listener.make_current()
 	visual = CharacterArt.build_player(self)
-	# 이스터에그 — 대체 색 잠금 해제 시 시안 틴트 적용(visual.modulate). 이후 플래시 리셋도 이 값으로.
-	if GameState.alt_skin_unlocked and visual != null:
+	# 이스터에그 — 대체 색 잠금 해제 + 설정에서 켜져 있을 때만 시안 틴트 적용(visual.modulate).
+	# 이후 플래시 리셋도 이 값으로. 토글 = 설정 그래픽 탭(해금 시에만 노출).
+	if GameState.alt_skin_unlocked and GameState.alt_skin_enabled and visual != null:
 		_skin_tint = ALT_SKIN_TINT
 		visual.modulate = _skin_tint
 	torso = visual.get_node_or_null("Torso")

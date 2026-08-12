@@ -194,6 +194,9 @@ var playthrough_count: int = 0
 var shiny_kills: int = 0
 # 이스터에그 — 숨은 대체 색(스킨) 잠금 해제. 코나미 코드(데스크톱) 또는 황금 3처치(폰)로. 영속.
 var alt_skin_unlocked: bool = false
+# 해금한 대체 색을 실제로 입을지(설정 토글). 해금 자체는 유지한 채 끌 수 있다 — "시작부터
+# 파랗다, 왜?"(사용자 2026-08-12) 혼란 해소용. 영속.
+var alt_skin_enabled: bool = true
 # 이스터에그 — 서버 복도 숨은 터미널 로그(라이벌 VEIL 복선)를 본 적 있는가(숨은 발견 기록). 영속.
 var found_server_log: bool = false
 
@@ -826,6 +829,7 @@ func load_settings() -> void:
 	playthrough_count = int(cf.get_value("flags", "playthrough_count", 0))
 	shiny_kills = int(cf.get_value("flags", "shiny_kills", 0))
 	alt_skin_unlocked = bool(cf.get_value("flags", "alt_skin_unlocked", false))
+	alt_skin_enabled = bool(cf.get_value("flags", "alt_skin_enabled", true))
 	found_server_log = bool(cf.get_value("flags", "found_server_log", false))
 	screen_brightness = clampf(float(cf.get_value("access", "brightness", 1.0)), 0.5, 1.5)
 	sfx_captions = bool(cf.get_value("access", "sfx_captions", false))
@@ -876,6 +880,7 @@ func save_settings() -> void:
 	cf.set_value("flags", "playthrough_count", playthrough_count)
 	cf.set_value("flags", "shiny_kills", shiny_kills)
 	cf.set_value("flags", "alt_skin_unlocked", alt_skin_unlocked)
+	cf.set_value("flags", "alt_skin_enabled", alt_skin_enabled)
 	cf.set_value("flags", "found_server_log", found_server_log)
 	cf.set_value("access", "brightness", screen_brightness)
 	cf.set_value("access", "sfx_captions", sfx_captions)
