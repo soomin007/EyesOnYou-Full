@@ -63,8 +63,10 @@ func explode() -> void:
 	var center: Vector2 = global_position
 	SfxPlayer.play_at("bomb_explode", center)
 	# 반경 내 적을 거리순 최대 max_hits체 (몰살 방지). AoE라 방패 방향 무시(1인자 take_damage).
+	# "enemy" 그룹 + "boss_hittable" 그룹(14-1 거짓 VEIL 등 그룹 밖 보스체) — 폭발이 보스를
+	# 아예 못 때리던 버그(사용자 보고 2026-08-12) 수정.
 	var in_range: Array = []
-	for n in get_tree().get_nodes_in_group("enemy"):
+	for n in get_tree().get_nodes_in_group("enemy") + get_tree().get_nodes_in_group("boss_hittable"):
 		if not (n is Node2D):
 			continue
 		var e := n as Node2D

@@ -1174,35 +1174,13 @@ static func _core_recovery() -> Dictionary:
 			{"pos": Vector2(1490, 640), "w": 170.0},
 			{"pos": Vector2(960, 520),  "w": 200.0},
 		],
-		"waves": [
-			{
-				"trigger": "immediate",
-				"banner":  "WAVE 1",
-				"enemies": {
-					"patrol": [Vector2(180, 790.0), Vector2(1740, 790.0)],
-					# 재밍 노드 — 우측 절반이 그늘(마커 소등). §7.2 "재밍 그늘에서 밀려온다".
-					"jammer": [Vector2(1560, 790.0)],
-				},
-			},
-			{
-				"trigger": "prev_clear",
-				"banner":  "WAVE 2",
-				"enemies": {
-					"shield": [Vector2(180, 790.0)],
-					"bomber": [Vector2(1700, 790.0), Vector2(1770, 790.0)],
-					"sniper": [Vector2(960, 490.0)],
-					"jammer": [Vector2(360, 790.0)],
-				},
-			},
-		],
-		# 폴백 enemies (waves 미인식 환경 대비 합집합)
+		# P1 재설계(2026-08-12 2차 — "전멸전은 몰살 빌드에 무력" 반려): 웨이브 대신 **목표형 전투**.
+		# 초기 스폰 = 좌우 발판의 재밍 기둥(지휘 앵커) 2기뿐. 잡몹은 Stage가 끝없이 소규모 투입
+		# (_p1_trickle_tick — 전멸 불가). 출구 = 기둥 파괴뿐 → 관통·유도 만렙 빌드도 목표를 향해
+		# 싸우게 된다. 기둥의 재밍 그늘이 좌우 절반의 마커를 지운다(§7.2 "재밍 그늘").
 		"enemies": {
-			"patrol": [Vector2(180, 790.0), Vector2(1740, 790.0)],
-			"shield": [Vector2(180, 790.0)],
-			"bomber": [Vector2(1700, 790.0), Vector2(1770, 790.0)],
-			"sniper": [Vector2(960, 490.0)],
-			"drone":  [],
-			"jammer": [Vector2(1560, 790.0), Vector2(360, 790.0)],
+			"patrol": [], "sniper": [], "drone": [], "bomber": [], "shield": [],
+			"jammer": [Vector2(430, 610.0), Vector2(1490, 610.0)],
 		},
 		# 중앙 상단 회복 1 — P1 소모 보전(P2 진입 전 들를 이유).
 		"rewards": {"xp_orbs": [], "hp_pickups": [Vector2(960, 490.0)]},

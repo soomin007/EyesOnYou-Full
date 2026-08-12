@@ -1293,6 +1293,12 @@ func _check_touch_player() -> void:
 func take_damage(amount: int, from_dir: int = 0) -> void:
 	if dead:
 		return
+	# 14-1 P2 제어 노드 — 교대 실드(meta fs_dir = 실드가 향한 쪽). 막힌 쪽에서 온 탄은 무효,
+	# 주기적으로 편이 바뀐다(Stage가 플립). 폭발(from_dir 0)은 관통 = 수류탄이 정답 카드.
+	if has_meta("fs_dir") and from_dir != 0 and from_dir * int(get_meta("fs_dir")) < 0:
+		_show_block_spark(from_dir)
+		SfxPlayer.play_at("bullet_deflect_shield", global_position)
+		return
 	# 방패병 — 정면(enemy.dir이 가리키는 쪽)으로 날아오는 사격은 막힘.
 	# 즉 bullet의 진행 방향(from_dir)과 enemy의 dir이 반대 부호일 때 head-on이라 막음.
 	if enemy_type == EnemyType.SHIELD and from_dir != 0 and _shield_blocks(from_dir):
