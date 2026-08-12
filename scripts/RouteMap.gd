@@ -10,6 +10,39 @@ extends Control
 var pool: Array = []
 var recommended_id: String = ""
 var recommended_reason: String = ""
+# §4 상충 추천(rival_veil_concept — 막4 "두 목소리") — 가짜 목소리가 다른 맵을 권한다.
+var rival_rec_id: String = ""
+var rival_rec_line: String = ""
+
+# 유인 멘트 — 말투 A(결이 어긋난 정중함) 플레이스홀더. 감언과 실제(최고위험 맵)의 어긋남이 본체.
+const _RIVAL_LURES: Array = [
+	"이쪽이 조용합니다. 방금 제가 봤습니다.",
+	"이 길을 비워 뒀습니다. 저를 믿으시죠.",
+	"여기가 빠릅니다. 경비도 물려 뒀고요.",
+]
+
+# 막4+(라이벌 노골화)에서 후보가 둘 이상이면, 라이벌이 내 VEIL과 **다른** 맵을 권한다(§4 상충).
+# 유인 대상 = 추천 제외 후보 중 최고위험(감언 뒤에 실제 위험 — 화자 "?"와 어긋난 정중함이 tell).
+# 선택은 §9 축적(간파율)의 기초 데이터로 카운트(rival_lure_shown/followed).
+func _setup_rival_lure() -> void:
+	rival_rec_id = ""
+	rival_rec_line = ""
+	if GameState.story_mode or GameState.act_for_stage(GameState.current_stage) < 3:
+		return
+	var best_risk: int = -1
+	for r in pool:
+		var route: Dictionary = r
+		var rid: String = str(route.get("id", ""))
+		if rid == "" or rid == recommended_id:
+			continue
+		if bool(route.get("hidden", false)) or bool(route.get("challenge", false)):
+			continue
+		var risk: int = int(route.get("risk", 1))
+		if risk > best_risk:
+			best_risk = risk
+			rival_rec_id = rid
+	if rival_rec_id != "":
+		rival_rec_line = str(_RIVAL_LURES[randi() % _RIVAL_LURES.size()])
 var hovered_idx: int = 0
 var buttons: Array = []
 # 고위험/고보상 별도 패널 (사용자 피드백: 본 멘트에 겹치면 너무 많아짐).
@@ -40,6 +73,7 @@ func _ready() -> void:
 	var rec: Dictionary = RouteData.choose_veil_recommendation_with_reason(pool)
 	recommended_id = str(rec.get("id", ""))
 	recommended_reason = str(rec.get("reason", ""))
+	_setup_rival_lure()
 	# VEIL 멘트 — 신뢰도 톤(색)을 _ready에서 한 번만 적용. 폰트는 22로 키워
 	# 선택 화면에서 분명히 눈에 들어오게 (이전 15는 카드에 묻혀 안 보였음).
 	veil_text.add_theme_font_size_override("font_size", 22)
@@ -301,7 +335,8 @@ func _build_node_buttons() -> void:
 		var b := Button.new()
 		b.custom_minimum_size = Vector2(220, 188)
 		b.toggle_mode = false
-		b.text = _format_button_text(route, route.get("id", "") == recommended_id)
+		b.text = _format_button_text(route, route.get("id", "") == recommended_id,
+			route.get("id", "") == rival_rec_id)
 		b.add_theme_font_size_override("font_size", 18)
 		b.pressed.connect(_on_button_pressed.bind(i))
 		b.focus_entered.connect(_on_focus.bind(i))
@@ -316,7 +351,7 @@ func _build_node_buttons() -> void:
 		# 메뉴 등장 직후 1초 동안 포커스 보류 — 점프 연타로 자동 활성화되는 사고 방지.
 		GameState.arm_focus_with_delay(self, buttons[0])
 
-func _format_button_text(route: Dictionary, recommended: bool) -> String:
+func _format_button_text(route: Dictionary, recommended: bool, rival: bool = false) -> String:
 	var route_name: String = route.get("name", "?")
 	var hidden: bool = route.get("hidden", false)
 	var challenge: bool = route.get("challenge", false)
@@ -324,6 +359,8 @@ func _format_button_text(route: Dictionary, recommended: bool) -> String:
 	var reward_str: String = "?" if hidden else _dots(route.get("reward", 0))
 	var prefix: String = "[도전]\n" if challenge else ""
 	var rec: String = "  ★" if recommended else ""
+	if rival:
+		rec += "  ?"   # §4 상충 추천 — 정체 불명의 별도 표(호버 시 "? 추천" 멘트로 설명)
 	return "%s%s%s\n\n위험  %s\n보상  %s" % [prefix, route_name, rec, risk_str, reward_str]
 
 # 맵에 등장하는 적 타입(중복 제거, 등장 순서). enemies(고정) + waves(ARENA) 합산.
@@ -409,6 +446,12 @@ func _update_veil_comment() -> void:
 		msg += "★ 베일 추천\nVEIL   " + recommended_reason
 	else:
 		msg += "VEIL   " + str(route.get("veil_comment", ""))
+	# §4 상충 추천 — 라이벌이 미는 카드엔 정체 불명 "?"의 감언이 붙는다. 신뢰 warm이면
+	# 내 VEIL이 즉시 반박(신뢰가 지각을 산다 §4.1) — 아니면 어긋난 정중함을 스스로 읽어야 한다.
+	if route.get("id", "") == rival_rec_id and rival_rec_line != "":
+		msg += "\n\n? 추천\n?   " + rival_rec_line
+		if GameState.veil_register_band() == "warm":
+			msg += "\nVEIL   방금 그 추천, 제가 한 것이 아닙니다."
 	veil_text.text = msg
 	# 고위험/고보상 경고는 별도 우측 패널, 권장 스킬은 별도 좌측 칩 — 본 멘트와 시각 분리.
 	_update_risk_reward_panel(route)
@@ -541,5 +584,10 @@ func _on_button_pressed(idx: int) -> void:
 	if idx < 0 or idx >= pool.size():
 		return
 	var route: Dictionary = pool[idx]
+	# §9 축적(간파율 기초) — 상충 추천이 떠 있던 선택에서 유인을 따랐는가.
+	if rival_rec_id != "":
+		GameState.rival_lure_shown += 1
+		if str(route.get("id", "")) == rival_rec_id:
+			GameState.rival_lure_followed += 1
 	GameState.record_route_choice(route, recommended_id)
 	get_tree().change_scene_to_file(SceneRouter.STAGE)

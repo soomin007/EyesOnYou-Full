@@ -101,6 +101,10 @@ var rival_phase_reached: int = 0
 # CoreTunnel이 읽어 목격 비트에서 회수 리드아웃·고백·처리 선택을 실행(꺼져 있으면 연습장 프로토).
 # 해제: 처리 선택 완료(터널 → 브리핑) + reset()/start_main_game().
 var core_tunnel_live: bool = false
+# §4 상충 추천 축적(§9 간파율 기초) — 막4+ 루트 선택에서 라이벌 유인이 떠 있던 횟수/따른 횟수.
+# 런 단위(reset 초기화). 엔딩 게이트(§9.1 "거짓 많이 따름" 축)의 원료.
+var rival_lure_shown: int = 0
+var rival_lure_followed: int = 0
 
 var skills: Dictionary = {}
 var current_route_id: String = ""
@@ -331,6 +335,8 @@ func reset() -> void:
 	disposal_choice = ""
 	rival_phase_reached = 0
 	core_tunnel_live = false
+	rival_lure_shown = 0
+	rival_lure_followed = 0
 	# 디버그 연습장 플래그 누수 차단 — 연습장을 종료 버튼 아닌 경로(ESC→타이틀 등)로 빠져나오면
 	# playground_active가 true로 남아, 다음 일반 모드 클리어가 _trigger_stage_clear에서 연습장 분기로
 	# 빠져 패널만 뜨고 다음 맵으로 안 넘어가던 치명 버그. reset()은 타이틀 복귀/새 런마다 호출되므로 여기서 해제.
@@ -378,6 +384,8 @@ func start_main_game() -> void:
 	disposal_choice = ""
 	rival_phase_reached = 0
 	core_tunnel_live = false
+	rival_lure_shown = 0
+	rival_lure_followed = 0
 	playground_active = false  # 연습장 플래그 누수 차단(디버그→일반 모드) — reset()과 동일 방어.
 	_reset_perf_metrics()
 

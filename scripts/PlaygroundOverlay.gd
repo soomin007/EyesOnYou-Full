@@ -90,12 +90,32 @@ func _open_panel() -> void:
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	outer.add_child(v)
 
-	# 14-2 프로토 바로가기 — 맨 위 고정(맨 아래에 두면 오버플로로 안 보였음).
-	var tunnel_btn := Button.new()
-	tunnel_btn.text = "14-2 터널 프로토 (유사 1인칭) 진입"
-	tunnel_btn.add_theme_font_size_override("font_size", 13)
-	tunnel_btn.pressed.connect(_on_tunnel_proto)
-	v.add_child(tunnel_btn)
+	# 14장 구간 바로가기 — 맨 위 고정(맨 아래에 두면 오버플로로 안 보였음, 2026-08-12).
+	# 보스 페이즈 직행은 체크포인트 플래그(rival_phase_reached) 재활용 — 별도 배선 없음.
+	var ch14 := HBoxContainer.new()
+	ch14.add_theme_constant_override("separation", 6)
+	ch14.add_child(_make_row_label("14장"))
+	var first14: Button = null
+	for entry in [["14-1 P1", 0], ["14-1 P2", 1], ["14-1 P3", 2]]:
+		var e14: Array = entry
+		var b14 := Button.new()
+		b14.text = str(e14[0])
+		b14.add_theme_font_size_override("font_size", 13)
+		b14.pressed.connect(_on_ch14_phase.bind(int(e14[1])))
+		ch14.add_child(b14)
+		if first14 == null:
+			first14 = b14
+	var t_proto := Button.new()
+	t_proto.text = "14-2 프로토"
+	t_proto.add_theme_font_size_override("font_size", 13)
+	t_proto.pressed.connect(_on_tunnel_proto)
+	ch14.add_child(t_proto)
+	var t_live := Button.new()
+	t_live.text = "14-2 실런"
+	t_live.add_theme_font_size_override("font_size", 13)
+	t_live.pressed.connect(_on_tunnel_live)
+	ch14.add_child(t_live)
+	v.add_child(ch14)
 	v.add_child(HSeparator.new())
 
 	v.add_child(_build_stage_row())
@@ -141,7 +161,8 @@ func _open_panel() -> void:
 	exit_btn.pressed.connect(_on_exit)
 	v.add_child(exit_btn)
 	# 키보드 내비 — 첫 버튼 포커스(화살표/Tab 이동 · Enter 실행 · 포커스 따라 자동 스크롤).
-	tunnel_btn.call_deferred("grab_focus")
+	if first14 != null:
+		first14.call_deferred("grab_focus")
 
 func _on_invincible_toggled(on: bool) -> void:
 	# 무적은 연습장에서만 효과가 있다(Player.take_hit이 playground_active로 가드) — 일반 모드엔 영향 없음.
@@ -462,6 +483,23 @@ func _on_tunnel_proto() -> void:
 	# 14-2 코어 대면 터널 프로토(rival_veil_concept §7.1) — 손맛 검증용 진입.
 	# 플래그 누수 차단: 터널의 모든 퇴장 경로는 Title(reset)로 가지만, 여기서도 미리 끈다.
 	GameState.playground_active = false
+	SceneRouter.go(get_tree(), SceneRouter.CORE_TUNNEL)
+
+# 14-1 보스 페이즈 직행(0=P1 1=P2 2=P3) — 체크포인트 경로(_init_rival_boss)가 해당 페이즈부터 연다.
+func _on_ch14_phase(phase: int) -> void:
+	GameState.current_route_id = "route_core_recovery"
+	GameState.current_stage = 13
+	GameState.current_route_risk = 3
+	GameState.current_route_reward = 3
+	GameState.current_route_tags = ["전투"]
+	GameState.rival_phase_reached = phase
+	_reload()
+
+# 14-2 실런 비트(목격→리드아웃→고백→처리 선택) 테스트 — 선택 후 탈출 브리핑으로 이어지니
+# 확인이 끝나면 일시정지 → 처음으로로 빠져나오면 된다(Title reset이 플래그를 정리).
+func _on_tunnel_live() -> void:
+	GameState.playground_active = false
+	GameState.core_tunnel_live = true
 	SceneRouter.go(get_tree(), SceneRouter.CORE_TUNNEL)
 
 func _on_exit() -> void:
