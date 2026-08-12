@@ -93,6 +93,10 @@ const DISPOSAL_DESTROY: String = "destroy"   # 파기 — 드라이브를 소각
 const DISPOSAL_CONCEAL: String = "conceal"   # 은닉 — 빼돌려 요원이 보관한다(의뢰 배신).
 const DISPOSAL_LEAVE: String = "leave"       # 잔류 — 건드리지 않고 그 자리에 둔다(시설에 남김).
 var disposal_choice: String = ""
+# 14-1 라이벌 보스 페이즈 체크포인트(§7.2 확정: 사망 시 현 페이즈부터 재시작, 전체 재시작 없음).
+# 0=미도달/P1, 1=P2(빙의) 도달. 런 내 세션 한정(run.cfg 미저장) — 이어하기 재진입은 P1부터.
+# 해제: 보스 클리어(_finish_rival_p2) + reset()/start_main_game()(지속 플래그 경계 원칙).
+var rival_phase_reached: int = 0
 
 var skills: Dictionary = {}
 var current_route_id: String = ""
@@ -321,6 +325,7 @@ func reset() -> void:
 	shield_immune_line_shown = false
 	trap_warn_count = 0
 	disposal_choice = ""
+	rival_phase_reached = 0
 	# 디버그 연습장 플래그 누수 차단 — 연습장을 종료 버튼 아닌 경로(ESC→타이틀 등)로 빠져나오면
 	# playground_active가 true로 남아, 다음 일반 모드 클리어가 _trigger_stage_clear에서 연습장 분기로
 	# 빠져 패널만 뜨고 다음 맵으로 안 넘어가던 치명 버그. reset()은 타이틀 복귀/새 런마다 호출되므로 여기서 해제.
@@ -366,6 +371,7 @@ func start_main_game() -> void:
 	shield_immune_line_shown = false
 	trap_warn_count = 0
 	disposal_choice = ""
+	rival_phase_reached = 0
 	playground_active = false  # 연습장 플래그 누수 차단(디버그→일반 모드) — reset()과 동일 방어.
 	_reset_perf_metrics()
 

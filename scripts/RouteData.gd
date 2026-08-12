@@ -504,13 +504,13 @@ const ALL_ROUTES: Array = [
 		"reward": 3,
 		"hidden": false,
 		"unique": false,
-		# 막5 회수 스테이지(s14=내부13) — 전투 통과 후 회수 문서 + 처리 선택(B2, 막3서 이주). Stage가
-		# route id로 트리거. 다음(A4)에 라이벌 최종 보스가 여기 얹힘(SENTINEL이 lab에 얹힌 것과 동형).
+		# 막5 회수 스테이지(s14=내부13) — 14-1 라이벌 보스전(P1 지휘→P2 빙의, MapData rival_boss).
+		# 클리어 후 회수 문서 + 처리 선택(B2, 막3서 이주 — 이후 14-2 터널로 이주 예정).
 		# 배타 배치(다른 route가 겹치면 엔드게임 우회 가능).
 		"min_stage": 13, "max_stage": 13,
-		"tags": ["전투", "드론", "밝은_환경"],
-		"veil_comment": "드라이브가 여기 있어요. 회수하고, 어떻게 할지 정해요.",
-		"entry_comment": "심장부예요. 회수 대상이 바로 앞이에요.",
+		"tags": ["전투"],
+		"veil_comment": "심장부입니다. 안의 신호가 전부 이상합니다.",
+		"entry_comment": "회수 대상 전방. ...누가 먼저 와 있습니다.",
 		"stage_color": Color(0.20, 0.16, 0.20),
 	},
 ]

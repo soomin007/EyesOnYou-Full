@@ -1148,36 +1148,64 @@ static func _control_corridor() -> Dictionary:
 		"spikes": [],
 	}
 
-# ─── 24. 핵심 회수 (HORIZONTAL, 막5 s13) — 드라이브 회수 직전 마지막 접근 ──
-# 5막 엔드게임 진입. 통과(POSITION)하면 Stage가 회수 문서 + 처리 선택(DisposalChoiceOverlay)을 띄운다
-# (route_core_recovery id로 트리거, 막3 lab서 이주). 라이트 전투. 다음(A4)에 라이벌 최종 보스가 여기 얹힘.
+# ─── 24. 핵심 회수 (ARENA, 막5 s13) — 14-1 라이벌 보스전 ──
+# 5막 엔드게임 진입. 클리어(ENEMY_CLEAR, 페이즈 완주)하면 Stage가 회수 문서 + 처리 선택을 띄운다
+# (route_core_recovery id로 트리거, 막3 lab서 이주 — 이후 14-2 터널로 이주 예정).
 # 시그니처 배경 = Stage._ambience_core_recovery(심장부 수렴 — 격벽 아치·데이터 펄스·코어 글로우).
+# 2026-08-12 재구성: 통과 통로 → 14-1 라이벌 보스 아레나(§7.2 P1 지휘 → P2 빙의).
+# P1 = 웨이브 전원 엘리트("라이벌의 군대", elite_chance 1.0 세트피스) + 재밍 노드가 그늘을 만든다.
+# P2(코드, Stage._start_rival_p2) = 소등 + 벽 포탑 + 위장 함정 + 제어 노드 2기(측면 발판 위).
+# 도달 보장(known_issues): 지상 820→측면 640(더블점프 245>180)→중앙 520(풀점프 130>120).
 static func _core_recovery() -> Dictionary:
 	return {
-		"world_type":   "HORIZONTAL",
-		"world_size":   Vector2(3200.0, 720.0),
-		"player_start": Vector2(140.0, 540.0),
-		"goal_type":    "POSITION",
-		"goal_pos":     Vector2(3080.0, 540.0),
-		"camera_mode":  "HORIZONTAL",
+		"world_type":   "ARENA",
+		"world_size":   Vector2(1920.0, 900.0),
+		"player_start": Vector2(960.0, 750.0),
+		"goal_type":    "ENEMY_CLEAR",
+		"goal_pos":     Vector2.ZERO,
+		"camera_mode":  "FIXED",
+		"ground_y":     820.0,
+		"rival_boss":   true,
+		"waves_hunt":   true,
+		"elite_chance": 1.0,
+		"arena_clear_xp": 4,
 		"platforms": [
-			{"pos": Vector2(600, 470),  "w": 220.0},
-			{"pos": Vector2(1100, 470), "w": 200.0},
-			{"pos": Vector2(1600, 470), "w": 220.0},
-			{"pos": Vector2(2100, 470), "w": 200.0},
-			{"pos": Vector2(2600, 470), "w": 220.0},
-			{"pos": Vector2(1350, 560), "w": 120.0},
+			{"pos": Vector2(430, 640),  "w": 170.0},
+			{"pos": Vector2(1490, 640), "w": 170.0},
+			{"pos": Vector2(960, 520),  "w": 200.0},
 		],
+		"waves": [
+			{
+				"trigger": "immediate",
+				"banner":  "WAVE 1",
+				"enemies": {
+					"patrol": [Vector2(180, 790.0), Vector2(1740, 790.0)],
+					# 재밍 노드 — 우측 절반이 그늘(마커 소등). §7.2 "재밍 그늘에서 밀려온다".
+					"jammer": [Vector2(1560, 790.0)],
+				},
+			},
+			{
+				"trigger": "prev_clear",
+				"banner":  "WAVE 2",
+				"enemies": {
+					"shield": [Vector2(180, 790.0)],
+					"bomber": [Vector2(1700, 790.0), Vector2(1770, 790.0)],
+					"sniper": [Vector2(960, 490.0)],
+					"jammer": [Vector2(360, 790.0)],
+				},
+			},
+		],
+		# 폴백 enemies (waves 미인식 환경 대비 합집합)
 		"enemies": {
-			"patrol": [Vector2(900, 600.0), Vector2(2200, 600.0)],
-			"sniper": [Vector2(1600, 438.0)],
-			"drone":  [Vector2(2100, 180.0)],
-			"bomber": [], "shield": [],
+			"patrol": [Vector2(180, 790.0), Vector2(1740, 790.0)],
+			"shield": [Vector2(180, 790.0)],
+			"bomber": [Vector2(1700, 790.0), Vector2(1770, 790.0)],
+			"sniper": [Vector2(960, 490.0)],
+			"drone":  [],
+			"jammer": [Vector2(1560, 790.0), Vector2(360, 790.0)],
 		},
-		"rewards": {
-			"xp_orbs":    [Vector2(1600, 440.0), Vector2(2600, 440.0)],
-			"hp_pickups": [Vector2(2100, 440.0)],
-		},
+		# 중앙 상단 회복 1 — P1 소모 보전(P2 진입 전 들를 이유).
+		"rewards": {"xp_orbs": [], "hp_pickups": [Vector2(960, 490.0)]},
 		"spikes": [],
 	}
 

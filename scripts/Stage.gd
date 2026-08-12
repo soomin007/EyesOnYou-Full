@@ -2320,29 +2320,32 @@ func _build_disguised_spikes() -> void:
 		return   # 스토리 모드는 단순화 — 거짓 렌더 제외(deceits와 동형)
 	for entry in arr:
 		var d: Dictionary = entry
-		var sx: float = float(d.get("x", 0.0))
-		var sy: float = float(d.get("y", GROUND_Y - 6.0))
-		var sw: float = float(d.get("w", 120.0))
-		var sd: int = int(d.get("dmg", 2))   # 하드 페널티 기본 dmg2(§4.1), 튜닝 대상
-		# 진짜 가시를 만들고, _build_spike가 self에 붙인 자식(시각 + Area2D zone)을 캡처.
-		var before: int = get_child_count()
-		_build_spike(sx, sw, sy, sd)
-		var visuals: Array = []
-		var zone: Area2D = null
-		for i in range(before, get_child_count()):
-			var n: Node = get_child(i)
-			if n is Area2D:
-				zone = n
-			else:
-				visuals.append(n)
-		# 위장 컨트롤러 — 시각 숨김 + tell + 리빌.
-		var ds := DisguisedSpike.new()
-		add_child(ds)
-		ds.position = Vector2(sx, sy)   # Stage는 원점이라 position=global
-		ds.setup(visuals, sw)
-		# 밟는 순간 정체 노출 — zone에 컨트롤러 참조.
-		if zone != null:
-			zone.set_meta("disguised_ref", ds)
+		_spawn_disguised_spike(float(d.get("x", 0.0)), float(d.get("y", GROUND_Y - 6.0)),
+			float(d.get("w", 120.0)), int(d.get("dmg", 2)))   # 하드 페널티 기본 dmg2(§4.1)
+
+# 위장 함정 1개 스폰 — 맵 빌드(deceit_spikes)와 런타임 소환(14-1 P2 빙의) 공용.
+# 반환 [zone(Area2D), ds(DisguisedSpike)] — 런타임 소환자는 이걸로 종료 시 해제한다.
+func _spawn_disguised_spike(sx: float, sy: float, sw: float, sd: int) -> Array:
+	# 진짜 가시를 만들고, _build_spike가 self에 붙인 자식(시각 + Area2D zone)을 캡처.
+	var before: int = get_child_count()
+	_build_spike(sx, sw, sy, sd)
+	var visuals: Array = []
+	var zone: Area2D = null
+	for i in range(before, get_child_count()):
+		var n: Node = get_child(i)
+		if n is Area2D:
+			zone = n
+		else:
+			visuals.append(n)
+	# 위장 컨트롤러 — 시각 숨김 + tell + 리빌.
+	var ds := DisguisedSpike.new()
+	add_child(ds)
+	ds.position = Vector2(sx, sy)   # Stage는 원점이라 position=global
+	ds.setup(visuals, sw)
+	# 밟는 순간 정체 노출 — zone에 컨트롤러 참조.
+	if zone != null:
+		zone.set_meta("disguised_ref", ds)
+	return [zone, ds]
 
 # 토글 가능한 가시 — 시각 + 콜리전을 그룹으로 묶어 한 번에 on/off.
 # datacenter 측면 레버에서 메인 통로 가시를 끄는 데 사용.
@@ -4299,7 +4302,11 @@ func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1, disguise_kind: in
 	if kind != 5 and disguise_kind < 0 and not feign \
 			and not (kind == 1 and bool(_map_data.get("nest_snipers", false))) \
 			and not GameState.story_mode:
-		if GameState.playground_active:
+		if float(_map_data.get("elite_chance", -1.0)) >= 1.0:
+			# 세트피스 확정(14-1 P1 "라이벌의 군대") — 확률 램프의 클러스터 안전핀(cap)과
+			# 연습장 노이즈 제외를 둘 다 무시한다. 전원 엘리트가 이 맵의 설계.
+			elite = true
+		elif GameState.playground_active:
 			elite = GameState.debug_force_elite
 		else:
 			var cap: int = ELITE_CAP_ACT5 if GameState.act_for_stage(GameState.current_stage) >= 4 else ELITE_CAP_ACT4
@@ -4332,12 +4339,24 @@ func _on_enemy_killed(at_position: Vector2, wave_idx: int = -1, shiny: bool = fa
 	# ARENA enemy_clear 모드 — 모든 웨이브 spawn + 적 0이면 클리어
 	if _goal_type == "ENEMY_CLEAR":
 		_enemies_remaining -= 1
+		# 14-1 라이벌 보스(§7.2) — "전멸 = 클리어"를 페이즈 전환으로 가로챈다:
+		# P1 전멸 → P2(빙의) 개시 / P2 노드 전파괴 → 종료 연출 후 진짜 클리어.
+		if _rival_boss_active() and _can_arena_clear():
+			if _rival_phase == 0:
+				call_deferred("_start_rival_p2")
+				return
+			elif _rival_phase == 1:
+				call_deferred("_finish_rival_p2")
+				return
 		if _can_arena_clear():
 			call_deferred("_on_arena_cleared")
 
 # 웨이브가 있을 때는 모든 웨이브가 spawn된 뒤에야 클리어 가능.
 # 일반 ARENA에서는 _enemies_remaining만 보면 됨.
 func _can_arena_clear() -> bool:
+	# 14-1 보스 — P2 종료 연출(조명 복구 + 라이벌 퇴장 대사) 동안 클리어 보류.
+	if _rival_hold:
+		return false
 	if _enemies_remaining > 0:
 		return false
 	# 예고(텔레그래프) 중인 증원이 있으면 대기 — _wave_spawned는 예고 시작 시점에 켜지므로
@@ -4350,6 +4369,113 @@ func _can_arena_clear() -> bool:
 		if not bool(spawned):
 			return false
 	return true
+
+# ─── 14-1 라이벌 보스전 (rival_veil_concept §7.2) — P1 지휘(웨이브) → P2 빙의(시설) ───
+# MapData "rival_boss": true(route_core_recovery)에서만. P1 = 선언적 웨이브(전원 엘리트 세트피스 +
+# 재밍 노드). 전멸 시점에 클리어 대신 P2: 방 자체가 적 — 소등 + 벽 포탑 + 위장 함정 + 제어 노드
+# 2기(재머 재사용, 측면 발판 위). 노드 전파괴 → 조명 복구 + 퇴장 대사 → 진짜 클리어(기존 회수
+# 흐름 유지). 가짜 클리어 + P3(거짓 VEIL 분신전)은 다음 단계(③)에서 이 뒤에 끼어든다.
+# 대사 = 라이벌 말투 A(결이 어긋난 정중함)·VEIL 보고체, 전부 플레이스홀더(dialogue_review).
+var _rival_phase: int = 0            # 0=P1(웨이브) 1=P2(빙의) 2=완료
+var _rival_hold: bool = false        # P2 종료 연출 동안 클리어 보류
+var _rival_p2_props: Array = []      # P2 소환물(포탑·위장 함정 zone/컨트롤러) — 종료 시 정리
+var _rival_cast: CanvasModulate = null   # P2 소등 캐스트
+
+func _rival_boss_active() -> bool:
+	return bool(_map_data.get("rival_boss", false))
+
+func _init_rival_boss() -> void:
+	# 페이즈 체크포인트(§7.2 확정: 하드코어 지양) — P2 도달 후 사망 재시도는 P1을 건너뛰고 곧장 P2.
+	if GameState.rival_phase_reached >= 1:
+		for e in get_tree().get_nodes_in_group("enemy"):
+			(e as Node).queue_free()
+		_enemies_remaining = 0
+		for i in _wave_spawned.size():
+			_wave_spawned[i] = true
+		call_deferred("_start_rival_p2")
+		return
+	# 입장 비트 — 라이벌 개입 + VEIL 경계 콜아웃. (타이머는 메서드 bind — 람다 freed self 금지.)
+	get_tree().create_timer(1.0, false).timeout.connect(_rival_intro_line)
+	get_tree().create_timer(4.6, false).timeout.connect(_rival_intro_veil_line)
+
+func _rival_intro_line() -> void:
+	if not is_inside_tree() or goal_reached:
+		return
+	_show_rival_subtitle("어서 오세요, 요원. 여기서부터는 제 구역입니다.", 3.2)
+
+func _rival_intro_veil_line() -> void:
+	if not is_inside_tree() or goal_reached:
+		return
+	_show_veil_subtitle("신호 다수. 전부 물들어 있습니다. 조심하십시오.", 3.0)
+
+func _start_rival_p2() -> void:
+	if _rival_phase != 0 or goal_reached or not is_inside_tree():
+		return
+	_rival_phase = 1
+	GameState.rival_phase_reached = 1
+	SfxPlayer.play("boss_phase_change")
+	_show_rival_subtitle("병사들이 아깝네요. 그럼, 방하고 싸워 보시죠.", 3.4)
+	get_tree().create_timer(3.8, false).timeout.connect(_rival_p2_objective_line)
+	# 소등 — 완만한 감광(고대비 점멸 금지, known_issues 광과민성 기준).
+	_rival_cast = CanvasModulate.new()
+	_rival_cast.color = Color(1, 1, 1)
+	add_child(_rival_cast)
+	var tw := _rival_cast.create_tween()
+	tw.tween_property(_rival_cast, "color", Color(0.50, 0.43, 0.60), 1.4)
+	# 벽 포탑 2기 — holdout 문법(텔레그래프 있는 주기 사격, 엇갈린 위상).
+	var turret_cfgs: Array = [
+		{"x": 110.0, "y": 782.0, "dir": "right", "phase": 0.0},
+		{"x": 1810.0, "y": 782.0, "dir": "left", "phase": 1.3},
+	]
+	for entry in turret_cfgs:
+		var d: Dictionary = entry
+		var trap := BulletTrap.new()
+		trap.position = Vector2(float(d.get("x", 0.0)), float(d.get("y", 0.0)))
+		trap.damage = 1
+		trap.burst = 3
+		add_child(trap)
+		trap.setup(_dir_from_str(str(d.get("dir", "left"))), 2.6, float(d.get("phase", 0.0)), 0.7, "periodic", "")
+		_rival_p2_props.append(trap)
+	_traps_present = true
+	# 위장 함정 1개 — 우측 노드 접근로의 거짓 바닥(§4 문법 재사용, 맵당 1개 준수).
+	if not GameState.story_mode:
+		var parts: Array = _spawn_disguised_spike(1220.0, 814.0, 110.0, 2)
+		for p in parts:
+			if p != null:
+				_rival_p2_props.append(p)
+	# 제어 노드 2기 — 측면 발판 위 재머(§5 "라이벌의 손"). 전부 부수면 방 해방.
+	_spawn_enemy(5, Vector2(430.0, 610.0))
+	_spawn_enemy(5, Vector2(1490.0, 610.0))
+	_enemies_remaining += 2
+
+func _rival_p2_objective_line() -> void:
+	if not is_inside_tree() or goal_reached or _rival_phase != 1:
+		return
+	_show_veil_subtitle("구조물 제어권 상실. 측면 발판의 방출 장치가 앵커입니다. 부수십시오.", 3.4)
+
+func _finish_rival_p2() -> void:
+	if _rival_phase != 1 or goal_reached or not is_inside_tree():
+		return
+	_rival_phase = 2
+	_rival_hold = true
+	GameState.rival_phase_reached = 0   # 정복 — 체크포인트 경계 해제(지속 플래그 원칙)
+	# 조명 복구 + 소환물 정리(포탑 정지·위장 함정 무장 해제).
+	if _rival_cast != null and is_instance_valid(_rival_cast):
+		var tw := _rival_cast.create_tween()
+		tw.tween_property(_rival_cast, "color", Color(1, 1, 1), 1.0)
+	for p in _rival_p2_props:
+		if p is Node and is_instance_valid(p):
+			(p as Node).queue_free()
+	_rival_p2_props.clear()
+	_show_rival_subtitle("...방을 내드리죠. 다음 방은 더 깊습니다.", 3.0)
+	get_tree().create_timer(2.4, false).timeout.connect(_rival_boss_release)
+
+func _rival_boss_release() -> void:
+	if not is_inside_tree():
+		return
+	_rival_hold = false
+	if _can_arena_clear():
+		call_deferred("_on_arena_cleared")
 
 # 황금 희귀 개체 처치 보상 — 황금 보너스 오브 + 떠오르는 라벨 + 누적 카운터(영속).
 func _reward_shiny_kill(pos: Vector2) -> void:
@@ -4751,6 +4877,8 @@ func _build_goal() -> void:
 			_build_goal_position()
 		"ENEMY_CLEAR":
 			_setup_arena_clear_tracking()
+			if _rival_boss_active():
+				_init_rival_boss()
 		"SEQUENCE":
 			pass  # ??? 등 — 자체 종료 로직
 		_:
