@@ -7,7 +7,8 @@ extends Control
 #
 # 구조: 비트 컨트롤러(이 노드 — 상태·진행·사운드)와 렌더러(_TunnelView — 원근 투영 _draw)를
 # 분리한다. 손맛이 안 나오면 렌더러만 소실점 2D로 교체 가능(회의 결정: 비트는 렌더러와 분리).
-# 진입: 연습장 패널(PlaygroundOverlay) 프로토 버튼. 실런 배선(14-1 클리어 → 문)은 다음 단계.
+# 진입 2경로(④): ① 실런 — 14-1 보스 클리어 → core_tunnel_live로 직결, 목격 비트에서 회수
+# 리드아웃·고백·처리 선택 후 탈출 브리핑. ② 연습장 프로토 버튼 — 종료 패널(손맛 검증용).
 # BGM: 무음 + 환경음(발소리·점등·목격 스팅)만 — 14-2 확정 사양. 현재 SFX는 기존 자산 대타.
 
 # ── 터널 치수 / 비트 좌표 (z = 전방 거리, 월드 단위) ─────────────────────────
@@ -44,11 +45,21 @@ var _touch_back: bool = false
 var _view: Control = null
 var _hint_label: Label = null
 var _end_panel: PanelContainer = null
+# 실런 모드(④) — Stage 보스 클리어에서 core_tunnel_live로 진입. 목격 비트가 프로토 패널 대신
+# 회수 리드아웃 → VEIL 고백 → 처리 선택(DisposalChoiceOverlay)을 실행하고 브리핑(탈출)으로 잇는다.
+var _live: bool = false
+var _readout_box: VBoxContainer = null
+var _readout_lines: Array = []
+var _readout_idx: int = 0
+var _conf_lines: Array = []
+var _conf_idx: int = 0
+var _conf_label: Label = null
 
 func _ready() -> void:
 	# 진입 안전판 — 직전 화면(연습장 등)의 paused 누수 차단(SceneRouter.go와 동일 규약).
 	get_tree().paused = false
 	GameState.restrict_combat_input = false
+	_live = GameState.core_tunnel_live
 	BgmPlayer.stop()
 	for i in LIGHT_ZS.size():
 		_light_states.append({"on": false, "t": 0.0})
@@ -92,7 +103,10 @@ func _process(delta: float) -> void:
 			_witness_t += delta
 			if _witness_t >= 2.6:
 				_phase = "done"
-				_show_end_panel()
+				if _live:
+					_begin_recovery_beat()
+				else:
+					_show_end_panel()
 		"done":
 			_witness_t += delta
 	_update_bob(delta)
@@ -231,7 +245,94 @@ func _update_hint(delta: float) -> void:
 	var goal: float = 0.85 if want else 0.0
 	_hint_label.modulate.a = lerpf(_hint_label.modulate.a, goal, minf(1.0, delta * 3.0))
 
-# ── 프로토 종료 패널 — 본편에선 이 순간 처리 선택(DisposalChoiceOverlay)이 등장 ──
+# ── 실런 회수 비트(④) — 목격 → 복호화 리드아웃 → VEIL 고백 → 처리 선택 ──────────
+# 회수 "문서"의 14-2 리디자인: 종이 오버레이(ArcturusDocumentOverlay) 대신 코어 곁 터미널
+# 리드아웃(좌측, 줄 단위 타이핑 + terminal_typewrite). 문구 단일 소스 = VeilDialogue
+# (스토리 lab 경로와 공유). 전 구간 타이머 체인(입력 불요) — 소프트락 안전판.
+func _begin_recovery_beat() -> void:
+	_readout_box = VBoxContainer.new()
+	_readout_box.add_theme_constant_override("separation", 8)
+	_readout_box.position = Vector2(90, 170)
+	_readout_box.custom_minimum_size = Vector2(430, 0)
+	add_child(_readout_box)
+	_readout_lines = VeilDialogue.get_recovery_doc_lines()
+	_readout_idx = 0
+	get_tree().create_timer(0.8, false).timeout.connect(_advance_readout)
+
+func _advance_readout() -> void:
+	if not is_inside_tree():
+		return
+	if _readout_idx >= _readout_lines.size():
+		get_tree().create_timer(1.0, false).timeout.connect(_begin_confession)
+		return
+	var d: Dictionary = _readout_lines[_readout_idx]
+	_readout_idx += 1
+	var kind: String = str(d.get("kind", "body"))
+	if kind == "blank":
+		var spacer := Control.new()
+		spacer.custom_minimum_size = Vector2(0, 6)
+		_readout_box.add_child(spacer)
+	else:
+		var l := Label.new()
+		l.text = str(d.get("text", ""))
+		l.add_theme_font_size_override("font_size", 19 if kind == "title" else 15)
+		l.add_theme_color_override("font_color",
+			Color(0.62, 0.92, 1.0) if kind == "title" else Color(0.80, 0.88, 0.94))
+		l.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+		l.add_theme_constant_override("outline_size", 4)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_readout_box.add_child(l)
+		SfxPlayer.play("terminal_typewrite", -4.0)
+	get_tree().create_timer(float(d.get("delay", 0.6)) + 0.45, false).timeout.connect(_advance_readout)
+
+func _begin_confession() -> void:
+	if not is_inside_tree():
+		return
+	_conf_lines = VeilDialogue.get_recovery_confession(GameState.truth_seen)
+	_conf_idx = 0
+	_conf_label = Label.new()
+	_conf_label.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_conf_label.position = Vector2(-420, -160)
+	_conf_label.custom_minimum_size = Vector2(840, 0)
+	_conf_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_conf_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_conf_label.add_theme_font_size_override("font_size", 19)
+	_conf_label.add_theme_color_override("font_color", GameState.veil_tone_color())
+	_conf_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+	_conf_label.add_theme_constant_override("outline_size", 5)
+	_conf_label.modulate.a = 0.0
+	add_child(_conf_label)
+	_advance_confession()
+
+func _advance_confession() -> void:
+	if not is_inside_tree():
+		return
+	if _conf_idx >= _conf_lines.size():
+		get_tree().create_timer(0.7, false).timeout.connect(_show_live_choice)
+		return
+	var ln: Dictionary = _conf_lines[_conf_idx]
+	_conf_idx += 1
+	var dur: float = float(ln.get("dur", 3.8))
+	_conf_label.text = "VEIL   " + str(ln.get("text", ""))
+	SfxPlayer.play("veil_subtitle_in")
+	var tw := _conf_label.create_tween()
+	tw.tween_property(_conf_label, "modulate:a", 1.0, 0.4)
+	tw.tween_interval(dur)
+	tw.tween_property(_conf_label, "modulate:a", 0.0, 0.4)
+	get_tree().create_timer(dur + 1.0, false).timeout.connect(_advance_confession)
+
+func _show_live_choice() -> void:
+	if not is_inside_tree():
+		return
+	DisposalChoiceOverlay.show(self, _on_live_choice_picked)
+
+func _on_live_choice_picked(choice_id: String) -> void:
+	# 처리 선택 저장 → 탈출(s15) 브리핑으로. 실런 플래그는 여기서 닫는다(경계 해제).
+	GameState.disposal_choice = choice_id
+	GameState.core_tunnel_live = false
+	SceneRouter.go(get_tree(), SceneRouter.BRIEFING)
+
+# ── 프로토 종료 패널 — 본편에선 위 회수 비트가 이 자리를 대신한다(연습장 전용) ──
 func _show_end_panel() -> void:
 	if _end_panel != null:
 		return
@@ -314,6 +415,9 @@ func _exit_to_title() -> void:
 	SceneRouter.go(get_tree(), SceneRouter.TITLE)
 
 func _unhandled_input(event: InputEvent) -> void:
+	# ESC/P 타이틀 복귀는 연습장 프로토 전용 — 실런에선 짧은 클라이맥스 구간이라 오조작 이탈 차단.
+	if _live:
+		return
 	if event is InputEventKey:
 		var key := event as InputEventKey
 		if key.pressed and not key.echo and (key.keycode == KEY_ESCAPE or key.keycode == KEY_P):

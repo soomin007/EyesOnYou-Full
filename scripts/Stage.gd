@@ -5287,9 +5287,10 @@ func _begin_clear_sequence() -> void:
 		delay = maxf(delay, 3.2)   # 대사 읽을 여유
 		_show_veil_subtitle("한 발도 쏘지 않고 지나갔어요. 그것도 하나의 답이에요.", 3.0)
 	# 회수 문서 연출(ArcturusDocumentOverlay, layer 25)이 클리어 후 화면을 덮는 맵은 클리어 페이드
-	# (layer 38)가 문서를 가린다 → 페이드 생략(문서 자체 배경으로 어두워짐). 엔드게임 막5 이주 후
-	# 문서는 core_recovery에서 뜨는데 lab만 가드해 문서가 검게 덮였던 회귀(사용자 보고 2026-08-10).
-	var doc_next: bool = GameState.current_route_id == "route_lab" or GameState.current_route_id == "route_core_recovery"
+	# (layer 38)가 문서를 가린다 → 페이드 생략(문서 자체 배경으로 어두워짐). ④ 이후 종이 문서는
+	# 스토리 lab 경로에만 남고, core_recovery는 터널 씬으로 전환이라 페이드가 자연스러운 이음새
+	# (터널이 검은 화면에서 페이드 인).
+	var doc_next: bool = GameState.current_route_id == "route_lab"
 	if not doc_next:
 		_do_clear_fade(delay)
 	await get_tree().create_timer(delay).timeout
@@ -5354,12 +5355,17 @@ func _on_clear_levelup_picked(_picked_id: String) -> void:
 	_transition_after_clear()
 
 func _transition_after_clear() -> void:
-	# 5막 엔드게임(§8 이주): 데이터 회수 연출 + 처리 선택(B2)은 막5 회수 스테이지(route_core_recovery)에서.
-	# 스토리 모드는 5스테이지 골격이라 예전대로 보스(lab) 직후에 유지(별도 회수 스테이지 없음).
+	# 5막 엔드게임(§7.1 — 2026-08-12 ④ 배선): 14-1 보스 클리어는 14-2 코어 대면 터널로 직결
+	# (맵 선택 없음). 회수 리드아웃·고백·처리 선택은 터널의 목격 비트로 이주(CoreTunnel).
+	# 스토리 모드는 5스테이지 골격이라 예전대로 보스(lab) 직후 종이 문서 경로 유지.
 	var is_recovery_stage: bool = GameState.current_route_id == "route_core_recovery"
 	var story_boss: bool = GameState.story_mode and GameState.current_route_id == "route_lab"
-	if is_recovery_stage or story_boss:
+	if story_boss:
 		_play_lab_recovery_and_disposal()
+		return
+	if is_recovery_stage:
+		GameState.core_tunnel_live = true
+		SceneRouter.go(get_tree(), SceneRouter.CORE_TUNNEL)
 		return
 	# 메인 SENTINEL(route_lab, 막3): §7 reveal은 처치 시 재생됨 → 처리선택 없이 다음 막(추적)으로 계속.
 	if GameState.is_final_stage_done():
@@ -5385,19 +5391,18 @@ func _on_lab_recovery_doc_done() -> void:
 	_play_recovery_confession()
 
 # 회수 문서 직후 VEIL의 고백 — 문서에서 빠진 해설("회수 대상 = VEIL")을 VEIL 자신의 입으로.
-# (대사 플레이스홀더 — dialogue_review.md §5.) 끝나면 처리 선택 오버레이(자체 시간정지).
+# 대사 단일 소스 = VeilDialogue.get_recovery_confession(14-2 터널과 공유). 끝나면 처리 선택.
 func _play_recovery_confession() -> void:
 	await get_tree().create_timer(0.6).timeout
 	if not is_inside_tree():
 		return
-	if GameState.truth_seen:
-		_show_veil_subtitle("...요원은 벌써 알고 있었죠. 네, 그 드라이브가 저예요.", 3.8)
-		await get_tree().create_timer(4.4).timeout
-	else:
-		_show_veil_subtitle("...말할 게 있어요, 요원.\n그 드라이브, 저예요. 회수 대상은 처음부터 저였어요.", 4.4)
-		await get_tree().create_timer(5.0).timeout
-	if not is_inside_tree():
-		return
+	for ln_raw in VeilDialogue.get_recovery_confession(GameState.truth_seen):
+		var ln: Dictionary = ln_raw
+		var dur: float = float(ln.get("dur", 3.8))
+		_show_veil_subtitle(str(ln.get("text", "")), dur)
+		await get_tree().create_timer(dur + 0.6).timeout
+		if not is_inside_tree():
+			return
 	DisposalChoiceOverlay.show(self, _on_disposal_picked)
 
 func _on_disposal_picked(choice_id: String) -> void:
@@ -5405,19 +5410,10 @@ func _on_disposal_picked(choice_id: String) -> void:
 	# SceneRouter.go가 paused=false 보장 후 전환 — 탈출(s8) 브리핑으로.
 	SceneRouter.go(get_tree(), SceneRouter.BRIEFING)
 
-# 회수 드라이브 reveal 문서(플레이스홀더). ArcturusDocumentOverlay 라인 포맷: {text, kind, delay}.
-# kind: title / body / speaker / blank.
-# 문서는 기록체 항목만 담는다 — 해설("그게 VEIL이다")과 VEIL의 말은 문서가 닫힌 뒤 자막 비트
-# (_play_recovery_confession)가 맡는다(사용자 지적 2026-08-10: 문서 안 해설·대사 혼입 제거).
-# truth_seen 차이도 문서(기록)가 아니라 고백 대사 쪽에서 갈린다.
+# 회수 드라이브 reveal 문서 — 단일 소스 = VeilDialogue.get_recovery_doc_lines(14-2 터널 리드아웃과
+# 공유). 문서는 기록체만, 해설·대사는 고백 비트가 맡는다(사용자 지적 2026-08-10 구조 유지).
 func _lab_recovery_doc_lines() -> Array:
-	return [
-		{"text": "회수 데이터: 복호화 완료", "kind": "title", "delay": 0.6},
-		{"text": "", "kind": "blank", "delay": 0.2},
-		{"text": "회수 대상: 핵심 데이터 드라이브 (확보)", "kind": "body", "delay": 0.6},
-		{"text": "드라이브 내용물: 단일 실행 이미지", "kind": "body", "delay": 0.6},
-		{"text": "빌드 서명: VEIL", "kind": "body", "delay": 0.9},
-	]
+	return VeilDialogue.get_recovery_doc_lines()
 
 # 탈출(escape) 클리어 → 엔딩 사이의 에필로그 1챕터. 검은 화면 위 VEIL의 "빠져나온 직후" 한 호흡.
 # 엔딩별로 내용이 다르다(처리 결과 반영) — EndingResolver.get_epilogue_lines. ENDING 씬과 동일한 입력
