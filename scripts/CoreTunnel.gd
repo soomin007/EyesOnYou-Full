@@ -2,7 +2,7 @@ class_name CoreTunnel
 extends Control
 
 # 14-2 코어 대면 — 2.5D 유사 1인칭 터널 프로토타입 (rival_veil_concept §7.1, 2026-08-12 회의 확정).
-# 캄캄한 복도를 전방(오른쪽 키)으로 걸으면 천장 전등이 하나씩 텅…텅…텅 순차 점등하고,
+# 캄캄한 복도를 전방(↑/W)으로 걸으면 천장 전등이 하나씩 텅…텅…텅 순차 점등하고,
 # 복도 끝에서 코어(드라이브·라이벌의 몸)가 서서히 드러난다. 목격 순간 = 처리 선택의 새 집.
 #
 # 구조: 비트 컨트롤러(이 노드 — 상태·진행·사운드)와 렌더러(_TunnelView — 원근 투영 _draw)를
@@ -11,13 +11,14 @@ extends Control
 # BGM: 무음 + 환경음(발소리·점등·목격 스팅)만 — 14-2 확정 사양. 현재 SFX는 기존 자산 대타.
 
 # ── 터널 치수 / 비트 좌표 (z = 전방 거리, 월드 단위) ─────────────────────────
-const TUNNEL_LEN: float = 4700.0        # 끝 벽(캡)까지
-const CORE_Z: float = 4460.0            # 코어 위치
-const WITNESS_Z: float = 4040.0         # 이 지점 도달 = 목격 비트(강제 정지)
+# 2026-08-12 실플레이: 목격 지점 4040→3240 단축("생각보다 조금 길다"), 전등 7→6개.
+const TUNNEL_LEN: float = 3900.0        # 끝 벽(캡)까지
+const CORE_Z: float = 3660.0            # 코어 위치
+const WITNESS_Z: float = 3240.0         # 이 지점 도달 = 목격 비트(강제 정지)
 const WALK_SPEED: float = 200.0         # 전진 속도 — 긴장 걸음(인게임 240보다 느리게)
 const BACK_SPEED: float = 130.0
 
-const LIGHT_ZS: Array[float] = [520.0, 1060.0, 1600.0, 2140.0, 2680.0, 3220.0, 3760.0]
+const LIGHT_ZS: Array[float] = [500.0, 1000.0, 1500.0, 2000.0, 2500.0, 3000.0]
 const LIGHT_AHEAD: float = 820.0        # 이만큼 앞의 전등이 켜진다 — 항상 한 걸음 앞을 비춤
 const LIGHT_CASCADE_GAP: float = 0.5    # 연속 점등 최소 간격 — 빨리 걸어도 텅…텅…텅 리듬 유지
 const LIGHT_RANGE: float = 470.0        # 전등 하나가 비추는 z 반경
@@ -58,7 +59,7 @@ func _ready() -> void:
 	add_child(view)
 	_view = view
 	_hint_label = Label.new()
-	_hint_label.text = "→  전진"
+	_hint_label.text = "↑ / W  전진"
 	_hint_label.add_theme_font_size_override("font_size", 15)
 	_hint_label.add_theme_color_override("font_color", Color(0.72, 0.78, 0.85))
 	_hint_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
@@ -100,9 +101,21 @@ func _process(delta: float) -> void:
 		_view.queue_redraw()
 
 # ── 걷기 ────────────────────────────────────────────────────────────────────
+# 전진 = ↑/W — 화면은 전방(깊이)으로 가는데 →키는 어색하다는 실플레이 피드백(2026-08-12).
+# ←/→도 계속 허용(수평 이동 근육기억 폴백). 물리 키 직접 판정이라 리매핑과 무관.
+func _forward_held() -> bool:
+	if Input.is_physical_key_pressed(KEY_W) or Input.is_physical_key_pressed(KEY_UP):
+		return true
+	return Input.is_action_pressed("move_right")
+
+func _back_held() -> bool:
+	if Input.is_physical_key_pressed(KEY_S) or Input.is_physical_key_pressed(KEY_DOWN):
+		return true
+	return Input.is_action_pressed("move_left")
+
 func _update_walk(delta: float) -> void:
-	var forward: bool = Input.is_action_pressed("move_right") or _touch_forward or debug_auto_walk
-	var back: bool = (Input.is_action_pressed("move_left") or _touch_back) and not forward
+	var forward: bool = _forward_held() or _touch_forward or debug_auto_walk
+	var back: bool = (_back_held() or _touch_back) and not forward
 	var target: float = 0.0
 	if forward:
 		target = WALK_SPEED
@@ -121,7 +134,8 @@ func _update_bob(delta: float) -> void:
 		if cycle != _last_step_cycle:
 			_last_step_cycle = cycle
 			if _phase == "walk" or _phase == "witness":
-				SfxPlayer.play("player_step", -2.0)
+				# 빈 복도라 발소리가 존재감을 가져야 함 — 실플레이 "살짝만 크게"(2026-08-12) 반영 +3dB.
+				SfxPlayer.play("player_step", 1.0)
 	view_bob = Vector2(
 		sin(_bob_phase) * 4.0 * amp,
 		-absf(sin(_bob_phase)) * 5.5 * amp + _clunk_kick * 7.0)
@@ -146,7 +160,9 @@ func _update_lights() -> void:
 		_last_light_time = _elapsed
 		_lights_on += 1
 		_clunk_kick = 1.0
-		SfxPlayer.play("hatch_open", 3.0)
+		# "텅" — 문 열림(hatch_open) 대타가 어색하다는 피드백(2026-08-12)으로 자체 제작
+		# light_clunk(착지음 피치다운+홀 에코)로 교체.
+		SfxPlayer.play("light_clunk", 2.0)
 		break
 
 # 전등 밝기(0~1) — 점등 직후 플리커 → 안정 후 미세한 형광등 떨림. 목격 비트에선 세계가
@@ -176,8 +192,9 @@ func light_at(z: float) -> float:
 	return total
 
 # 코어 가시성(0~1) — 접근할수록 드러나고, 목격 비트에서 마저 밝아진다.
+# 램프는 목격 지점(WITNESS_Z)에서 1.0에 닿도록 터널 길이와 함께 조정할 것.
 func core_vis() -> float:
-	var v: float = clampf((player_z - 2700.0) / 1250.0, 0.0, 1.0)
+	var v: float = clampf((player_z - 2100.0) / 1100.0, 0.0, 1.0)
 	if _phase == "witness" or _phase == "done":
 		v = minf(1.0, v + _witness_t * 0.25)
 	return v

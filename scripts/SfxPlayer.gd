@@ -87,6 +87,8 @@ const KNOWN_SFX: Array[String] = [
 	"spike_hit", "lever_pull", "plate_step_inactive", "plate_step_active",
 	"hatch_open", "drop_platform_descend", "gate_unlock",
 	"siren_flash", "blackout_fade_in", "challenge_clear", "challenge_fail",
+	# 14-2 터널 전등 점등 "텅" — player_land 가공(피치다운+홀 에코, 2026-08-12 자체 제작 wav).
+	"light_clunk",
 	# UI
 	"ui_focus", "ui_confirm", "ui_cancel", "ui_slider_tick", "ui_pause_open",
 	# Story / special
