@@ -229,6 +229,8 @@ func _scan_for_call() -> void:
 			continue   # 이미 본 위협 — 새로 짚을 게 없음
 		if en.is_in_group("jammer"):
 			continue   # 재머 = VEIL 맹점(§1). 마커도 없고 말로도 안 짚는다
+		if en.has_meta("no_marker"):
+			continue   # 14-1 P3 무표시 위협(§7.2) — 거짓 VEIL이 가린 신호. 말로도 못 짚는다
 		var spos: Vector2 = xform * wpos
 		var off: bool = spos.x < 0.0 or spos.x > view.x or spos.y < 0.0 or spos.y > view.y
 		if off:
@@ -310,6 +312,8 @@ func _draw() -> void:
 			_seen[id] = _t
 		if en.is_in_group("jammer"):
 			continue   # 재머 = VEIL 맹점(§1). 마커 없음 — 밝은 본체+필드 링으로 직접 보인다
+		if en.has_meta("no_marker"):
+			continue   # 14-1 P3 무표시 위협(§7.2) — 거짓 VEIL이 신호를 가림. 스프라이트로만 보인다
 		if _enemy_in_jam(en, jammers):
 			continue   # 재밍 구역 안 적은 VEIL이 못 봄 — 마커 없음(플레이어가 밖에 있어도)
 		# degradation 중 일부 위협은 VEIL이 영영 못 본다 = 요원이 직접 봐야 함 (역전의 실물)

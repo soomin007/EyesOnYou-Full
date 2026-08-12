@@ -4394,14 +4394,19 @@ func _init_rival_boss() -> void:
 	_rival_fx_layer = CanvasLayer.new()
 	_rival_fx_layer.layer = 12
 	add_child(_rival_fx_layer)
-	# 페이즈 체크포인트(§7.2 확정: 하드코어 지양) — P2 도달 후 사망 재시도는 P1을 건너뛰고 곧장 P2.
+	# 페이즈 체크포인트(§7.2 확정: 하드코어 지양) — 사망 재시도는 도달한 페이즈부터.
+	# P3(2)면 가짜 클리어 연출도 건너뛴다(반복 시 고문 + 한 번 속은 트릭은 재현 무의미).
 	if GameState.rival_phase_reached >= 1:
 		for e in get_tree().get_nodes_in_group("enemy"):
 			(e as Node).queue_free()
 		_enemies_remaining = 0
 		for i in _wave_spawned.size():
 			_wave_spawned[i] = true
-		call_deferred("_start_rival_p2")
+		if GameState.rival_phase_reached >= 2:
+			call_deferred("_start_rival_p3")
+			get_tree().create_timer(1.4, false).timeout.connect(_p3_tell_line)   # 판별 tell 재고지
+		else:
+			call_deferred("_start_rival_p2")
 		return
 	# 입장 비트 — 라이벌 개입 + VEIL 경계 콜아웃. (타이머는 메서드 bind — 람다 freed self 금지.)
 	get_tree().create_timer(1.0, false).timeout.connect(_rival_intro_line)
@@ -4473,14 +4478,14 @@ func _rival_p2_objective_line() -> void:
 		return
 	_show_veil_subtitle("구조물 제어권 상실. 좌측 발판의 방출 장치가 앵커입니다. 부수십시오.", 3.4)
 
-# P2 진행 — 노드 하나가 죽어 전장이 비면 호출: A 단계면 B(+증원) 노출, B 단계면 종료.
+# P2 진행 — 노드 하나가 죽어 전장이 비면 호출: A 단계면 B(+증원) 노출, B 단계면 가짜 클리어로.
 func _advance_rival_p2() -> void:
 	if _rival_phase != 1 or goal_reached or not is_inside_tree():
 		return
 	if _rival_p2_stage == 0:
 		_rival_p2_second()
 	else:
-		_finish_rival_p2()
+		_start_fake_clear()
 
 # P2 2박자 — 노드 B(우측) 노출 + 엘리트 증원 2기(양측, 텔레그래프 후 투입).
 func _rival_p2_second() -> void:
@@ -4515,22 +4520,180 @@ func _rival_p2_second_spawn() -> void:
 	_enemies_remaining += 3
 	_rival_hold = false
 
-func _finish_rival_p2() -> void:
+# ─── 가짜 클리어(§7.2 확정 연출) — P2 종료를 "이긴 척"으로 위장한다 ───
+# 진짜 클리어 문법 재현(챔 + 소등 페이드 + STAGE CLEAR 문구) → 글리치 찢김 → 거짓 VEIL 등장.
+# goal_reached는 켜지 않는다(가짜). 전 구간 타이머 체인(입력 불요) = 소프트락 안전판.
+var _fake_clear_layer: CanvasLayer = null
+var _fake_clear_rect: ColorRect = null
+var _fake_clear_label: Label = null
+
+func _start_fake_clear() -> void:
 	if _rival_phase != 1 or goal_reached or not is_inside_tree():
 		return
 	_rival_phase = 2
 	_rival_hold = true
-	GameState.rival_phase_reached = 0   # 정복 — 체크포인트 경계 해제(지속 플래그 원칙)
-	_rival_beat_flash()
-	# 조명 복구 + 소환물 정리(포탑 정지·위장 함정 무장 해제).
+	GameState.restrict_combat_input = true
+	# P2 무대 정돈 — 조명 복구 + 소환물 정리("정말 끝난 것처럼").
 	if _rival_cast != null and is_instance_valid(_rival_cast):
 		var tw := _rival_cast.create_tween()
-		tw.tween_property(_rival_cast, "color", Color(1, 1, 1), 1.0)
+		tw.tween_property(_rival_cast, "color", Color(1, 1, 1), 0.8)
 	for p in _rival_p2_props:
 		if p is Node and is_instance_valid(p):
 			(p as Node).queue_free()
 	_rival_p2_props.clear()
-	_show_rival_subtitle("...방을 내드리죠. 다음 방은 더 깊습니다.", 3.0)
+	# 진짜 클리어 문법 — 챔 + 검은 페이드 + 문구.
+	SfxPlayer.play("stage_clear_chime")
+	_fake_clear_layer = CanvasLayer.new()
+	_fake_clear_layer.layer = 44
+	add_child(_fake_clear_layer)
+	_fake_clear_rect = ColorRect.new()
+	_fake_clear_rect.color = Color(0, 0, 0, 0.0)
+	_fake_clear_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_fake_clear_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fake_clear_layer.add_child(_fake_clear_rect)
+	var ftw := _fake_clear_rect.create_tween()
+	ftw.tween_property(_fake_clear_rect, "color:a", 0.88, 1.2)
+	_fake_clear_label = Label.new()
+	_fake_clear_label.text = "STAGE CLEAR"
+	_fake_clear_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_fake_clear_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_fake_clear_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_fake_clear_label.add_theme_font_size_override("font_size", 42)
+	_fake_clear_label.add_theme_color_override("font_color", Color(0.95, 0.92, 0.85))
+	_fake_clear_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+	_fake_clear_label.add_theme_constant_override("outline_size", 6)
+	_fake_clear_label.modulate.a = 0.0
+	_fake_clear_layer.add_child(_fake_clear_label)
+	var ltw := _fake_clear_label.create_tween()
+	ltw.tween_interval(0.9)
+	ltw.tween_property(_fake_clear_label, "modulate:a", 1.0, 0.7)
+	get_tree().create_timer(3.0, false).timeout.connect(_fake_clear_tear)
+
+# 찢김 — 문구가 어긋나 바이올렛으로 물들고, 닫히던 화면이 도로 열린다(저빈도 모션, 광과민성 준수).
+func _fake_clear_tear() -> void:
+	if goal_reached or not is_inside_tree() or _fake_clear_layer == null:
+		return
+	_rival_beat_flash()
+	SfxPlayer.play("boss_alert_text")
+	if _fake_clear_label != null and is_instance_valid(_fake_clear_label):
+		var jtw := _fake_clear_label.create_tween()
+		jtw.tween_property(_fake_clear_label, "position", Vector2(7.0, -4.0), 0.14)
+		jtw.parallel().tween_property(_fake_clear_label, "modulate", Color(0.72, 0.42, 1.0), 0.14)
+		jtw.tween_property(_fake_clear_label, "position", Vector2(-9.0, 3.0), 0.15)
+		jtw.tween_property(_fake_clear_label, "position", Vector2(0.0, 0.0), 0.15)
+		jtw.tween_property(_fake_clear_label, "modulate:a", 0.0, 0.3)
+	if _fake_clear_rect != null and is_instance_valid(_fake_clear_rect):
+		var rtw := _fake_clear_rect.create_tween()
+		rtw.tween_interval(0.35)
+		rtw.tween_property(_fake_clear_rect, "color:a", 0.0, 0.55)
+	get_tree().create_timer(1.1, false).timeout.connect(_fake_clear_end)
+
+func _fake_clear_end() -> void:
+	if goal_reached or not is_inside_tree():
+		return
+	if _fake_clear_layer != null and is_instance_valid(_fake_clear_layer):
+		_fake_clear_layer.queue_free()
+	_fake_clear_layer = null
+	_fake_clear_rect = null
+	_fake_clear_label = null
+	GameState.restrict_combat_input = false
+	_show_rival_subtitle("이 화면, 익숙하시죠. 제가 그렸습니다.", 3.2)
+	get_tree().create_timer(3.6, false).timeout.connect(_p3_veil_shaken_line)
+	get_tree().create_timer(6.8, false).timeout.connect(_p3_tell_line)
+	_start_rival_p3()
+
+func _p3_veil_shaken_line() -> void:
+	if not is_inside_tree() or goal_reached:
+		return
+	_show_veil_subtitle("방금 클리어 신호는 제가 보낸 것이 아닙니다.", 3.0)
+
+func _p3_tell_line() -> void:
+	if not is_inside_tree() or goal_reached:
+		return
+	_show_veil_subtitle("저것의 표식은 구형 렌더 문법입니다. 굵은 브래킷은 전부 가짜입니다.", 3.6)
+
+# ─── P3 분신전 — 거짓 VEIL(FalseVeil) + 무표시 위협 + 신뢰=지각 보조 ───
+var _false_veil: Node2D = null
+var _p3_assist_timer: Timer = null
+var _p3_assist_idx: int = 0
+
+func _start_rival_p3() -> void:
+	if goal_reached or not is_inside_tree() or _false_veil != null:
+		return
+	_rival_phase = 2
+	_rival_hold = true
+	GameState.rival_phase_reached = 2
+	var fv := FalseVeil.new()
+	fv.setup(
+		[Vector2(960.0, 380.0), Vector2(560.0, 430.0), Vector2(1360.0, 430.0)],
+		[Vector2(300.0, 790.0), Vector2(700.0, 790.0), Vector2(1200.0, 790.0), Vector2(1650.0, 790.0),
+		Vector2(430.0, 610.0), Vector2(1490.0, 610.0), Vector2(960.0, 490.0)])
+	fv.volley_started.connect(_on_p3_volley)
+	fv.defeated.connect(_on_false_veil_defeated)
+	fv.position = Vector2(960.0, 400.0)
+	add_child(fv)
+	_false_veil = fv
+	# 신뢰 = 지각 보조(§7.2): warm이 가장 자주, thaw는 드물게, cold는 혼자 판별(tell은 전원 상시).
+	var band: String = GameState.veil_register_band()
+	if band != "cold":
+		_p3_assist_timer = Timer.new()
+		_p3_assist_timer.wait_time = 6.0 if band == "warm" else 10.0
+		add_child(_p3_assist_timer)
+		_p3_assist_timer.timeout.connect(_veil_assist_tick)
+		_p3_assist_timer.start()
+
+# P3 볼리 — 가짜 마커 세례와 동시에 "무표시 진짜 위협" 투입(VeilSight가 마커 생략).
+# 누적 상한 3 — 안 잡고 버티는 플레이어에게 무한 적체 방지.
+func _on_p3_volley() -> void:
+	if _rival_phase != 2 or goal_reached or not is_inside_tree():
+		return
+	var alive_p3: int = 0
+	for e in get_tree().get_nodes_in_group("enemy"):
+		if (e as Node).has_meta("no_marker"):
+			alive_p3 += 1
+	if alive_p3 >= 3:
+		return
+	SfxPlayer.play("hatch_open")
+	for p in [Vector2(180.0, 790.0), Vector2(1740.0, 790.0)]:
+		var n := _spawn_enemy(0, p)
+		n.set_meta("no_marker", true)
+	_enemies_remaining += 2
+
+const _P3_ASSIST_LINES: Array = [
+	"가짜 하나 지웁니다.",
+	"그건 제가 그린 표식이 아닙니다. 지웁니다.",
+	"굵은 것부터 지웁니다.",
+]
+
+func _veil_assist_tick() -> void:
+	if goal_reached or _false_veil == null or not is_instance_valid(_false_veil):
+		if _p3_assist_timer != null and is_instance_valid(_p3_assist_timer):
+			_p3_assist_timer.stop()
+		return
+	if bool(_false_veil.call("erase_one_fake")):
+		_show_veil_subtitle(str(_P3_ASSIST_LINES[_p3_assist_idx % _P3_ASSIST_LINES.size()]), 2.2)
+		_p3_assist_idx += 1
+
+func _on_false_veil_defeated() -> void:
+	if _rival_phase != 2 or goal_reached:
+		return
+	_rival_phase = 3
+	GameState.rival_phase_reached = 0   # 정복 — 체크포인트 경계 해제(지속 플래그 원칙)
+	if _p3_assist_timer != null and is_instance_valid(_p3_assist_timer):
+		_p3_assist_timer.stop()
+	# 잔여 무표시 위협 정리 — 분신이 소멸하면 그 손도 흩어진다.
+	for e in get_tree().get_nodes_in_group("enemy"):
+		if (e as Node).has_meta("no_marker"):
+			(e as Node).queue_free()
+	_enemies_remaining = 0
+	_rival_beat_flash()
+	_show_rival_subtitle("...잘 보시네요. 그 눈이 마음에 듭니다.", 3.0)
+	get_tree().create_timer(3.4, false).timeout.connect(_rival_final_line)
+
+func _rival_final_line() -> void:
+	if not is_inside_tree() or goal_reached:
+		return
+	_show_rival_subtitle("방을 내드리죠. 다음 방은 더 깊습니다.", 3.0)
 	get_tree().create_timer(2.4, false).timeout.connect(_rival_boss_release)
 
 func _rival_boss_release() -> void:
