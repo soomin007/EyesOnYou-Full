@@ -101,6 +101,11 @@ func _open_panel() -> void:
 
 	var sep := HSeparator.new()
 	v.add_child(sep)
+	var tunnel_btn := Button.new()
+	tunnel_btn.text = "14-2 터널 프로토 (유사 1인칭)"
+	tunnel_btn.add_theme_font_size_override("font_size", 13)
+	tunnel_btn.pressed.connect(_on_tunnel_proto)
+	v.add_child(tunnel_btn)
 	var exit_btn := Button.new()
 	exit_btn.text = "연습장 종료 (타이틀로)"
 	exit_btn.add_theme_font_size_override("font_size", 13)
@@ -419,6 +424,12 @@ func _on_skill_all(n: int) -> void:
 	_set_skill_tier("dash", 1 if n > 0 else 0)
 	_set_skill_tier("double_jump", 1 if n > 0 else 0)
 	_reload()
+
+func _on_tunnel_proto() -> void:
+	# 14-2 코어 대면 터널 프로토(rival_veil_concept §7.1) — 손맛 검증용 진입.
+	# 플래그 누수 차단: 터널의 모든 퇴장 경로는 Title(reset)로 가지만, 여기서도 미리 끈다.
+	GameState.playground_active = false
+	SceneRouter.go(get_tree(), SceneRouter.CORE_TUNNEL)
 
 func _on_exit() -> void:
 	GameState.playground_active = false

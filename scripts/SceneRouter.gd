@@ -12,6 +12,8 @@ const DEATH: String     = "res://scenes/death.tscn"
 const ENDING: String    = "res://scenes/ending.tscn"
 const SETTINGS: String  = "res://scenes/settings.tscn"
 const CREDITS: String   = "res://scenes/credits.tscn"
+# 14-2 코어 대면 터널(유사 1인칭) — 현재 연습장 프로토 진입만, 실런 배선(14-1 클리어 → 문)은 예정.
+const CORE_TUNNEL: String = "res://scenes/core_tunnel.tscn"
 
 static func go(tree: SceneTree, path: String) -> void:
 	# 안전망: scene 전환 시 paused 무조건 해제 — 직전 scene의 LevelUpOverlay/도전방 fail 등에서
