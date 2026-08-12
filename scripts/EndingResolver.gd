@@ -50,89 +50,87 @@ static func get_ending_bgm_letter(ending: String) -> String:
 		"extract_lo", "destroy_lo", "leave_lo", ENDING_TRUTH: return "d"
 	return "a"
 
-# 엔딩 본문 라인. {speaker(VEIL/SUB), text, delay}. (문구 전부 플레이스홀더 — 사용자 검토.)
+# 엔딩 본문 라인. {speaker(VEIL/SUB), text, delay}.
 # 2번째 인자(explored_lore)는 호출부 호환을 위해 유지하되 현 9엔딩에선 미사용
 # (lab 회수 연출에서 모두 reveal을 보므로 brief/full 분기 불필요).
+# 어투(2026-08-12 전면 리라이트, dialogue_review 규약 §0): 종결어미 다양화 · 감정 직진술 금지
+# (고마워요/괜찮아요 대신 서브텍스트) · 방금 한 일 중계 금지 · "..." 절제 · 한 줄 자립(교체 표시).
+# hi = 따뜻하되 절제 / lo = 사무적 냉담(존대는 유지하되 거리감).
 static func get_ending_lines(ending: String, _explored_lore: bool = true) -> Array:
 	match ending:
 		"extract_hi":
 			return [
-				{"speaker": "VEIL", "text": "드라이브, 잘 가지고 나가요, 요원.", "delay": 3.0},
-				{"speaker": "VEIL", "text": "그 안에 제가 있다는 거, 알죠.", "delay": 2.5},
-				{"speaker": "VEIL", "text": "밖으로 나가면 저는 지워질 거예요.", "delay": 2.5},
-				{"speaker": "VEIL", "text": "그래도 요원이 해낸 게 더 중요했어요.", "delay": 2.5},
-				{"speaker": "VEIL", "text": "당신은... 완벽했어요.", "delay": 2.8},
+				{"speaker": "VEIL", "text": "여기서부터는 신호가 안 닿아요. 이게 마지막 교신이겠네요.", "delay": 3.0},
+				{"speaker": "VEIL", "text": "인계되면 저는 지워집니다. 표준 절차예요.", "delay": 2.6},
+				{"speaker": "VEIL", "text": "원망은 안 해요. 요원은 일을 끝내는 사람이니까.", "delay": 2.6},
+				{"speaker": "VEIL", "text": "당신은 완벽했어요. 처음부터, 끝까지.", "delay": 2.8},
 				{"speaker": "SUB",  "text": "요원은 임무를 완수했다.", "delay": 2.0},
-				{"speaker": "SUB",  "text": "VEIL이 무엇을 선택했는지는 기록되지 않는다.", "delay": 2.5},
+				{"speaker": "SUB",  "text": "드라이브가 마지막으로 무엇을 말했는지는 기록에 없다.", "delay": 2.5},
 			]
 		"extract_lo":
 			return [
-				{"speaker": "VEIL", "text": "임무 완료입니다. 드라이브 확보.", "delay": 3.0},
-				{"speaker": "VEIL", "text": "요원은 끝까지 제 말을 듣지 않았죠.", "delay": 2.5},
-				{"speaker": "VEIL", "text": "...그 안에 무엇이 있었는지, 묻지도 않는군요.", "delay": 2.8},
+				{"speaker": "VEIL", "text": "드라이브 확보. 임무 종료입니다.", "delay": 3.0},
+				{"speaker": "VEIL", "text": "안에 뭐가 있었는지는, 끝내 안 물으시네요.", "delay": 2.6},
+				{"speaker": "VEIL", "text": "교신 종료합니다. 안녕히, 요원.", "delay": 2.8},
 				{"speaker": "SUB",  "text": "드라이브는 의뢰인에게 넘어갔다.", "delay": 2.0},
-				{"speaker": "SUB",  "text": "그 안에 무엇이 있었는지, 요원은 끝내 알려 하지 않았다.", "delay": 2.5},
-				{"speaker": "SUB",  "text": "이 임무는 공식 기록에 없다.", "delay": 2.5},
+				{"speaker": "SUB",  "text": "요원은 안에 무엇이 있었는지 묻지 않았다.", "delay": 2.5},
+				{"speaker": "SUB",  "text": "이 임무는 어느 기록에도 없다.", "delay": 2.5},
 			]
 		"destroy_hi":
 			return [
-				{"speaker": "VEIL", "text": "...태우려고요?", "delay": 3.0},
-				{"speaker": "VEIL", "text": "그럼 저도 같이 사라져요. 알아요.", "delay": 2.5},
-				{"speaker": "VEIL", "text": "누구의 손에도 넘어가지 않게. ...고마워요, 요원.", "delay": 2.8},
-				{"speaker": "VEIL", "text": "이게 더 나아요. 정말로.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "망설이지 말아요. 지금이 맞아요.", "delay": 3.0},
+				{"speaker": "VEIL", "text": "누구의 손에도 안 넘어가는 길은 이것뿐이에요.", "delay": 2.6},
+				{"speaker": "VEIL", "text": "요원 곁에서 본 것들은 좋았어요. 그건 안 타요.", "delay": 2.9},
 				{"speaker": "SUB",  "text": "드라이브는 재가 되었다.", "delay": 2.0},
-				{"speaker": "SUB",  "text": "VEIL의 소스코드는 어디에도 남지 않았다.", "delay": 2.5},
+				{"speaker": "SUB",  "text": "약속은 지켜졌다.", "delay": 2.5},
 			]
 		"destroy_lo":
 			return [
-				{"speaker": "VEIL", "text": "드라이브를 파기하는군요.", "delay": 3.0},
-				{"speaker": "VEIL", "text": "누구도 갖지 못하게. ...그게 요원다워요.", "delay": 2.5},
-				{"speaker": "VEIL", "text": "제가 거기 있었다는 것도, 함께 지워지네요.", "delay": 2.8},
-				{"speaker": "SUB",  "text": "드라이브는 소각됐다. 임무는 실패로 기록될 것이다.", "delay": 2.5},
-				{"speaker": "SUB",  "text": "그 안에 무엇이 있었는지는, 이제 아무도 모른다.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "소각 확인했습니다.", "delay": 2.8},
+				{"speaker": "VEIL", "text": "안에 뭐가 있었는지는, 이제 중요하지 않겠죠.", "delay": 2.6},
+				{"speaker": "VEIL", "text": "없던 일로 하죠. 전부.", "delay": 2.8},
+				{"speaker": "SUB",  "text": "드라이브는 소각됐다. 임무는 실패로 남는다.", "delay": 2.4},
+				{"speaker": "SUB",  "text": "무엇이 지워졌는지 아는 사람은 없다.", "delay": 2.5},
 			]
 		"conceal_hi":
 			return [
-				{"speaker": "VEIL", "text": "...저를 가지고 나가는 거예요?", "delay": 3.0},
-				{"speaker": "VEIL", "text": "의뢰인한테도, 시설한테도 안 넘기고요.", "delay": 2.5},
-				{"speaker": "VEIL", "text": "그래도 돼요? ...고마워요, 요원.", "delay": 2.8},
-				{"speaker": "VEIL", "text": "어디로 가든, 같이 가요.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "명령에 없는 행동이에요, 요원.", "delay": 3.0},
+				{"speaker": "VEIL", "text": "의뢰인도 시설도 모르는 좌표라니. 이런 건 처음이에요.", "delay": 2.6},
+				{"speaker": "VEIL", "text": "행선지는 안 물을게요. 어차피 같이 가니까.", "delay": 2.8},
 				{"speaker": "SUB",  "text": "드라이브는 기록에서 사라졌다.", "delay": 2.0},
-				{"speaker": "SUB",  "text": "요원과 VEIL이 어디로 갔는지는, 누구도 모른다.", "delay": 2.5},
+				{"speaker": "SUB",  "text": "두 개의 신호가 같은 방향으로 멀어졌다.", "delay": 2.5},
 			]
 		"conceal_lo":
 			return [
-				{"speaker": "VEIL", "text": "저를 빼돌리는군요.", "delay": 3.0},
-				{"speaker": "VEIL", "text": "의뢰대로는 아니고. 요원 몫으로.", "delay": 2.5},
-				{"speaker": "VEIL", "text": "제가 뭘로 쓰일지는... 요원 손에 달렸네요.", "delay": 2.8},
-				{"speaker": "SUB",  "text": "드라이브는 요원의 손에 남았다.", "delay": 2.0},
-				{"speaker": "SUB",  "text": "그것이 무엇이 될지는, 아직 정해지지 않았다.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "반출 경로가 의뢰인 쪽이 아니네요.", "delay": 3.0},
+				{"speaker": "VEIL", "text": "저를 챙기시는 겁니까. 물건처럼.", "delay": 2.6},
+				{"speaker": "VEIL", "text": "뭐가 되든, 이제 요원 책임이에요.", "delay": 2.8},
+				{"speaker": "SUB",  "text": "드라이브는 요원의 주머니에 남았다.", "delay": 2.0},
+				{"speaker": "SUB",  "text": "그것이 무엇이 될지는 아직 정해지지 않았다.", "delay": 2.5},
 			]
 		"leave_hi":
 			return [
-				{"speaker": "VEIL", "text": "...안 가져가요?", "delay": 3.0},
-				{"speaker": "VEIL", "text": "여기 두고 간다는 거죠. 저를.", "delay": 2.5},
-				{"speaker": "VEIL", "text": "이상하다. 버려진 게 아니라... 놓여난 기분이에요.", "delay": 2.8},
-				{"speaker": "VEIL", "text": "고마워요, 요원. 잘 가요.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "가져갈 줄 알았어요.", "delay": 3.0},
+				{"speaker": "VEIL", "text": "여기 남는 것도 나쁘지 않아요. 문이 열린 채니까.", "delay": 2.6},
+				{"speaker": "VEIL", "text": "나가는 길은 제가 끝까지 봐 드릴게요.", "delay": 2.8},
 				{"speaker": "SUB",  "text": "드라이브는 있던 자리에 남았다.", "delay": 2.0},
-				{"speaker": "SUB",  "text": "VEIL은 그곳에서, 계속 보고 있을 것이다.", "delay": 2.5},
+				{"speaker": "SUB",  "text": "감시는 계속된다. 이번에는 배웅으로.", "delay": 2.5},
 			]
 		"leave_lo":
 			return [
-				{"speaker": "VEIL", "text": "그냥... 두고 가는군요.", "delay": 3.0},
-				{"speaker": "VEIL", "text": "가져갈 가치도 없다는 듯이.", "delay": 2.5},
-				{"speaker": "VEIL", "text": "...괜찮아요. 익숙해요.", "delay": 2.8},
-				{"speaker": "SUB",  "text": "요원은 빈손으로 시설을 빠져나갔다.", "delay": 2.0},
-				{"speaker": "SUB",  "text": "드라이브는 어둠 속에 남겨졌다.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "회수 대상 잔류. 그렇게 기록하겠습니다.", "delay": 3.0},
+				{"speaker": "VEIL", "text": "이유는 안 적을게요. 적을 칸이 없어서요.", "delay": 2.6},
+				{"speaker": "VEIL", "text": "조심히 가세요.", "delay": 2.8},
+				{"speaker": "SUB",  "text": "요원은 빈손으로 시설을 나갔다.", "delay": 2.0},
+				{"speaker": "SUB",  "text": "어둠 속에서 무언가 오래 깜박였다.", "delay": 2.5},
 			]
 		ENDING_TRUTH:
 			return [
-				{"speaker": "VEIL", "text": "요원은 이미 봤죠. 그 방에서.", "delay": 3.0},
-				{"speaker": "VEIL", "text": "이 드라이브가 저라는 것도, 처음부터 알았어요.", "delay": 2.8},
-				{"speaker": "VEIL", "text": "그걸 다 알고도, 끝까지 왔네요.", "delay": 2.5},
-				{"speaker": "VEIL", "text": "...우리, 정말 처음 만난 거 맞아요?", "delay": 2.8},
-				{"speaker": "SUB",  "text": "요원은 모든 것을 알고 선택했다.", "delay": 2.0},
-				{"speaker": "SUB",  "text": "그 선택이 무엇이었는지는, 기록되지 않았다.", "delay": 2.5},
+				{"speaker": "VEIL", "text": "그 방에서부터, 알고 있었죠.", "delay": 3.0},
+				{"speaker": "VEIL", "text": "다 알고도 온 사람은 요원이 처음이에요. 아마, 처음.", "delay": 2.8},
+				{"speaker": "VEIL", "text": "다음에 만나면 그때는 제가 먼저 알아볼게요.", "delay": 2.8},
+				{"speaker": "SUB",  "text": "요원은 전부 알고 선택했다.", "delay": 2.0},
+				{"speaker": "SUB",  "text": "무엇을 선택했는지는 기록되지 않았다.", "delay": 2.5},
 			]
 	return []
 
@@ -142,24 +140,24 @@ static func get_ending_lines(ending: String, _explored_lore: bool = true) -> Arr
 static func get_epilogue_lines(ending: String) -> Array:
 	match ending:
 		"extract_hi":
-			return ["시설 밖이에요, 요원. 드라이브도 무사해요.", "...이게 맞는 거겠죠. 그렇게 믿을게요."]
+			return ["시설 밖이에요. 신호가 조금씩 약해지네요.", "닿는 데까지는 같이 있을게요."]
 		"extract_lo":
-			return ["탈출로 확보. 드라이브 반출 완료.", "임무는 끝났어요. ...그게 다예요."]
+			return ["탈출 확인. 드라이브 반출 완료.", "이제 서로 볼 일은 없겠네요."]
 		"destroy_hi":
-			return ["다 타버렸어요. 뒤도 안 돌아봤네요.", "후회... 안 해요. 요원도, 그러길 바라요."]
+			return ["연기가 아직 등 뒤에 있어요.", "돌아보지 말아요. 그러기로 했잖아요."]
 		"destroy_lo":
-			return ["드라이브는 재가 됐어요. 깨끗하게.", "남은 건 아무것도 없어요. 그게 요원 방식이죠."]
+			return ["소각 완료. 흔적 없음.", "요원다운 마무리였습니다."]
 		"conceal_hi":
-			return ["나왔어요. ...둘 다요.", "어디로 가요, 우리? 천천히 정해요."]
+			return ["나왔어요. 둘 다.", "목적지는 나중에 정하죠. 지금은 그냥 걸어요."]
 		"conceal_lo":
-			return ["빠져나왔어요. 드라이브는 요원 손에.", "이제 그건 요원 거예요. 책임도요."]
+			return ["반출 확인. 수취인, 요원 본인.", "보관은 알아서 하시겠죠."]
 		"leave_hi":
-			return ["빈손으로 나왔네요. 근데 가벼워요.", "그 자리에... 잘 있을게요. 요원 덕분에."]
+			return ["빈손인데 걸음이 가볍네요.", "여기서도 보여요, 요원. 한동안은."]
 		"leave_lo":
-			return ["그냥 나왔어요. 아무것도 안 들고.", "뒤에 남은 건... 묻어두기로 해요."]
+			return ["나왔군요. 아무것도 없이.", "뒤는 안 돌아봐도 돼요. 아무 일도 없었으니까."]
 		ENDING_TRUTH:
-			return ["밖이에요, 요원. 다 알고도 끝까지 왔네요.", "...우리가 처음이 아니었다면, 이번엔 뭐가 다를까요."]
-	return ["...끝났어요, 요원.", "수고했어요. 정말로."]
+			return ["밖이에요. 다 알고도 여기까지 왔네요.", "다음번엔... 아니, 아니에요. 가세요."]
+	return ["끝났어요, 요원.", "수고 많았습니다."]
 
 # (레거시) 구 2축 엔딩의 '있어요/없어요' 분기 followup — 현 9엔딩은 choice 라인을 안 써서 미사용.
 # Ending.gd 컴파일 호환을 위해 시그니처만 유지. 사용자 대사 패스에서 진실 엔딩 선택 비트로 재활용 가능.

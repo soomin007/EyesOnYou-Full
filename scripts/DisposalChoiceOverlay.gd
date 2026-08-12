@@ -54,9 +54,9 @@ static func show(host: Node, on_picked: Callable) -> CanvasLayer:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(title)
 
-	# VEIL 한 마디 — 신뢰 톤색으로(플레이스홀더 문구).
+	# VEIL 한 마디 — 신뢰 톤색으로.
 	var veil_lbl := Label.new()
-	veil_lbl.text = "VEIL   요원이 정해요. 저는... 결과를 받아들일게요."
+	veil_lbl.text = "VEIL   요원이 정하세요. 어느 쪽이든, 받아들일게요."
 	veil_lbl.add_theme_font_size_override("font_size", 18)
 	veil_lbl.add_theme_color_override("font_color", GameState.veil_tone_color())
 	veil_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
