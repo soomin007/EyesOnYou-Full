@@ -26,17 +26,30 @@ var panel: PanelContainer
 var open: bool = false
 
 func _ready() -> void:
+	# 패널이 열리면 트리를 일시정지하므로(키보드 내비), 오버레이 자신은 항상 동작해야 한다.
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	layer = CanvasLayer.new()
 	layer.layer = 30
 	add_child(layer)
 
 	toggle_button = Button.new()
-	toggle_button.text = "▼ 연습장"
+	toggle_button.text = "▼ 연습장 [F1]"
 	toggle_button.add_theme_font_size_override("font_size", 13)
 	toggle_button.position = Vector2(20, 56)
 	toggle_button.custom_minimum_size = Vector2(110, 28)
 	toggle_button.pressed.connect(_toggle_panel)
 	layer.add_child(toggle_button)
+
+# F1 = 패널 여닫기(마우스 없이도 접근), 열린 상태의 ESC = 닫기.
+# 패널이 열리면 paused라 Stage(PAUSABLE)는 입력을 못 받고, 이 노드(ALWAYS)만 받는다.
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey:
+		var key := event as InputEventKey
+		if not key.pressed or key.echo:
+			return
+		if key.keycode == KEY_F1 or (open and key.keycode == KEY_ESCAPE):
+			get_viewport().set_input_as_handled()
+			_toggle_panel()
 
 func _toggle_panel() -> void:
 	if open:
@@ -46,7 +59,10 @@ func _toggle_panel() -> void:
 
 func _open_panel() -> void:
 	open = true
-	toggle_button.text = "▲ 연습장"
+	toggle_button.text = "▲ 연습장 [F1]"
+	# 열려 있는 동안 일시정지 — 화살표/Enter로 패널을 조작해도 뒤의 플레이어가 움직이지 않게
+	# (키보드 내비 지원). 닫기/reload/이탈 모든 경로에서 해제(known_issues paused carry 참조).
+	get_tree().paused = true
 	panel = PanelContainer.new()
 	panel.position = Vector2(20, 92)
 	var style := StyleBoxFlat.new()
@@ -60,9 +76,27 @@ func _open_panel() -> void:
 	panel.add_theme_stylebox_override("panel", style)
 	layer.add_child(panel)
 
+	# 행이 늘며 패널이 720px 화면 밖으로 넘치는 재발 방지(과거 스킬 8줄 사례와 동형 — 하단
+	# 버튼이 안 보인다는 보고 2026-08-12). 전체를 스크롤 박스에 담고 포커스를 따라 자동 스크롤.
+	var outer := ScrollContainer.new()
+	outer.custom_minimum_size = Vector2(700, 560)
+	outer.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	outer.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	outer.follow_focus = true
+	panel.add_child(outer)
+
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 10)
-	panel.add_child(v)
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	outer.add_child(v)
+
+	# 14-2 프로토 바로가기 — 맨 위 고정(맨 아래에 두면 오버플로로 안 보였음).
+	var tunnel_btn := Button.new()
+	tunnel_btn.text = "14-2 터널 프로토 (유사 1인칭) 진입"
+	tunnel_btn.add_theme_font_size_override("font_size", 13)
+	tunnel_btn.pressed.connect(_on_tunnel_proto)
+	v.add_child(tunnel_btn)
+	v.add_child(HSeparator.new())
 
 	v.add_child(_build_stage_row())
 	v.add_child(_build_route_section())
@@ -101,16 +135,13 @@ func _open_panel() -> void:
 
 	var sep := HSeparator.new()
 	v.add_child(sep)
-	var tunnel_btn := Button.new()
-	tunnel_btn.text = "14-2 터널 프로토 (유사 1인칭)"
-	tunnel_btn.add_theme_font_size_override("font_size", 13)
-	tunnel_btn.pressed.connect(_on_tunnel_proto)
-	v.add_child(tunnel_btn)
 	var exit_btn := Button.new()
 	exit_btn.text = "연습장 종료 (타이틀로)"
 	exit_btn.add_theme_font_size_override("font_size", 13)
 	exit_btn.pressed.connect(_on_exit)
 	v.add_child(exit_btn)
+	# 키보드 내비 — 첫 버튼 포커스(화살표/Tab 이동 · Enter 실행 · 포커스 따라 자동 스크롤).
+	tunnel_btn.call_deferred("grab_focus")
 
 func _on_invincible_toggled(on: bool) -> void:
 	# 무적은 연습장에서만 효과가 있다(Player.take_hit이 playground_active로 가드) — 일반 모드엔 영향 없음.
@@ -124,7 +155,8 @@ func _on_force_elite_toggled(on: bool) -> void:
 
 func _close_panel() -> void:
 	open = false
-	toggle_button.text = "▼ 연습장"
+	toggle_button.text = "▼ 연습장 [F1]"
+	get_tree().paused = false
 	if panel != null and is_instance_valid(panel):
 		panel.queue_free()
 	panel = null
@@ -159,6 +191,7 @@ func _build_route_section() -> HBoxContainer:
 	sc.custom_minimum_size = Vector2(560, 200)
 	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	sc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	sc.follow_focus = true
 	var vb := VBoxContainer.new()
 	vb.add_theme_constant_override("separation", 8)
 	# 막별 버킷 — min_stage가 속한 막으로 분류. min_stage 없는 특수(도전방 등)는 별도.
@@ -434,9 +467,12 @@ func _on_tunnel_proto() -> void:
 func _on_exit() -> void:
 	GameState.playground_active = false
 	GameState.reset()
-	get_tree().change_scene_to_file(SceneRouter.TITLE)
+	# SceneRouter.go = paused 해제 보장(패널 열림 = paused 상태에서 눌릴 수 있음).
+	SceneRouter.go(get_tree(), SceneRouter.TITLE)
 
 func _reload() -> void:
 	# Stage scene을 다시 로드 — _ready에서 새 GameState 값으로 빌드.
 	# playground_active가 true이므로 패널도 다시 부착됨.
+	# paused는 SceneTree 전역이라 reload에도 carry된다 — 패널 열림 상태에서 눌리므로 반드시 해제.
+	get_tree().paused = false
 	get_tree().reload_current_scene()
