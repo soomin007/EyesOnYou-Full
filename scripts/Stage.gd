@@ -2040,8 +2040,9 @@ func _build_chase_hazard() -> void:
 	add_child(hz)
 	hz.setup(float(cfg.get("start_x", -300.0)), float(cfg.get("speed", 210.0)), float(cfg.get("max_gap", 700.0)))
 
-# 아레나 방어(DefenseCore 기믹) — MapData "defense_core" = {pos, hp?, radius?, drain?}.
-# 코어 dome 안에 적이 머물면 코어 HP가 깎이고, 0이면 방어 실패(스테이지 실패). 웨이브 전멸이 클리어.
+# 아레나 방어(DefenseCore 기믹) — MapData "defense_core" = {pos, hp?, radius?, interval?}.
+# dome 안 적이 와인드업(예고 게이지) 후 코어를 직접 타격, 0이면 방어 실패. 웨이브 전멸이 클리어.
+# (2026-08-12 재설계: 오라 드레인 → 이산 타격. 인과 가독 + 밀어내기 유효화.)
 func _build_defense_core() -> void:
 	var cfg: Dictionary = _map_data.get("defense_core", {})
 	if cfg.is_empty():
@@ -2049,7 +2050,7 @@ func _build_defense_core() -> void:
 	var core := DefenseCore.new()
 	add_child(core)
 	core.position = cfg.get("pos", Vector2(960.0, 820.0))
-	core.setup(float(cfg.get("hp", 120.0)), float(cfg.get("radius", 360.0)), float(cfg.get("drain", 6.0)))
+	core.setup(float(cfg.get("hp", 14.0)), float(cfg.get("radius", 360.0)), float(cfg.get("interval", 1.5)))
 	core.breached.connect(_on_core_breached)
 	_defense_core = core
 

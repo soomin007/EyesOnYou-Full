@@ -1479,7 +1479,9 @@ static func _core_defense() -> Dictionary:
 		"camera_mode":  "FIXED",
 		"ground_y":     820.0,
 		# 지켜야 할 코어 — 중앙 지면. dome 반경 360(=x 600..1320). 적은 이 밖에서 스폰해 안으로 밀려온다.
-		"defense_core": {"pos": Vector2(960.0, 820.0), "hp": 120.0, "radius": 360.0, "drain": 6.0},
+		# 타격 기반(2026-08-12): 적 1기가 1.5s 와인드업마다 1피해. hp 14 ≈ 적 1기 방치 21초(구 드레인
+		# 120/6=20초와 등가) — 예고·요격 여지만큼 실질은 관대해짐. 밸런스 실플레이 대상.
+		"defense_core": {"pos": Vector2(960.0, 820.0), "hp": 14.0, "radius": 360.0, "interval": 1.5},
 		"platforms": [
 			# 좌우 상단 저격 발판(dome 밖, 중앙과 수평거리 700) — 플레이어만 압박, 코어는 못 깎음.
 			{"pos": Vector2(260, 560),  "w": 200.0},
