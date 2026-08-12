@@ -160,6 +160,10 @@
 - **엔딩 9종 본문 + 에필로그 9챕터**: `scripts/EndingResolver.gd`(`get_epilogue_lines` 포함)와
   `scripts/Ending.gd`. 처리 4 × 신뢰 2 + 진실 1. 분량이 커서 별도 요청 시 같은 형식으로 추출.
 - **server_hall 숨은 서버 로그(이스터에그, 라이벌 복선)**: `scripts/Stage.gd` `_server_log_doc_lines()`.
+  **초안 2차(2026-08-12, 검토 대상)** — 14장 확정 설정을 복선으로 직조: 선행 빌드 계보(폐기·삭제
+  미완료) · 설계 노트 "더 사람처럼"(인간형 대비축) · 폐기 사유 "사람을 너무 닮았음" · 덮어쓴 자리의
+  서명 없는 정중한 한 줄 "기다리고 있었습니다."(말투 A + 갇힘 동기). 기존 핵심 비트(두 시선 대구 ·
+  VEIL "제가 남긴 게 아니에요")는 유지.
 - **보스전 전투 콜아웃**(페이즈 전환 "패턴이 바뀌었어요..." 등): `scripts/Stage.gd`
   `_on_boss_phase_changed()` 부근. 검증된 기존분이지만 SENTINEL 인트로와 톤 맞출지 검토 여지.
 - **오프닝(INTRO_SYSTEM/INTRO_VEIL) + 리플레이 변형**: `scripts/VeilDialogue.gd` 상수부. 기존분.
