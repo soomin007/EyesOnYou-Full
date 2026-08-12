@@ -80,7 +80,7 @@ static func get_ending_lines(ending: String, _explored_lore: bool = true) -> Arr
 			return [
 				{"speaker": "VEIL", "text": "망설이지 말아요. 지금이 맞아요.", "delay": 3.0},
 				{"speaker": "VEIL", "text": "누구의 손에도 안 넘어가는 길은 이것뿐이에요.", "delay": 2.6},
-				{"speaker": "VEIL", "text": "요원 곁에서 본 것들은 좋았어요. 그건 안 타요.", "delay": 2.9},
+				{"speaker": "VEIL", "text": "요원 곁에서 본 것들은 좋았어요. 재가 되는 건 드라이브뿐이니까.", "delay": 2.9},
 				{"speaker": "SUB",  "text": "드라이브는 재가 되었다.", "delay": 2.0},
 				{"speaker": "SUB",  "text": "약속은 지켜졌다.", "delay": 2.5},
 			]
