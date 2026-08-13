@@ -146,17 +146,36 @@ func _build_lines() -> Array:
 		GameState.reentry_line_pending = false
 		out.append({"speaker": "SYS", "text": "이전 작전 기록: 잔존 구간 검출. 해당 지점에서 재개합니다."})
 		out.append({"speaker": "VEIL", "text": "여기부터는 기록이 유난히 진합니다. 이어서 갑니다, 요원."})
+		# 라이벌 기억(축 C) — 재진입 = 라이벌과 같은 짓(기록을 뒤지는 것). 그는 알아본다.
+		out.append({"speaker": "RIVAL", "text": "덮어쓴 기록을 뒤지셨군요. 그 방법은, 제가 잘 압니다."})
 	# 첫 진입 시 1회만: 의뢰 수리 문서 → PALIMPSEST 시스템 텍스트 → VEIL 인사.
 	if GameState.current_stage == 0:
 		out.append({"speaker": "SYS", "text": VeilDialogue.INTRO_CONTRACT})
 		out.append({"speaker": "SYS", "text": VeilDialogue.get_intro_system_text()})
 		for s in VeilDialogue.get_intro_veil_lines():
 			out.append({"speaker": "VEIL", "text": str(s)})
+		# 라이벌 기억(축 C) — 다회차 오프닝 반 박자: 내 VEIL의 "기록상 처음" 뒤에 끼어드는 한 줄.
+		# 재진입 런은 위 재진입 라인이 그 역할(런당 라이벌 언급 1~2회 상한).
+		if not GameState.story_mode and GameState.playthrough_count >= 1 and not GameState.reentry_run:
+			out.append({"speaker": "RIVAL", "text": "기록상, 이라고 들으셨겠지요."})
 	else:
 		# 막 진입(막2+)의 첫 stage면 문턱 멘트 1줄을 브리핑 앞에 — 막 진입 카드와 한 박자(B-4).
 		var entry_line: String = VeilDialogue.get_act_entry_line(GameState.current_stage)
 		if entry_line != "":
 			out.append({"speaker": "VEIL", "text": entry_line})
+		# 라이벌 기억(축 C) — 막4 문턱: 지난 완주의 처리 선택을 정확히 짚는다(그는 기억한다).
+		if not GameState.story_mode and GameState.is_act_start(GameState.current_stage) \
+				and GameState.act_for_stage(GameState.current_stage) == 3 \
+				and GameState.rival_last_disposal != "":
+			var recall: Dictionary = {
+				"extract": "지난번에는 가지고 나가셨지요. 그 바깥이, 마음에 드셨습니까.",
+				"destroy": "지난번에는 태우셨습니다. 이번에도 그러실 겁니까.",
+				"conceal": "지난번에는 숨기셨지요. 어디에 두셨는지, 저는 압니다.",
+				"leave": "지난번에는 두고 가셨습니다. ...그 마음, 아직 유효합니까.",
+			}
+			var line: String = str(recall.get(GameState.rival_last_disposal, ""))
+			if line != "":
+				out.append({"speaker": "RIVAL", "text": line})
 	out.append({"speaker": "VEIL", "text": VeilDialogue.get_briefing(GameState.current_stage)})
 	return out
 
@@ -169,9 +188,16 @@ func _start_line() -> void:
 	var sp: String = str(line.get("speaker", ""))
 	if sp == "SYS":
 		speaker_label.text = ""
+		speaker_label.remove_theme_color_override("font_color")
 		text_label.add_theme_color_override("font_color", Color(0.62, 0.72, 0.85))
+	elif sp == "RIVAL":
+		# 라이벌(화자 불명 "?") — 인게임 자막과 같은 바이올렛 문법.
+		speaker_label.text = "?"
+		speaker_label.add_theme_color_override("font_color", Color(0.72, 0.42, 1.0))
+		text_label.add_theme_color_override("font_color", Color(0.80, 0.62, 1.0))
 	else:
 		speaker_label.text = "VEIL"
+		speaker_label.remove_theme_color_override("font_color")
 		text_label.add_theme_color_override("font_color", Color(0.92, 0.92, 0.92))
 	text_label.text = ""
 

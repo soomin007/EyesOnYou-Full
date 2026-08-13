@@ -109,10 +109,21 @@ func _process(_delta: float) -> void:
 		win.content_scale_factor = target
 
 func _input(event: InputEvent) -> void:
+	# F11 = 전체화면 토글(데스크톱, 사용자 2026-08-13). 메인 화면 버튼과 안 겹치는 표준 키.
+	# 브라우저에서도 키다운이 제스처 핸들러라 fullscreen 요청이 허용된다.
+	if event is InputEventKey:
+		var fk := event as InputEventKey
+		if fk.pressed and not fk.echo and (fk.keycode == KEY_F11 or fk.physical_keycode == KEY_F11):
+			_toggle_fullscreen()
+			get_viewport().set_input_as_handled()
+			return
 	# 자동 전체화면(설정 auto_fullscreen). 브라우저는 사용자 제스처 핸들러 안에서만 fullscreen/orientation
 	# lock을 허용하므로 입력(터치/클릭/키 누름) 이벤트에서 시도한다. 1회성이 아니라 "전체화면이 아니면
 	# 매 입력마다 재시도" → 사용자가 전체화면을 빠져나가도 다음 입력에 다시 들어간다(otherside 방식).
+	# 데스크톱(비터치)은 자동 재진입이 성가시다는 피드백(2026-08-13)으로 제외 — F11 수동 토글만.
 	if not GameState.auto_fullscreen:
+		return
+	if not is_touch_device():
 		return
 	if not _is_press(event):
 		return
@@ -148,6 +159,22 @@ func _enter_fullscreen() -> void:
 	var mode: int = DisplayServer.window_get_mode()
 	if mode != DisplayServer.WINDOW_MODE_FULLSCREEN and mode != DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+
+# F11 토글 — 웹은 브라우저 전체화면 요청/해제, 네이티브는 창 모드 전환(+설정 동기화).
+func _toggle_fullscreen() -> void:
+	if OS.has_feature("web"):
+		var in_fs: bool = bool(JavaScriptBridge.eval(
+			"!!(document.fullscreenElement || document.webkitFullscreenElement)", true))
+		if in_fs:
+			JavaScriptBridge.eval("try{ if(document.exitFullscreen) document.exitFullscreen(); else if(document.webkitExitFullscreen) document.webkitExitFullscreen(); }catch(e){}", true)
+		else:
+			_try_web_landscape()
+		return
+	var mode: int = DisplayServer.window_get_mode()
+	var now_fs: bool = mode == DisplayServer.WINDOW_MODE_FULLSCREEN or mode == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN
+	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED if now_fs else DisplayServer.WINDOW_MODE_FULLSCREEN)
+	GameState.fullscreen = not now_fs
+	GameState.save_settings()
 
 func _try_web_landscape() -> void:
 	if not OS.has_feature("web"):

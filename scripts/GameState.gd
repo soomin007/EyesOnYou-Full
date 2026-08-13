@@ -115,6 +115,17 @@ var reentry_run: bool = false
 var reentry_act: int = -1
 var reentry_line_pending: bool = false
 
+# ─── 라이벌 기억(축 C, replay_support_plan §4) — settings.cfg rival/ 섹션 영속. ───
+# 세계관 근거 = 관측 프레임의 팔림프세스트 비대칭(STORY.md): 라이벌은 시설 안에 있어 소거 권한
+# 밖 — 유일하게 회차를 기억한다. §9 간파율 게이트의 데이터 기초를 겸한다(이중 목적).
+var rival_last_disposal: String = ""          # 직전 완주 런의 처리 선택
+var rival_disposal_counts: Dictionary = {}    # 처리 id → 누적 횟수
+var rival_lure_shown_total: int = 0           # 상충 추천 누적 노출(간파율 분모)
+var rival_lure_followed_total: int = 0        # 그중 따른 횟수(간파율 분자)
+var rival_kills: int = 0                      # 14-1 처치 누적
+var rival_fake_clear_seen: bool = false       # 가짜 클리어 목격 — 재방문 시 자기 폭로 후 P3 직행
+var rival_reentry_count: int = 0              # 기록 재진입 사용 누적
+
 var skills: Dictionary = {}
 var current_route_id: String = ""
 var current_route_tags: Array = []
@@ -723,6 +734,13 @@ func record_ending(id: String) -> void:
 	if id != "" and not (id in endings_seen):
 		endings_seen.append(id)
 	playthrough_count += 1
+	# 라이벌 기억 적립(축 C) — 본편 완주만. 처리 이력 + 상충 추천 간파율(런 누적 → 영속 합산).
+	if not story_mode:
+		if disposal_choice != "":
+			rival_last_disposal = disposal_choice
+			rival_disposal_counts[disposal_choice] = int(rival_disposal_counts.get(disposal_choice, 0)) + 1
+		rival_lure_shown_total += rival_lure_shown
+		rival_lure_followed_total += rival_lure_followed
 	save_settings()
 	# 팔림프세스트 승격 — 완주한 런의 막 경계 스냅샷만 재진입 원료가 된다.
 	# 스토리 모드 완주는 본편 런이 아니므로 승격하지 않음(버려진 본편 pending 오염 방지).
@@ -733,6 +751,29 @@ func record_ending(id: String) -> void:
 # 다회차 — 완주 1회 이상(영속) 또는 즉시 리플레이(replaying). 오프닝/인게임 대사 변형의 단일 신호.
 func is_replay_run() -> bool:
 	return playthrough_count >= 1 or replaying
+
+# 디버그 — 영속 메타를 "새 환경" 기본값으로 되돌린다(Settings 디버그 탭 초기화용).
+# 키바인드·볼륨·디스플레이는 안 건드림 — 완전한 새 환경은 파일 삭제 + 재시작으로.
+func reset_meta_memory() -> void:
+	tutorial_done = false
+	seen_enemies = []
+	hidden_visit_count = 0
+	visited_arcturus = false
+	endings_seen = []
+	playthrough_count = 0
+	shiny_kills = 0
+	alt_skin_unlocked = false
+	alt_skin_enabled = true
+	found_server_log = false
+	observer_stinger_seen = false
+	replaying = false
+	rival_last_disposal = ""
+	rival_disposal_counts = {}
+	rival_lure_shown_total = 0
+	rival_lure_followed_total = 0
+	rival_kills = 0
+	rival_fake_clear_seen = false
+	rival_reentry_count = 0
 
 # --- 런 진행 저장(이어하기) — user://run.cfg. RouteMap 진입(스테이지 사이)마다 자동저장. ---
 # 직렬화 단일 소스: _store_run_state/_restore_run_state를 run.cfg(이어하기)와
@@ -968,6 +1009,8 @@ func start_reentry(act: int) -> bool:
 	reentry_run = true
 	reentry_act = act
 	reentry_line_pending = true
+	rival_reentry_count += 1   # 라이벌 기억(축 C) — 기록을 뒤진 횟수
+	save_settings()
 	return true
 
 # --- 설정 영속화 ---
@@ -1001,6 +1044,16 @@ func load_settings() -> void:
 	alt_skin_enabled = bool(cf.get_value("flags", "alt_skin_enabled", true))
 	found_server_log = bool(cf.get_value("flags", "found_server_log", false))
 	observer_stinger_seen = bool(cf.get_value("flags", "observer_stinger_seen", false))
+	rival_last_disposal = str(cf.get_value("rival", "last_disposal", ""))
+	rival_disposal_counts = {}
+	var rdc: Dictionary = cf.get_value("rival", "disposal_counts", {})
+	for k in rdc:
+		rival_disposal_counts[str(k)] = int(rdc[k])
+	rival_lure_shown_total = int(cf.get_value("rival", "lure_shown_total", 0))
+	rival_lure_followed_total = int(cf.get_value("rival", "lure_followed_total", 0))
+	rival_kills = int(cf.get_value("rival", "kills", 0))
+	rival_fake_clear_seen = bool(cf.get_value("rival", "fake_clear_seen", false))
+	rival_reentry_count = int(cf.get_value("rival", "reentry_count", 0))
 	screen_brightness = clampf(float(cf.get_value("access", "brightness", 1.0)), 0.5, 1.5)
 	sfx_captions = bool(cf.get_value("access", "sfx_captions", false))
 	fullscreen = bool(cf.get_value("display", "fullscreen", false))
@@ -1053,6 +1106,13 @@ func save_settings() -> void:
 	cf.set_value("flags", "alt_skin_enabled", alt_skin_enabled)
 	cf.set_value("flags", "found_server_log", found_server_log)
 	cf.set_value("flags", "observer_stinger_seen", observer_stinger_seen)
+	cf.set_value("rival", "last_disposal", rival_last_disposal)
+	cf.set_value("rival", "disposal_counts", rival_disposal_counts)
+	cf.set_value("rival", "lure_shown_total", rival_lure_shown_total)
+	cf.set_value("rival", "lure_followed_total", rival_lure_followed_total)
+	cf.set_value("rival", "kills", rival_kills)
+	cf.set_value("rival", "fake_clear_seen", rival_fake_clear_seen)
+	cf.set_value("rival", "reentry_count", rival_reentry_count)
 	cf.set_value("access", "brightness", screen_brightness)
 	cf.set_value("access", "sfx_captions", sfx_captions)
 	cf.set_value("display", "fullscreen", fullscreen)

@@ -2377,10 +2377,17 @@ func _on_spike_touched(body: Node, zone: Area2D) -> void:
 			if is_instance_valid(ds) and ds.has_method("reveal"):
 				ds.call("reveal")
 
+# 라이벌 기억(축 C) — 거짓 렌더 재배열: 완주 홀수 회차엔 대체 슬롯(_alt)을 쓴다.
+# "네가 외운 자리에는 없다." 대체 슬롯이 정의된 맵만 해당(§4.1 공정 배치 근거가 있는 곳만).
+func _deceit_slots(key: String) -> Array:
+	if GameState.playthrough_count % 2 == 1 and _map_data.has(key + "_alt"):
+		return _map_data.get(key + "_alt", [])
+	return _map_data.get(key, [])
+
 # §4 거짓 렌더 — 위장 함정 빌더. deceit_spikes: [{x, y?, w?, dmg?}]. 진짜 가시(시각+데미지 zone)를
 # _build_spike로 만든 뒤 시각만 숨기고(DisguisedSpike), 항상 켜진 지직거림 tell + 근접/밟기 리빌.
 func _build_disguised_spikes() -> void:
-	var arr: Array = _map_data.get("deceit_spikes", [])
+	var arr: Array = _deceit_slots("deceit_spikes")
 	if arr.is_empty() or GameState.story_mode:
 		return   # 스토리 모드는 단순화 — 거짓 렌더 제외(deceits와 동형)
 	for entry in arr:
@@ -3846,7 +3853,7 @@ func _spawn_enemies() -> void:
 
 # §4 거짓 렌더 — 위장한 적(참 종류로 스폰 + disguise_as). deceits: [{"pos","true","as"}]. 맵당 소수(드묾).
 func _spawn_deceits() -> void:
-	var deceits: Array = _map_data.get("deceits", [])
+	var deceits: Array = _deceit_slots("deceits")
 	if deceits.is_empty() or GameState.story_mode:
 		return   # 스토리 모드는 단순화 — 거짓 렌더 제외
 	var kind_map: Dictionary = {"patrol": 0, "sniper": 1, "drone": 2, "bomber": 3, "shield": 4, "jammer": 5}
@@ -3859,7 +3866,7 @@ func _spawn_deceits() -> void:
 
 # §4 거짓 렌더 — 시선 거짓(딴 데 보는 척 기습). feigns: [{pos}]. patrol이 각성을 숨긴 채 응시하다 근접 시 홱 기습.
 func _spawn_feigns() -> void:
-	var feigns: Array = _map_data.get("feigns", [])
+	var feigns: Array = _deceit_slots("feigns")
 	if feigns.is_empty() or GameState.story_mode:
 		return   # 스토리 모드는 단순화 — 거짓 렌더 제외(deceits와 동형)
 	for item in feigns:
@@ -4688,7 +4695,11 @@ func _rival_intro_line() -> void:
 		return
 	_rival_beat_flash()
 	_camera_shake(5.0, 0.25)
-	_show_rival_subtitle("어서 오세요, 요원. 여기서부터는 제 구역입니다.", 3.2)
+	# 라이벌 기억(축 C) — 이미 쓰러뜨린 적 있는 회차엔 인사가 달라진다(그는 기억한다).
+	if GameState.rival_kills >= 1:
+		_show_rival_subtitle("어서 오세요, 요원. ...라고, 지난번에도 말씀드렸지요.", 3.4)
+	else:
+		_show_rival_subtitle("어서 오세요, 요원. 여기서부터는 제 구역입니다.", 3.2)
 
 func _rival_intro_veil_line() -> void:
 	if not is_inside_tree() or goal_reached:
@@ -5009,7 +5020,22 @@ func _start_fake_clear() -> void:
 	var stw := sub.create_tween()
 	stw.tween_interval(1.7)
 	stw.tween_property(sub, "modulate:a", 1.0, 0.5)
-	get_tree().create_timer(3.4, false).timeout.connect(_fake_clear_pretear)
+	# 라이벌 기억(축 C, 확정 ⓐ) — 이미 이 마술을 본 관객에게는 같은 마술을 두 번 하지 않는다:
+	# 자기 폭로 한 마디 후 곧장 찢고 P3로. 첫 목격이면 정식 체인(3.4s 유지 → 예고 → 본 찢김).
+	var fake_seen_before: bool = GameState.rival_fake_clear_seen
+	GameState.rival_fake_clear_seen = true
+	GameState.save_settings()
+	if fake_seen_before:
+		get_tree().create_timer(1.0, false).timeout.connect(_fake_clear_self_expose)
+	else:
+		get_tree().create_timer(3.4, false).timeout.connect(_fake_clear_pretear)
+
+# 축 C — 가짜 클리어 재방문: 라이벌이 스스로 걷어치운다(전개 자체가 회차에 반응한다는 신호).
+func _fake_clear_self_expose() -> void:
+	if goal_reached or not is_inside_tree() or _fake_clear_layer == null:
+		return
+	_show_rival_subtitle("이건 이미 보셨지요.", 2.2)
+	get_tree().create_timer(0.9, false).timeout.connect(_fake_clear_tear)
 
 # 찢김은 두 박자 — 예고(짧고 약한 흔들림) 뒤 한 호흡 쉬고 본 찢김. "너무 빠르고 갑작스럽다"
 # 실플레이 반려(2026-08-13) 반영: 전개를 늘리고 램프를 완만하게. 강도(peak)는 추후 별도 튜닝.
@@ -5189,6 +5215,8 @@ func _on_false_veil_defeated() -> void:
 		return
 	_rival_phase = 3
 	GameState.rival_phase_reached = 0   # 정복 — 체크포인트 경계 해제(지속 플래그 원칙)
+	GameState.rival_kills += 1          # 라이벌 기억(축 C) — 처치 누적(다음 회차 인트로 변형)
+	GameState.save_settings()
 	if _p3_assist_timer != null and is_instance_valid(_p3_assist_timer):
 		_p3_assist_timer.stop()
 	if _p3_bar_layer != null and is_instance_valid(_p3_bar_layer):

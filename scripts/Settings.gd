@@ -232,9 +232,17 @@ func _build_debug_tab() -> Control:
 	outer.add_theme_constant_override("margin_top", 18)
 	outer.add_theme_constant_override("margin_bottom", 18)
 
+	# 행이 계속 늘어나는 탭 — 처음부터 스크롤로(고정 패널 오버플로 함정, known_issues).
+	var scroll := ScrollContainer.new()
+	scroll.follow_focus = true
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	outer.add_child(scroll)
+
 	var v := VBoxContainer.new()
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.add_theme_constant_override("separation", 14)
-	outer.add_child(v)
+	scroll.add_child(v)
 
 	v.add_child(_make_section_header("연습장"))
 
@@ -292,7 +300,92 @@ func _build_debug_tab() -> Control:
 			var eb: Button = b as Button
 			eb.focus_neighbor_top = eb.get_path_to(enter_btn)
 
+	# ── 메타데이터 관리(사용자 2026-08-13) — 새 환경 테스트용 초기화 + 현황 표시. ──
+	var spacer2 := Control.new()
+	spacer2.custom_minimum_size = Vector2(0, 12)
+	v.add_child(spacer2)
+	v.add_child(_make_section_header("메타데이터 관리"))
+	_meta_status_label = Label.new()
+	_meta_status_label.text = _meta_status_text()
+	_meta_status_label.add_theme_font_size_override("font_size", 13)
+	_meta_status_label.add_theme_color_override("font_color", Color(0.62, 0.72, 0.85))
+	_meta_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(_meta_status_label)
+	var meta_grid := GridContainer.new()
+	meta_grid.columns = 2
+	meta_grid.add_theme_constant_override("h_separation", 10)
+	meta_grid.add_theme_constant_override("v_separation", 8)
+	v.add_child(meta_grid)
+	var meta_btn_defs: Array = [
+		{"label": "전체 초기화 (새 환경)", "cb": _on_meta_wipe_all},
+		{"label": "완주·엔딩 기록 초기화", "cb": _on_meta_reset_endings},
+		{"label": "도감·발견 초기화", "cb": _on_meta_reset_bestiary},
+		{"label": "이어하기·재진입 기록 삭제", "cb": _on_meta_reset_saves},
+	]
+	for entry in meta_btn_defs:
+		var d: Dictionary = entry
+		var mb := Button.new()
+		mb.text = str(d.get("label", ""))
+		mb.custom_minimum_size = Vector2(290, 36)
+		mb.add_theme_font_size_override("font_size", 13)
+		mb.pressed.connect(d.get("cb"))
+		meta_grid.add_child(mb)
+	var meta_warn := Label.new()
+	meta_warn.text = "즉시 적용·되돌릴 수 없어요. 전체 초기화 후에는 게임 재시작(웹은 새로고침)을 권장해요. 키 바인드·볼륨은 유지됩니다."
+	meta_warn.add_theme_font_size_override("font_size", 12)
+	meta_warn.add_theme_color_override("font_color", Color(0.95, 0.78, 0.5))
+	meta_warn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(meta_warn)
+
 	return outer
+
+# ── 메타데이터 관리 — 현황/핸들러. 디버그 용도라 확인 대화 없음(라벨에 명시, 사용자가 알고 누름). ──
+var _meta_status_label: Label = null
+
+func _meta_status_text() -> String:
+	return "완주 %d회 · 엔딩 %d/9 · 도감 %d종 · 재진입 기록 %s · 이어하기 %s · 라이벌 처치 %d회" % [
+		GameState.playthrough_count, GameState.endings_seen.size(), GameState.seen_enemies.size(),
+		"있음" if GameState.has_any_confirmed_snapshot() else "없음",
+		"있음" if GameState.has_run() else "없음", GameState.rival_kills]
+
+func _refresh_meta_status() -> void:
+	if _meta_status_label != null and is_instance_valid(_meta_status_label):
+		_meta_status_label.text = _meta_status_text()
+
+func _remove_user_file(fname: String) -> void:
+	var d := DirAccess.open("user://")
+	if d != null and d.file_exists(fname):
+		d.remove(fname)
+
+# 전체 초기화 — 저장 파일 3종 삭제 + 영속 메타를 메모리에서도 기본값으로(재시작 없이도 새 환경).
+func _on_meta_wipe_all() -> void:
+	for f in ["settings.cfg", "run.cfg", "palimpsest.cfg"]:
+		_remove_user_file(f)
+	GameState.reset_meta_memory()
+	_refresh_meta_status()
+
+func _on_meta_reset_endings() -> void:
+	GameState.playthrough_count = 0
+	GameState.endings_seen = []
+	GameState.observer_stinger_seen = false
+	GameState.replaying = false
+	GameState.save_settings()
+	_refresh_meta_status()
+
+func _on_meta_reset_bestiary() -> void:
+	GameState.seen_enemies = []
+	GameState.hidden_visit_count = 0
+	GameState.visited_arcturus = false
+	GameState.found_server_log = false
+	GameState.shiny_kills = 0
+	GameState.alt_skin_unlocked = false
+	GameState.save_settings()
+	_refresh_meta_status()
+
+func _on_meta_reset_saves() -> void:
+	GameState.clear_run()
+	_remove_user_file("palimpsest.cfg")
+	_refresh_meta_status()
 
 # 엔딩 미리보기 진입 — 처리(disposal)·신뢰(수용률)·진실(truth_seen)을 ending_id에 맞춰 강제.
 # 기존 진행도는 백업 안 함 — 디버그 용도라 진행 데이터 손실은 무시 (사용자가 알고 누름).

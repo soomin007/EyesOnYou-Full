@@ -43,6 +43,11 @@ func _setup_rival_lure() -> void:
 			rival_rec_id = rid
 	if rival_rec_id != "":
 		rival_rec_line = str(_RIVAL_LURES[randi() % _RIVAL_LURES.size()])
+		# 라이벌 기억(축 C) — 여러 회차에 걸쳐 계속 간파당했으면(누적 노출 6+, 수용 1/3 미만)
+		# 감언을 접고 역수를 던진다. 그조차 신뢰할 수 없다는 게 본체(tell·최고위험 유인은 유지).
+		if GameState.rival_lure_shown_total >= 6 \
+				and GameState.rival_lure_followed_total * 3 <= GameState.rival_lure_shown_total:
+			rival_rec_line = "이번에는 속이지 않겠습니다. 이 길이 정말 낫습니다."
 var hovered_idx: int = 0
 var buttons: Array = []
 # 고위험/고보상 별도 패널 (사용자 피드백: 본 멘트에 겹치면 너무 많아짐).

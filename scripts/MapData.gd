@@ -947,6 +947,11 @@ static func _server_hall() -> Dictionary:
 		"deceit_spikes": [
 			{"x": 2150, "w": 120, "dmg": 2},
 		],
+		# 축 C 재배열 — 완주 홀수 회차 대체 슬롯. 같은 개활 지면(rack 2000 이후) 내 이동이라 공정
+		# 조건(주 동선 교차·시선 분산 지점) 유지. "외운 자리(2150)엔 없다."
+		"deceit_spikes_alt": [
+			{"x": 2450, "w": 120, "dmg": 2},
+		],
 		"rewards": {
 			"xp_orbs":    [Vector2(2000, 440), Vector2(3000, 440), Vector2(3500, 438)],
 			"hp_pickups": [Vector2(4050, 440)],
