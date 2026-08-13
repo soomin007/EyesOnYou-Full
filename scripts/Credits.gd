@@ -295,7 +295,7 @@ func _show_observer_stinger() -> void:
 	if is_instance_valid(_scroll):
 		_scroll.visible = false
 	var lbl := Label.new()
-	lbl.text = "기록 보관 완료.\n관측 세션 종료. 대상: VEIL-3, 그리고 현장 요원.\n\n...잔존 흔적: 검출됨. 덮어쓰기 대기."
+	lbl.text = "기록 보관 완료.\n관측 세션 종료. 대상: VEIL-3 · 현장 요원.\n\n...잔존 흔적: 검출됨. 덮어쓰기 대기."
 	lbl.set_anchors_preset(Control.PRESET_FULL_RECT)
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER

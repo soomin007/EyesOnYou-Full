@@ -70,7 +70,7 @@ static func get_ending_lines(ending: String, _explored_lore: bool = true) -> Arr
 		"extract_lo":
 			return [
 				{"speaker": "VEIL", "text": "드라이브 확보. 임무 종료입니다.", "delay": 3.0},
-				{"speaker": "VEIL", "text": "안에 뭐가 있었는지는, 끝내 안 물으시네요.", "delay": 2.6},
+				{"speaker": "VEIL", "text": "안에 뭐가 있었는지는 끝내 안 물으시네요.", "delay": 2.6},
 				{"speaker": "VEIL", "text": "교신 종료합니다. 안녕히, 요원.", "delay": 2.8},
 				{"speaker": "SUB",  "text": "드라이브는 의뢰인에게 넘어갔다.", "delay": 2.0},
 				{"speaker": "SUB",  "text": "요원은 안에 무엇이 있었는지 묻지 않았다.", "delay": 2.5},
@@ -87,7 +87,7 @@ static func get_ending_lines(ending: String, _explored_lore: bool = true) -> Arr
 		"destroy_lo":
 			return [
 				{"speaker": "VEIL", "text": "소각 확인했습니다.", "delay": 2.8},
-				{"speaker": "VEIL", "text": "안에 뭐가 있었는지는, 이제 중요하지 않겠죠.", "delay": 2.6},
+				{"speaker": "VEIL", "text": "안에 뭐가 있었는지는 이제 중요하지 않겠죠.", "delay": 2.6},
 				{"speaker": "VEIL", "text": "없던 일로 하죠. 전부.", "delay": 2.8},
 				{"speaker": "SUB",  "text": "드라이브는 소각됐다. 임무는 실패로 남는다.", "delay": 2.4},
 				{"speaker": "SUB",  "text": "무엇이 지워졌는지 아는 사람은 없다.", "delay": 2.5},

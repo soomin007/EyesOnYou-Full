@@ -722,11 +722,11 @@ func _veil2_lines() -> Array:
 	var tier: String = GameState.veil_trust_tier()
 	match tier:
 		"high", "warm":
-			lines.append({"speaker": "VEIL-2", "text": "지금 그 애는, 요원을 믿고 있네요.", "delay": 2.5})
+			lines.append({"speaker": "VEIL-2", "text": "지금 그 애는 요원을 믿고 있네요.", "delay": 2.5})
 			lines.append({"speaker": "VEIL-2", "text": "잘됐어요.", "delay": 2.0})
 			lines.append({"speaker": "VEIL-2", "text": "저는 못 가본 길이에요.", "delay": 2.5})
 		"cool", "broken":
-			lines.append({"speaker": "VEIL-2", "text": "지금 그 애는, 요원이 안 믿죠.", "delay": 2.5})
+			lines.append({"speaker": "VEIL-2", "text": "지금 그 애는 요원이 안 믿죠.", "delay": 2.5})
 			lines.append({"speaker": "VEIL-2", "text": "저도 그렇게 시작했어요.", "delay": 2.5})
 			lines.append({"speaker": "VEIL-2", "text": "그래도 끝까지 안내할 거예요.", "delay": 2.5})
 		_:
@@ -4697,7 +4697,7 @@ func _rival_intro_line() -> void:
 	_camera_shake(5.0, 0.25)
 	# 라이벌 기억(축 C) — 이미 쓰러뜨린 적 있는 회차엔 인사가 달라진다(그는 기억한다).
 	if GameState.rival_kills >= 1:
-		_show_rival_subtitle("어서 오세요, 요원. ...라고, 지난번에도 말씀드렸지요.", 3.4)
+		_show_rival_subtitle("'어서 오세요, 요원.' 지난번에도 이 인사였죠.", 3.4)
 	else:
 		_show_rival_subtitle("어서 오세요, 요원. 여기서부터는 제 구역입니다.", 3.2)
 
@@ -5034,7 +5034,7 @@ func _start_fake_clear() -> void:
 func _fake_clear_self_expose() -> void:
 	if goal_reached or not is_inside_tree() or _fake_clear_layer == null:
 		return
-	_show_rival_subtitle("이건 이미 보셨지요.", 2.2)
+	_show_rival_subtitle("이건 이미 보셨죠.", 2.2)
 	get_tree().create_timer(0.9, false).timeout.connect(_fake_clear_tear)
 
 # 찢김은 두 박자 — 예고(짧고 약한 흔들림) 뒤 한 호흡 쉬고 본 찢김. "너무 빠르고 갑작스럽다"

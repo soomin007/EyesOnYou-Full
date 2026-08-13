@@ -147,7 +147,7 @@ func _build_lines() -> Array:
 		out.append({"speaker": "SYS", "text": "이전 작전 기록: 잔존 구간 검출. 해당 지점에서 재개합니다."})
 		out.append({"speaker": "VEIL", "text": "여기부터는 기록이 유난히 진합니다. 이어서 갑니다, 요원."})
 		# 라이벌 기억(축 C) — 재진입 = 라이벌과 같은 짓(기록을 뒤지는 것). 그는 알아본다.
-		out.append({"speaker": "RIVAL", "text": "덮어쓴 기록을 뒤지셨군요. 그 방법은, 제가 잘 압니다."})
+		out.append({"speaker": "RIVAL", "text": "덮어쓴 기록을 뒤지셨군요. 저도 잘 아는 방법입니다."})
 	# 첫 진입 시 1회만: 의뢰 수리 문서 → PALIMPSEST 시스템 텍스트 → VEIL 인사.
 	if GameState.current_stage == 0:
 		out.append({"speaker": "SYS", "text": VeilDialogue.INTRO_CONTRACT})
@@ -157,7 +157,7 @@ func _build_lines() -> Array:
 		# 라이벌 기억(축 C) — 다회차 오프닝 반 박자: 내 VEIL의 "기록상 처음" 뒤에 끼어드는 한 줄.
 		# 재진입 런은 위 재진입 라인이 그 역할(런당 라이벌 언급 1~2회 상한).
 		if not GameState.story_mode and GameState.playthrough_count >= 1 and not GameState.reentry_run:
-			out.append({"speaker": "RIVAL", "text": "기록상, 이라고 들으셨겠지요."})
+			out.append({"speaker": "RIVAL", "text": "'기록상'이라고 하는군요. 틀린 말은 아닙니다."})
 	else:
 		# 막 진입(막2+)의 첫 stage면 문턱 멘트 1줄을 브리핑 앞에 — 막 진입 카드와 한 박자(B-4).
 		var entry_line: String = VeilDialogue.get_act_entry_line(GameState.current_stage)
@@ -168,10 +168,10 @@ func _build_lines() -> Array:
 				and GameState.act_for_stage(GameState.current_stage) == 3 \
 				and GameState.rival_last_disposal != "":
 			var recall: Dictionary = {
-				"extract": "지난번에는 가지고 나가셨지요. 그 바깥이, 마음에 드셨습니까.",
+				"extract": "지난번에는 가지고 나가셨죠. 바깥은 마음에 드셨습니까.",
 				"destroy": "지난번에는 태우셨습니다. 이번에도 그러실 겁니까.",
-				"conceal": "지난번에는 숨기셨지요. 어디에 두셨는지, 저는 압니다.",
-				"leave": "지난번에는 두고 가셨습니다. ...그 마음, 아직 유효합니까.",
+				"conceal": "지난번에는 숨기셨죠. 어디 두셨는지 저는 압니다.",
+				"leave": "지난번에는 두고 가셨습니다. ...그 마음은 아직 유효합니까.",
 			}
 			var line: String = str(recall.get(GameState.rival_last_disposal, ""))
 			if line != "":

@@ -160,11 +160,18 @@ func _enter_fullscreen() -> void:
 	if mode != DisplayServer.WINDOW_MODE_FULLSCREEN and mode != DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 
+# 현재 전체화면인가 — 웹은 브라우저 fullscreen 요소, 네이티브는 창 모드로 판정(F11 힌트 노출용).
+func is_fullscreen_now() -> bool:
+	if OS.has_feature("web"):
+		return bool(JavaScriptBridge.eval(
+			"!!(document.fullscreenElement || document.webkitFullscreenElement)", true))
+	var mode: int = DisplayServer.window_get_mode()
+	return mode == DisplayServer.WINDOW_MODE_FULLSCREEN or mode == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN
+
 # F11 토글 — 웹은 브라우저 전체화면 요청/해제, 네이티브는 창 모드 전환(+설정 동기화).
 func _toggle_fullscreen() -> void:
 	if OS.has_feature("web"):
-		var in_fs: bool = bool(JavaScriptBridge.eval(
-			"!!(document.fullscreenElement || document.webkitFullscreenElement)", true))
+		var in_fs: bool = is_fullscreen_now()
 		if in_fs:
 			JavaScriptBridge.eval("try{ if(document.exitFullscreen) document.exitFullscreen(); else if(document.webkitExitFullscreen) document.webkitExitFullscreen(); }catch(e){}", true)
 		else:

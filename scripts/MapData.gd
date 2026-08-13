@@ -776,7 +776,7 @@ static func _escape_leave() -> Dictionary:
 		"fake_watchers": [Vector2(1250, 636.0), Vector2(2600, 636.0), Vector2(3350, 636.0)],
 		"route_lines": [
 			{"x": 900.0,  "who": "rival", "text": "가시는 길은 열어 두었습니다.", "dur": 3.0},
-			{"x": 2200.0, "who": "rival", "text": "두고 가시는군요. ...고맙다는 말은, 하지 않겠습니다.", "dur": 3.4},
+			{"x": 2200.0, "who": "rival", "text": "두고 가시는군요. ...고맙다는 말은 하지 않겠습니다.", "dur": 3.4},
 			{"x": 3300.0, "who": "veil",  "text": "...끝까지 배웅할 모양이네요. 신경 쓰지 말고 가요.", "dur": 3.2},
 		],
 		"rewards": {"xp_orbs": [], "hp_pickups": []},

@@ -13,6 +13,9 @@ enum { STATE_MAIN, STATE_MODE, STATE_TUTOR, STATE_NEWGAME_CONFIRM, STATE_PATCHNO
 @onready var center_node: CenterContainer = $Center
 
 var blink_t: float = 0.0
+# F11 전체화면 안내(데스크톱 전용, 전체화면 아닐 때만) — _process가 0.5s 폴링으로 노출 갱신.
+var _f11_hint: Label = null
+var _f11_poll_t: float = 0.0
 var settings_overlay: Control = null
 var state: int = STATE_MAIN
 # 모드 선택 단계에서 결정 — TUTOR 단계에서 사용.
@@ -33,6 +36,7 @@ func _ready() -> void:
 	GameState.input_kind_changed.connect(_on_input_kind_changed)
 	# 메인 테마(Glass Protocol)  타이틀/모드 선택/튜토리얼까지 동일 트랙 유지.
 	BgmPlayer.play("main_theme")
+	_build_f11_hint()
 	_build_description_panel()
 	_build_patch_panel()
 	_set_state(STATE_MAIN)
@@ -146,6 +150,29 @@ func _fill_patch_panel(patch: Dictionary, latest: bool) -> void:
 		l.custom_minimum_size = Vector2(360, 0)
 		patch_v.add_child(l)
 
+# F11 전체화면 안내(사용자 2026-08-14) — 데스크톱(비터치)에서 전체화면이 아닐 때만 우하단 노출.
+# 모바일(터치)은 자동 전체화면이 담당하므로 제외. 펄스는 완만하게(_process).
+func _build_f11_hint() -> void:
+	if OrientationGuard.is_touch_device():
+		return
+	_f11_hint = Label.new()
+	_f11_hint.text = "[ F11  전체화면 ]"
+	_f11_hint.add_theme_font_size_override("font_size", 14)
+	_f11_hint.add_theme_color_override("font_color", Color(0.72, 0.78, 0.86))
+	_f11_hint.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+	_f11_hint.add_theme_constant_override("outline_size", 3)
+	_f11_hint.anchor_left = 1.0
+	_f11_hint.anchor_right = 1.0
+	_f11_hint.anchor_top = 1.0
+	_f11_hint.anchor_bottom = 1.0
+	_f11_hint.offset_left = -190.0
+	_f11_hint.offset_right = -20.0
+	_f11_hint.offset_top = -44.0
+	_f11_hint.offset_bottom = -18.0
+	_f11_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_f11_hint.visible = not OrientationGuard.is_fullscreen_now()
+	add_child(_f11_hint)
+
 func _on_input_kind_changed(_kind: String) -> void:
 	_refresh_hint()
 
@@ -168,6 +195,14 @@ func _refresh_hint() -> void:
 
 func _process(delta: float) -> void:
 	blink_t += delta
+	# F11 안내(데스크톱) — 전체화면이 아닐 때만 노출(0.5s 폴링), 완만한 펄스.
+	if _f11_hint != null:
+		_f11_poll_t -= delta
+		if _f11_poll_t <= 0.0:
+			_f11_poll_t = 0.5
+			_f11_hint.visible = not OrientationGuard.is_fullscreen_now()
+		if _f11_hint.visible:
+			_f11_hint.modulate.a = 0.55 + 0.35 * sin(blink_t * 2.2)
 	if hint_label != null:
 		# 메인 메뉴에서만 가벼운 깜빡임. 질문 단계(MODE/TUTOR)는 또렷하게 고정.
 		if state == STATE_MAIN:
