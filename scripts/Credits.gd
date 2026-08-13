@@ -83,6 +83,9 @@ var _touch_fingers: Dictionary = {}
 
 # 크레딧 끝 메뉴 (scene 모드). "다시 플레이하기"는 포커스 시 글리치로 글자가 바뀐다.
 var _menu_shown: bool = false
+# 첫 완주 스팅어(관측 로그) 상태 — 표시 중 재진입 방지 + ESC 조기 종료 시 정리용 참조.
+var _stinger_active: bool = false
+var _stinger_label: Label = null
 var _replay_btn: Button = null
 var _morph_tween: Tween = null
 const GLITCH_CHARS: String = "▒░█▓◇◆#@%&/\\?ㅁㅇㄹㅂㅈ"
@@ -237,6 +240,18 @@ func open_as_overlay() -> void:
 func _show_end_menu() -> void:
 	if _menu_shown:
 		return
+	# 첫 완주 스팅어(관측 로그, lore_expansion §3-4) — 메뉴보다 먼저 1화면. 타이틀의
+	# "기록 재진입" 버튼이 처음 나타나는 순간과 서사적 짝(해금 = 폭로). 1회만(영속).
+	if not _is_overlay and not _stinger_active and GameState.playthrough_count >= 1 \
+			and not GameState.observer_stinger_seen:
+		_show_observer_stinger()
+		return
+	# 스팅어 도중 ESC 등으로 메뉴가 먼저 오면 스팅어를 정리하고 본 것으로 기록.
+	if _stinger_label != null and is_instance_valid(_stinger_label):
+		_stinger_label.queue_free()
+		_stinger_label = null
+		GameState.observer_stinger_seen = true
+		GameState.save_settings()
 	_menu_shown = true
 	if is_instance_valid(_hint_label):
 		_hint_label.visible = false
@@ -269,6 +284,40 @@ func _show_end_menu() -> void:
 	center.create_tween().tween_property(center, "modulate:a", 1.0, 0.6)
 	# 잠깐 "다시 플레이하기"를 보여준 뒤(0.6s) 포커스 → 그 순간 글리치로 변형.
 	GameState.arm_focus_with_delay(self, _replay_btn, 0.6)
+
+# 첫 완주 스팅어 — 관측 로그 문법의 시스템 텍스트 1화면(부관체·숫자 미명시, lore §4).
+# 페이드 인 → 4.6s 유지 → 페이드 아웃 → 플래그 영속 → 끝 메뉴. ESC로 건너뛰면
+# _show_end_menu 쪽 정리 분기가 플래그를 대신 기록한다.
+func _show_observer_stinger() -> void:
+	_stinger_active = true
+	if is_instance_valid(_hint_label):
+		_hint_label.visible = false
+	if is_instance_valid(_scroll):
+		_scroll.visible = false
+	var lbl := Label.new()
+	lbl.text = "기록 보관 완료.\n관측 세션 종료. 대상: VEIL-3, 그리고 현장 요원.\n\n...잔존 흔적: 검출됨. 덮어쓰기 대기."
+	lbl.set_anchors_preset(Control.PRESET_FULL_RECT)
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	lbl.add_theme_font_size_override("font_size", 20)
+	lbl.add_theme_color_override("font_color", Color(0.62, 0.72, 0.85))
+	lbl.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+	lbl.add_theme_constant_override("outline_size", 4)
+	lbl.modulate.a = 0.0
+	add_child(lbl)
+	_stinger_label = lbl
+	var tw := lbl.create_tween()
+	tw.tween_property(lbl, "modulate:a", 1.0, 1.2)
+	tw.tween_interval(4.6)
+	tw.tween_property(lbl, "modulate:a", 0.0, 1.0)
+	tw.tween_callback(func() -> void:
+		if _stinger_label != null and is_instance_valid(_stinger_label):
+			_stinger_label.queue_free()
+		_stinger_label = null
+		GameState.observer_stinger_seen = true
+		GameState.save_settings()
+		_show_end_menu()
+	)
 
 func _make_credit_button(label: String) -> Button:
 	var b := Button.new()

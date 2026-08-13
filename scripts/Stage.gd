@@ -4918,7 +4918,7 @@ func _fake_clear_end() -> void:
 func _p3_veil_shaken_line() -> void:
 	if not is_inside_tree() or goal_reached:
 		return
-	_show_veil_subtitle("방금 클리어 신호는 제가 보낸 것이 아닙니다.", 3.0)
+	_show_veil_subtitle("방금 그 신호, 제가 보낸 게 아닙니다.", 3.0)
 
 func _p3_tell_line() -> void:
 	if not is_inside_tree() or goal_reached:

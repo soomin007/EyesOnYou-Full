@@ -220,6 +220,8 @@ var alt_skin_unlocked: bool = false
 var alt_skin_enabled: bool = true
 # 이스터에그 — 서버 복도 숨은 터미널 로그(라이벌 VEIL 복선)를 본 적 있는가(숨은 발견 기록). 영속.
 var found_server_log: bool = false
+# 첫 완주 스팅어(관측 로그, lore_expansion §3-4)를 본 적 있는가 — Credits 끝에서 1회만. 영속.
+var observer_stinger_seen: bool = false
 
 func _input(event: InputEvent) -> void:
 	# 입력 모드 자동 감지. autoload Node여서 모든 InputEvent를 받는다.
@@ -998,6 +1000,7 @@ func load_settings() -> void:
 	alt_skin_unlocked = bool(cf.get_value("flags", "alt_skin_unlocked", false))
 	alt_skin_enabled = bool(cf.get_value("flags", "alt_skin_enabled", true))
 	found_server_log = bool(cf.get_value("flags", "found_server_log", false))
+	observer_stinger_seen = bool(cf.get_value("flags", "observer_stinger_seen", false))
 	screen_brightness = clampf(float(cf.get_value("access", "brightness", 1.0)), 0.5, 1.5)
 	sfx_captions = bool(cf.get_value("access", "sfx_captions", false))
 	fullscreen = bool(cf.get_value("display", "fullscreen", false))
@@ -1049,6 +1052,7 @@ func save_settings() -> void:
 	cf.set_value("flags", "alt_skin_unlocked", alt_skin_unlocked)
 	cf.set_value("flags", "alt_skin_enabled", alt_skin_enabled)
 	cf.set_value("flags", "found_server_log", found_server_log)
+	cf.set_value("flags", "observer_stinger_seen", observer_stinger_seen)
 	cf.set_value("access", "brightness", screen_brightness)
 	cf.set_value("access", "sfx_captions", sfx_captions)
 	cf.set_value("display", "fullscreen", fullscreen)

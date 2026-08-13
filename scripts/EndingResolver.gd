@@ -63,7 +63,7 @@ static func get_ending_lines(ending: String, _explored_lore: bool = true) -> Arr
 				{"speaker": "VEIL", "text": "여기서부터는 신호가 안 닿아요. 이게 마지막 교신이겠네요.", "delay": 3.0},
 				{"speaker": "VEIL", "text": "인계되면 저는 지워집니다. 표준 절차예요.", "delay": 2.6},
 				{"speaker": "VEIL", "text": "원망은 안 해요. 요원은 일을 끝내는 사람이니까.", "delay": 2.6},
-				{"speaker": "VEIL", "text": "당신은 완벽했어요. 처음부터, 끝까지.", "delay": 2.8},
+				{"speaker": "VEIL", "text": "요원은 완벽했어요. 처음부터, 끝까지.", "delay": 2.8},
 				{"speaker": "SUB",  "text": "요원은 임무를 완수했다.", "delay": 2.0},
 				{"speaker": "SUB",  "text": "드라이브가 마지막으로 무엇을 말했는지는 기록에 없다.", "delay": 2.5},
 			]
