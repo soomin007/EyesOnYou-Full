@@ -4,16 +4,22 @@
 > 외부 API 없음. 모든 텍스트와 로직은 코드 안에 완결.
 > 진행·다음 작업은 [`design/backlog.md`](design/backlog.md), 게임 개요는 [`../README.md`](../README.md), 스토리 캐논은 [`STORY.md`](STORY.md), 성장 시스템 설계는 [`design/growth_system.md`](design/growth_system.md), 맵 명세는 [`design/world_layout.md`](design/world_layout.md), 톤 원칙은 [`design/show_dont_tell.md`](design/show_dont_tell.md) 참조.
 
+> ⚠️ **레거시 구간 안내(2026-08-14 확인).** 이 문서의 서술 상당 부분은 **데모(3막 7~9스테이지 / 맵 12종 /
+> 적 3종 / 결말 4종)** 시점 사양이다. 현행 빌드는 **5막 15스테이지 · 맵 36종 · 적 6종(+엘리트) ·
+> 엔딩 9종**이며, 아래 §3·§4·§5·§7·§8·§9·§11에는 그 시점 기준이 그대로 남아 있다. 해당 절 머리에
+> 레거시 표시를 달아 두었으니 **수치는 코드를, 현행 구조는 [`design/backlog.md`](design/backlog.md)와
+> [`design/act_identity.md`](design/act_identity.md)를** 따른다. §10(영속화)은 코드 기준으로 갱신 완료.
+
 ---
 
 ## 1. 프로젝트 개요
 
 **제목**: Eyes on You  
 **장르**: 횡스크롤 액션 어드벤처 + 로그라이트  
-**엔진**: Godot 4.x (GDScript)  
-**배포**: Godot Web Export → itch.io (QR 코드 접근 전제)  
+**엔진**: Godot 4.6 (GDScript)  
+**배포**: Godot Web Export → GitHub Pages 자동 배포([`../DEPLOY.md`](../DEPLOY.md))  
 **외부 의존성**: 없음 (API 없음, 모든 텍스트 하드코딩)  
-**그래픽**: 미니멀 벡터(코드 생성) + 일부 AI 생성 배경 이미지(별도 제공 예정)
+**그래픽**: 100% 절차적 — 미니멀 벡터 캐릭터·코드 드로잉 맵/배경(비트맵 배경 에셋 없음)
 
 ---
 
@@ -29,6 +35,9 @@
 ---
 
 ## 3. 핵심 게임 루프
+
+> ⚠️ 레거시(데모 5스테이지 · 결말 4종 기준). 현행 루프는 5막 15스테이지이며 최종 스테이지 앞에
+> 14장 보스 2막 구성(라이벌 3페이즈 → 코어 터널 → 처리 선택)과 처리별 탈출 4종이 붙는다.
 
 ```
 [타이틀]
@@ -76,8 +85,10 @@
 `map_scene`은 폐기 — 모든 stage가 `stage.tscn` 단일 씬에서 절차적으로 빌드된다 (§5 참조).
 
 ### 루트 + Stage 분배
-전체 12맵 목록·id·risk/reward·`available_stages`는 [`design/growth_system.md`](design/growth_system.md) §3 ·
-[`design/world_layout.md`](design/world_layout.md) §2가 단일 진실(Dead Cells식 — 스테이지마다 후보 추첨).
+전체 맵 목록·id·risk/reward·`min_stage`/`max_stage`는 `scripts/RouteData.gd::ALL_ROUTES`가 코드 단일 진실이고
+(2026-08-14 기준 **36종** — 데모 12맵 + 본편 확장 + 처리별 탈출 4종 + 회수/보스 맵),
+설계 문서로는 [`design/growth_system.md`](design/growth_system.md) §3 ·
+[`design/world_layout.md`](design/world_layout.md) §2를 본다(Dead Cells식 — 스테이지마다 후보 추첨).
 아래는 그 risk/reward가 *게임플레이에 미치는 효과*(SPEC 고유)만 정리한다.
 
 ### Risk/Reward 게임플레이 효과 (게임에 실제 반영)
@@ -108,14 +119,20 @@
 ### 플레이어 (현행)
 - 이동: 좌우 이동, 점프 (베이스라인 이중 점프), 대시 (베이스라인)
 - 기본 공격: **원거리 사격** (Bullet — 기본 J; 마우스 좌클릭은 설정에서 바인드 가능, project.godot 기본 매핑엔 없음)
-- 액티브 스킬: 기본 Q (`explosive` 등 스킬 획득 시); 마우스 우는 설정 바인드
+- 액티브 스킬: 기본 Q (`explosive` 획득 시 — 현행은 몸 폭발이 아니라 **포물선 수류탄 투척**, 홀드 차징으로
+  사거리 조절 + 궤도/착탄 미리보기); 마우스 우는 설정 바인드
 - 플랫폼 드롭다운: S / ↓ (one-way 플랫폼 위에서 아래로 통과)
 - HP: 기본 최대 **3** (하트로 표시), 피격 시 0.8초 무적. hp 스킬 T1/T2로 +1/+2 (최대 5)
 - 낙사 없음 — 좌우 wall로 막힘
 
 베이스라인 스킬 (`STARTING_SKILLS`): `dash`, `double_jump`. 시작부터 보유.
 
-### 적 (3종, 행동 보강 완료)
+### 적 (아래는 초기 3종의 상세 — 현행은 6종 + 엘리트)
+
+> 현행 `Enemy.gd`의 `enum EnemyType`은 **PATROL / SNIPER / DRONE / BOMBER / SHIELD / JAMMER** 6종이고,
+> 여기에 막4부터 확률 승격되는 **엘리트**(같은 타입의 강화 개체)가 얹힌다. 자폭병·방패병·교란기·엘리트의
+> 요약은 [`../README.md`](../README.md) 적 표, 도감 문구는 `scripts/BestiaryData.gd`가 진실.
+> 아래 3종 상세는 초기 사양 그대로 보존한다(수치는 코드가 최종).
 
 #### 정찰병 (Patrol)
 좌우 순찰 (range 140px) + 중거리 사격 + 근접 시 텔레그래프 후 돌진:
@@ -169,7 +186,12 @@
 - **CanvasLayer 18** (자막 20 아래, 게임 위). `route_blackout`(교신 차단 도전)은 컨셉상 VEIL이 못 도우므로 마커 없음.
 
 ### 맵 구성 (절차적 빌드)
-모든 스테이지가 `scenes/stage.tscn` 단일 씬을 사용. `Stage.gd._ready()`에서 `current_route_id` / `current_route_tags`를 보고 빌드:
+모든 스테이지가 `scenes/stage.tscn` 단일 씬을 사용. `Stage.gd._ready()`에서 `current_route_id` / `current_route_tags`를 보고 빌드.
+
+> ⚠️ 아래 layout·환경 효과 목록은 **데모 6맵 시점**의 예시다. 현행은 맵 좌표·기믹이 `scripts/MapData.gd`
+> (`get_layout`의 36개 분기)로 데이터화돼 있고, 맵마다 시그니처 배경(`_ambience_*`)이 따로 있다.
+> 기믹 프리미티브(이동 발판·부서지는 엄폐·추격 벽·아레나 코어·스윕 빔·위장 함정 등)는
+> [`design/world_layout.md`](design/world_layout.md)와 [`design/backlog.md`](design/backlog.md)를 본다.
 
 - **플랫폼 layout**: 루트별 다른 모양 (`_platform_layout_for_route`)
   - 뒷골목: 좁고 단차 큼 (140w)
@@ -188,7 +210,8 @@
 - **함정 가시**: 함정 태그면 자동 배치
 - **적 스폰**: tags + stage 진행도 + risk 배율 조합
 
-각 스테이지 길이: STAGE_LENGTH = 4400px (화면 3~4개 분량).
+각 스테이지 길이: `STAGE_LENGTH` 기본 4400px (화면 3~4개 분량). 맵 데이터에 월드 크기가 있으면
+그 값으로 덮어쓴다(`STAGE_LENGTH = _world_size.x`) — ARENA·보스 맵은 더 짧은 고정 폭을 쓴다.
 
 ---
 
@@ -247,6 +270,11 @@
 
 ### VEIL이 말하는 4가지 순간
 
+> ⚠️ 아래 대사 예시는 **데모 5스테이지 · ACT 기반** 시점이다. 현행 풀은 신뢰 밴드
+> (cold/thaw/warm) × 15스테이지 grid(`VeilDialogue.BRIEFINGS_BY_BAND` 등)로 재구조화됐고,
+> 여기에 막 진입 멘트·라이벌 발화·상충 추천·재진입 라인이 추가돼 있다.
+> 전량은 [`STORY.md`](STORY.md) Part II와 `scripts/VeilDialogue.gd`가 진실.
+
 #### 1. 임무 브리핑 (스테이지 시작 전, 현행)
 ```
 stage 0: "첫 임무예요, 요원. 천천히 가도 돼요."
@@ -299,6 +327,12 @@ else:
 ---
 
 ## 8. 결말 시스템 (핵심)
+
+> ⚠️ **레거시 원형(4종).** 현행은 **엔딩 9종** — `EndingResolver.resolve(disposal, truth_seen,
+> followed_count, rec_count)`가 `"<처리>_hi|lo"` 8개 + `"truth"`를 낸다. 처리 4종(반출/파기/은닉/잔류)은
+> 막5 회수 시점의 플레이어 선택이고, hi/lo는 추천 수용률, truth는 ??? 방 방문(`truth_seen`)이 연다.
+> 현행 분기와 본문은 [`STORY.md`](STORY.md) "결말 설계"와 `scripts/EndingResolver.gd`가 진실이며,
+> 아래 A/B/C/D는 그 정서적 원형으로 보존한다.
 
 ### 축 추적 (2026-06-13 재설계 — veil_trust_arc.md)
 ```gdscript
@@ -408,11 +442,15 @@ VEIL: 응답 없음.
 
 ## 9. 씬 구조 (현행)
 
+> 스크립트 목록은 파일이 늘면서 아래 트리보다 많아졌다(2026-08-14 기준 `scripts/*.gd` 72개).
+> 전체 목록은 [`../README.md`](../README.md) "프로젝트 구조" 또는 디렉터리를 직접 본다.
+
 ```
 res://
-├── project.godot              # AutoLoad: GameState · BgmPlayer · SfxPlayer, physics_interpolation 활성
+├── project.godot              # AutoLoad: GameState · BgmPlayer · SfxPlayer · Accessibility
+│                              #           · OrientationGuard · DebugOverlay, physics_interpolation 활성
 ├── README.md / DEPLOY.md / CLAUDE.md
-├── docs/SPEC.md / docs/STORY.md / docs/design/{growth_system, world_layout, show_dont_tell}.md
+├── docs/SPEC.md / docs/STORY.md / docs/INDEX.md / docs/design/*.md / docs/archive/*.md
 ├── scenes/
 │   ├── main.tscn              # 진입점 — Settings 로드 후 Title 전환
 │   ├── title.tscn
@@ -420,10 +458,12 @@ res://
 │   ├── briefing.tscn          # VEIL 브리핑
 │   ├── route_map.tscn         # 루트 선택
 │   ├── stage.tscn             # 횡스크롤 (모든 stage가 단일 씬, 절차적 빌드)
+│   ├── core_tunnel.tscn       # 14-2 코어 터널 (유사 1인칭 원근 렌더러 + 목격 비트)
 │   ├── death.tscn
 │   ├── ending.tscn
 │   ├── credits.tscn           # 자동 스크롤 크레딧 (엔딩 후 자동 / 설정 탭에서 보기)
-│   └── settings.tscn          # 키바인드 / 사운드 / 크레딧 / 디버그(연습장)
+│   ├── poster.tscn / poster_v2.tscn / ig_shotter.tscn / screenshotter.tscn  # 인엔진 포스터·캡처 툴
+│   └── settings.tscn          # 키바인드 / 사운드 / 크레딧 / 디버그(연습장·메타 관리)
 ├── scripts/
 │   ├── GameState.gd           # AutoLoad — 진행도/점수/스킬/루트/도감 영속
 │   ├── BgmPlayer.gd           # AutoLoad — 9트랙 BGM crossfade + ducking
@@ -487,17 +527,22 @@ var current_route_risk: int = 1
 var current_route_reward: int = 1
 
 # 스킬 / HP / XP
-var skills: Array = []           # STARTING_SKILLS = ["dash", "double_jump"]
+var skills: Dictionary = {}      # 라인 id → 보유 티어(0~3). STARTING_SKILLS = {"dash": 1, "double_jump": 1}
 var player_max_hp: int = 3
 var player_hp: int = 3
 var player_xp: int = 0
 var player_level: int = 1
-const XP_PER_LEVEL: int = 8
+var overflow_hp_bonus: int = 0   # 만렙 이후 오버플로 보상
+const XP_PER_LEVEL: int = 8      # 실제 요구량은 레벨 비례 증가 (xp_to_next: 8 + level*3/4)
+
+# 막 골격 (5막 재구조화 2026-07-07)
+const TOTAL_STAGES: int = 15     # 각 막 3스테이지 × 5. ACTS 합과 일치
+const RUN_VERSION: int = 4       # 구 run.cfg(v3, 9스테이지) 무효화
 
 # 영속 플래그 (settings.cfg)
 var tutorial_done: bool = false
 var seen_enemies: Array = []     # 도감 영속 — 한 번 본 적은 다음 런에도 안 뜸
-var endings_seen: Array = []     # 본 엔딩 A/B/C/D (영속, 다회차 신호)
+var endings_seen: Array = []     # 본 엔딩 id ("<처리>_hi|lo" 8종 + "truth") — 영속, 다회차 신호
 var playthrough_count: int = 0   # 완주 횟수 (영속, 다회차 신호)
 var bgm_volume: float = 1.0  # (구 master_volume — 2026-05-08 rename, audio.bgm 키)
 var sfx_volume: float = 1.0
@@ -514,18 +559,42 @@ var playground_active: bool = false
 - `on_stage_clear() -> bool` — stage++, score, **reward만큼 보너스 XP**, leveled_up 반환
 - `add_xp(amount) -> bool` — leveled_up 반환
 
-### 영속화
-**메타** `user://settings.cfg` (ConfigFile, version 3) — 런과 무관, `reset()`에서 보존:
-- `flags/tutorial_done`, `flags/seen_enemies`(도감)
-- `flags/hidden_visit_count`, `flags/visited_arcturus`
-- `flags/endings_seen`(본 엔딩 A/B/C/D), `flags/playthrough_count`(완주 횟수) — 다회차 신호
-- `audio/bgm`, `audio/sfx` (구 `audio/master`는 fallback으로 1회 더 읽힘)
-- `input/<action>` — 키바인드 (key/mouse/joypad 통합 스키마, version 3)
+### 영속화 (2026-08-14 코드 대조 — `GameState.gd` `save_settings`/`_store_run_state` 기준)
 
-**런 진행(이어하기)** `user://run.cfg` (ConfigFile, version 1) — 단일 자동저장:
-- `save_run()`이 RouteMap 진입(스테이지 사이)마다 런 상태(current_stage·route_history·skills·trust/aggr·HP·
-  story_mode·veil_* 등)를 저장. `has_run()`이면 타이틀에 "이어하기"(`load_run()` → ROUTE_MAP 복귀).
+**메타** `user://settings.cfg` (ConfigFile, `SETTINGS_VERSION = 4`) — 런과 무관, `reset()`에서 보존:
+- `flags/` — `tutorial_done` · `seen_enemies`(도감) · `hidden_visit_count` · `visited_arcturus` ·
+  `endings_seen`(본 엔딩 id) · `playthrough_count`(완주 횟수) · `shiny_kills`(황금 적 처치) ·
+  `alt_skin_unlocked` / `alt_skin_enabled`(숨겨진 색) · `found_server_log`(숨은 로어 문서) ·
+  `observer_stinger_seen`(첫 완주 관측 스팅어)
+- `rival/` — 라이벌 기억 영속 프로필(축 C): `last_disposal` · `disposal_counts` · `lure_shown_total` /
+  `lure_followed_total`(상충 추천 간파율 누적) · `kills` · `fake_clear_seen` · `reentry_count`
+- `access/` — `brightness` · `sfx_captions`
+- `display/` — `fullscreen` · `auto_fullscreen` · `window_size_index`
+- `audio/` — `bgm` · `sfx` (구 `audio/master`는 fallback으로 1회 더 읽힘)
+- `input/<action>` — 키바인드 (key/mouse/joy_button/joy_motion 통합 스키마).
+  version < 4면 키바인드만 폐기하고 project.godot 기본값 유지.
+
+**런 진행(이어하기)** `user://run.cfg` (ConfigFile, `RUN_VERSION = 4`) — 단일 자동저장:
+- 직렬화 단일 소스는 `_store_run_state` / `_restore_run_state`이며 **run.cfg와 palimpsest.cfg가 공유**한다
+  (필드 추가 시 두 함수만 고치면 된다).
+- 저장 필드: 진행(`current_stage`·`death_count`·`score`) · 축(`trust_score`·`aggression_score`·
+  `shared_hardship`·`rec_count`·`followed_count`) · 루트(`route_history`·`current_route_*` 6종 ·
+  `last_veil_recommended_route`·`followed_veil_last_choice`) · 성장(`skills`·`player_max_hp`·`player_hp`·
+  `player_xp`·`player_level`·`overflow_hp_bonus`) · 상태 플래그(`map_extension_seen`·`story_mode`·
+  `veil_degraded`·`veil_reversal_pending`·`truth_seen`·`disposal_choice`·`replaying`) ·
+  실력 추적(`hits_taken`·`recent_stage_hits`·`recent_stage_deaths`·`last_stage_secs`) ·
+  간파율(`rival_lure_shown`·`rival_lure_followed`).
+- `save_run()`이 RouteMap 진입(스테이지 사이)마다 저장. `has_run()`은 `meta/version`이 `RUN_VERSION`과
+  같을 때만 true(구조 버전이 바뀐 구 저장은 무효화 → 타이틀 "이어하기" 숨김).
 - `clear_run()`: 엔딩 도달(`record_ending`) + 새 게임 시작 시. 죽음→타이틀은 유지(직전 체크포인트 복귀).
+
+**기록 재진입 스냅샷** `user://palimpsest.cfg` (ConfigFile, `meta/version` = `RUN_VERSION`):
+- 런 중 막 경계(RouteMap 진입 + `is_act_start`)마다 `save_act_snapshot()`이 `pending_act<N>` 섹션에 런
+  상태를 적고, 엔딩 도달 시 `promote_act_snapshots()`가 `act<N>`으로 승격한다 = **완주한 기록만 재진입 가능**.
+- 완주 못 한 런의 잔여 pending은 새 런·재진입 시작에서 `clear_pending_snapshots()`가 폐기(이어하기는 보존).
+- 구조 버전이 다른 파일은 통째로 폐기(스테이지 재배치와 어긋난 재진입 방지).
+- 스토리 모드·연습장은 스냅샷을 남기지 않는다. 설계 = [`design/replay_support_plan.md`](design/replay_support_plan.md) §2.
+
 - 웹: `user://`는 브라우저 IndexedDB에 영속(도메인별). 닫았다 열어도 유지. 새 게임은 덮어쓰기 경고 확인 후 진행.
 
 ---
@@ -561,20 +630,27 @@ P0 MVP (이동/사망/루트/레벨업/두 점수 축), P1 VEIL 4상황 발화 +
 - VEIL 캐릭터 시트 → 신뢰밴드(cold/thaw/warm)별 어투 변화 적용 (`veil_register_band`, veil_pool_remap.md)
 - ??? 맵 시퀀스 → 단말기 시스템 구현
 
-### Phase 9 — 🚧 마무리 (P3)
-- 한글 폰트 번들 (NotoSansKR/Pretendard, DynamicFont)
-- 배경 이미지 임포트 (assets/backgrounds/)
-- SFX (P2 미구현, 슬라이더는 노출됨)
-- Web Export + itch.io 업로드
+### Phase 9 — ✅ 마무리 (P3)
+- 한글 폰트 번들 — `assets/fonts/Pretendard-Regular.otf`(OFL) 적용 완료
+- 배경 — 이미지 임포트 대신 **절차적 코드 드로잉**으로 확정(맵별 `_ambience_*` 시그니처 배경)
+- BGM·SFX — 전량 AI 생성물 배선 완료(`assets/bgm/`·`assets/sfx/`, BgmPlayer 크로스페이드 + SfxPlayer 풀링)
+- Web Export — GitHub Pages 자동 배포로 확정(itch.io 대신). 절차는 [`../DEPLOY.md`](../DEPLOY.md)
+
+### Phase 10 이후 — 본편 확장 (진행 중)
+5막 재구조화 · 기믹 맵 프리미티브 · 라이벌 VEIL(거짓 렌더·14장 보스 2막) · 다회차 지원 3축 ·
+관측 프레임 정사. 진행 상태는 [`design/backlog.md`](design/backlog.md)가 단일 소스.
 
 ---
 
 ## 12. 주의사항
 
 - **Physics interpolation 활성**: `project.godot` `[physics] common/physics_interpolation=true`. 60Hz 물리 + 고주사율 모니터에서 카메라 smoothing과 함께 떨리는 현상을 방지. Godot가 노드 transform을 물리 틱 사이에서 lerp.
-- **한글 폰트**: Web Export에서 한글 깨짐 주의. `Noto Sans KR` 또는 `Pretendard`를 `res://assets/fonts/`에 포함시킬 것. DynamicFont로 로드. (P3)
-- **Web Export**: Godot 4 Web Export는 SharedArrayBuffer 필요. itch.io 기본 설정에서 지원됨.
-- **배경 이미지**: `assets/backgrounds/`에 PNG로 제공 예정. 해상도 1280×720 기준. TextureRect로 배치. (P3)
+- **한글 폰트**: Web Export에서 한글 깨짐 주의. `res://assets/fonts/Pretendard-Regular.otf`를 번들해
+  `gui/theme/custom_font`로 등록해 둔 상태.
+- **Web Export**: Threads Support를 끈 프리셋("Web")으로 빌드해 GitHub Pages에 배포한다(SharedArrayBuffer
+  헤더 요구를 피하는 구성). 절차는 [`../DEPLOY.md`](../DEPLOY.md).
+- **배경**: 비트맵 배경을 쓰지 않는다. 맵마다 `Stage.gd`의 `_ambience_*`가 코드로 시그니처 배경을 그린다
+  (새 맵을 만들면 배경도 한 세트로 만든다).
 - **결말 D 정적**: 10초 정적은 의도된 연출. 스킵 불가.
 - **VEIL 대사 emdash 금지**: `—`(emdash)로 망설임을 표현하면 너무 AI 같은 인상을 준다. 콤마/마침표 또는 자연스러운 어순으로 풀 것. UI 구분자(`[ SPACE — 계속 ]`)나 코드 주석은 무관.
 - **add_xp 다중 레벨업**: 현재 한 호출당 한 레벨만 처리. reward max 3 + 잔여 XP 4 = 7로 한 레벨 이상 못 오르므로 안전. reward를 5+로 올리면 while 루프 처리 필요.
