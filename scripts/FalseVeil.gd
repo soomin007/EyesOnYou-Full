@@ -32,6 +32,8 @@ var _lid: float = 0.0                   # 0=뜸 1=감음
 var _blink_t: float = 0.0
 var _hit_flash_t: float = 0.0
 var _die_t: float = 0.0
+var _ripple_t: float = 0.0              # 잠복 중 탄 통과 파문("지금은 그림이다"의 시각 언어)
+var _ripple_cd: float = 0.0
 var _anchors: Array = []                # 부유 이동 지점(순환)
 var _anchor_idx: int = 0
 var _fake_spots: Array = []             # 가짜 마커 후보 위치(순환)
@@ -77,7 +79,6 @@ func _spawn_fakes() -> void:
 		var m := _FakeMarker.new()
 		m.position = spot
 		m.lifetime = PHASED_DUR + 1.0
-		m.queue_no = _spot_idx   # 구식 시스템 라벨 "대기열 등록 #N" — 볼리마다 번호가 이어진다
 		parent.add_child(m)
 		_fakes.append(m)
 
@@ -96,6 +97,17 @@ func _physics_process(delta: float) -> void:
 	_t += delta
 	_state_t += delta
 	_hit_flash_t = maxf(0.0, _hit_flash_t - delta)
+	_ripple_t = maxf(0.0, _ripple_t - delta)
+	_ripple_cd = maxf(0.0, _ripple_cd - delta)
+	# 잠복/응시 중 탄이 몸을 지나가면 파문 — "박히지 않고 통과한다"를 그 자리에서 보여준다.
+	if (state == State.PHASED or state == State.TELE) and _ripple_cd <= 0.0:
+		var btree := get_tree()
+		if btree != null:
+			for b in btree.get_nodes_in_group("player_bullet"):
+				if b is Node2D and global_position.distance_to((b as Node2D).global_position) < 46.0:
+					_ripple_t = 0.35
+					_ripple_cd = 0.3
+					break
 	# 살아있는 가짜 참조 정리.
 	var i: int = _fakes.size() - 1
 	while i >= 0:
@@ -209,6 +221,12 @@ func _draw() -> void:
 			a = 1.0
 		State.DYING:
 			a = maxf(0.0, 1.0 - maxf(0.0, _die_t - 1.1) / 0.8)
+	# 잠복도(ghost) — 1이면 "구형 렌더로 그려진 그림"(스캔라인 짜임), 0이면 실체.
+	var ghost: float = 0.0
+	if state == State.PHASED:
+		ghost = 1.0
+	elif state == State.TELE:
+		ghost = 1.0 - clampf(_state_t / TELE_DUR, 0.0, 1.0)
 	var open_amt: float = 1.0 - _lid
 	if open_amt <= 0.02 and state != State.DYING:
 		open_amt = 0.02
@@ -253,6 +271,20 @@ func _draw() -> void:
 		draw_circle(Vector2.ZERO, pupil_r, Color(0.05, 0.03, 0.09, a))
 		draw_circle(Vector2(-3.5, -3.5), 2.2, Color(1.0, 1.0, 1.0, 0.8 * a))
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		# 잠복 = 가짜 마커와 같은 스캔라인 짜임을 본체에도 — "지금은 그림"이 시각 언어로 읽힌다.
+		# 실체화(TELE→SOLID)되며 짜임이 걷히고 몸이 꽉 찬다. 텍스트 라벨 없이 상태 전달
+		# ("실체 없음" 라벨 작위적 반려 2026-08-13).
+		if ghost > 0.02:
+			var sy: float = -h + 2.0
+			while sy < h * 0.8 - 1.0:
+				var rel: float = (-sy / h) if sy < 0.0 else (sy / maxf(h * 0.8, 0.001))
+				rel = clampf(rel, 0.0, 0.999)
+				var t0: float = asin(rel) / PI
+				var half_w: float = w * (1.0 - 2.0 * t0)
+				if half_w > 2.0:
+					draw_line(Vector2(-half_w, sy), Vector2(half_w, sy),
+						Color(0.05, 0.03, 0.09, 0.5 * ghost * a), 2.0)
+				sy += 4.0
 	# 실체(피격 가능) 링 — SOLID에서만 완만히 맥동.
 	if state == State.SOLID:
 		var ring_a: float = 0.35 + 0.15 * sin(_t * 3.0)
@@ -261,35 +293,35 @@ func _draw() -> void:
 	if _hit_flash_t > 0.0:
 		var k: float = 1.0 - _hit_flash_t / 0.25
 		draw_arc(Vector2.ZERO, 40.0 + 30.0 * k, 0.0, TAU, 36, Color(1.0, 1.0, 1.0, 0.7 * (1.0 - k)), 2.5, true)
+	# 실체화 스냅 — SOLID 진입 순간 밝은 링이 퍼진다("지금부터 박힌다").
+	if state == State.SOLID and _state_t < 0.35:
+		var sk: float = _state_t / 0.35
+		draw_arc(Vector2.ZERO, 40.0 + 26.0 * sk, 0.0, TAU, 40, Color(0.95, 0.85, 1.0, 0.8 * (1.0 - sk)), 3.0, true)
+	# 탄 통과 파문 — 잠복 중 탄이 몸을 지나간 흔적(박히지 않았음을 그 자리에서 보여줌).
+	if _ripple_t > 0.0:
+		var rk: float = 1.0 - _ripple_t / 0.35
+		draw_arc(Vector2.ZERO, 30.0 + 42.0 * rk, 0.0, TAU, 36, Color(0.72, 0.42, 1.0, 0.38 * (1.0 - rk)), 2.0, true)
 
-# ═══ 가짜 적(거짓 렌더) — 구형 렌더 문법의 적 실루엣 + 표적 UI ═══
+# ═══ 가짜 적(거짓 렌더) — 구형 렌더 문법의 적 실루엣 ═══
 # "허공에 네모만 떠 있어 뭔지 모르겠다" 반려(2026-08-12) → 마커가 아니라 **적처럼 보이는 것**을
-# 그린다: 디더 스캔라인으로 짜인 옛 렌더러풍 병사 실루엣이 서서 플레이어를 조준하는 척한다.
-# tell = 구형 문법(디더 실루엣·굵은 브래킷·구식 시스템 라벨) + 쏘면 탄이 그냥 통과(콜리전 없음).
+# 그린다: 디더 스캔라인으로 짜인 옛 렌더러풍 병사 실루엣이 서서 플레이어를 겨눈다.
+# tell = 구형 문법(디더 실루엣·굵은 브래킷) + 쏘면 탄이 통과하며 렌더가 찢김(콜리전 없음).
+# "대기열 등록 #N" 라벨과 발사 없는 조준 점선은 스폰/사격 예고로 오독돼 제거(실플레이 2026-08-13).
 class _FakeMarker extends Node2D:
 	var lifetime: float = 8.0
 	var t: float = 0.0
 	var erasing: bool = false
 	var _erase_t: float = 0.0
 	var _erase_cyan: bool = false
-	var queue_no: int = 1          # 라벨 "대기열 등록 #N" — 구식 시스템 문구 잔향
+	var _slip_burst_t: float = 0.0   # 탄 통과 순간의 찢김(회복되는 약한 tear)
 	var _aim_to: Vector2 = Vector2.ZERO
 
 	func _ready() -> void:
 		z_index = 6
-		var lbl := Label.new()
-		lbl.text = "대기열 등록 #%02d" % queue_no
-		lbl.add_theme_font_size_override("font_size", 11)
-		lbl.add_theme_color_override("font_color", Color(0.82, 0.58, 1.0, 0.9))
-		lbl.add_theme_color_override("font_outline_color", Color(0, 0, 0))
-		lbl.add_theme_constant_override("outline_size", 3)
-		lbl.position = Vector2(-52.0, -92.0)
-		lbl.size = Vector2(110.0, 14.0)
-		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		add_child(lbl)
 
 	func _process(delta: float) -> void:
 		t += delta
+		_slip_burst_t = maxf(0.0, _slip_burst_t - delta)
 		if erasing:
 			_erase_t += delta
 			if _erase_t > 0.4:
@@ -297,12 +329,20 @@ class _FakeMarker extends Node2D:
 				return
 		elif t >= lifetime:
 			erase(false)
-		# 조준하는 척 — 플레이어 방향으로 점선(위협 연기. 쏘지는 않는다).
 		var tree := get_tree()
 		if tree != null:
+			# 겨누는 척 — 실루엣이 플레이어를 계속 향한다(발사는 없다).
 			var arr := tree.get_nodes_in_group("player")
 			if arr.size() > 0:
 				_aim_to = (arr[0] as Node2D).global_position - global_position
+			# 탄이 실루엣을 지나가면 렌더가 찢겼다 재조립 — "쏘면 뚫리는 그림"을 즉석에서 학습.
+			if not erasing and _slip_burst_t <= 0.0:
+				for b in tree.get_nodes_in_group("player_bullet"):
+					if b is Node2D:
+						var lp: Vector2 = (b as Node2D).global_position - global_position
+						if absf(lp.x) < 26.0 and lp.y > -60.0 and lp.y < 6.0:
+							_slip_burst_t = 0.32
+							break
 		queue_redraw()
 
 	func erase(by_veil: bool) -> void:
@@ -320,8 +360,12 @@ class _FakeMarker extends Node2D:
 		var vi := Color(0.82, 0.58, 1.0, 0.9 * a)
 		# 글리치 슬립 — 드물게(1.7s 주기) 한순간 실루엣이 옆으로 밀린다(구형 렌더의 미끄러짐).
 		var slip: float = 3.0 if fmod(t, 1.7) < 0.1 else 0.0
-		# 소멸 = 슬라이스 흩어짐 — 지워질 때 가로 밴드가 좌우로 찢겨 나간다.
-		var tear: float = (_erase_t / 0.4) if erasing else 0.0
+		# 소멸 = 슬라이스 흩어짐 / 탄 통과 = 같은 문법의 약한 찢김(회복됨).
+		var tear: float = 0.0
+		if erasing:
+			tear = _erase_t / 0.4
+		elif _slip_burst_t > 0.0:
+			tear = 0.35 * (_slip_burst_t / 0.32)
 		# ① 병사 실루엣(발 기준, 높이 ~52) — 2px 가로 스트립 디더(CRT 짜임). 옛 렌더러가 그린 적.
 		var seg_defs: Array = [
 			{"y0": -52.0, "y1": -40.0, "hw": 6.0},    # 머리
@@ -338,19 +382,11 @@ class _FakeMarker extends Node2D:
 				draw_rect(Rect2(Vector2(-hw + band_off, y), Vector2(hw * 2.0, 2.0)),
 					Color(vi.r, vi.g, vi.b, 0.55 * a), true)
 				y += 4.0
-		# 팔(총 든 자세) — 조준 방향으로 뻗은 짧은 스트립.
+		# 팔(총 든 자세) — 조준 방향으로 뻗은 짧은 스트립(발사는 없다 — 긴 조준선은 제거).
 		var aim_dir: Vector2 = _aim_to.normalized() if _aim_to.length() > 1.0 else Vector2.RIGHT
 		var shoulder := Vector2(0.0, -32.0)
 		draw_line(shoulder, shoulder + aim_dir * 14.0, Color(vi.r, vi.g, vi.b, 0.55 * a), 3.0)
-		# ② 조준 점선 — 위협 연기(발사는 없다). 은은하게.
-		var aim_from: Vector2 = shoulder + aim_dir * 16.0
-		var aim_len: float = minf(_aim_to.length() - 30.0, 240.0)
-		var step_i: int = 0
-		while float(step_i) * 22.0 < aim_len:
-			var s0: Vector2 = aim_from + aim_dir * (float(step_i) * 22.0)
-			draw_line(s0, s0 + aim_dir * 10.0, Color(vi.r, vi.g, vi.b, 0.22 * a), 1.5)
-			step_i += 1
-		# ③ 표적 브래킷(굵음 = 구형 문법 tell) — 실루엣을 감싼다.
+		# ② 표적 브래킷(굵음 = 구형 문법 tell) — 실루엣을 감싼다.
 		var bw: float = 22.0
 		var top: float = -58.0
 		var arm: float = 10.0
@@ -360,13 +396,13 @@ class _FakeMarker extends Node2D:
 			var sy: float = 1.0 if c.y < -20.0 else -1.0
 			draw_line(c, c + Vector2(sx * arm, 0.0), vi, 4.0)
 			draw_line(c, c + Vector2(0.0, sy * arm), vi, 4.0)
-		# ④ 스캔라인 스윕 + 깜빡이는 커서(1.6Hz 소면적 — 광과민성 기준 내).
+		# ③ 스캔라인 스윕 + 깜빡이는 커서(1.6Hz 소면적 — 광과민성 기준 내).
 		var scan: float = fmod(t, 1.4) / 1.4
 		var sy2: float = lerpf(top + 4.0, -4.0, scan)
 		draw_line(Vector2(-bw + 3.0, sy2), Vector2(bw - 3.0, sy2), Color(vi.r, vi.g, vi.b, 0.40 * a), 1.5)
 		if fmod(t, 0.62) < 0.34:
 			draw_line(Vector2(-8.0, 10.0), Vector2(8.0, 10.0), vi, 3.0)
-		# ⑤ VEIL 소거 — 시안 취소선(내 VEIL이 그은 줄).
+		# ④ VEIL 소거 — 시안 취소선(내 VEIL이 그은 줄).
 		if erasing and _erase_cyan:
 			var k: float = clampf(_erase_t / 0.22, 0.0, 1.0)
 			var x0: float = -bw - 6.0

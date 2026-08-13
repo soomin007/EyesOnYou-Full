@@ -28,6 +28,8 @@ var tracking_max_angle: float = TRACKING_MAX_ANGLE
 func _ready() -> void:
 	collision_layer = 0
 	collision_mask = 1 | 4  # 벽 + 적
+	# 거짓 렌더(FalseVeil 가짜 적 등)가 "탄이 통과하는 그림"임을 보여주기 위한 근접 감지용 그룹.
+	add_to_group("player_bullet")
 	body_entered.connect(_on_body_entered)
 	z_index = 2
 	lifetime = BASE_LIFETIME * lifetime_mult
@@ -124,7 +126,9 @@ func _find_nearest_enemy() -> Node2D:
 	return nearest
 
 func _on_body_entered(body: Node) -> void:
-	if body.is_in_group("enemy"):
+	# boss_hittable = "enemy" 그룹 밖 보스체(FalseVeil 등). 그룹 스캔 데미지 경로(Grenade)만
+	# 뚫려 있고 총알이 조용히 통과하던 버그 수정(2026-08-13 실플레이 "보스가 공격을 안 받아").
+	if body.is_in_group("enemy") or body.is_in_group("boss_hittable"):
 		if body in hit_enemies:
 			return
 		hit_enemies.append(body)

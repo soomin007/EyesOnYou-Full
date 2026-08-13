@@ -4390,6 +4390,7 @@ var _p1_spawn_timer: Timer = null    # P1 연속 증원 타이머
 var _p1_spawn_idx: int = 0
 var _p1_side: int = 0
 var _p2_flip_timer: Timer = null     # P2 노드 실드 교대 타이머
+var _rival_bar_layer: CanvasLayer = null   # P1·P2 페이즈 목표 바(노드 합산 HP)
 const RIVAL_P1_NODE_HP: int = 6      # P1 지휘 앵커(재밍 기둥)
 const RIVAL_P2_NODE_HP: int = 10     # P2 제어 노드(교대 실드로 실질 더 김)
 const P1_TRICKLE_CAP: int = 5        # P1 동시 잡몹 상한 — 몰살 클러스터가 아니라 흐름 압박
@@ -4402,6 +4403,10 @@ func _init_rival_boss() -> void:
 	_rival_fx_layer = CanvasLayer.new()
 	_rival_fx_layer.layer = 12
 	add_child(_rival_fx_layer)
+	# 페이즈 목표 바 — "공격이 되는지 알 길이 없다" 반려 기준의 P1·P2 판. 노드 합산 HP를 보스 바
+	# 문법으로 상시 표시(P2 진입 시 다시 차오름 = 페이즈 문법). P3는 FalseVeil 바가 자리를 승계.
+	if GameState.rival_phase_reached < 2:
+		_build_rival_node_bar()
 	# 페이즈 체크포인트(§7.2 확정: 하드코어 지양) — 사망 재시도는 도달한 페이즈부터.
 	# P3(2)면 가짜 클리어 연출도 건너뛴다(반복 시 고문 + 한 번 속은 트릭은 재현 무의미).
 	if GameState.rival_phase_reached >= 1:
@@ -4413,6 +4418,7 @@ func _init_rival_boss() -> void:
 		if GameState.rival_phase_reached >= 2:
 			call_deferred("_start_rival_p3")
 			get_tree().create_timer(1.4, false).timeout.connect(_p3_tell_line)   # 판별 tell 재고지
+			get_tree().create_timer(4.8, false).timeout.connect(_p3_unmarked_line)
 		else:
 			call_deferred("_start_rival_p2")
 		return
@@ -4545,7 +4551,7 @@ func _rival_intro_line() -> void:
 func _rival_intro_veil_line() -> void:
 	if not is_inside_tree() or goal_reached:
 		return
-	_show_veil_subtitle("증원이 끝없이 이어집니다. 좌우 재밍 기둥이 지휘 앵커입니다. 그것부터 부수십시오.", 3.8)
+	_show_veil_subtitle("적이 끝없이 들어옵니다. 전부 잡을 필요는 없습니다. 좌우 기둥이 부르고 있으니, 기둥부터 부수십시오.", 3.8)
 
 func _start_rival_p2() -> void:
 	if _rival_phase != 0 or goal_reached or not is_inside_tree():
@@ -4556,7 +4562,7 @@ func _start_rival_p2() -> void:
 		_p1_spawn_timer.stop()
 	_despawn_rival_mobs()
 	SfxPlayer.play("boss_phase_change")
-	_run_glitch(0.5, 0.6)
+	_run_glitch(0.9, 0.5)
 	_rival_beat_flash()
 	_camera_shake(10.0, 0.4)
 	_show_rival_subtitle("병사들이 아깝네요. 그럼, 방하고 싸워 보시죠.", 3.4)
@@ -4621,16 +4627,21 @@ func _p2_flip_shields() -> void:
 	for e in get_tree().get_nodes_in_group("enemy"):
 		if (e as Node).has_meta("fs_dir"):
 			(e as Node).set_meta("fs_dir", -int((e as Node).get_meta("fs_dir")))
+			(e as Node).set_meta("fs_flip_ms", Time.get_ticks_msec())
 	SfxPlayer.play("plate_step_active", -6.0)
 
 func _rival_p2_objective_line() -> void:
 	if not is_inside_tree() or goal_reached or _rival_phase != 1:
 		return
-	_show_veil_subtitle("방이 적입니다. 두 앵커의 실드는 한쪽만 엽니다. 열린 쪽을 노리거나, 폭발로 뚫으십시오.", 4.0)
+	_show_veil_subtitle("방 전체가 넘어갔습니다. 저 기둥 둘이 제어를 쥐고 있습니다. 방패는 한쪽뿐이니, 등 뒤로 돌거나 폭발로 뚫으십시오.", 4.0)
 
-# P2 제어 노드의 교대 실드 표시 — 부모(enemy) 메타 fs_dir 쪽 반원 아크. 막힌 쪽이 한눈에 보인다.
+# P2 제어 노드의 교대 실드 표시 — 부모(enemy) 메타 fs_dir 쪽 반구. 막힌 쪽은 면이 있는 실드,
+# 열린 쪽은 따뜻한 노출 글로우("여길 치라"), 교대 순간엔 밝은 스냅(실드가 넘어간 쪽으로 시선 유도).
+# "보스가 공격을 안 받아" 실플레이 반려(2026-08-13) — 아크 선 하나로는 막힘/열림이 안 읽혔다.
 class _FlipShieldArc extends Node2D:
-	func _process(_delta: float) -> void:
+	var _t: float = 0.0
+	func _process(delta: float) -> void:
+		_t += delta
 		queue_redraw()
 	func _draw() -> void:
 		var parent_n := get_parent()
@@ -4638,8 +4649,71 @@ class _FlipShieldArc extends Node2D:
 			return
 		var d: int = int(parent_n.get_meta("fs_dir"))
 		var base: float = 0.0 if d > 0 else PI
-		draw_arc(Vector2(0, -22), 40.0, base - PI * 0.45, base + PI * 0.45, 20, Color(0.72, 0.42, 1.0, 0.75), 3.5, true)
-		draw_arc(Vector2(0, -22), 46.0, base - PI * 0.3, base + PI * 0.3, 14, Color(0.72, 0.42, 1.0, 0.35), 2.0, true)
+		# 막힌 쪽 — 두께가 있는 반구 실드(면으로 보이게).
+		draw_arc(Vector2(0, -22), 40.0, base - PI * 0.45, base + PI * 0.45, 24, Color(0.72, 0.42, 1.0, 0.28), 14.0, true)
+		draw_arc(Vector2(0, -22), 47.0, base - PI * 0.45, base + PI * 0.45, 24, Color(0.72, 0.42, 1.0, 0.85), 3.5, true)
+		draw_arc(Vector2(0, -22), 52.0, base - PI * 0.3, base + PI * 0.3, 14, Color(0.72, 0.42, 1.0, 0.35), 2.0, true)
+		# 열린 쪽 — 노출 코어 글로우(완만한 호흡, 금색 = VEIL 시안/라이벌 바이올렛과 구별).
+		var open_base: float = base + PI
+		var oa: float = 0.4 + 0.18 * sin(_t * 2.6)
+		draw_arc(Vector2(0, -22), 34.0, open_base - PI * 0.35, open_base + PI * 0.35, 16, Color(1.0, 0.86, 0.55, oa), 3.0, true)
+		# 교대 직후 0.3s — 넘어간 쪽에 밝은 스냅.
+		if parent_n.has_meta("fs_flip_ms"):
+			var since: float = float(Time.get_ticks_msec() - int(parent_n.get_meta("fs_flip_ms"))) / 1000.0
+			if since < 0.3:
+				var k: float = 1.0 - since / 0.3
+				draw_arc(Vector2(0, -22), 44.0, base - PI * 0.5, base + PI * 0.5, 24, Color(0.95, 0.80, 1.0, 0.7 * k), 5.0, true)
+
+# P1·P2 페이즈 목표 바 — rival_node(재밍 기둥/제어 노드) 합산 HP를 상단 보스 바 문법으로.
+# 이름 라벨은 "?"(화자 불명 문법 공유). 페이즈가 넘어가면 바가 다시 차오른다(보스 페이즈 문법).
+class _RivalNodeBarUpdater extends Node:
+	var host: Node = null
+	var fill: ColorRect = null
+	func _process(_delta: float) -> void:
+		if host == null or fill == null or not is_instance_valid(host):
+			return
+		var tree := get_tree()
+		if tree == null:
+			return
+		var phase: int = int(host.get("_rival_phase"))
+		var max_hp: float = 12.0 if phase == 0 else 20.0
+		var total: float = 0.0
+		for e in tree.get_nodes_in_group("enemy"):
+			var n := e as Node
+			if n.has_meta("rival_node") and is_instance_valid(n) \
+					and not n.is_queued_for_deletion() and not bool(n.get("dead")):
+				total += maxf(0.0, float(n.get("hp")))
+		fill.size.x = 400.0 * clampf(total / max_hp, 0.0, 1.0)
+
+func _build_rival_node_bar() -> void:
+	_rival_bar_layer = CanvasLayer.new()
+	_rival_bar_layer.layer = 21
+	add_child(_rival_bar_layer)
+	var holder := Control.new()
+	holder.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_rival_bar_layer.add_child(holder)
+	var name_lbl := Label.new()
+	name_lbl.text = "?"
+	name_lbl.add_theme_font_size_override("font_size", 14)
+	name_lbl.add_theme_color_override("font_color", Color(0.85, 0.50, 1.0))
+	name_lbl.position = Vector2(320.0, 77.0)
+	name_lbl.size = Vector2(112.0, 20.0)
+	name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	holder.add_child(name_lbl)
+	var bg := ColorRect.new()
+	bg.color = Color(0.08, 0.06, 0.10, 0.85)
+	bg.position = Vector2(440.0, 84.0)
+	bg.size = Vector2(400.0, 8.0)
+	holder.add_child(bg)
+	var fill := ColorRect.new()
+	fill.color = Color(0.85, 0.55, 1.0)
+	fill.position = Vector2(440.0, 84.0)
+	fill.size = Vector2(400.0, 8.0)
+	holder.add_child(fill)
+	var upd := _RivalNodeBarUpdater.new()
+	upd.host = self
+	upd.fill = fill
+	_rival_bar_layer.add_child(upd)
 
 # P2 스윕 — 바이올렛 소거 벽이 좌우로 방을 훑는다. 세이프존 = 올라온 격벽 뒤(x밴드).
 # 격벽 슬롯 4개 중 2개가 매 사이클 다른 자리에 올라온다 — 안전지대가 옮겨 다닌다.
@@ -4740,6 +4814,9 @@ func _start_fake_clear() -> void:
 		if p is Node and is_instance_valid(p):
 			(p as Node).queue_free()
 	_rival_p2_props.clear()
+	if _rival_bar_layer != null and is_instance_valid(_rival_bar_layer):
+		_rival_bar_layer.queue_free()
+		_rival_bar_layer = null
 	# 진짜 클리어 문법 — 챔 + 검은 페이드 + 문구.
 	SfxPlayer.play("stage_clear_chime")
 	_fake_clear_layer = CanvasLayer.new()
@@ -4790,30 +4867,38 @@ func _start_fake_clear() -> void:
 	var stw := sub.create_tween()
 	stw.tween_interval(1.7)
 	stw.tween_property(sub, "modulate:a", 1.0, 0.5)
-	get_tree().create_timer(3.4, false).timeout.connect(_fake_clear_tear)
+	get_tree().create_timer(3.4, false).timeout.connect(_fake_clear_pretear)
 
-# 찢김 — 화면 전체 글리치 셰이더(슬라이스 변위 + RGB 분리)로 클리어 UI를 통째로 찢는다.
+# 찢김은 두 박자 — 예고(짧고 약한 흔들림) 뒤 한 호흡 쉬고 본 찢김. "너무 빠르고 갑작스럽다"
+# 실플레이 반려(2026-08-13) 반영: 전개를 늘리고 램프를 완만하게. 강도(peak)는 추후 별도 튜닝.
+func _fake_clear_pretear() -> void:
+	if goal_reached or not is_inside_tree() or _fake_clear_layer == null:
+		return
+	_run_glitch(0.55, 0.3)
+	get_tree().create_timer(1.1, false).timeout.connect(_fake_clear_tear)
+
+# 본 찢김 — 화면 전체 글리치 셰이더(슬라이스 변위 + RGB 분리)로 클리어 UI를 통째로 찢는다.
 # 피크에서 문구가 오염되고, 닫히던 화면이 도로 열린다. (라벨 흔들기 반려 → 셰이더 재작업.)
 func _fake_clear_tear() -> void:
 	if goal_reached or not is_inside_tree() or _fake_clear_layer == null:
 		return
 	SfxPlayer.play("boss_alert_text")
-	_run_glitch(1.0, 1.0)
+	_run_glitch(2.2, 0.9)
 	_rival_beat_flash()
-	get_tree().create_timer(0.22, false).timeout.connect(_fake_clear_corrupt)
-	get_tree().create_timer(1.3, false).timeout.connect(_fake_clear_end)
+	get_tree().create_timer(0.55, false).timeout.connect(_fake_clear_corrupt)
+	get_tree().create_timer(2.4, false).timeout.connect(_fake_clear_end)
 
 func _fake_clear_corrupt() -> void:
 	if _fake_clear_label != null and is_instance_valid(_fake_clear_label):
 		_fake_clear_label.text = "S T▮G E   C L E▮R"
 		_fake_clear_label.add_theme_color_override("font_color", Color(0.72, 0.42, 1.0))
 		var jt := _fake_clear_label.create_tween()
-		jt.tween_property(_fake_clear_label, "position", Vector2(10.0, -5.0), 0.1)
-		jt.tween_property(_fake_clear_label, "position", Vector2(-7.0, 4.0), 0.12)
-		jt.tween_property(_fake_clear_label, "modulate:a", 0.0, 0.35)
+		jt.tween_property(_fake_clear_label, "position", Vector2(10.0, -5.0), 0.16)
+		jt.tween_property(_fake_clear_label, "position", Vector2(-7.0, 4.0), 0.2)
+		jt.tween_property(_fake_clear_label, "modulate:a", 0.0, 0.6)
 	if _fake_clear_rect != null and is_instance_valid(_fake_clear_rect):
 		var rtw := _fake_clear_rect.create_tween()
-		rtw.tween_property(_fake_clear_rect, "color:a", 0.0, 0.65)
+		rtw.tween_property(_fake_clear_rect, "color:a", 0.0, 1.0)
 
 func _fake_clear_end() -> void:
 	if goal_reached or not is_inside_tree():
@@ -4827,6 +4912,7 @@ func _fake_clear_end() -> void:
 	_show_rival_subtitle("이 화면, 익숙하시죠. 제가 그렸습니다.", 3.2)
 	get_tree().create_timer(3.6, false).timeout.connect(_p3_veil_shaken_line)
 	get_tree().create_timer(6.8, false).timeout.connect(_p3_tell_line)
+	get_tree().create_timer(10.6, false).timeout.connect(_p3_unmarked_line)
 	_start_rival_p3()
 
 func _p3_veil_shaken_line() -> void:
@@ -4837,7 +4923,12 @@ func _p3_veil_shaken_line() -> void:
 func _p3_tell_line() -> void:
 	if not is_inside_tree() or goal_reached:
 		return
-	_show_veil_subtitle("저것의 표식은 구형 렌더 문법입니다. 굵은 브래킷은 전부 가짜입니다.", 3.6)
+	_show_veil_subtitle("두꺼운 표식은 제가 그린 것이 아닙니다. 속이 빈 그림입니다. 쏘면 그냥 뚫립니다.", 3.6)
+
+func _p3_unmarked_line() -> void:
+	if not is_inside_tree() or goal_reached or _rival_phase != 2:
+		return
+	_show_veil_subtitle("진짜는 표식 없이 옵니다. 가장자리에서 들어오는 걸 직접 보십시오.", 3.4)
 
 # ─── P3 분신전 — 거짓 VEIL(FalseVeil) + 무표시 위협 + 신뢰=지각 보조 ───
 var _false_veil: Node2D = null
@@ -4845,29 +4936,22 @@ var _p3_assist_timer: Timer = null
 var _p3_assist_idx: int = 0
 var _p3_bar_layer: CanvasLayer = null
 
-# P3 보스 체력바 — "공격이 되는 건지 알 길이 없다" 반려(2026-08-12): SENTINEL 바 문법 재사용 +
-# 실체/잠복 상태를 바 색·상태 라벨로 상시 표시(잠복 = 회색 "실체 없음" → 실체 = 밝은 "노출").
+# P3 보스 체력바 — SENTINEL 바 문법 재사용. 잠복/실체는 텍스트 라벨 대신 본체의 시각 언어
+# (잠복 = 스캔라인 그림 + 탄 통과 파문 / 실체 = 꽉 찬 몸 + 링)와 바 밝기로만 전달
+# ("실체 없음" 라벨은 작위적 — 실플레이 반려 2026-08-13).
 class _FvBarUpdater extends Node:
 	var fv: Node2D = null
 	var fill: ColorRect = null
-	var state_label: Label = null
 	func _process(_delta: float) -> void:
 		if fv == null or not is_instance_valid(fv) or fill == null:
 			return
 		var ratio: float = clampf(float(fv.get("hp")) / 6.0, 0.0, 1.0)
 		fill.size.x = 400.0 * ratio
 		var st: int = int(fv.get("state"))
-		if st == 2:   # SOLID — 피격 가능
+		if st == 2:   # SOLID — 피격 가능(밝음)
 			fill.color = Color(0.85, 0.55, 1.0)
-			state_label.text = "노출"
-			state_label.add_theme_color_override("font_color", Color(0.95, 0.85, 1.0))
-		elif st == 3:   # DYING
+		else:         # PHASED/TELE/DYING — 흐림
 			fill.color = Color(0.45, 0.38, 0.55)
-			state_label.text = ""
-		else:   # PHASED/TELE — 실체 없음
-			fill.color = Color(0.45, 0.38, 0.55)
-			state_label.text = "실체 없음"
-			state_label.add_theme_color_override("font_color", Color(0.60, 0.55, 0.70))
 
 func _build_fv_bar(fv: Node2D) -> void:
 	_p3_bar_layer = CanvasLayer.new()
@@ -4894,15 +4978,9 @@ func _build_fv_bar(fv: Node2D) -> void:
 	fill.position = Vector2(440.0, 84.0)
 	fill.size = Vector2(400.0, 8.0)
 	holder.add_child(fill)
-	var state_lbl := Label.new()
-	state_lbl.position = Vector2(848.0, 77.0)
-	state_lbl.size = Vector2(120.0, 20.0)
-	state_lbl.add_theme_font_size_override("font_size", 13)
-	holder.add_child(state_lbl)
 	var upd := _FvBarUpdater.new()
 	upd.fv = fv
 	upd.fill = fill
-	upd.state_label = state_lbl
 	_p3_bar_layer.add_child(upd)
 
 func _start_rival_p3() -> void:
@@ -4911,7 +4989,7 @@ func _start_rival_p3() -> void:
 	_rival_phase = 2
 	_rival_hold = true
 	GameState.rival_phase_reached = 2
-	_run_glitch(0.4, 0.55)
+	_run_glitch(0.8, 0.5)
 	var fv := FalseVeil.new()
 	fv.setup(
 		[Vector2(960.0, 380.0), Vector2(560.0, 430.0), Vector2(1360.0, 430.0)],
