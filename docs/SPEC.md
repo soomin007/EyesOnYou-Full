@@ -19,7 +19,7 @@
 **엔진**: Godot 4.6 (GDScript)  
 **배포**: Godot Web Export → GitHub Pages 자동 배포([`../DEPLOY.md`](../DEPLOY.md))  
 **외부 의존성**: 없음 (API 없음, 모든 텍스트 하드코딩)  
-**그래픽**: 100% 절차적 — 미니멀 벡터 캐릭터·코드 드로잉 맵/배경(비트맵 배경 에셋 없음)
+**그래픽**: 100% 절차적 (미니멀 벡터 캐릭터·코드 드로잉 맵/배경, 비트맵 배경 에셋 없음)
 
 ---
 
@@ -86,9 +86,9 @@
 
 ### 루트 + Stage 분배
 전체 맵 목록·id·risk/reward·`min_stage`/`max_stage`는 `scripts/RouteData.gd::ALL_ROUTES`가 코드 단일 진실이고
-(2026-08-14 기준 **36종** — 데모 12맵 + 본편 확장 + 처리별 탈출 4종 + 회수/보스 맵),
+(2026-08-14 기준 **36종**, 데모 12맵 + 본편 확장 + 처리별 탈출 4종 + 회수/보스 맵),
 설계 문서로는 [`design/growth_system.md`](design/growth_system.md) §3 ·
-[`design/world_layout.md`](design/world_layout.md) §2를 본다(Dead Cells식 — 스테이지마다 후보 추첨).
+[`design/world_layout.md`](design/world_layout.md) §2를 본다(Dead Cells식, 스테이지마다 후보 추첨).
 아래는 그 risk/reward가 *게임플레이에 미치는 효과*(SPEC 고유)만 정리한다.
 
 ### Risk/Reward 게임플레이 효과 (게임에 실제 반영)
@@ -119,7 +119,7 @@
 ### 플레이어 (현행)
 - 이동: 좌우 이동, 점프 (베이스라인 이중 점프), 대시 (베이스라인)
 - 기본 공격: **원거리 사격** (Bullet — 기본 J; 마우스 좌클릭은 설정에서 바인드 가능, project.godot 기본 매핑엔 없음)
-- 액티브 스킬: 기본 Q (`explosive` 획득 시 — 현행은 몸 폭발이 아니라 **포물선 수류탄 투척**, 홀드 차징으로
+- 액티브 스킬: 기본 Q (`explosive` 획득 시, 현행은 몸 폭발이 아니라 **포물선 수류탄 투척**, 홀드 차징으로
   사거리 조절 + 궤도/착탄 미리보기); 마우스 우는 설정 바인드
 - 플랫폼 드롭다운: S / ↓ (one-way 플랫폼 위에서 아래로 통과)
 - HP: 기본 최대 **3** (하트로 표시), 피격 시 0.8초 무적. hp 스킬 T1/T2로 +1/+2 (최대 5)
@@ -127,7 +127,7 @@
 
 베이스라인 스킬 (`STARTING_SKILLS`): `dash`, `double_jump`. 시작부터 보유.
 
-### 적 (아래는 초기 3종의 상세 — 현행은 6종 + 엘리트)
+### 적 (아래는 초기 3종의 상세, 현행은 6종 + 엘리트)
 
 > 현행 `Enemy.gd`의 `enum EnemyType`은 **PATROL / SNIPER / DRONE / BOMBER / SHIELD / JAMMER** 6종이고,
 > 여기에 막4부터 확률 승격되는 **엘리트**(같은 타입의 강화 개체)가 얹힌다. 자폭병·방패병·교란기·엘리트의
@@ -211,7 +211,7 @@
 - **적 스폰**: tags + stage 진행도 + risk 배율 조합
 
 각 스테이지 길이: `STAGE_LENGTH` 기본 4400px (화면 3~4개 분량). 맵 데이터에 월드 크기가 있으면
-그 값으로 덮어쓴다(`STAGE_LENGTH = _world_size.x`) — ARENA·보스 맵은 더 짧은 고정 폭을 쓴다.
+그 값으로 덮어쓴다(`STAGE_LENGTH = _world_size.x`): ARENA·보스 맵은 더 짧은 고정 폭을 쓴다.
 
 ---
 
@@ -328,7 +328,7 @@ else:
 
 ## 8. 결말 시스템 (핵심)
 
-> ⚠️ **레거시 원형(4종).** 현행은 **엔딩 9종** — `EndingResolver.resolve(disposal, truth_seen,
+> ⚠️ **레거시 원형(4종).** 현행은 **엔딩 9종**: `EndingResolver.resolve(disposal, truth_seen,
 > followed_count, rec_count)`가 `"<처리>_hi|lo"` 8개 + `"truth"`를 낸다. 처리 4종(반출/파기/은닉/잔류)은
 > 막5 회수 시점의 플레이어 선택이고, hi/lo는 추천 수용률, truth는 ??? 방 방문(`truth_seen`)이 연다.
 > 현행 분기와 본문은 [`STORY.md`](STORY.md) "결말 설계"와 `scripts/EndingResolver.gd`가 진실이며,
@@ -542,7 +542,7 @@ const RUN_VERSION: int = 4       # 구 run.cfg(v3, 9스테이지) 무효화
 # 영속 플래그 (settings.cfg)
 var tutorial_done: bool = false
 var seen_enemies: Array = []     # 도감 영속 — 한 번 본 적은 다음 런에도 안 뜸
-var endings_seen: Array = []     # 본 엔딩 id ("<처리>_hi|lo" 8종 + "truth") — 영속, 다회차 신호
+var endings_seen: Array = []     # 본 엔딩 id ("<처리>_hi|lo" 8종 + "truth"): 영속, 다회차 신호
 var playthrough_count: int = 0   # 완주 횟수 (영속, 다회차 신호)
 var bgm_volume: float = 1.0  # (구 master_volume — 2026-05-08 rename, audio.bgm 키)
 var sfx_volume: float = 1.0
@@ -559,22 +559,22 @@ var playground_active: bool = false
 - `on_stage_clear() -> bool` — stage++, score, **reward만큼 보너스 XP**, leveled_up 반환
 - `add_xp(amount) -> bool` — leveled_up 반환
 
-### 영속화 (2026-08-14 코드 대조 — `GameState.gd` `save_settings`/`_store_run_state` 기준)
+### 영속화 (2026-08-14 코드 대조, `GameState.gd` `save_settings`/`_store_run_state` 기준)
 
-**메타** `user://settings.cfg` (ConfigFile, `SETTINGS_VERSION = 4`) — 런과 무관, `reset()`에서 보존:
-- `flags/` — `tutorial_done` · `seen_enemies`(도감) · `hidden_visit_count` · `visited_arcturus` ·
+**메타** `user://settings.cfg` (ConfigFile, `SETTINGS_VERSION = 4`). 런과 무관하며 `reset()`에서 보존된다:
+- `flags/`: `tutorial_done` · `seen_enemies`(도감) · `hidden_visit_count` · `visited_arcturus` ·
   `endings_seen`(본 엔딩 id) · `playthrough_count`(완주 횟수) · `shiny_kills`(황금 적 처치) ·
   `alt_skin_unlocked` / `alt_skin_enabled`(숨겨진 색) · `found_server_log`(숨은 로어 문서) ·
   `observer_stinger_seen`(첫 완주 관측 스팅어)
-- `rival/` — 라이벌 기억 영속 프로필(축 C): `last_disposal` · `disposal_counts` · `lure_shown_total` /
+- `rival/`: 라이벌 기억 영속 프로필(축 C): `last_disposal` · `disposal_counts` · `lure_shown_total` /
   `lure_followed_total`(상충 추천 간파율 누적) · `kills` · `fake_clear_seen` · `reentry_count`
-- `access/` — `brightness` · `sfx_captions`
-- `display/` — `fullscreen` · `auto_fullscreen` · `window_size_index`
-- `audio/` — `bgm` · `sfx` (구 `audio/master`는 fallback으로 1회 더 읽힘)
-- `input/<action>` — 키바인드 (key/mouse/joy_button/joy_motion 통합 스키마).
+- `access/`: `brightness` · `sfx_captions`
+- `display/`: `fullscreen` · `auto_fullscreen` · `window_size_index`
+- `audio/`: `bgm` · `sfx` (구 `audio/master`는 fallback으로 1회 더 읽힘)
+- `input/<action>`: 키바인드 (key/mouse/joy_button/joy_motion 통합 스키마).
   version < 4면 키바인드만 폐기하고 project.godot 기본값 유지.
 
-**런 진행(이어하기)** `user://run.cfg` (ConfigFile, `RUN_VERSION = 4`) — 단일 자동저장:
+**런 진행(이어하기)** `user://run.cfg` (ConfigFile, `RUN_VERSION = 4`). 단일 자동저장 슬롯이다:
 - 직렬화 단일 소스는 `_store_run_state` / `_restore_run_state`이며 **run.cfg와 palimpsest.cfg가 공유**한다
   (필드 추가 시 두 함수만 고치면 된다).
 - 저장 필드: 진행(`current_stage`·`death_count`·`score`) · 축(`trust_score`·`aggression_score`·
@@ -630,13 +630,13 @@ P0 MVP (이동/사망/루트/레벨업/두 점수 축), P1 VEIL 4상황 발화 +
 - VEIL 캐릭터 시트 → 신뢰밴드(cold/thaw/warm)별 어투 변화 적용 (`veil_register_band`, veil_pool_remap.md)
 - ??? 맵 시퀀스 → 단말기 시스템 구현
 
-### Phase 9 — ✅ 마무리 (P3)
-- 한글 폰트 번들 — `assets/fonts/Pretendard-Regular.otf`(OFL) 적용 완료
-- 배경 — 이미지 임포트 대신 **절차적 코드 드로잉**으로 확정(맵별 `_ambience_*` 시그니처 배경)
-- BGM·SFX — 전량 AI 생성물 배선 완료(`assets/bgm/`·`assets/sfx/`, BgmPlayer 크로스페이드 + SfxPlayer 풀링)
-- Web Export — GitHub Pages 자동 배포로 확정(itch.io 대신). 절차는 [`../DEPLOY.md`](../DEPLOY.md)
+### Phase 9: ✅ 마무리 (P3)
+- 한글 폰트 번들: `assets/fonts/Pretendard-Regular.otf`(OFL) 적용 완료
+- 배경: 이미지 임포트 대신 **절차적 코드 드로잉**으로 확정(맵별 `_ambience_*` 시그니처 배경)
+- BGM·SFX: 전량 AI 생성물 배선 완료(`assets/bgm/`·`assets/sfx/`, BgmPlayer 크로스페이드 + SfxPlayer 풀링)
+- Web Export: GitHub Pages 자동 배포로 확정(itch.io 대신). 절차는 [`../DEPLOY.md`](../DEPLOY.md)
 
-### Phase 10 이후 — 본편 확장 (진행 중)
+### Phase 10 이후: 본편 확장 (진행 중)
 5막 재구조화 · 기믹 맵 프리미티브 · 라이벌 VEIL(거짓 렌더·14장 보스 2막) · 다회차 지원 3축 ·
 관측 프레임 정사. 진행 상태는 [`design/backlog.md`](design/backlog.md)가 단일 소스.
 

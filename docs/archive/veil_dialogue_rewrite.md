@@ -1,7 +1,7 @@
 # VEIL 대사 어투 아크 — 현재 대사 + 재작성 제안 (검토용)
 
 > ⚠️ **대체됨 + 구현 완료(2026-06-13).** 어투 아크를 **ACT(진행도)** 에 묶던 이 문서는 → **신뢰도+사망**에
-> 묶는 [`veil_trust_arc.md`](veil_trust_arc.md) + 대사 grid [`veil_pool_remap.md`](veil_pool_remap.md)로
+> 묶는 [`veil_trust_arc.md`](../design/veil_trust_arc.md) + 대사 grid [`veil_pool_remap.md`](../design/veil_pool_remap.md)로
 > 대체·구현됐다. 여기 ACT1/2/3 풀은 COLD/THAW/WARM 밴드로 재활용됨(인덱싱 축만 stage→신뢰). 이 문서는
 > **이력 보존용**(설계 경과). 라이브 대사는 `VeilDialogue.gd` 참조.
 

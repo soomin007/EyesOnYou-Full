@@ -1,7 +1,7 @@
 # Eyes on You — PRD (제품 요구사항)
 
 > **제품 결정·비목표·성공 기준·UX 원칙·리스크의 단일 소스.** 게임 내용·조작은 [`README.md`](README.md),
-> 구현 사양·시스템 수치는 [`docs/SPEC.md`](docs/SPEC.md), 진행 상태·다음 작업은 [`docs/design/backlog.md`](docs/design/backlog.md)를 본다.
+> 구현 사양·시스템 수치는 [`docs/SPEC.md`](../SPEC.md), 진행 상태·다음 작업은 [`docs/design/backlog.md`](../design/backlog.md)를 본다.
 
 ## 1. 제품 한 줄 정의
 
@@ -34,12 +34,12 @@
 
 두 축(추천 수용률 × 공격성)이 직교해 4종 결말로 갈린다 — **A 완벽한 도구 / B 혼자였던 사람 /
 C 공생 / D 유령 임무**. 두 축이 *서로 독립*이어야 한다는 것이 제품 요구사항(조언을 따름 ≠ 전투 선호).
-정확한 조건·대사·점수 산식은 [`docs/STORY.md`](docs/STORY.md)·[`docs/design/veil_trust_arc.md`](docs/design/veil_trust_arc.md), 구현은 `EndingResolver.gd`.
+정확한 조건·대사·점수 산식은 [`docs/STORY.md`](../STORY.md)·[`docs/design/veil_trust_arc.md`](../design/veil_trust_arc.md), 구현은 `EndingResolver.gd`.
 
 ## 5. VEIL 페르소나 — 제품 정체성
 
 - 1~2문장, 침착·간결, 끝에 "요원". **가끔 판단이 틀린다** — 늘 따르는 게 정답이 되면 안 된다(결말 다양성의 핵심 장치).
-- 대사는 전부 하드코딩(LLM/외부 API 금지). 톤 가이드 상세는 [`docs/STORY.md`](docs/STORY.md) Part I.
+- 대사는 전부 하드코딩(LLM/외부 API 금지). 톤 가이드 상세는 [`docs/STORY.md`](../STORY.md) Part I.
 
 ## 6. UX 원칙
 
@@ -78,6 +78,6 @@ C 공생 / D 유령 임무**. 두 축이 *서로 독립*이어야 한다는 것�
 
 ## 10. 참조
 
-게임 개요·조작 = [`README.md`](README.md) · 구현 사양 = [`docs/SPEC.md`](docs/SPEC.md) ·
-진행/다음 작업 = [`docs/design/backlog.md`](docs/design/backlog.md) · 전체 문서 지도 = [`docs/INDEX.md`](docs/INDEX.md).
+게임 개요·조작 = [`README.md`](README.md) · 구현 사양 = [`docs/SPEC.md`](../SPEC.md) ·
+진행/다음 작업 = [`docs/design/backlog.md`](../design/backlog.md) · 전체 문서 지도 = [`docs/INDEX.md`](../INDEX.md).
 스펙과 충돌 시 **제품 결정은 PRD, 구현 디테일은 SPEC** 우선.

@@ -24,7 +24,7 @@
 | 라이벌 VEIL(후반 컨셉·거짓 렌더·14장 보스 2막 구성) | [`design/rival_veil_concept.md`](design/rival_veil_concept.md) |
 | 다회차 지원 3축(기록 재진입·처리별 탈출 4종·라이벌 기억) | [`design/replay_support_plan.md`](design/replay_support_plan.md) |
 | 관측 프레임 세계관 보강(팔림프세스트의 이면) | [`design/lore_expansion.md`](design/lore_expansion.md) |
-| 대사 전수 검토(수정안 기입식 — 사용자 작업면) | [`design/dialogue_review.md`](design/dialogue_review.md) |
+| 대사 전수 검토(수정안 기입식, 사용자 작업면) | [`design/dialogue_review.md`](design/dialogue_review.md) |
 | 레버·발판·비밀칸 배치 인덱스 | [`design/puzzle_ideas.md`](design/puzzle_ideas.md) |
 | 효과음 전수(id·트리거·prompt·상태) + 후처리 | [`design/sfx_list.md`](design/sfx_list.md) · [`design/sfx_trim_guide.md`](design/sfx_trim_guide.md) |
 | 사람 vs AI 기여 분담(크레딧) | [`contributions.md`](contributions.md) |

@@ -43,7 +43,7 @@
 - **영어판(i18n) — itch.io 배포 전제(사용자 2026-08-13)**: Godot TranslationServer(CSV) 기반
   전 문자열 외부화 + 영문 번역. 하드코딩 문자열이 Stage.gd 등에 산재해 외부화 자체가 큰 단위 —
   별도 세션 권장. 대사 문구가 안정된 뒤 착수(문자열 이동은 한 번만).
-- ✅ **전체 문서 최신화 + 과거 문서 정리 완료**(2026-08-14) — `doc_cleanup_workorder.md` 기준 수행.
+- ✅ **전체 문서 최신화 + 과거 문서 정리 완료**(2026-08-14): `doc_cleanup_workorder.md` 기준 수행.
   아카이브 6종 이동(demo_feedback·playtest_round2·difficulty_analysis·mobile_feasibility·
   act4_bgm_plan·elite_enemies_plan) + README/INDEX/SPEC/STORY 현행화 + 살아있는 설계 문서
   상태 표기 갱신. **판단 보류 3건은 `doc_cleanup_report.md`** 참조(사용자 결정 필요).
@@ -337,7 +337,7 @@
   - **A2 진행**: ✅ 신규 맵 3종(주차장 막1 / 변전소·실험구역 막2, 기존 풀 합류 — 맵 16개). **런 길이 확대
     (한 런 ~18-20)는 보류** — stage 수 증설은 페이싱·난이도 검증(플레이테스트) 필요. 추가 맵 양산(30+)은 가능.
   - **A3 신규 적**(expansion_plan): ✅ 재머(VEIL 마커 교란, 2026-07-06 — 위 라이벌 VEIL 참조) ·
-    ✅ 엘리트(설계 = `../archive/elite_enemies_plan.md`, **구현 완료 2026-08-11 커밋 694dd37**) —
+    ✅ 엘리트(설계 = `../archive/elite_enemies_plan.md`, **구현 완료 2026-08-11 커밋 694dd37**)
     실플레이 밸런스 검증만 남음.
   - **★ 후반 컨셉 = 적대적 라이벌 VEIL**(2026-06-25 회의 확정, 미구현): 시설 안 두 번째 VEIL이 3막부터
     슬쩍 간섭 → 5막 대놓고. 시야(렌더) 강탈로 거짓을 보여주고, 쌓은 신뢰가 진짜/가짜 구분 능력이 됨.
