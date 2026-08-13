@@ -5656,7 +5656,7 @@ func _begin_clear_sequence() -> void:
 	if _check_pacifist_clear():
 		GameState.pacifist_line_shown = true
 		delay = maxf(delay, 3.2)   # 대사 읽을 여유
-		_show_veil_subtitle("한 발도 쏘지 않고 지나갔어요. 그것도 하나의 답이에요.", 3.0)
+		_show_veil_subtitle("한 발도 안 쏘고 지나왔네요. 그것도 하나의 답이겠죠.", 3.0)
 	# 회수 문서 연출(ArcturusDocumentOverlay, layer 25)이 클리어 후 화면을 덮는 맵은 클리어 페이드
 	# (layer 38)가 문서를 가린다 → 페이드 생략(문서 자체 배경으로 어두워짐). ④ 이후 종이 문서는
 	# 스토리 lab 경로에만 남고, core_recovery는 터널 씬으로 전환이라 페이드가 자연스러운 이음새
