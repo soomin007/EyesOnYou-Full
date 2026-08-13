@@ -326,7 +326,7 @@
   `Player.gd._try_jump`는 `is_on_floor()`만 보고 지상 풀점프(`JUMP_VELOCITY -540`) vs 공중 2단(`×0.92`)을
   가른다. 가장자리에서 *걸어서 떨어지면* `is_on_floor()`가 즉시 false인데 `jumps_used`는 0이라, 첫 점프가
   지상 풀점프가 아니라 약한 2단(-497)으로 나가고 더블점프 1회를 소모한다 → 높이 부족으로 플랫폼에 못 닿고,
-  바닥에 멈췄다 뛰면(is_on_floor true) 성공해서 "멈췄다 하면 됨"이 된다(2차 피드백 다수, [[playtest_round2]]).
+  바닥에 멈췄다 뛰면(is_on_floor true) 성공해서 "멈췄다 하면 됨"이 된다(2차 피드백 다수, [[playtest_round2]] = `../archive/playtest_round2.md`).
   → **coyote time(~0.08~0.1s) + jump buffer를 짝으로 추가.** 가장자리 이탈 직후 윈도우의 첫 점프는 지상
   점프로 처리. 더불어 제자리 더블점프(수평속도 0)의 정점이 플랫폼 간격에 닿는지 레벨 좌표로 검증할 것
   (수평 입력 없이 한 칸은 오르게). 점프 "느낌" 버그는 대개 입력 타이밍 관용(coyote/buffer) 부재가 원인.
@@ -389,7 +389,7 @@
   `route_core_recovery`(막5 회수, 클라이맥스)가 매핑에 빠져 가장 이완된 초반곡(Cold Gear)이 깔렸다
   (2026-08-10 발견). 폴백이라 에러 없이 그럴싸하게 재생돼 눈치채기 어렵다. → 라우트 추가 체크리스트:
   RouteData 항목 + MapData 레이아웃 + **_ROUTE_TRACKS 매핑** + (필요 시) 시그니처 배경. 근본 해결은
-  막 기반 선곡(act_def의 bgm 필드 실데이터 승격 — act4_bgm_plan.md §4)으로 폴백 자체를 없애는 것.
+  막 기반 선곡(act_def의 bgm 필드 실데이터 승격 — ../archive/act4_bgm_plan.md §4)으로 폴백 자체를 없애는 것.
 
 ---
 

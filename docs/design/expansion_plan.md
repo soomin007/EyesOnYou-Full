@@ -71,5 +71,5 @@
 
 - **Phase A부터.** 에셋 0이고 피드백 1순위("짧음")를 직접 해소하며, 막 구조가 B·C의 그릇이 된다.
 - 착수 시 먼저 **막 경계·맵 풀·적/스킬 목록을 설계 문서로 확정**(이 문서를 그 출발점으로) 후 코드.
-- 단일 소스: 맵=world_layout.md, 스킬=growth_system.md, 스토리=STORY.md, 난이도=difficulty_analysis.md를
+- 단일 소스: 맵=world_layout.md, 스킬=growth_system.md, 스토리=STORY.md, 난이도=../archive/difficulty_analysis.md(아카이브)를
   확장분과 동기화.

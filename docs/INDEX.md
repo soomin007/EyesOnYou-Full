@@ -3,6 +3,10 @@
 외부 협업자/Claude 인계용 한 페이지 안내. **모든 문서의 단일 진입점이자, 무엇이 어디서 단일 진실인지의 지도.**
 내용이 겹칠 땐 아래 "단일 소스 지도"의 담당 문서만 고치고, 나머지는 그 문서를 링크한다.
 
+> **현재 빌드 골격(2026-08-14)**: 5막 15스테이지 · 맵 36종 · 엔딩 9종(처리 4 × 신뢰 2 + 진실) ·
+> 14장 최종 보스 2막 구성(라이벌 3페이즈 + 코어 터널) · 처리별 탈출 4종 · 기록 재진입(팔림프세스트) ·
+> 관측 프레임 정사. 자세한 진행 상태는 [`design/backlog.md`](design/backlog.md).
+
 ## 단일 소스 지도 (이 주제는 이 문서가 진실)
 
 | 주제 | 단일 소스 |
@@ -16,8 +20,12 @@
 | └ VEIL 밴드×진행 대사 grid(설계 스냅샷) | [`design/veil_pool_remap.md`](design/veil_pool_remap.md) |
 | └ 다회차 리플레이 대사 변형(제안·검토) | [`design/veil_replay_dialogue.md`](design/veil_replay_dialogue.md) |
 | 톤 원칙 "글로 명시 < 체험으로 체득" | [`design/show_dont_tell.md`](design/show_dont_tell.md) |
+| 막 정체성(막별 성격·팔레트·난이도 램프·전환 비트) | [`design/act_identity.md`](design/act_identity.md) |
+| 라이벌 VEIL(후반 컨셉·거짓 렌더·14장 보스 2막 구성) | [`design/rival_veil_concept.md`](design/rival_veil_concept.md) |
+| 다회차 지원 3축(기록 재진입·처리별 탈출 4종·라이벌 기억) | [`design/replay_support_plan.md`](design/replay_support_plan.md) |
+| 관측 프레임 세계관 보강(팔림프세스트의 이면) | [`design/lore_expansion.md`](design/lore_expansion.md) |
+| 대사 전수 검토(수정안 기입식 — 사용자 작업면) | [`design/dialogue_review.md`](design/dialogue_review.md) |
 | 레버·발판·비밀칸 배치 인덱스 | [`design/puzzle_ideas.md`](design/puzzle_ideas.md) |
-| 난이도 정량 분석(누가 얼마나 어려운가) | [`design/difficulty_analysis.md`](design/difficulty_analysis.md) |
 | 효과음 전수(id·트리거·prompt·상태) + 후처리 | [`design/sfx_list.md`](design/sfx_list.md) · [`design/sfx_trim_guide.md`](design/sfx_trim_guide.md) |
 | 사람 vs AI 기여 분담(크레딧) | [`contributions.md`](contributions.md) |
 | 포스터 비주얼 아이덴티티(색·모티프·카피) | [`poster_brief.md`](poster_brief.md) |
