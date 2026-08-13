@@ -156,15 +156,71 @@ const ALL_ROUTES: Array = [
 		"reward": 2,
 		"hidden": false,
 		"unique": false,
-		# 막5 종착(s15=내부14) — 회수·처리선택 뒤 빠져나가는 마지막 길. 클리어=에필로그→엔딩.
-		# is_final_stage_done()가 마지막 스테이지를 escape로 인식하므로 반드시 TOTAL_STAGES-1(=14)에 배타 배치.
+		# 막5 종착(s15=내부14). 본편은 처리별 탈출 4종(아래)이 대체 — 이 원형은 **스토리 모드 전용**
+		# (STORY_SCHEDULE이 직접 참조). story_only는 본편 풀에서 제외 플래그(replay_support_plan §3.2).
 		"min_stage": 14, "max_stage": 14,
 		"available_stages": [14],
+		"story_only": true,
 		"tags": ["우회", "은폐"],
 		"veil_comment": "비상 탈출로예요. 빨리 빠지면 그만큼 안전해요.",
 		"entry_comment": "조용한 길이에요. 멈추지 말고 빠지면 돼요.",
 		"entry_comment_replay": "조용한 길이에요. 여기, 낯이 익죠. 이번엔 뭐가 다를까요. 멈추지 말고 빠지세요.",
 		"stage_color": Color(0.10, 0.12, 0.14),
+	},
+	# ─── 처리별 탈출 4종(replay_support_plan §3.2, Dishonored 최종 미션 문법) ───
+	# s13 처리 선택이 s14의 룰을 바꾼다. 전부 s14 배타 + disposal 키 = 그 처리를 골랐을 때만 풀 진입.
+	# 정체성 = "시설과 라이벌이 그 처리에 어떻게 반응하는가"(드라이브 = 라이벌의 탈출 티켓).
+	{
+		"id": "route_escape_extract",
+		"name": "봉쇄 게이트",
+		"description": "드라이브가 신호를 뿜는다. 시설의 모든 유닛이 이 길목으로 몰린다.",
+		"risk": 3, "reward": 3,
+		"hidden": false, "unique": false,
+		"min_stage": 14, "max_stage": 14, "available_stages": [14],
+		"disposal": "extract",
+		"tags": ["전투", "노출"],
+		"veil_comment": "전부 이쪽으로 몰려와요. 뚫고 나가는 수밖에 없겠네요.",
+		"entry_comment": "드라이브가 신호를 흘려요. 위치가 계속 새고 있어요. 정면뿐이에요, 뚫죠.",
+		"stage_color": Color(0.22, 0.10, 0.10),
+	},
+	{
+		"id": "route_escape_destroy",
+		"name": "붕괴 회랑",
+		"description": "소각과 함께 시설 제어가 무너졌다. 뒤에서부터 구조가 내려앉는다.",
+		"risk": 3, "reward": 2,
+		"hidden": false, "unique": false,
+		"min_stage": 14, "max_stage": 14, "available_stages": [14],
+		"disposal": "destroy",
+		"tags": ["노출"],
+		"veil_comment": "소각 여파로 구조가 버티질 못해요. 멈추지만 않으면 돼요.",
+		"entry_comment": "뒤가 무너지기 시작했어요. 돌아볼 시간 없어요. 앞으로만 가요.",
+		"stage_color": Color(0.20, 0.12, 0.08),
+	},
+	{
+		"id": "route_escape_conceal",
+		"name": "정비 갱도",
+		"description": "아무도 반출 사실을 모른다. 단 하나, 시설 안의 눈만 빼고.",
+		"risk": 2, "reward": 2,
+		"hidden": false, "unique": false,
+		"min_stage": 14, "max_stage": 14, "available_stages": [14],
+		"disposal": "conceal",
+		"tags": ["은폐", "우회"],
+		"veil_comment": "조용히 나가야 해요. 들키면 은닉이 아니게 되죠.",
+		"entry_comment": "수색이 붙었어요. 저쪽이 우리 위치를 흘리는 것 같아요. 빛을 피해요.",
+		"stage_color": Color(0.06, 0.09, 0.13),
+	},
+	{
+		"id": "route_escape_leave",
+		"name": "무인 회랑",
+		"description": "아무것도 가지고 나가지 않는 길. 아무도 막지 않는다.",
+		"risk": 1, "reward": 2,
+		"hidden": false, "unique": false,
+		"min_stage": 14, "max_stage": 14, "available_stages": [14],
+		"disposal": "leave",
+		"tags": ["우회"],
+		"veil_comment": "막는 게 없어요. ...이상할 만큼요.",
+		"entry_comment": "조용하네요. 너무 조용해요. 보이는 걸 다 믿진 말아요.",
+		"stage_color": Color(0.13, 0.10, 0.16),
 	},
 	{
 		"id": "route_lab",
@@ -541,6 +597,15 @@ static func get_route_pool_for_stage(stage_index: int, visited: Array = []) -> A
 			continue
 		if not _stage_in_range(route, stage_index):
 			continue
+		# 스토리 전용 원형(비상 탈출로)은 본편 풀에서 제외 — 처리별 4종이 대체.
+		if bool(route.get("story_only", false)):
+			continue
+		# 처리별 탈출 — disposal 키가 있으면 이번 런의 처리 선택과 일치할 때만(§3.2).
+		# 빈 값 폴백은 EndingResolver와 동일하게 extract(정상 흐름에선 s13 터널에서 항상 설정됨).
+		if route.has("disposal"):
+			var want: String = GameState.disposal_choice if GameState.disposal_choice != "" else GameState.DISPOSAL_EXTRACT
+			if str(route.get("disposal", "")) != want:
+				continue
 		var g: Array = route.get("guaranteed_in_stages", [])
 		if stage_index in g:
 			guaranteed.append(route)

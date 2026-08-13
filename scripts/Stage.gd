@@ -121,6 +121,12 @@ const _ROUTE_TRACKS: Dictionary = {
 	"route_server_hall": "mid_late",
 	"route_blackout":   "mid_late",
 	"route_escape":     "mid_late",
+	# 처리별 탈출 4종 — 본편(막5)은 막 기반 선곡(confront)이 우선하지만, 매핑 누락 폴백 함정
+	# 방지용으로 명시(known_issues 라우트 추가 체크리스트). 탈출별 BGM 분화는 백로그(사용자 결정).
+	"route_escape_extract": "confront",
+	"route_escape_destroy": "confront",
+	"route_escape_conceal": "confront",
+	"route_escape_leave":   "confront",
 	# lab(SENTINEL 보스) = confront(Violet Signal) — 0~25s 빌드업에 보스 인트로 컷씬을 정렬(2026-08-10).
 	# §7 reveal(처치 직후 라이벌 첫 발화)까지 라이벌 테마가 이어져 "라이벌이 지켜보던 판"의 데뷔 무대가 된다.
 	"route_lab":        "confront",
@@ -304,7 +310,7 @@ func _arm_act3_vision_subtitle() -> void:
 	var stage: int = GameState.current_stage
 	# 비상 탈출로는 "탈출" 비트 — 시야 붕괴 아크에서 제외(스토리 stage4는 아래 조건으로 이미 빠지지만,
 	# 일반 모드 stage6은 stage>=5에 걸려 여기서 재발동되므로 route로 명시 차단). 사용자: 탈출 맵은 붕괴 꺼져야 함.
-	if GameState.current_route_id == "route_escape":
+	if GameState.current_route_id.begins_with("route_escape"):
 		return
 	# 시야 역전(reversal)은 딱 한 번만 발동 — 이미 붕괴된 뒤 후속 맵은 _arm_degraded_hazard_warning이
 	# "여기 잘 못 봐요" 경고를 맡는다. 여기서 또 reversal 자막+begin_degradation을 내면 중복이라 가드.
@@ -806,6 +812,8 @@ func _build_world() -> void:
 	_build_defense_core()
 	_build_cover_niches()
 	_build_sweep_beam()
+	_build_route_lines()
+	_build_fake_watchers()
 
 var locked_door_triggered: bool = false
 
@@ -2042,6 +2050,60 @@ func _build_chase_hazard() -> void:
 	add_child(hz)
 	hz.setup(float(cfg.get("start_x", -300.0)), float(cfg.get("speed", 210.0)), float(cfg.get("max_gap", 700.0)))
 
+# 맵 데이터 구동 진행 자막 — MapData "route_lines": [{x, who("veil"/"rival"), text, dur?, glitch?}].
+# 플레이어가 x를 처음 넘는 순간 1회 출력(탈출 4종의 배웅/중계 비트, replay_support_plan §3.2).
+func _build_route_lines() -> void:
+	var arr: Array = _map_data.get("route_lines", [])
+	if arr.is_empty() or GameState.story_mode:
+		return
+	var trig := _RouteLineTriggers.new()
+	trig.host = self
+	trig.lines = arr
+	add_child(trig)
+
+class _RouteLineTriggers extends Node:
+	var host: Node = null
+	var lines: Array = []
+	var _fired: Array = []
+	func _physics_process(_delta: float) -> void:
+		if host == null or not is_instance_valid(host):
+			return
+		var tree := get_tree()
+		if tree == null:
+			return
+		var players := tree.get_nodes_in_group("player")
+		if players.is_empty():
+			return
+		var px: float = (players[0] as Node2D).global_position.x
+		for i in lines.size():
+			if i in _fired:
+				continue
+			var d: Dictionary = lines[i]
+			if px < float(d.get("x", 0.0)):
+				continue
+			_fired.append(i)
+			var txt: String = str(d.get("text", ""))
+			var dur: float = float(d.get("dur", 3.2))
+			if bool(d.get("glitch", false)):
+				host.call("_run_glitch", 0.5, 0.4)
+			if str(d.get("who", "veil")) == "rival":
+				host.call("_show_rival_subtitle", txt, dur)
+			else:
+				host.call("_show_veil_subtitle", txt, dur)
+
+# 거짓 렌더 배웅 실루엣 — MapData "fake_watchers": [Vector2]. 잔류 탈출의 정체성(§3.2):
+# 구형 렌더 문법의 실루엣(FalseVeil._FakeMarker 재사용)이 길가에 서서 플레이어를 겨눈 채
+# 배웅한다. 콜리전 없음 — 쏘면 렌더가 찢겼다 재조립(P3와 같은 공정 tell).
+func _build_fake_watchers() -> void:
+	var arr: Array = _map_data.get("fake_watchers", [])
+	if arr.is_empty() or GameState.story_mode:
+		return
+	for p in arr:
+		var m := FalseVeil._FakeMarker.new()
+		m.lifetime = 99999.0
+		m.position = p
+		add_child(m)
+
 # 아레나 방어(DefenseCore 기믹) — MapData "defense_core" = {pos, hp?, radius?, interval?}.
 # dome 안 적이 와인드업(예고 게이지) 후 코어를 직접 타격, 0이면 방어 실패. 웨이브 전멸이 클리어.
 # (2026-08-12 재설계: 오라 드레인 → 이산 타격. 인과 가독 + 밀어내기 유효화.)
@@ -2415,6 +2477,18 @@ func _build_route_ambience() -> void:
 			_ambience_datacenter()
 		"route_escape":
 			_ambience_escape()
+		"route_escape_extract":
+			_ambience_escape()
+			_escape_tone_extract()
+		"route_escape_destroy":
+			_ambience_escape()
+			_escape_tone_destroy()
+		"route_escape_conceal":
+			_ambience_escape()
+			_escape_tone_conceal()
+		"route_escape_leave":
+			_ambience_escape()
+			_escape_tone_leave()
 		"route_hidden":
 			_ambience_hidden()
 		"route_parking_lot", "route_car_cover":
@@ -2793,6 +2867,74 @@ func _ambience_datacenter() -> void:
 		tw.tween_property(bar, "position:x", bar.position.x + 80.0, rng.randf_range(1.5, 2.8))
 		tw.tween_property(bar, "modulate:a", 0.0, 0.1)
 		tw.tween_property(bar, "modulate:a", 0.35, 0.1)
+
+# ─── 처리별 탈출 톤 오버레이(replay_support_plan §3.2) — _ambience_escape() 공통 뼈대 위에
+# 처리별 색을 얹는다. 캐스트는 CanvasModulate 대신 MUL 블렌드 풀스크린(막5 라이벌 틴트
+# CanvasModulate와의 중복 충돌 회피). 광과민 기준: 넓은 발광의 맥동은 얕고(±5%p) 느리게(1Hz 미만).
+
+func _escape_cast(color: Color) -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 8   # 월드 위, HUD(20+) 아래
+	add_child(layer)
+	var rect := ColorRect.new()
+	rect.color = color
+	rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var mat := CanvasItemMaterial.new()
+	mat.blend_mode = CanvasItemMaterial.BLEND_MODE_MUL
+	rect.material = mat
+	layer.add_child(rect)
+
+# 반출 = 총력 저지: 붉은 경보 캐스트 + 벽면 경광 글로우(느린 호흡, 스트로브 아님).
+func _escape_tone_extract() -> void:
+	_escape_cast(Color(1.0, 0.86, 0.84))
+	for x in [700.0, 1500.0, 2300.0, 3100.0]:
+		var lamp := _AlarmGlow.new()
+		lamp.position = Vector2(float(x), 120.0)
+		add_child(lamp)
+
+class _AlarmGlow extends Node2D:
+	var _t: float = randf() * TAU
+	func _process(delta: float) -> void:
+		_t += delta
+		queue_redraw()
+	func _draw() -> void:
+		var a: float = 0.16 + 0.05 * sin(_t * 2.4)   # 약 0.38Hz 왕복 — 저대비 완만
+		draw_circle(Vector2.ZERO, 150.0, Color(0.95, 0.25, 0.2, a))
+		draw_circle(Vector2.ZERO, 60.0, Color(0.95, 0.30, 0.25, a * 1.4))
+
+# 파기 = 붕괴: 주황빛 재 캐스트 + 떨어지는 분진.
+func _escape_tone_destroy() -> void:
+	_escape_cast(Color(1.0, 0.90, 0.80))
+	add_child(_AshFall.new())
+
+class _AshFall extends Node2D:
+	var _parts: Array = []
+	func _ready() -> void:
+		z_index = 5
+		for i in 26:
+			_parts.append({"x": randf() * 3800.0, "y": randf() * 720.0,
+				"vy": 30.0 + randf() * 50.0, "r": 1.5 + randf() * 2.0})
+	func _process(delta: float) -> void:
+		for p in _parts:
+			var d: Dictionary = p
+			d["y"] = float(d["y"]) + float(d["vy"]) * delta
+			if float(d["y"]) > 720.0:
+				d["y"] = -10.0
+				d["x"] = randf() * 3800.0
+		queue_redraw()
+	func _draw() -> void:
+		for p in _parts:
+			var d: Dictionary = p
+			draw_circle(Vector2(float(d["x"]), float(d["y"])), float(d["r"]), Color(0.75, 0.62, 0.50, 0.35))
+
+# 은닉 = 밀고당하는 잠입: 어둠 캐스트(수색 빔·니치 시각은 SweepBeam 기믹이 담당).
+func _escape_tone_conceal() -> void:
+	_escape_cast(Color(0.62, 0.66, 0.74))
+
+# 잔류 = 거짓 평온: 옅은 바이올렛 캐스트(배웅 실루엣·위장 함정은 데이터 기믹이 담당).
+func _escape_tone_leave() -> void:
+	_escape_cast(Color(0.94, 0.88, 1.0))
 
 func _ambience_escape() -> void:
 	# 비상 탈출로 — 터널 walls(고정 구조물) + 항상 보이는 city group.
@@ -5602,7 +5744,7 @@ func _check_pacifist_clear() -> bool:
 		return false
 	if _goal_type != "POSITION" or not _had_enemies or challenge_active:
 		return false
-	if GameState.current_route_id in ["route_escape", "route_hidden"]:
+	if GameState.current_route_id == "route_hidden" or GameState.current_route_id.begins_with("route_escape"):
 		return false
 	if player == null or not is_instance_valid(player):
 		return false

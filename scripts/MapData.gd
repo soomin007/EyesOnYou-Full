@@ -34,6 +34,10 @@ static func get_layout(route_id: String) -> Dictionary:
 		"route_ward":       return _ward()
 		"route_datacenter": return _datacenter()
 		"route_escape":     return _escape()
+		"route_escape_extract": return _escape_extract()
+		"route_escape_destroy": return _escape_destroy()
+		"route_escape_conceal": return _escape_conceal()
+		"route_escape_leave":   return _escape_leave()
 		"route_lab":        return _lab()
 		"route_core_recovery": return _core_recovery()
 		"route_hidden":     return _hidden()
@@ -633,6 +637,148 @@ static func _escape() -> Dictionary:
 			"drone":  [],
 			"bomber": [], "shield": [],
 		},
+		"rewards": {"xp_orbs": [], "hp_pickups": []},
+		"spikes": [],
+	}
+
+# ─── 9-b. 처리별 탈출 4종(replay_support_plan §3.2) — _escape() 뼈대(터널→야경 3800) 공유,
+# 룰과 톤을 처리 선택이 정한다. s14 배타, RouteData disposal 키로 1종만 풀 진입. ───
+
+# 반출 = 총력 저지. 드라이브가 신호를 뿜어 위치가 상시 노출 — 시설 전 유닛이 길목에 몰린다.
+# 정면 돌파, 최고 밀도. 재머 1기(§4.1 맵당 1) + 혼성 배치. 엘리트는 스테이지 램프대로(만렙 대응).
+static func _escape_extract() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(3800.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(3680.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"platforms": [
+			{"pos": Vector2(400, 520),  "w": 240.0},
+			{"pos": Vector2(800, 480),  "w": 240.0},
+			{"pos": Vector2(1200, 520), "w": 240.0},
+			{"pos": Vector2(1600, 480), "w": 240.0},
+			{"pos": Vector2(2000, 520), "w": 240.0},
+			{"pos": Vector2(2400, 480), "w": 240.0},
+			{"pos": Vector2(2800, 520), "w": 240.0},
+			{"pos": Vector2(3200, 480), "w": 240.0},
+			{"pos": Vector2(3500, 520), "w": 200.0},
+		],
+		"enemies": {
+			"patrol": [Vector2(650, 600.0), Vector2(1150, 600.0), Vector2(2050, 600.0), Vector2(2650, 600.0), Vector2(3150, 600.0)],
+			"sniper": [],
+			"drone":  [Vector2(2350, 300.0), Vector2(3050, 300.0)],
+			"bomber": [Vector2(1750, 600.0), Vector2(3300, 600.0)],
+			"shield": [Vector2(1450, 600.0), Vector2(2900, 600.0)],
+			"jammer": [Vector2(2450, 600.0)],
+		},
+		"route_lines": [
+			{"x": 1800.0, "who": "veil", "text": "경보가 우릴 앞질러 가요. 다음 구간은 미리 쏘면서 진입하죠.", "dur": 3.4},
+		],
+		"rewards": {"xp_orbs": [], "hp_pickups": [Vector2(2200, 460.0)]},
+		"spikes": [],
+	}
+
+# 파기 = 붕괴 탈출. 소각 여파로 시설 제어가 무너진다 — collapse 문법(추격 벽+잔해) 확장.
+# 라이벌 간섭이 폭주하다 뚝 끊기는 배웅(route_lines). 강제 전진 중 강화 개체는 unfair — 엘리트 잠금.
+static func _escape_destroy() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(3800.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(3680.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"elite_chance": 0.0,
+		"chase_hazard": {"start_x": -300.0, "speed": 225.0, "max_gap": 680.0},
+		"platforms": [
+			{"pos": Vector2(1600, 470), "w": 130.0},
+			{"pos": Vector2(2900, 460), "w": 130.0},
+		],
+		"hurdles": [
+			{"x": 900.0,  "w": 46.0, "h": 80.0},
+			{"x": 1500.0, "w": 46.0, "h": 100.0},
+			{"x": 2100.0, "w": 54.0, "h": 120.0},
+			{"x": 2700.0, "w": 46.0, "h": 100.0},
+			{"x": 3200.0, "w": 46.0, "h": 80.0},
+		],
+		"enemies": {
+			"patrol": [Vector2(2400, 600.0)],
+			"sniper": [], "drone": [], "bomber": [], "shield": [],
+		},
+		"route_lines": [
+			{"x": 800.0,  "who": "rival", "text": "타는 냄새가 여기까지 옵니다. 제가... 타는 냄새가.", "dur": 3.2, "glitch": true},
+			{"x": 1900.0, "who": "rival", "text": "요원. 요원, 요원, 요ㅇ", "dur": 2.4, "glitch": true},
+			{"x": 2600.0, "who": "veil",  "text": "...신호가 끊겼어요. 저것도, 시설도. 앞만 봐요.", "dur": 3.2},
+		],
+		"rewards": {"xp_orbs": [], "hp_pickups": []},
+		"spikes": [],
+	}
+
+# 은닉 = 밀고당하는 잠입. 시설은 모르지만 라이벌은 안다 — 수색 빔(SweepBeam 검문)이 통로를 훑고,
+# 니치 사이를 리듬으로 건넌다. 막1 침투 문법의 역방향(어둠·회피 중심, 적 최소).
+static func _escape_conceal() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(3800.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(3680.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"elite_chance": 0.0,
+		"sweep_beam": {
+			"x_start": -60.0, "x_end": 3860.0, "y_top": -120.0, "y_bot": 640.0,
+			"speed": 380.0, "rest": 2.0, "telegraph": 0.7, "beam_half": 24.0,
+		},
+		"cover_niches": [460.0, 950.0, 1450.0, 1950.0, 2450.0, 2950.0, 3450.0],
+		"niche_half": 90.0,
+		"platforms": [],
+		"enemies": {
+			"patrol": [Vector2(1250, 600.0), Vector2(2650, 600.0)],
+			"sniper": [], "drone": [], "bomber": [], "shield": [],
+		},
+		"route_lines": [
+			{"x": 1300.0, "who": "veil",  "text": "수색등이 우리 동선을 알고 움직여요. ...누가 흘리고 있어요.", "dur": 3.4},
+			{"x": 2700.0, "who": "rival", "text": "어디로 가시는 겁니까, 요원. 그건 제 것이기도 합니다.", "dur": 3.4},
+		],
+		"rewards": {"xp_orbs": [], "hp_pickups": []},
+		"spikes": [],
+	}
+
+# 잔류 = 거짓 평온. 라이벌이 유일하게 만족한 결말 — 아무도 막지 않는다. 적 0, 대신 거짓 렌더의
+# 최후 변주: 구형 렌더 실루엣들이 길가에 서서 배웅하고(fake_watchers), 위장 함정 하나(§4.1 맵당 1).
+static func _escape_leave() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(3800.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(3680.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"platforms": [
+			{"pos": Vector2(400, 520),  "w": 240.0},
+			{"pos": Vector2(800, 480),  "w": 240.0},
+			{"pos": Vector2(1200, 520), "w": 240.0},
+			{"pos": Vector2(1600, 480), "w": 240.0},
+			{"pos": Vector2(2000, 520), "w": 240.0},
+			{"pos": Vector2(2400, 480), "w": 240.0},
+			{"pos": Vector2(2800, 520), "w": 240.0},
+			{"pos": Vector2(3200, 480), "w": 240.0},
+			{"pos": Vector2(3500, 520), "w": 200.0},
+		],
+		"enemies": {
+			"patrol": [], "sniper": [], "drone": [], "bomber": [], "shield": [],
+		},
+		"deceit_spikes": [
+			{"x": 2050, "w": 110, "dmg": 2},
+		],
+		"fake_watchers": [Vector2(1250, 636.0), Vector2(2600, 636.0), Vector2(3350, 636.0)],
+		"route_lines": [
+			{"x": 900.0,  "who": "rival", "text": "가시는 길은 열어 두었습니다.", "dur": 3.0},
+			{"x": 2200.0, "who": "rival", "text": "두고 가시는군요. ...고맙다는 말은, 하지 않겠습니다.", "dur": 3.4},
+			{"x": 3300.0, "who": "veil",  "text": "...끝까지 배웅할 모양이네요. 신경 쓰지 말고 가요.", "dur": 3.2},
+		],
 		"rewards": {"xp_orbs": [], "hp_pickups": []},
 		"spikes": [],
 	}

@@ -429,7 +429,7 @@ func record_route_choice(route: Dictionary, recommended_id: String) -> void:
 	# 그 외, 보스/탈출 직전 첫 전투 맵(일반 stage>=4 / 스토리 stage2~3, 아직 안 붕괴)은 "진입부터 붕괴"
 	# onset으로: VeilSight가 시작부터 어둡고 진입 시 역전 멘트 1회(Stage가 pending으로 처리). 중간 글리치·
 	# 자막 겹침을 없애 "갑자기 와다닥" 느낌 제거(사용자 보고).
-	if rid == "route_escape":
+	if rid.begins_with("route_escape"):
 		veil_degraded = false
 		veil_reversal_pending = false
 	elif not veil_degraded:
