@@ -141,6 +141,11 @@ func _continue_hint() -> String:
 
 func _build_lines() -> Array:
 	var out: Array = []
+	# 기록 재진입(팔림프세스트) — 재개 직후 첫 브리핑에만 1회. 오프닝 "덮어쓰기됨" 문법의 연장.
+	if GameState.reentry_line_pending:
+		GameState.reentry_line_pending = false
+		out.append({"speaker": "SYS", "text": "이전 작전 기록: 잔존 구간 검출. 해당 지점에서 재개합니다."})
+		out.append({"speaker": "VEIL", "text": "여기부터는 기록이 유난히 진합니다. 이어서 갑니다, 요원."})
 	# 첫 진입 시 1회만 OPERATION PALIMPSEST 시스템 텍스트 + VEIL 인사
 	if GameState.current_stage == 0:
 		out.append({"speaker": "SYS", "text": VeilDialogue.get_intro_system_text()})

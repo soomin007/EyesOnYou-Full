@@ -206,6 +206,11 @@ func _set_state(new_state: int) -> void:
 				var b_continue := _make_button("이어하기")
 				b_continue.pressed.connect(_on_continue_pressed)
 				buttons_box.add_child(b_continue)
+			# 기록 재진입(팔림프세스트) — 완주 1회 이상 + 확정 스냅샷 보유 시에만 노출(그 전엔 숨김).
+			if GameState.playthrough_count >= 1 and GameState.has_any_confirmed_snapshot():
+				var b_reentry := _make_button("기록 재진입")
+				b_reentry.pressed.connect(_on_reentry_pressed)
+				buttons_box.add_child(b_reentry)
 			var b_settings := _make_button("설정")
 			b_settings.pressed.connect(_on_settings_pressed)
 			buttons_box.add_child(b_settings)
@@ -459,6 +464,10 @@ func _on_continue_pressed() -> void:
 	# 이어하기 — 저장된 런을 GameState에 복원하고 루트 선택(스테이지 사이)으로 복귀.
 	if GameState.load_run():
 		SceneRouter.go(get_tree(), SceneRouter.ROUTE_MAP)
+
+func _on_reentry_pressed() -> void:
+	# 기록 재진입(팔림프세스트) — 막 경계 선택 오버레이. 선택 시 오버레이가 직접 씬 전환.
+	ReentryOverlay.show(self)
 
 func _on_tutor_pressed(want_tutorial: bool) -> void:
 	# 새 게임 시작 — 이전 진행 저장(run.cfg) 삭제(이어하기와 분리). 모드는 모드 선택에서 이미 박혔다.

@@ -66,6 +66,9 @@ func _ready() -> void:
 	# 자동저장 — 스테이지 사이(다음 루트 선택 직전)의 깨끗한 스냅샷. 웹에서 닫아도 "이어하기"로 복귀.
 	# (이 시점 불변식: route_history.size() == current_stage)
 	GameState.save_run()
+	# 팔림프세스트 — 막 경계(막 시작 스테이지)면 재진입용 스냅샷도 같은 시점에 기록.
+	# 가드(스토리/연습장/막 경계 아님)는 함수 안에서. 완주(record_ending) 시 확정 승격.
+	GameState.save_act_snapshot()
 	# 표시용 총계(displayed_total_stages) — 막1~3 동안 "…/ 9"로 보여 막4/5 확장을 숨긴다(반전 공개).
 	stage_label.text = "STAGE %d / %d   루트 선택" % [GameState.current_stage + 1, GameState.displayed_total_stages()]
 	subtitle_label.text = "● 위험도 · 보상(경험치)   ·   ? 미상"

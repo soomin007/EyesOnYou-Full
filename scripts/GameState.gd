@@ -27,6 +27,8 @@ const SETTINGS_PATH: String = "user://settings.cfg"
 # 런 진행 저장(이어하기) — 설정과 분리한 별도 파일. 웹에선 user://가 브라우저 IndexedDB에 영속.
 const RUN_PATH: String = "user://run.cfg"
 const RUN_VERSION: int = 4  # 4: 5막 재구조화(15스테이지 / 엔드게임 막5 이주) — 구 run.cfg(v3, 9스테이지) 무효화
+# 기록 재진입(팔림프세스트) 스냅샷 — 완주 런의 막 경계 상태(act0~4 확정 + pending_actN 대기).
+const PALIMPSEST_PATH: String = "user://palimpsest.cfg"
 # 플레이 피드백 설문(구글 폼). 타이틀·크레딧 끝 메뉴의 "피드백 보내기"가 연다.
 const FEEDBACK_URL: String = "https://forms.gle/byS8EABJitB9r6z88"
 const KEYBIND_ACTIONS: Array[String] = ["move_left", "move_right", "jump", "attack", "dash", "skill", "pause"]
@@ -102,9 +104,16 @@ var rival_phase_reached: int = 0
 # 해제: 처리 선택 완료(터널 → 브리핑) + reset()/start_main_game().
 var core_tunnel_live: bool = false
 # §4 상충 추천 축적(§9 간파율 기초) — 막4+ 루트 선택에서 라이벌 유인이 떠 있던 횟수/따른 횟수.
-# 런 단위(reset 초기화). 엔딩 게이트(§9.1 "거짓 많이 따름" 축)의 원료.
+# 런 단위(reset 초기화). 엔딩 게이트(§9.1 "거짓 많이 따름" 축)의 원료. run.cfg·스냅샷 영속.
 var rival_lure_shown: int = 0
 var rival_lure_followed: int = 0
+
+# 기록 재진입(팔림프세스트, replay_support_plan §2) — 막 경계 스냅샷에서 재개한 런인가.
+# reset()/start_main_game()에서 해제(지속 플래그 경계 원칙). reentry_line_pending은
+# 재개 직후 첫 브리핑이 1회 소비(재진입 시스템/VEIL 멘트).
+var reentry_run: bool = false
+var reentry_act: int = -1
+var reentry_line_pending: bool = false
 
 var skills: Dictionary = {}
 var current_route_id: String = ""
@@ -337,6 +346,9 @@ func reset() -> void:
 	core_tunnel_live = false
 	rival_lure_shown = 0
 	rival_lure_followed = 0
+	reentry_run = false
+	reentry_act = -1
+	reentry_line_pending = false
 	# 디버그 연습장 플래그 누수 차단 — 연습장을 종료 버튼 아닌 경로(ESC→타이틀 등)로 빠져나오면
 	# playground_active가 true로 남아, 다음 일반 모드 클리어가 _trigger_stage_clear에서 연습장 분기로
 	# 빠져 패널만 뜨고 다음 맵으로 안 넘어가던 치명 버그. reset()은 타이틀 복귀/새 런마다 호출되므로 여기서 해제.
@@ -386,6 +398,10 @@ func start_main_game() -> void:
 	core_tunnel_live = false
 	rival_lure_shown = 0
 	rival_lure_followed = 0
+	reentry_run = false
+	reentry_act = -1
+	reentry_line_pending = false
+	clear_pending_snapshots()  # 완주 못 한 이전 런의 막 경계 스냅샷 폐기(승격 오염 방지)
 	playground_active = false  # 연습장 플래그 누수 차단(디버그→일반 모드) — reset()과 동일 방어.
 	_reset_perf_metrics()
 
@@ -706,6 +722,10 @@ func record_ending(id: String) -> void:
 		endings_seen.append(id)
 	playthrough_count += 1
 	save_settings()
+	# 팔림프세스트 승격 — 완주한 런의 막 경계 스냅샷만 재진입 원료가 된다.
+	# 스토리 모드 완주는 본편 런이 아니므로 승격하지 않음(버려진 본편 pending 오염 방지).
+	if not story_mode:
+		promote_act_snapshots()
 	clear_run()
 
 # 다회차 — 완주 1회 이상(영속) 또는 즉시 리플레이(replaying). 오프닝/인게임 대사 변형의 단일 신호.
@@ -713,43 +733,51 @@ func is_replay_run() -> bool:
 	return playthrough_count >= 1 or replaying
 
 # --- 런 진행 저장(이어하기) — user://run.cfg. RouteMap 진입(스테이지 사이)마다 자동저장. ---
+# 직렬화 단일 소스: _store_run_state/_restore_run_state를 run.cfg(이어하기)와
+# palimpsest.cfg(막 경계 스냅샷, 기록 재진입)가 공유한다. 필드 추가 시 두 함수만 고치면 된다.
+func _store_run_state(cf: ConfigFile, section: String) -> void:
+	cf.set_value(section, "current_stage", current_stage)
+	cf.set_value(section, "death_count", death_count)
+	cf.set_value(section, "score", score)
+	cf.set_value(section, "trust_score", trust_score)
+	cf.set_value(section, "aggression_score", aggression_score)
+	cf.set_value(section, "shared_hardship", shared_hardship)
+	cf.set_value(section, "rec_count", rec_count)
+	cf.set_value(section, "followed_count", followed_count)
+	cf.set_value(section, "route_history", route_history)
+	cf.set_value(section, "last_veil_recommended_route", last_veil_recommended_route)
+	cf.set_value(section, "followed_veil_last_choice", followed_veil_last_choice)
+	cf.set_value(section, "skills", skills)
+	cf.set_value(section, "current_route_id", current_route_id)
+	cf.set_value(section, "current_route_tags", current_route_tags)
+	cf.set_value(section, "current_route_risk", current_route_risk)
+	cf.set_value(section, "current_route_reward", current_route_reward)
+	cf.set_value(section, "current_route_challenge", current_route_challenge)
+	cf.set_value(section, "current_route_hidden", current_route_hidden)
+	cf.set_value(section, "player_max_hp", player_max_hp)
+	cf.set_value(section, "player_hp", player_hp)
+	cf.set_value(section, "player_xp", player_xp)
+	cf.set_value(section, "player_level", player_level)
+	cf.set_value(section, "overflow_hp_bonus", overflow_hp_bonus)
+	cf.set_value(section, "map_extension_seen", map_extension_seen)
+	cf.set_value(section, "story_mode", story_mode)
+	cf.set_value(section, "veil_degraded", veil_degraded)
+	cf.set_value(section, "veil_reversal_pending", veil_reversal_pending)
+	cf.set_value(section, "truth_seen", truth_seen)
+	cf.set_value(section, "disposal_choice", disposal_choice)
+	cf.set_value(section, "replaying", replaying)
+	cf.set_value(section, "hits_taken", hits_taken)
+	cf.set_value(section, "recent_stage_hits", recent_stage_hits)
+	cf.set_value(section, "recent_stage_deaths", recent_stage_deaths)
+	cf.set_value(section, "last_stage_secs", last_stage_secs)
+	# §9 간파율 축적 — 기존 run.cfg 미저장 필드였음(이어하기 시 소실). 스냅샷 정합을 위해 추가.
+	cf.set_value(section, "rival_lure_shown", rival_lure_shown)
+	cf.set_value(section, "rival_lure_followed", rival_lure_followed)
+
 func save_run() -> void:
 	var cf := ConfigFile.new()
 	cf.set_value("meta", "version", RUN_VERSION)
-	cf.set_value("run", "current_stage", current_stage)
-	cf.set_value("run", "death_count", death_count)
-	cf.set_value("run", "score", score)
-	cf.set_value("run", "trust_score", trust_score)
-	cf.set_value("run", "aggression_score", aggression_score)
-	cf.set_value("run", "shared_hardship", shared_hardship)
-	cf.set_value("run", "rec_count", rec_count)
-	cf.set_value("run", "followed_count", followed_count)
-	cf.set_value("run", "route_history", route_history)
-	cf.set_value("run", "last_veil_recommended_route", last_veil_recommended_route)
-	cf.set_value("run", "followed_veil_last_choice", followed_veil_last_choice)
-	cf.set_value("run", "skills", skills)
-	cf.set_value("run", "current_route_id", current_route_id)
-	cf.set_value("run", "current_route_tags", current_route_tags)
-	cf.set_value("run", "current_route_risk", current_route_risk)
-	cf.set_value("run", "current_route_reward", current_route_reward)
-	cf.set_value("run", "current_route_challenge", current_route_challenge)
-	cf.set_value("run", "current_route_hidden", current_route_hidden)
-	cf.set_value("run", "player_max_hp", player_max_hp)
-	cf.set_value("run", "player_hp", player_hp)
-	cf.set_value("run", "player_xp", player_xp)
-	cf.set_value("run", "player_level", player_level)
-	cf.set_value("run", "overflow_hp_bonus", overflow_hp_bonus)
-	cf.set_value("run", "map_extension_seen", map_extension_seen)
-	cf.set_value("run", "story_mode", story_mode)
-	cf.set_value("run", "veil_degraded", veil_degraded)
-	cf.set_value("run", "veil_reversal_pending", veil_reversal_pending)
-	cf.set_value("run", "truth_seen", truth_seen)
-	cf.set_value("run", "disposal_choice", disposal_choice)
-	cf.set_value("run", "replaying", replaying)
-	cf.set_value("run", "hits_taken", hits_taken)
-	cf.set_value("run", "recent_stage_hits", recent_stage_hits)
-	cf.set_value("run", "recent_stage_deaths", recent_stage_deaths)
-	cf.set_value("run", "last_stage_secs", last_stage_secs)
+	_store_run_state(cf, "run")
 	cf.save(RUN_PATH)
 
 func has_run() -> bool:
@@ -766,6 +794,55 @@ func clear_run() -> void:
 	if d != null and d.file_exists("run.cfg"):
 		d.remove("run.cfg")
 
+func _restore_run_state(cf: ConfigFile, section: String) -> void:
+	current_stage = int(cf.get_value(section, "current_stage", 0))
+	death_count = int(cf.get_value(section, "death_count", 0))
+	score = int(cf.get_value(section, "score", 0))
+	trust_score = int(cf.get_value(section, "trust_score", 0))
+	aggression_score = int(cf.get_value(section, "aggression_score", 0))
+	shared_hardship = int(cf.get_value(section, "shared_hardship", 0))
+	rec_count = int(cf.get_value(section, "rec_count", 0))
+	followed_count = int(cf.get_value(section, "followed_count", 0))
+	route_history = []
+	for v in cf.get_value(section, "route_history", []):
+		route_history.append(str(v))
+	last_veil_recommended_route = str(cf.get_value(section, "last_veil_recommended_route", ""))
+	followed_veil_last_choice = bool(cf.get_value(section, "followed_veil_last_choice", false))
+	var saved_skills: Dictionary = cf.get_value(section, "skills", {})
+	skills = {}
+	for k in saved_skills:
+		skills[str(k)] = int(saved_skills[k])
+	current_route_id = str(cf.get_value(section, "current_route_id", ""))
+	current_route_tags = []
+	for t in cf.get_value(section, "current_route_tags", []):
+		current_route_tags.append(str(t))
+	current_route_risk = int(cf.get_value(section, "current_route_risk", 1))
+	current_route_reward = int(cf.get_value(section, "current_route_reward", 1))
+	current_route_challenge = bool(cf.get_value(section, "current_route_challenge", false))
+	current_route_hidden = bool(cf.get_value(section, "current_route_hidden", false))
+	player_max_hp = int(cf.get_value(section, "player_max_hp", 3))
+	player_hp = int(cf.get_value(section, "player_hp", player_max_hp))
+	player_xp = int(cf.get_value(section, "player_xp", 0))
+	player_level = int(cf.get_value(section, "player_level", 1))
+	overflow_hp_bonus = int(cf.get_value(section, "overflow_hp_bonus", 0))
+	map_extension_seen = bool(cf.get_value(section, "map_extension_seen", false))
+	story_mode = bool(cf.get_value(section, "story_mode", false))
+	veil_degraded = bool(cf.get_value(section, "veil_degraded", false))
+	veil_reversal_pending = bool(cf.get_value(section, "veil_reversal_pending", false))
+	truth_seen = bool(cf.get_value(section, "truth_seen", false))
+	disposal_choice = str(cf.get_value(section, "disposal_choice", ""))
+	replaying = bool(cf.get_value(section, "replaying", false))
+	hits_taken = int(cf.get_value(section, "hits_taken", 0))
+	recent_stage_hits = []
+	for h in cf.get_value(section, "recent_stage_hits", []):
+		recent_stage_hits.append(int(h))
+	recent_stage_deaths = []
+	for dd in cf.get_value(section, "recent_stage_deaths", []):
+		recent_stage_deaths.append(int(dd))
+	last_stage_secs = float(cf.get_value(section, "last_stage_secs", 0.0))
+	rival_lure_shown = int(cf.get_value(section, "rival_lure_shown", 0))
+	rival_lure_followed = int(cf.get_value(section, "rival_lure_followed", 0))
+
 # run.cfg를 GameState에 복원. 성공 시 true(이어하기 → ROUTE_MAP 복귀). 실패 시 false(상태 불변).
 func load_run() -> bool:
 	var cf := ConfigFile.new()
@@ -774,51 +851,121 @@ func load_run() -> bool:
 	if int(cf.get_value("meta", "version", 0)) != RUN_VERSION:
 		clear_run()
 		return false
-	current_stage = int(cf.get_value("run", "current_stage", 0))
-	death_count = int(cf.get_value("run", "death_count", 0))
-	score = int(cf.get_value("run", "score", 0))
-	trust_score = int(cf.get_value("run", "trust_score", 0))
-	aggression_score = int(cf.get_value("run", "aggression_score", 0))
-	shared_hardship = int(cf.get_value("run", "shared_hardship", 0))
-	rec_count = int(cf.get_value("run", "rec_count", 0))
-	followed_count = int(cf.get_value("run", "followed_count", 0))
-	route_history = []
-	for v in cf.get_value("run", "route_history", []):
-		route_history.append(str(v))
-	last_veil_recommended_route = str(cf.get_value("run", "last_veil_recommended_route", ""))
-	followed_veil_last_choice = bool(cf.get_value("run", "followed_veil_last_choice", false))
-	var saved_skills: Dictionary = cf.get_value("run", "skills", {})
-	skills = {}
-	for k in saved_skills:
-		skills[str(k)] = int(saved_skills[k])
-	current_route_id = str(cf.get_value("run", "current_route_id", ""))
-	current_route_tags = []
-	for t in cf.get_value("run", "current_route_tags", []):
-		current_route_tags.append(str(t))
-	current_route_risk = int(cf.get_value("run", "current_route_risk", 1))
-	current_route_reward = int(cf.get_value("run", "current_route_reward", 1))
-	current_route_challenge = bool(cf.get_value("run", "current_route_challenge", false))
-	current_route_hidden = bool(cf.get_value("run", "current_route_hidden", false))
-	player_max_hp = int(cf.get_value("run", "player_max_hp", 3))
-	player_hp = int(cf.get_value("run", "player_hp", player_max_hp))
-	player_xp = int(cf.get_value("run", "player_xp", 0))
-	player_level = int(cf.get_value("run", "player_level", 1))
-	overflow_hp_bonus = int(cf.get_value("run", "overflow_hp_bonus", 0))
-	map_extension_seen = bool(cf.get_value("run", "map_extension_seen", false))
-	story_mode = bool(cf.get_value("run", "story_mode", false))
-	veil_degraded = bool(cf.get_value("run", "veil_degraded", false))
-	veil_reversal_pending = bool(cf.get_value("run", "veil_reversal_pending", false))
-	truth_seen = bool(cf.get_value("run", "truth_seen", false))
-	disposal_choice = str(cf.get_value("run", "disposal_choice", ""))
-	replaying = bool(cf.get_value("run", "replaying", false))
-	hits_taken = int(cf.get_value("run", "hits_taken", 0))
-	recent_stage_hits = []
-	for h in cf.get_value("run", "recent_stage_hits", []):
-		recent_stage_hits.append(int(h))
-	recent_stage_deaths = []
-	for dd in cf.get_value("run", "recent_stage_deaths", []):
-		recent_stage_deaths.append(int(dd))
-	last_stage_secs = float(cf.get_value("run", "last_stage_secs", 0.0))
+	_restore_run_state(cf, "run")
+	return true
+
+# --- 기록 재진입(팔림프세스트) — user://palimpsest.cfg. replay_support_plan §2 ---
+# 런 중 막 경계(RouteMap 진입 + is_act_start)마다 pending_actN에 스냅샷이 쌓이고,
+# 엔딩 도달(record_ending) 시 actN으로 승격된다 = "완주한 기록"만 재진입 가능(확정 §7-1).
+# 서사: 재진입 = 덮어쓴 기록의 진한 구간에서 다시 쓰기(PALIMPSEST 오프닝과 한 몸).
+
+func act_start_stage(act_idx: int) -> int:
+	var s: int = 0
+	for i in range(clampi(act_idx, 0, ACTS.size())):
+		var d: Dictionary = ACTS[i]
+		s += int(d.get("stages", 0))
+	return s
+
+func save_act_snapshot() -> void:
+	if story_mode or playground_active:
+		return
+	if not is_act_start(current_stage):
+		return
+	var act: int = act_for_stage(current_stage)
+	var cf := ConfigFile.new()
+	if cf.load(PALIMPSEST_PATH) == OK:
+		# 구조 버전이 바뀐 파일이면 구 스냅샷 전부 폐기(스테이지 재배치와 어긋난 재진입 방지).
+		if int(cf.get_value("meta", "version", 0)) != RUN_VERSION:
+			cf = ConfigFile.new()
+	cf.set_value("meta", "version", RUN_VERSION)
+	_store_run_state(cf, "pending_act%d" % act)
+	cf.save(PALIMPSEST_PATH)
+
+# 엔딩 도달 — 이번 런이 지나온 막 경계 pending을 확정 스냅샷으로 승격.
+# 재진입 런은 진입한 막부터의 구간만 덮어쓴다(앞 구간은 이전 완주 기록 유지 = 팔림프세스트).
+func promote_act_snapshots() -> void:
+	var cf := ConfigFile.new()
+	if cf.load(PALIMPSEST_PATH) != OK:
+		return
+	if int(cf.get_value("meta", "version", 0)) != RUN_VERSION:
+		return
+	var promoted: bool = false
+	for act in range(ACTS.size()):
+		var pend: String = "pending_act%d" % act
+		if cf.has_section(pend):
+			for key in cf.get_section_keys(pend):
+				cf.set_value("act%d" % act, key, cf.get_value(pend, key))
+			cf.erase_section(pend)
+			promoted = true
+	if promoted:
+		cf.save(PALIMPSEST_PATH)
+
+# 완주 못 한 런의 잔여 pending 폐기 — 새 런 시작(start_main_game)·재진입 시작에서 호출.
+# (이어하기는 같은 런의 연속이라 pending을 보존한다.)
+func clear_pending_snapshots() -> void:
+	var cf := ConfigFile.new()
+	if cf.load(PALIMPSEST_PATH) != OK:
+		return
+	var changed: bool = false
+	for act in range(ACTS.size()):
+		var pend: String = "pending_act%d" % act
+		if cf.has_section(pend):
+			cf.erase_section(pend)
+			changed = true
+	if changed:
+		cf.save(PALIMPSEST_PATH)
+
+func has_any_confirmed_snapshot() -> bool:
+	var cf := ConfigFile.new()
+	if cf.load(PALIMPSEST_PATH) != OK:
+		return false
+	if int(cf.get_value("meta", "version", 0)) != RUN_VERSION:
+		return false
+	for act in range(ACTS.size()):
+		if cf.has_section("act%d" % act):
+			return true
+	return false
+
+# 재진입 UI용 요약 — 없으면 빈 사전(그 막은 "기록 없음").
+func get_act_snapshot_summary(act: int) -> Dictionary:
+	var cf := ConfigFile.new()
+	if cf.load(PALIMPSEST_PATH) != OK:
+		return {}
+	if int(cf.get_value("meta", "version", 0)) != RUN_VERSION:
+		return {}
+	var sec: String = "act%d" % act
+	if not cf.has_section(sec):
+		return {}
+	var skill_dict: Dictionary = cf.get_value(sec, "skills", {})
+	return {
+		"level": int(cf.get_value(sec, "player_level", 1)),
+		"max_hp": int(cf.get_value(sec, "player_max_hp", 3)),
+		"skill_count": skill_dict.size(),
+		"trust_score": int(cf.get_value(sec, "trust_score", 0)),
+		"rec_count": int(cf.get_value(sec, "rec_count", 0)),
+		"followed_count": int(cf.get_value(sec, "followed_count", 0)),
+		"truth_seen": bool(cf.get_value(sec, "truth_seen", false)),
+	}
+
+# 확정 스냅샷(actN)을 현재 상태로 복원하고 그 막의 첫 스테이지에서 재개. 성공 시 true.
+func start_reentry(act: int) -> bool:
+	var cf := ConfigFile.new()
+	if cf.load(PALIMPSEST_PATH) != OK:
+		return false
+	if int(cf.get_value("meta", "version", 0)) != RUN_VERSION:
+		return false
+	var sec: String = "act%d" % act
+	if not cf.has_section(sec):
+		return false
+	reset()   # 런 파생 세션 상태 청소(체크포인트·터널 플래그 등) 후 스냅샷 복원
+	_restore_run_state(cf, sec)
+	# 스냅샷은 막 시작 스테이지의 RouteMap 진입 시점 상태라 current_stage가 이미 막 경계지만,
+	# 명시 고정으로 불변식(route_history.size() == current_stage)을 보증한다.
+	current_stage = act_start_stage(act)
+	clear_pending_snapshots()   # 이전에 버려진 런의 잔여 pending 제거 — 이번 런이 새로 쌓는다
+	reentry_run = true
+	reentry_act = act
+	reentry_line_pending = true
 	return true
 
 # --- 설정 영속화 ---
