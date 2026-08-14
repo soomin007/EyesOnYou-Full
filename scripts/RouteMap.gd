@@ -14,9 +14,10 @@ var recommended_reason: String = ""
 var rival_rec_id: String = ""
 var rival_rec_line: String = ""
 # 상충 추천 전용 라벨 — 본 멘트(veil_text)와 한 라벨에 이어 붙이면 같은 색 벽으로 읽힌다
-# (가독성 피드백 2026-08-14). 화자색은 인게임 자막과 동일: ? = 바이올렛, VEIL = 톤 색.
+# (가독성 피드백 2026-08-14). 화자색은 인게임 자막과 동일한 바이올렛.
+# warm 밴드 VEIL 반박 라벨은 제거(사용자 2026-08-14 2차: 정적 화면에 실시간 반박이 부자연).
+# 어긋난 정중함 + ? 화자 + 바이올렛 색이 이미 tell — warm 특전은 인게임(P3 지각 보조)에 있다.
 var rival_lure_label: Label = null
-var rival_rebuttal_label: Label = null
 
 # 유인 멘트 — 말투 A(결이 어긋난 정중함) 플레이스홀더. 감언과 실제(최고위험 맵)의 어긋남이 본체.
 const _RIVAL_LURES: Array = [
@@ -103,7 +104,7 @@ func _ready() -> void:
 	_refresh_hint()
 	GameState.input_kind_changed.connect(_on_input_kind_changed)
 
-# 상충 추천 라벨 2종을 VeilBox 세로 스택(veil_text 아래)에 만든다. 평소엔 숨김.
+# 상충 추천 라벨을 VeilBox 세로 스택(veil_text 아래)에 만든다. 평소엔 숨김.
 func _build_rival_lure_labels() -> void:
 	var v_box: VBoxContainer = veil_text.get_parent() as VBoxContainer
 	if v_box == null:
@@ -115,12 +116,6 @@ func _build_rival_lure_labels() -> void:
 	rival_lure_label.add_theme_color_override("font_color", Color(0.85, 0.50, 1.0))
 	rival_lure_label.visible = false
 	v_box.add_child(rival_lure_label)
-	rival_rebuttal_label = Label.new()
-	rival_rebuttal_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	rival_rebuttal_label.add_theme_font_size_override("font_size", 20)
-	rival_rebuttal_label.add_theme_color_override("font_color", GameState.veil_tone_color())
-	rival_rebuttal_label.visible = false
-	v_box.add_child(rival_rebuttal_label)
 
 func _build_risk_reward_panel() -> void:
 	# VeilBox 우측에 작은 패널 — 고위험/고보상 경고를 본 멘트와 분리해서 표시.
@@ -367,7 +362,10 @@ func _build_node_buttons() -> void:
 		var b := Button.new()
 		b.custom_minimum_size = Vector2(220, 188)
 		b.toggle_mode = false
-		b.text = _format_button_text(route, route.get("id", "") == recommended_id,
+		# ★는 진짜 추천(사유 있음)일 때만 — 단일 후보(배타) 스테이지의 유일한 카드에 ★가 붙으면
+		# "고를 게 없는데 추천"이라는 모순(수용률 집계 제외와 같은 기준, 2026-08-14).
+		b.text = _format_button_text(route,
+			route.get("id", "") == recommended_id and recommended_reason != "",
 			route.get("id", "") == rival_rec_id)
 		b.add_theme_font_size_override("font_size", 18)
 		b.pressed.connect(_on_button_pressed.bind(i))
@@ -482,13 +480,9 @@ func _update_veil_comment() -> void:
 	# 내 VEIL이 즉시 반박(신뢰가 지각을 산다 §4.1) — 아니면 어긋난 정중함을 스스로 읽어야 한다.
 	veil_text.text = msg
 	# 상충 추천 — 전용 라벨(바이올렛)로 분리. "? 추천" 헤더 행은 삭제: 화자 ?와 색이 이미 말한다.
-	var lure_here: bool = route.get("id", "") == rival_rec_id and rival_rec_line != ""
 	if rival_lure_label != null:
-		rival_lure_label.visible = lure_here
+		rival_lure_label.visible = route.get("id", "") == rival_rec_id and rival_rec_line != ""
 		rival_lure_label.text = "?   " + rival_rec_line
-	if rival_rebuttal_label != null:
-		rival_rebuttal_label.visible = lure_here and GameState.veil_register_band() == "warm"
-		rival_rebuttal_label.text = "VEIL   방금 그 추천, 제가 한 것이 아닙니다."
 	# 고위험/고보상 경고는 별도 우측 패널, 권장 스킬은 별도 좌측 칩 — 본 멘트와 시각 분리.
 	_update_risk_reward_panel(route)
 	_update_skill_rec_panel(route)
@@ -625,5 +619,10 @@ func _on_button_pressed(idx: int) -> void:
 		GameState.rival_lure_shown += 1
 		if str(route.get("id", "")) == rival_rec_id:
 			GameState.rival_lure_followed += 1
-	GameState.record_route_choice(route, recommended_id)
+	# 단일 후보(배타: s8 lab·s13 core_recovery·s14 escape) 스테이지는 수용률 집계에서 제외 —
+	# 고를 게 없는 진입을 "추천을 따랐다"로 세면 분자·분모가 공짜로 차서 lo 엔딩 도달이
+	# 비대칭으로 어려워진다(신뢰 hi/lo 점검 2026-08-14). reason == ""가 단일 후보 신호
+	# (choose_veil_recommendation_with_reason). 어투 trust +2도 같이 안 붙는다(선택이 아니므로).
+	var counted_rec: String = recommended_id if recommended_reason != "" else ""
+	GameState.record_route_choice(route, counted_rec)
 	get_tree().change_scene_to_file(SceneRouter.STAGE)

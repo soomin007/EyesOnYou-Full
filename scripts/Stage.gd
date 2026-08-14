@@ -985,15 +985,11 @@ func _ensure_subtitle_stack() -> void:
 func _show_veil_subtitle(message: String, duration: float, _plain_prefix: bool = false, fast_in: bool = false) -> void:
 	SfxPlayer.play("veil_subtitle_in")
 	_ensure_subtitle_stack()
-	# 14-1 가짜 클리어 이후(라이벌이 렌더를 쥔 구간) — 내 VEIL 목소리는 잠깐 떨리다 끊긴다.
+	# 14-1 가짜 클리어 이후(라이벌이 렌더를 쥔 구간) — 내 VEIL 목소리는 짧게 끊긴다.
 	# 온전한 문장은 보라색(라이벌)만 나온다(사용자 2026-08-14). 정보 전달은 시각 tell이 담당.
-	var choked: bool = _rival_phase >= 2 and not goal_reached
-	if choked:
+	# 자막 흔들림/지직임은 전부 제거 — 가독성 우선(사용자 2026-08-14 2차: "글씨를 읽을 수 없다").
+	if _rival_phase >= 2 and not goal_reached:
 		duration = minf(duration, 1.4)
-		_subtitle_shake_until_ms = Time.get_ticks_msec() + int((duration + 0.4) * 1000.0)
-	elif GameState.veil_degraded:
-		# 시야 붕괴 맵 — 등장 순간만 잠깐 떨림(상시 흔들림은 가독성 해침, 2026-08-14).
-		_subtitle_shake_until_ms = Time.get_ticks_msec() + 700
 	# 어두운 반투명 pill 배경 — 게임 화면 위에서 또렷하게(사용자: 대사 인지 안 됨).
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0.03, 0.05, 0.09, 0.82)
@@ -1015,17 +1011,10 @@ func _show_veil_subtitle(message: String, duration: float, _plain_prefix: bool =
 
 # §7 라이벌 VEIL 자막 — 내 VEIL(_show_veil_subtitle, 시안)과 시각적으로 구별. 바이올렛 + 화자 불명("?").
 # 라이벌은 다른 존재라 아직 "VEIL"로 이름 붙지 않는다(§2 정체는 막이 진행되며 한 겹씩 벗겨짐). 대사=플레이스홀더.
-# 라이벌 발화 마이크로 글리치 쿨다운 — 대사가 이어질 때마다 매번 지직거리면 과함
-# (글리치가 너무 잦고 강하다는 피드백 2026-08-14). 8초에 한 번만.
-var _line_glitch_last_ms: int = -100000
-
 func _show_rival_subtitle(message: String, duration: float) -> void:
 	SfxPlayer.play("veil_subtitle_in")
-	# 라이벌 발화 = 렌더 개입 — 짧은 마이크로 글리치가 목소리와 동기(대사 연출 밋밋 반려 2026-08-12).
-	var now_ms: int = Time.get_ticks_msec()
-	if now_ms - _line_glitch_last_ms >= 8000:
-		_line_glitch_last_ms = now_ms
-		_run_glitch(0.15, 0.22)
+	# 대사 동기 화면 연출 없음 — 발화마다 화면이 번쩍이는 게 과했다(사용자 2026-08-14 2차,
+	# 쿨다운 마이크로 글리치도 반려). 글리치·플래시는 구조 비트(P2 진입·가짜 클리어 찢김)에만.
 	_ensure_subtitle_stack()
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0.07, 0.02, 0.11, 0.86)   # 어두운 바이올렛 pill
@@ -4557,8 +4546,12 @@ var _p1_spawn_idx: int = 0
 var _p1_side: int = 0
 var _p2_flip_timer: Timer = null     # P2 노드 실드 교대 타이머
 var _rival_bar_layer: CanvasLayer = null   # P1·P2 페이즈 목표 바(노드 합산 HP)
-const RIVAL_P1_NODE_HP: int = 6      # P1 지휘 앵커(재밍 기둥)
-const RIVAL_P2_NODE_HP: int = 10     # P2 제어 노드(교대 실드로 실질 더 김)
+const RIVAL_P1_NODE_HP: int = 6      # P1 지휘 앵커(재밍 기둥) — 기본값. 레벨 스케일은 아래 변수.
+const RIVAL_P2_NODE_HP: int = 10     # P2 제어 노드(교대 실드로 실질 더 김) — 기본값.
+# 노드 HP 성장 스케일 — 고정 6/10은 s13 시점 빌드(연사·관통 만렙)에 몇 초 만에 녹아
+# "사실상 없는 페이즈"가 된다(사용자 2026-08-14). _init_rival_boss가 레벨 비례로 채운다.
+var _rival_node_hp_p1: int = RIVAL_P1_NODE_HP
+var _rival_node_hp_p2: int = RIVAL_P2_NODE_HP
 const P1_TRICKLE_CAP: int = 5        # P1 동시 잡몹 상한 — 몰살 클러스터가 아니라 흐름 압박
 const _P1_TYPES: Array = [0, 3, 2, 0, 4, 2, 3, 0]   # patrol·bomber·drone 회전(드론=수평 관통 사선 밖)
 
@@ -4569,6 +4562,10 @@ func _init_rival_boss() -> void:
 	_rival_fx_layer = CanvasLayer.new()
 	_rival_fx_layer.layer = 12
 	add_child(_rival_fx_layer)
+	# 노드 HP 레벨 스케일 — 예: lv18이면 P1 15 / P2 28. 교대 실드(실질 DPS 절반)와 곱해져
+	# 페이즈가 "있는" 길이가 된다.
+	_rival_node_hp_p1 = RIVAL_P1_NODE_HP + int(float(GameState.player_level) * 0.5)
+	_rival_node_hp_p2 = RIVAL_P2_NODE_HP + GameState.player_level
 	# 페이즈 목표 바 — "공격이 되는지 알 길이 없다" 반려 기준의 P1·P2 판. 노드 합산 HP를 보스 바
 	# 문법으로 상시 표시(P2 진입 시 다시 차오름 = 페이즈 문법). P3는 FalseVeil 바가 자리를 승계.
 	if GameState.rival_phase_reached < 2:
@@ -4592,7 +4589,7 @@ func _init_rival_boss() -> void:
 	for e in get_tree().get_nodes_in_group("enemy"):
 		if int((e as Node).get("enemy_type")) == 5:
 			(e as Node).set_meta("rival_node", true)
-			(e as Node).set("hp", RIVAL_P1_NODE_HP)
+			(e as Node).set("hp", _rival_node_hp_p1)
 	# P1 연속 증원 — 전멸이 목표가 아니다(만렙 관통·유도 빌드가 클러스터를 몰살해도 다음이 온다).
 	# 소규모 투입이 끝없이 이어져 긴박을 만들고, 출구는 기둥 파괴뿐(목표형 전투 재설계 2026-08-12).
 	_p1_spawn_timer = Timer.new()
@@ -4715,7 +4712,7 @@ class _GlitchRunner extends Node:
 func _rival_intro_line() -> void:
 	if not is_inside_tree() or goal_reached:
 		return
-	_rival_beat_flash()
+	# 발화 동기 플래시 제거(2026-08-14 2차) — 존재감은 카메라 흔들림만 남긴다.
 	_camera_shake(5.0, 0.25)
 	# 라이벌 기억(축 C) — 이미 쓰러뜨린 적 있는 회차엔 인사가 달라진다(그는 기억한다).
 	if GameState.rival_kills >= 1:
@@ -4769,13 +4766,31 @@ func _start_rival_p2() -> void:
 		for p in parts:
 			if p != null:
 				_rival_p2_props.append(p)
-	# 제어 노드 2기 — 지상, **교대 실드**: 막힌 쪽 탄은 무효(Enemy.take_damage fs_dir), 주기적으로
-	# 편이 바뀐다. 열린 쪽으로 돌아가거나 교대 타이밍을 노리거나, 수류탄(폭발 관통)이 정답 카드.
-	# "기믹을 이용하는 느낌이 없다" 반려(2026-08-12) — 노드 자체를 기믹으로.
+	# 제어 노드는 즉시 놓지 않는다 — 소등과 동시에 바닥에서 그냥 생겨 "뜬금없다"는 반려
+	# (사용자 2026-08-14). 스폰 텔레그래프 1.1s → 등장 스냅(SFX) 순서로 도착을 예고한다.
+	for cfg in [{"x": 560.0}, {"x": 1360.0}]:
+		var tel := _WaveSpawnTelegraph.new()
+		tel.lifetime = 1.1
+		tel.position = Vector2(float((cfg as Dictionary).get("x", 960.0)), 790.0)
+		add_child(tel)
+	get_tree().create_timer(1.1, false).timeout.connect(_p2_spawn_nodes)
+	# 스윕 + 이동 격벽 — 바이올렛 소거 벽이 방을 훑고, 세이프존(격벽)이 매 사이클 옮겨 다닌다
+	# (§7.2 "격벽 이동·안전지대가 옮겨 다님"의 구현).
+	var sweep := _RivalSweep.new()
+	add_child(sweep)
+	_rival_p2_props.append(sweep)
+
+# P2 제어 노드 2기 실스폰(텔레그래프 1.1s 뒤) — 지상, **교대 실드**: 막힌 쪽 탄은 무효
+# (Enemy.take_damage fs_dir), 주기적으로 편이 바뀐다. 열린 쪽으로 돌아가거나 교대 타이밍을
+# 노리거나, 수류탄(폭발 관통)이 정답 카드. "기믹 이용 느낌 없음" 반려(2026-08-12) 반영.
+func _p2_spawn_nodes() -> void:
+	if _rival_phase != 1 or goal_reached or not is_inside_tree():
+		return
+	SfxPlayer.play("hatch_open")
 	for cfg in [{"x": 560.0, "d": 1}, {"x": 1360.0, "d": -1}]:
 		var cd: Dictionary = cfg
 		var node := _spawn_enemy(5, Vector2(float(cd.get("x", 960.0)), 790.0))
-		node.set("hp", RIVAL_P2_NODE_HP)
+		node.set("hp", _rival_node_hp_p2)
 		node.set_meta("rival_node", true)
 		node.set_meta("fs_dir", int(cd.get("d", 1)))
 		var arc := _FlipShieldArc.new()
@@ -4788,11 +4803,6 @@ func _start_rival_p2() -> void:
 	_p2_flip_timer.timeout.connect(_p2_flip_shields)
 	_p2_flip_timer.start()
 	_rival_p2_props.append(_p2_flip_timer)
-	# 스윕 + 이동 격벽 — 바이올렛 소거 벽이 방을 훑고, 세이프존(격벽)이 매 사이클 옮겨 다닌다
-	# (§7.2 "격벽 이동·안전지대가 옮겨 다님"의 구현).
-	var sweep := _RivalSweep.new()
-	add_child(sweep)
-	_rival_p2_props.append(sweep)
 
 func _p2_flip_shields() -> void:
 	if _rival_phase != 1 or not is_inside_tree():
@@ -4851,7 +4861,9 @@ class _RivalNodeBarUpdater extends Node:
 		if tree == null:
 			return
 		var phase: int = int(host.get("_rival_phase"))
-		var max_hp: float = 12.0 if phase == 0 else 20.0
+		# 노드 HP가 레벨 스케일이라 바 최대치도 호스트 값에서 읽는다(하드코딩 시 바가 안 참).
+		var per_node: int = int(host.get("_rival_node_hp_p1")) if phase == 0 else int(host.get("_rival_node_hp_p2"))
+		var max_hp: float = 2.0 * float(per_node)
 		var total: float = 0.0
 		for e in tree.get_nodes_in_group("enemy"):
 			var n := e as Node
@@ -5250,7 +5262,6 @@ func _on_false_veil_defeated() -> void:
 		if (e as Node).has_meta("no_marker"):
 			(e as Node).queue_free()
 	_enemies_remaining = 0
-	_rival_beat_flash()
 	_show_rival_subtitle("...잘 보시네요. 그 눈이 마음에 듭니다.", 3.0)
 	get_tree().create_timer(3.4, false).timeout.connect(_rival_final_line)
 
@@ -6148,21 +6159,9 @@ func _process(delta: float) -> void:
 	_tick_escape_transition(delta)
 	_tick_trap_warning()
 	_tick_avoid_warning()
-	_tick_subtitle_glitch()
 
-# 자막창 떨림 — 새 VEIL 대사가 뜨는 순간만 잠깐(통신 두절 느낌). 이전엔 시야 붕괴 내내 상시로
-# 흔들렸는데 "대사가 계속 흔들려 읽기 힘들다"(2026-08-14)로 창(window) 방식 변경. 라이벌(보라)
-# 대사는 창을 안 열므로 흔들리지 않는다. 창 시각은 _show_veil_subtitle이 연다.
-var _subtitle_shake_until_ms: int = -1
-
-func _tick_subtitle_glitch() -> void:
-	if _subtitle_stack_layer == null or not is_instance_valid(_subtitle_stack_layer):
-		return
-	if Time.get_ticks_msec() > _subtitle_shake_until_ms:
-		if _subtitle_stack_layer.offset != Vector2.ZERO:
-			_subtitle_stack_layer.offset = Vector2.ZERO
-		return
-	_subtitle_stack_layer.offset = Vector2(randf_range(-4.0, 4.0), randf_range(-2.0, 2.0))
+# 자막창 흔들림은 완전 제거됨(2026-08-14 2차: 잠깐의 등장 떨림조차 "글씨를 읽을 수 없다" 반려).
+# 통신 두절 톤은 14-1 후반의 대사 조기 끊김(_show_veil_subtitle duration 캡)이 담당한다.
 
 # 발사 함정에 처음 가까워지면 VEIL이 "파괴 불가, 회피" 1회 안내(못 잡는 함정 명시).
 func _tick_trap_warning() -> void:
