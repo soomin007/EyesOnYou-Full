@@ -24,7 +24,7 @@ const WARN: Color = Color(1.0, 0.55, 0.22)    # 공격 임박 — 경고 주황
 const RIVAL: Color = Color(0.80, 0.34, 0.98)  # 재머 마커 — 라이벌 바이올렛(안티-VEIL, rival_veil_concept §5)
 const EDGE_MARGIN: float = 24.0               # 화면 밖 화살표가 가장자리에서 떨어지는 여백 (피드백: 더 붙게 48→24)
 const RETICLE_R: float = 17.0
-const FADE_IN: float = 0.35                    # 마커가 "짚어지는" 등장 시간
+const FADE_IN: float = 0.5                     # 마커가 "그어지는" 등장 시간(스트로크 연출, 인지 강화 ②)
 const CALL_COOLDOWN: float = 18.0             # VEIL이 말로 짚는 최소 간격 (노이즈 방지)
 const MIN_CALL_TIME: float = 7.0             # 맵 진입 멘트 보호 — 이 전엔 말 안 함
 const GLITCH_DUR: float = 1.2                # 역전 순간 일제 붕괴 연출 길이
@@ -41,6 +41,8 @@ var _t: float = 0.0
 var _seen: Dictionary = {}                    # instance_id → 처음 본 _t (페이드인용)
 var _degrade_t: float = -1.0                  # >=0 이면 ACT3 degradation 진행 중 (시작 시각)
 var _jam_intro_called: bool = false           # 재밍 필드 첫 진입 시 VEIL 반응 1회(맵당)
+var _tag_id: int = -1                         # 런 첫 마커 서명 태그 대상(인지 강화 ①)
+var _tag_until: float = -1.0
 var _last_call_t: float = -999.0
 var _vignette: ColorRect = null               # 비네트 표면 (셰이더가 색/반경/디더를 계산)
 var _vig_mat: ShaderMaterial = null
@@ -322,9 +324,9 @@ func _draw() -> void:
 			continue
 		var danger: bool = en.has_method("veil_is_telegraphing") and en.veil_is_telegraphing()
 		var col: Color = WARN if danger else CALM
-		# 등장 페이드인 — "방금 짚어진" 느낌
+		# 등장 = 스트로크(다이아몬드가 한 획씩 그어짐). 알파는 먼저 차올라 긋는 선이 보이게.
 		var appear: float = clamp((_t - float(_seen[id])) / FADE_IN, 0.0, 1.0)
-		var alpha_mul: float = appear * (1.0 - jam)   # 재밍 깊을수록 마커 소거
+		var alpha_mul: float = clampf(appear * 2.2, 0.0, 1.0) * (1.0 - jam)   # 재밍 깊을수록 마커 소거
 		if alpha_mul <= 0.01:
 			continue
 		if degraded:
@@ -342,6 +344,12 @@ func _draw() -> void:
 			jitter = Vector2(sin(_t * 37.0 + float(id)), cos(_t * 41.0 + float(id))) * 6.0 * glitch
 		var spos: Vector2 = xform * wpos + jitter
 		var on_screen: bool = spos.x >= 0.0 and spos.x <= view.x and spos.y >= 0.0 and spos.y <= view.y
+		# ① 런 첫 마커 서명(인지 강화 2026-08-14) — 첫 표식 옆에 1회 "VEIL" 태그를 붙여
+		# 마커·화살표가 시스템 UI가 아니라 VEIL의 행동임을 못박는다. 소개 대사와 별개의 시각 서명.
+		if not GameState.veilsight_tag_shown:
+			GameState.veilsight_tag_shown = true
+			_tag_id = id
+			_tag_until = _t + 2.4
 		if on_screen:
 			# 화면 안 — 요원도 볼 수 있으니 평시엔 은은, 위험할 땐 또렷.
 			var rc: Color = col
@@ -352,6 +360,11 @@ func _draw() -> void:
 			var ec: Color = col
 			ec.a *= alpha_mul
 			_draw_edge_arrow(spos, center, view, ec)
+		if id == _tag_id and _t < _tag_until:
+			var anchor: Vector2 = spos if on_screen else Vector2(
+				clampf(spos.x, EDGE_MARGIN + 26.0, view.x - EDGE_MARGIN - 64.0),
+				clampf(spos.y, EDGE_MARGIN + 34.0, view.y - EDGE_MARGIN - 16.0))
+			_draw_veil_tag(anchor, alpha_mul)
 	# 사라진 적 정리 (메모리 — _seen 무한 증가 방지)
 	if _seen.size() > alive.size():
 		for k in _seen.keys():
@@ -369,7 +382,47 @@ func _draw_reticle(pos: Vector2, col: Color, danger: bool, appear: float) -> voi
 		pos + Vector2(-r, 0.0),
 		pos + Vector2(0.0, -r),
 	])
-	draw_polyline(pts, col, 2.0 if danger else 1.6)
+	var width: float = 2.0 if danger else 1.6
+	# 등장 중엔 한 획씩 그어지는 스트로크(인지 강화 ② — "시스템 표시"가 아니라 "누가 그려줌").
+	if appear < 1.0:
+		_draw_partial_polyline(pts, appear, col, width)
+	else:
+		draw_polyline(pts, col, width)
+
+# 폴리라인을 전체 길이의 f(0~1) 비율까지만 그린다 — 손으로 긋는 등장 연출.
+func _draw_partial_polyline(pts: PackedVector2Array, f: float, col: Color, width: float) -> void:
+	var total: float = 0.0
+	for i in pts.size() - 1:
+		total += pts[i].distance_to(pts[i + 1])
+	var budget: float = total * clampf(f, 0.0, 1.0)
+	var out := PackedVector2Array()
+	out.append(pts[0])
+	for i in pts.size() - 1:
+		var seg: float = pts[i].distance_to(pts[i + 1])
+		if seg <= 0.001:
+			continue
+		if budget >= seg:
+			out.append(pts[i + 1])
+			budget -= seg
+		else:
+			out.append(pts[i].lerp(pts[i + 1], budget / seg))
+			break
+	if out.size() >= 2:
+		draw_polyline(out, col, width)
+
+# 런 첫 마커 서명 — 마커 옆 짧은 연결선 + "VEIL" 텍스트. 마지막 0.6s 동안 페이드아웃.
+func _draw_veil_tag(anchor: Vector2, alpha_mul: float) -> void:
+	var a: float = clampf((_tag_until - _t) / 0.6, 0.0, 1.0) * clampf(alpha_mul * 1.6, 0.0, 1.0)
+	if a <= 0.02:
+		return
+	var f: Font = get_theme_default_font()
+	if f == null:
+		return
+	var base: Vector2 = anchor + Vector2(16.0, -20.0)
+	draw_line(anchor + Vector2(10.0, -10.0), base + Vector2(-2.0, 4.0),
+		Color(CALM.r, CALM.g, CALM.b, 0.5 * a), 1.0)
+	draw_string(f, base, "VEIL", HORIZONTAL_ALIGNMENT_LEFT, -1.0, 13,
+		Color(CALM.r, CALM.g, CALM.b, a))
 
 func _draw_edge_arrow(spos: Vector2, center: Vector2, view: Vector2, col: Color) -> void:
 	# 위협 방향으로 화면 가장자리(여백 inset)에 클램프한 점 + 그 방향을 가리키는 삼각형.

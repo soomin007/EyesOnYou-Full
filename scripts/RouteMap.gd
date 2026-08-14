@@ -219,8 +219,9 @@ func _setup_trust_gauge() -> void:
 		return
 	var gauge := Label.new()
 	gauge.name = "TrustGauge"
-	# 신뢰가 무슨 뜻인지 모른다는 피드백 — 게이지 옆에 의미 한 줄 병기(추천 수용으로 깊어지는 관계).
-	gauge.text = "VEIL 신뢰  " + GameState.veil_trust_gauge_dots() + "   (추천 따를수록 깊어져요)"
+	# 신뢰가 무슨 뜻인지 모른다는 피드백 — 게이지 옆에 의미 한 줄 병기. 게이지 = 추천 수용률
+	# (엔딩 신뢰 축과 동일 지표, 2026-08-14 통일)이라 문구도 오르내림을 그대로 말한다.
+	gauge.text = "VEIL 신뢰  " + GameState.veil_trust_gauge_dots() + "   (추천을 따르면 차오르고, 무시하면 내려가요. 결말에 반영돼요)"
 	gauge.add_theme_font_size_override("font_size", 14)
 	gauge.add_theme_color_override("font_color", GameState.veil_tone_color())
 	header.add_child(gauge)

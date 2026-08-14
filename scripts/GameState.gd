@@ -90,6 +90,8 @@ var trap_warn_count: int = 0
 # VEIL 마킹 소개("위험한 건 제가 먼저 볼게요") — 런당 1회. VeilSight 인스턴스 변수였을 땐 맵마다
 # 재생돼 "뜬금없이 자주 나온다"(2026-08-14). 비영속, reset에서 초기화.
 var veilsight_intro_shown: bool = false
+# 런 첫 마커 "VEIL" 서명 태그(인지 강화 ①, 2026-08-14) — 런당 1회. 비영속, reset에서 초기화.
+var veilsight_tag_shown: bool = false
 
 # 막3 핵심부(lab) 보스 처치 후 데이터 회수 연출 → "처리 선택"(DisposalChoiceOverlay)에서 고른 값.
 # 엔딩 9개의 처리 축(반출/파기/은닉/잔류). 런 단위 — reset()/start_main_game()에서 해제, run.cfg 영속.
@@ -358,6 +360,7 @@ func reset() -> void:
 	shield_immune_line_shown = false
 	trap_warn_count = 0
 	veilsight_intro_shown = false
+	veilsight_tag_shown = false
 	disposal_choice = ""
 	rival_phase_reached = 0
 	core_tunnel_live = false
@@ -411,6 +414,7 @@ func start_main_game() -> void:
 	shield_immune_line_shown = false
 	trap_warn_count = 0
 	veilsight_intro_shown = false
+	veilsight_tag_shown = false
 	disposal_choice = ""
 	rival_phase_reached = 0
 	core_tunnel_live = false
@@ -550,16 +554,17 @@ func veil_tone_color() -> Color:
 # (구 TONE_PREFIXES / veil_tone_prefix 제거 — 2026-06-13. 어투는 신뢰밴드 대사 풀로 운반,
 #  레벨업 추천 앞 lead-in은 VeilDialogue.levelup_leadin. 미사용 dead code였음.)
 
-# 신뢰 게이지 — UI 표시용 (0.0 ~ +1.0 정규화). 0에서 차오름(§3.1 리베이스).
-func veil_trust_normalized() -> float:
-	return clampf(float(trust_score) / 15.0, 0.0, 1.0)
-
-# 신뢰 게이지 5점 문자열 — HUD/루트맵/레벨업 공용(드리프트 방지). 0에서 차오름.
-const TRUST_GAUGE_THRESHOLDS: Array[int] = [2, 4, 8, 12, 16]
+# 신뢰 게이지 5점 문자열 — HUD/루트맵/레벨업/엔딩 공용(드리프트 방지).
+# 2026-08-14 통일: 게이지 = 엔딩 신뢰 축과 같은 지표(추천 수용률). 이전엔 어투 trust(고비 공유로도
+# 상승)를 보여줘 "게이지 보고 엔딩을 노렸는데 어긋난다"는 혼동이 있었다(사용자). 추천을 따르면
+# 차고 무시하면 내려간다. 3칸 이상(수용률 50%+) = 유대(hi) 결말. trust_score는 대사 톤 전용 내부 값.
 func veil_trust_gauge_dots() -> String:
+	var filled: int = 0
+	if rec_count > 0:
+		filled = int(round(5.0 * float(followed_count) / float(rec_count)))
 	var dots: String = ""
-	for th in TRUST_GAUGE_THRESHOLDS:
-		dots += "●" if trust_score >= int(th) else "○"
+	for i in 5:
+		dots += "●" if i < filled else "○"
 	return dots
 
 func is_high_risk() -> bool:
