@@ -16,13 +16,14 @@ signal volley_started
 
 enum State { PHASED, TELE, SOLID, DYING }
 
-const MAX_HP: int = 6
+const MAX_HP: int = 6   # 기본값 — Stage가 레벨 스케일로 덮어쓴다(max_hp/hp)
 const PHASED_DUR: float = 7.0
 const TELE_DUR: float = 0.7
 const SOLID_DUR: float = 3.4
 const FAKES_PER_VOLLEY: int = 4
 const DRIFT_SPEED: float = 60.0
 
+var max_hp: int = MAX_HP
 var hp: int = MAX_HP
 var state: State = State.PHASED
 var _state_t: float = 0.0

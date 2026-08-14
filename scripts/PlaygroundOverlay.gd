@@ -500,6 +500,11 @@ func _on_ch14_phase(phase: int) -> void:
 func _on_tunnel_live() -> void:
 	GameState.playground_active = false
 	GameState.core_tunnel_live = true
+	# 실런 흐름에선 14-1 클리어의 on_stage_clear가 13→14로 올려둔 뒤 터널로 온다. 여기서
+	# 안 맞추면 처리 선택 후 브리핑이 stage 13 풀(=14-1)로 되돌아가 보스를 다시 하게 된다
+	# (사용자 재현 2026-08-14). 탈출(s14) 풀로 이어지도록 스테이지를 실런과 동일하게 세팅.
+	GameState.current_stage = 14
+	GameState.rival_phase_reached = 0
 	SceneRouter.go(get_tree(), SceneRouter.CORE_TUNNEL)
 
 func _on_exit() -> void:

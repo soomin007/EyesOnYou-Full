@@ -673,6 +673,11 @@ func _check_first_encounter() -> void:
 		return   # 위장 중엔 도감 스포일 방지 — 리빌 후 참 종류로 등록
 	if encountered or harmless:
 		return
+	# 14-1 페이즈 목표(재머 시각 재사용, rival_node)는 도감 조우 제외 — 보스 연출 중 도감
+	# 팝업이 pause를 걸면 가짜 클리어 타이머 체인이 동결돼 P3가 영영 안 온다(하니스 재현
+	# 2026-08-14). 재머 카드는 일반 맵 재머에서 등록된다.
+	if has_meta("rival_node"):
+		return
 	if BestiaryOverlay.is_active():
 		return
 	var p := _find_player()

@@ -4749,7 +4749,8 @@ func _rival_intro_line() -> void:
 func _rival_intro_veil_line() -> void:
 	if not is_inside_tree() or goal_reached:
 		return
-	_show_veil_subtitle("적이 끝없이 들어옵니다. 전부 잡을 필요는 없습니다. 좌우 기둥이 부르고 있으니, 기둥부터 부수십시오.", 3.8)
+	# "기둥"이라고 하면 배경 격벽을 찾게 된다(사용자 2026-08-14) — 실물(재머 장치)과 단어 일치.
+	_show_veil_subtitle("적은 끝이 없습니다. 다 잡을 필요는 없어요. 증원은 좌우의 재머가 부릅니다. 저것부터 부수십시오.", 3.8)
 
 func _start_rival_p2() -> void:
 	if _rival_phase != 0 or goal_reached or not is_inside_tree():
@@ -4861,8 +4862,8 @@ func _p2_flip_shields() -> void:
 func _rival_p2_objective_line() -> void:
 	if not is_inside_tree() or goal_reached or _rival_phase != 1:
 		return
-	# 케이블 시각과 짝 — 기둥의 기능(포탑 전원)을 한 번만 말로 짚는다.
-	_show_veil_subtitle("포탑 전원이 저 기둥 둘에서 옵니다. 끊는 만큼 조용해져요. 방패는 한쪽뿐입니다.", 3.6)
+	# 케이블 시각과 짝 — 장치의 기능(포탑 전원)을 한 번만 말로 짚는다. 단어는 실물(재머)과 일치.
+	_show_veil_subtitle("포탑 전원이 저 재머 둘에서 옵니다. 끊는 만큼 조용해져요. 방패는 한쪽뿐입니다.", 3.6)
 
 # P2 기둥 격파 → 그 기둥이 전원을 대던 포탑이 죽는다 — 파괴의 보상이 즉시 체감된다.
 func _on_p2_node_down(_pos: Vector2, side: int) -> void:
@@ -5250,7 +5251,7 @@ class _FvBarUpdater extends Node:
 	func _process(_delta: float) -> void:
 		if fv == null or not is_instance_valid(fv) or fill == null:
 			return
-		var ratio: float = clampf(float(fv.get("hp")) / 6.0, 0.0, 1.0)
+		var ratio: float = clampf(float(fv.get("hp")) / maxf(1.0, float(fv.get("max_hp"))), 0.0, 1.0)
 		fill.size.x = 400.0 * ratio
 		var st: int = int(fv.get("state"))
 		if st == 2:   # SOLID — 피격 가능(밝음)
@@ -5296,6 +5297,10 @@ func _start_rival_p3() -> void:
 	GameState.rival_phase_reached = 2
 	_run_glitch(0.6, 0.38)
 	var fv := FalseVeil.new()
+	# 눈 HP 레벨 스케일 — 고정 6은 s13 빌드에 SOLID 한두 창이면 녹아 "재미도 감동도 없다"
+	# (사용자 2026-08-14). lv18이면 24: 실체화 창 3~4번을 살아남아야 하는 싸움이 된다.
+	fv.max_hp = 6 + GameState.player_level
+	fv.hp = fv.max_hp
 	fv.setup(
 		[Vector2(960.0, 380.0), Vector2(560.0, 430.0), Vector2(1360.0, 430.0)],
 		[Vector2(300.0, 790.0), Vector2(700.0, 790.0), Vector2(1200.0, 790.0), Vector2(1650.0, 790.0),
@@ -5360,7 +5365,9 @@ func _on_false_veil_defeated() -> void:
 		if (e as Node).has_meta("no_marker"):
 			(e as Node).queue_free()
 	_enemies_remaining = 0
-	_show_rival_subtitle("...잘 보시네요. 그 눈이 마음에 듭니다.", 3.0)
+	# "잘 보시네요. 그 눈이 마음에 듭니다" 어색 반려(사용자 2026-08-14) — 어긋난 정중함 유지,
+	# 눈 모티프는 관측 기록 테마로 회수.
+	_show_rival_subtitle("...제 그림을 전부 걷어내셨군요. 그 눈은 기록에 없던 겁니다.", 3.2)
 	get_tree().create_timer(3.4, false).timeout.connect(_rival_final_line)
 
 func _rival_final_line() -> void:

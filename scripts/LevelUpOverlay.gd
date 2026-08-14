@@ -48,7 +48,9 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 		advice_skill_id = ""
 	SfxPlayer.play("levelup")
 	var layer := CanvasLayer.new()
-	layer.layer = 40
+	# 46 = 가짜 클리어(44)·도감(45)보다 위. 40이었을 땐 14-1 가짜 클리어 검은 막 아래 숨어
+	# "pause만 걸리고 카드는 안 보이는" 정지 화면이 됐다(2026-08-14).
+	layer.layer = 46
 	layer.process_mode = Node.PROCESS_MODE_ALWAYS
 	# 안전판: layer가 _on_levelup_picked 콜백 없이 외부 경로(scene 전환, host free 등)로
 	# 사라져도 paused 누락 차단. host(Stage)가 set한 paused=true가 carry되어 다음 씬 freeze 방지.
