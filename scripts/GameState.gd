@@ -87,6 +87,9 @@ var elite_line_shown: bool = false
 var shield_immune_line_shown: bool = false
 # 포탑 "못 부숴요" 안내 발화 횟수 — 런당 2회까지만(함정 맵마다 반복돼 지겹다는 피드백 2026-08-11).
 var trap_warn_count: int = 0
+# VEIL 마킹 소개("위험한 건 제가 먼저 볼게요") — 런당 1회. VeilSight 인스턴스 변수였을 땐 맵마다
+# 재생돼 "뜬금없이 자주 나온다"(2026-08-14). 비영속, reset에서 초기화.
+var veilsight_intro_shown: bool = false
 
 # 막3 핵심부(lab) 보스 처치 후 데이터 회수 연출 → "처리 선택"(DisposalChoiceOverlay)에서 고른 값.
 # 엔딩 9개의 처리 축(반출/파기/은닉/잔류). 런 단위 — reset()/start_main_game()에서 해제, run.cfg 영속.
@@ -354,6 +357,7 @@ func reset() -> void:
 	elite_line_shown = false
 	shield_immune_line_shown = false
 	trap_warn_count = 0
+	veilsight_intro_shown = false
 	disposal_choice = ""
 	rival_phase_reached = 0
 	core_tunnel_live = false
@@ -406,6 +410,7 @@ func start_main_game() -> void:
 	elite_line_shown = false
 	shield_immune_line_shown = false
 	trap_warn_count = 0
+	veilsight_intro_shown = false
 	disposal_choice = ""
 	rival_phase_reached = 0
 	core_tunnel_live = false

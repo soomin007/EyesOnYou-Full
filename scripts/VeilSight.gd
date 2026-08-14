@@ -40,7 +40,6 @@ const VIG_DARK_A: float = 0.66                # degradation 검정 비네트 알
 var _t: float = 0.0
 var _seen: Dictionary = {}                    # instance_id → 처음 본 _t (페이드인용)
 var _degrade_t: float = -1.0                  # >=0 이면 ACT3 degradation 진행 중 (시작 시각)
-var _intro_called: bool = false               # "표시해 둘게요" 메타 소개 1회
 var _jam_intro_called: bool = false           # 재밍 필드 첫 진입 시 VEIL 반응 1회(맵당)
 var _last_call_t: float = -999.0
 var _vignette: ColorRect = null               # 비네트 표면 (셰이더가 색/반경/디더를 계산)
@@ -243,8 +242,10 @@ func _call_threat(spos: Vector2, center: Vector2) -> void:
 	# 어투를 신뢰 밴드로 맞춘다(단일 문자열이라 코드 분기). degraded는 항상 막판=WARM.
 	var band: String = GameState.veil_register_band()
 	var line: String
-	if not _intro_called:
-		_intro_called = true
+	# 소개 멘트는 런당 1회(GameState 플래그) — 인스턴스 변수(맵당 재생성)였을 땐 맵마다
+	# 첫 위협에서 재생돼 "뜬금없이 자주 나온다"는 피드백(2026-08-14).
+	if not GameState.veilsight_intro_shown:
+		GameState.veilsight_intro_shown = true
 		if band == "warm":
 			line = "위험한 건 제가 먼저 볼게요. 화면 끝에 띄워둘게요. 요원은 앞만 봐요."
 		else:

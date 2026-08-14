@@ -383,9 +383,11 @@ func _summon_minions(new_phase: int) -> void:
 	var hp_for: int = SUMMON_DRONE_HP if kind == 2 else SUMMON_PATROL_HP
 	# drone은 호버 라인 부근, patrol은 지면 위로 spawn.
 	var y: float = HOVER_Y if kind == 2 else (global_position.y + 280.0)
+	# X는 ARENA(1920) 안쪽으로 클램프 — 보스가 한쪽에 치우친 채 전환되면 보스 기준 ±760이
+	# 벽 밖으로 나가, patrol이 좌하단 구석에 낀 채 방치됐다(사용자 보고 2026-08-14).
 	var positions: Array = [
-		Vector2(global_position.x - SUMMON_OFFSET_X, y),
-		Vector2(global_position.x + SUMMON_OFFSET_X, y),
+		Vector2(clampf(global_position.x - SUMMON_OFFSET_X, 140.0, 1780.0), y),
+		Vector2(clampf(global_position.x + SUMMON_OFFSET_X, 140.0, 1780.0), y),
 	]
 	for pos in positions:
 		var m: CharacterBody2D = _spawn_minion(kind, pos, hp_for)
@@ -402,6 +404,10 @@ func _spawn_minion(kind: int, pos: Vector2, hp_value: int) -> CharacterBody2D:
 	e.collision_mask = 1
 	e.set("enemy_type", kind)
 	e.set("hp", hp_value)
+	# patrol 소환수는 사냥 모드 — 감지 범위(260px) 밖에서 스폰되면 제자리 순찰만 하다
+	# 구석에 머물러 "끼어 있다"로 읽힌다. P3 의도(지면 추격으로 동선 좁힘)와도 사냥이 맞다.
+	if kind == 0:
+		e.set("hunt", true)
 	var col := CollisionShape2D.new()
 	var shape := RectangleShape2D.new()
 	if kind == 2:

@@ -671,7 +671,9 @@ static func _escape_extract() -> Dictionary:
 			"drone":  [Vector2(2350, 300.0), Vector2(3050, 300.0)],
 			"bomber": [Vector2(1750, 600.0), Vector2(3300, 600.0)],
 			"shield": [Vector2(1450, 600.0), Vector2(2900, 600.0)],
-			"jammer": [Vector2(2450, 600.0)],
+			# 재머는 터널 안(_TUNNEL_END_X 1600 이내)으로 — 야경 노상에 설비가 놓인 게
+			# 부자연스럽다는 피드백(2026-08-14). 진입 밀집 구간의 마커를 지워 초반 압박 담당.
+			"jammer": [Vector2(1250, 600.0)],
 		},
 		"route_lines": [
 			{"x": 1800.0, "who": "veil", "text": "경보가 우릴 앞질러 가요. 다음 구간은 미리 쏘면서 진입하죠.", "dur": 3.4},

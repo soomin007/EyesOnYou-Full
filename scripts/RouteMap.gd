@@ -13,6 +13,10 @@ var recommended_reason: String = ""
 # §4 상충 추천(rival_veil_concept — 막4 "두 목소리") — 가짜 목소리가 다른 맵을 권한다.
 var rival_rec_id: String = ""
 var rival_rec_line: String = ""
+# 상충 추천 전용 라벨 — 본 멘트(veil_text)와 한 라벨에 이어 붙이면 같은 색 벽으로 읽힌다
+# (가독성 피드백 2026-08-14). 화자색은 인게임 자막과 동일: ? = 바이올렛, VEIL = 톤 색.
+var rival_lure_label: Label = null
+var rival_rebuttal_label: Label = null
 
 # 유인 멘트 — 말투 A(결이 어긋난 정중함) 플레이스홀더. 감언과 실제(최고위험 맵)의 어긋남이 본체.
 const _RIVAL_LURES: Array = [
@@ -89,6 +93,7 @@ func _ready() -> void:
 	# 긴 description이 박스 밖으로 빠져나가던 문제 — 자동 줄바꿈.
 	veil_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	veil_text.custom_minimum_size = Vector2(560, 0)
+	_build_rival_lure_labels()
 	_setup_trust_gauge()
 	_build_progress_strip()
 	_build_risk_reward_panel()
@@ -97,6 +102,25 @@ func _ready() -> void:
 	_update_veil_comment()
 	_refresh_hint()
 	GameState.input_kind_changed.connect(_on_input_kind_changed)
+
+# 상충 추천 라벨 2종을 VeilBox 세로 스택(veil_text 아래)에 만든다. 평소엔 숨김.
+func _build_rival_lure_labels() -> void:
+	var v_box: VBoxContainer = veil_text.get_parent() as VBoxContainer
+	if v_box == null:
+		return
+	v_box.add_theme_constant_override("separation", 10)
+	rival_lure_label = Label.new()
+	rival_lure_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	rival_lure_label.add_theme_font_size_override("font_size", 20)
+	rival_lure_label.add_theme_color_override("font_color", Color(0.85, 0.50, 1.0))
+	rival_lure_label.visible = false
+	v_box.add_child(rival_lure_label)
+	rival_rebuttal_label = Label.new()
+	rival_rebuttal_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	rival_rebuttal_label.add_theme_font_size_override("font_size", 20)
+	rival_rebuttal_label.add_theme_color_override("font_color", GameState.veil_tone_color())
+	rival_rebuttal_label.visible = false
+	v_box.add_child(rival_rebuttal_label)
 
 func _build_risk_reward_panel() -> void:
 	# VeilBox 우측에 작은 패널 — 고위험/고보상 경고를 본 멘트와 분리해서 표시.
@@ -456,11 +480,15 @@ func _update_veil_comment() -> void:
 		msg += "VEIL   " + str(route.get("veil_comment", ""))
 	# §4 상충 추천 — 라이벌이 미는 카드엔 정체 불명 "?"의 감언이 붙는다. 신뢰 warm이면
 	# 내 VEIL이 즉시 반박(신뢰가 지각을 산다 §4.1) — 아니면 어긋난 정중함을 스스로 읽어야 한다.
-	if route.get("id", "") == rival_rec_id and rival_rec_line != "":
-		msg += "\n\n? 추천\n?   " + rival_rec_line
-		if GameState.veil_register_band() == "warm":
-			msg += "\nVEIL   방금 그 추천, 제가 한 것이 아닙니다."
 	veil_text.text = msg
+	# 상충 추천 — 전용 라벨(바이올렛)로 분리. "? 추천" 헤더 행은 삭제: 화자 ?와 색이 이미 말한다.
+	var lure_here: bool = route.get("id", "") == rival_rec_id and rival_rec_line != ""
+	if rival_lure_label != null:
+		rival_lure_label.visible = lure_here
+		rival_lure_label.text = "?   " + rival_rec_line
+	if rival_rebuttal_label != null:
+		rival_rebuttal_label.visible = lure_here and GameState.veil_register_band() == "warm"
+		rival_rebuttal_label.text = "VEIL   방금 그 추천, 제가 한 것이 아닙니다."
 	# 고위험/고보상 경고는 별도 우측 패널, 권장 스킬은 별도 좌측 칩 — 본 멘트와 시각 분리.
 	_update_risk_reward_panel(route)
 	_update_skill_rec_panel(route)

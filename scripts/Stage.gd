@@ -985,6 +985,15 @@ func _ensure_subtitle_stack() -> void:
 func _show_veil_subtitle(message: String, duration: float, _plain_prefix: bool = false, fast_in: bool = false) -> void:
 	SfxPlayer.play("veil_subtitle_in")
 	_ensure_subtitle_stack()
+	# 14-1 가짜 클리어 이후(라이벌이 렌더를 쥔 구간) — 내 VEIL 목소리는 잠깐 떨리다 끊긴다.
+	# 온전한 문장은 보라색(라이벌)만 나온다(사용자 2026-08-14). 정보 전달은 시각 tell이 담당.
+	var choked: bool = _rival_phase >= 2 and not goal_reached
+	if choked:
+		duration = minf(duration, 1.4)
+		_subtitle_shake_until_ms = Time.get_ticks_msec() + int((duration + 0.4) * 1000.0)
+	elif GameState.veil_degraded:
+		# 시야 붕괴 맵 — 등장 순간만 잠깐 떨림(상시 흔들림은 가독성 해침, 2026-08-14).
+		_subtitle_shake_until_ms = Time.get_ticks_msec() + 700
 	# 어두운 반투명 pill 배경 — 게임 화면 위에서 또렷하게(사용자: 대사 인지 안 됨).
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0.03, 0.05, 0.09, 0.82)
@@ -1006,10 +1015,17 @@ func _show_veil_subtitle(message: String, duration: float, _plain_prefix: bool =
 
 # §7 라이벌 VEIL 자막 — 내 VEIL(_show_veil_subtitle, 시안)과 시각적으로 구별. 바이올렛 + 화자 불명("?").
 # 라이벌은 다른 존재라 아직 "VEIL"로 이름 붙지 않는다(§2 정체는 막이 진행되며 한 겹씩 벗겨짐). 대사=플레이스홀더.
+# 라이벌 발화 마이크로 글리치 쿨다운 — 대사가 이어질 때마다 매번 지직거리면 과함
+# (글리치가 너무 잦고 강하다는 피드백 2026-08-14). 8초에 한 번만.
+var _line_glitch_last_ms: int = -100000
+
 func _show_rival_subtitle(message: String, duration: float) -> void:
 	SfxPlayer.play("veil_subtitle_in")
 	# 라이벌 발화 = 렌더 개입 — 짧은 마이크로 글리치가 목소리와 동기(대사 연출 밋밋 반려 2026-08-12).
-	_run_glitch(0.18, 0.35)
+	var now_ms: int = Time.get_ticks_msec()
+	if now_ms - _line_glitch_last_ms >= 8000:
+		_line_glitch_last_ms = now_ms
+		_run_glitch(0.15, 0.22)
 	_ensure_subtitle_stack()
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0.07, 0.02, 0.11, 0.86)   # 어두운 바이올렛 pill
@@ -2085,7 +2101,7 @@ class _RouteLineTriggers extends Node:
 			var txt: String = str(d.get("text", ""))
 			var dur: float = float(d.get("dur", 3.2))
 			if bool(d.get("glitch", false)):
-				host.call("_run_glitch", 0.5, 0.4)
+				host.call("_run_glitch", 0.4, 0.3)
 			if str(d.get("who", "veil")) == "rival":
 				host.call("_show_rival_subtitle", txt, dur)
 			else:
@@ -4339,9 +4355,10 @@ func _play_sentinel_reveal() -> void:
 	# "그냥 손" 은유가 안 읽힌다는 지적(2026-08-10) — 손끝/몸통 대비로 명시(SENTINEL=도구, 본체 따로).
 	_show_rival_subtitle("수고했어요, 요원. 방금 이긴 건 시설이 내민 손끝일 뿐이에요.\n몸통은 따로 있어요.", 3.8)
 	await get_tree().create_timer(4.5).timeout
-	# 내 VEIL 동요 — §1 맹점 테마의 첫 실연("저는 못 봤어요"). (대사 플레이스홀더.)
-	_show_veil_subtitle("...방금 그거, 제가 아니에요.\n누가... 저는 못 봤어요.", 3.2)
-	await get_tree().create_timer(3.6).timeout
+	# 내 VEIL 동요 — §1 맹점 테마의 첫 실연. 어색한 원문("누가... 저는 못 봤어요") 재작성
+	# (사용자 2026-08-14): 동요는 감정 직진술 대신 말끝 흐림(~는데)으로.
+	_show_veil_subtitle("...방금 그 목소리, 제 채널이 아닙니다.\n같은 회선에 있었는데 저는 못 봤어요. 이런 적 없었는데.", 3.6)
+	await get_tree().create_timer(4.0).timeout
 	_sentinel_reveal_done = true
 
 # §7 복선 — 보스전 중 가끔(랜덤 간격) 거짓-렌더 tell과 같은 붉은-바이올렛 지직거림을 보스에 흘린다.
@@ -4666,6 +4683,9 @@ func _run_glitch(duration: float, peak: float) -> void:
 	runner.duration = duration
 	runner.peak = peak
 	runner.host_layer = layer
+	# pause(레벨업 오버레이 등) 중에도 엔벨로프가 계속 진행돼야 한다. 안 그러면 글리치가
+	# 피크 강도로 얼어붙은 화면이 pause 내내 남는다(최종 보스전 레벨업, 사용자 보고 2026-08-14).
+	runner.process_mode = Node.PROCESS_MODE_ALWAYS
 	layer.add_child(runner)
 
 class _GlitchRunner extends Node:
@@ -4675,7 +4695,9 @@ class _GlitchRunner extends Node:
 	var host_layer: CanvasLayer = null
 	var _t: float = 0.0
 	func _process(delta: float) -> void:
-		_t += delta
+		# pause 중엔 3배속으로 감아 글리치를 빠르게 걷는다 — 레벨업 카드가 깨끗한 화면에서 보이게.
+		var tree := get_tree()
+		_t += delta * (3.0 if tree != null and tree.paused else 1.0)
 		if mat == null or _t >= duration:
 			if host_layer != null and is_instance_valid(host_layer):
 				host_layer.queue_free()
@@ -4715,7 +4737,7 @@ func _start_rival_p2() -> void:
 		_p1_spawn_timer.stop()
 	_despawn_rival_mobs()
 	SfxPlayer.play("boss_phase_change")
-	_run_glitch(0.9, 0.5)
+	_run_glitch(0.7, 0.38)
 	_rival_beat_flash()
 	_camera_shake(10.0, 0.4)
 	_show_rival_subtitle("병사들이 아깝네요. 그럼, 방하고 싸워 보시죠.", 3.4)
@@ -5051,7 +5073,8 @@ func _fake_clear_tear() -> void:
 	if goal_reached or not is_inside_tree() or _fake_clear_layer == null:
 		return
 	SfxPlayer.play("boss_alert_text")
-	_run_glitch(2.2, 0.9)
+	# 강도 하향 2.2/0.9 → 1.6/0.65 — 본 찢김은 유지하되 눈 아픈 피크를 깎는다(2026-08-14).
+	_run_glitch(1.6, 0.65)
 	_rival_beat_flash()
 	get_tree().create_timer(0.55, false).timeout.connect(_fake_clear_corrupt)
 	get_tree().create_timer(2.4, false).timeout.connect(_fake_clear_end)
@@ -5157,7 +5180,7 @@ func _start_rival_p3() -> void:
 	_rival_phase = 2
 	_rival_hold = true
 	GameState.rival_phase_reached = 2
-	_run_glitch(0.8, 0.5)
+	_run_glitch(0.6, 0.38)
 	var fv := FalseVeil.new()
 	fv.setup(
 		[Vector2(960.0, 380.0), Vector2(560.0, 430.0), Vector2(1360.0, 430.0)],
@@ -5238,11 +5261,21 @@ func _rival_final_line() -> void:
 	get_tree().create_timer(2.4, false).timeout.connect(_rival_boss_release)
 
 func _rival_boss_release() -> void:
-	if not is_inside_tree():
+	if not is_inside_tree() or goal_reached:
 		return
 	_rival_hold = false
-	if _can_arena_clear():
-		call_deferred("_on_arena_cleared")
+	# 즉시 14-2 터널로 끊지 않는다("대뜸 복도로 보내지 말 것", 사용자 2026-08-14). 일반 맵
+	# 문법대로 우측에 출구가 열리고 걸어서 나간다. 출구 도달 → 클리어 시퀀스 →
+	# _transition_after_clear의 route_core_recovery 분기 → 14-2 터널(CoreTunnel). ARENA 보너스
+	# XP는 _on_arena_cleared를 안 거치므로 여기서 직접 준다.
+	var data: Dictionary = MapData.get_layout(GameState.current_route_id)
+	var bonus_xp: int = int(data.get("arena_clear_xp", 0))
+	if bonus_xp > 0:
+		GameState.add_xp(bonus_xp, false)
+	_goal_type = "POSITION"
+	_goal_pos = Vector2(1840.0, 760.0)
+	_build_goal_position()
+	SfxPlayer.play("gate_unlock")
 
 # 황금 희귀 개체 처치 보상 — 황금 보너스 오브 + 떠오르는 라벨 + 누적 카운터(영속).
 func _reward_shiny_kill(pos: Vector2) -> void:
@@ -6117,19 +6150,19 @@ func _process(delta: float) -> void:
 	_tick_avoid_warning()
 	_tick_subtitle_glitch()
 
-# 시야 붕괴 시 자막창이 통신 두절처럼 떨리고 주기적으로 끊긴다(EMP 재머 느낌). 평시엔 offset 0.
+# 자막창 떨림 — 새 VEIL 대사가 뜨는 순간만 잠깐(통신 두절 느낌). 이전엔 시야 붕괴 내내 상시로
+# 흔들렸는데 "대사가 계속 흔들려 읽기 힘들다"(2026-08-14)로 창(window) 방식 변경. 라이벌(보라)
+# 대사는 창을 안 열므로 흔들리지 않는다. 창 시각은 _show_veil_subtitle이 연다.
+var _subtitle_shake_until_ms: int = -1
+
 func _tick_subtitle_glitch() -> void:
 	if _subtitle_stack_layer == null or not is_instance_valid(_subtitle_stack_layer):
 		return
-	if not GameState.veil_degraded:
+	if Time.get_ticks_msec() > _subtitle_shake_until_ms:
 		if _subtitle_stack_layer.offset != Vector2.ZERO:
 			_subtitle_stack_layer.offset = Vector2.ZERO
 		return
-	var tm: float = float(Time.get_ticks_msec()) * 0.001
-	if fmod(tm * 8.0, 1.0) < 0.12:
-		_subtitle_stack_layer.offset = Vector2(randf_range(-6.0, 6.0), randf_range(-3.0, 3.0))
-	else:
-		_subtitle_stack_layer.offset = Vector2(randf_range(-1.5, 1.5), randf_range(-1.0, 1.0))
+	_subtitle_stack_layer.offset = Vector2(randf_range(-4.0, 4.0), randf_range(-2.0, 2.0))
 
 # 발사 함정에 처음 가까워지면 VEIL이 "파괴 불가, 회피" 1회 안내(못 잡는 함정 명시).
 func _tick_trap_warning() -> void:

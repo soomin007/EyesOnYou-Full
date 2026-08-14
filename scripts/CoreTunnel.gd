@@ -69,6 +69,15 @@ func _ready() -> void:
 	view.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(view)
 	_view = view
+	# 상하 비네트 — 셰이더(픽셀 단위 smoothstep+디더). draw_rect 6단 띠는 계단 줄무늬가
+	# 보였다(사용자 지적 2026-08-14). 뷰 위, 라벨 아래.
+	var vig := ColorRect.new()
+	vig.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vig.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var vig_mat := ShaderMaterial.new()
+	vig_mat.shader = load("res://assets/shaders/tunnel_vignette.gdshader") as Shader
+	vig.material = vig_mat
+	add_child(vig)
 	_hint_label = Label.new()
 	_hint_label.text = "↑ / W  전진"
 	_hint_label.add_theme_font_size_override("font_size", 15)
@@ -479,7 +488,6 @@ class _TunnelView:
 		_draw_corridor(pz, cx, cy, focal)
 		_draw_core(pz, cx, cy, focal)
 		_draw_lamps(pz, cx, cy, focal)
-		_draw_vignette(vs)
 		var fa: float = float(t.fade_alpha())
 		if fa > 0.001:
 			draw_rect(Rect2(Vector2.ZERO, vs), Color(0, 0, 0, fa), true)
@@ -607,11 +615,4 @@ class _TunnelView:
 		draw_circle(Vector2.ZERO, r_base * 1.5, Color(CORE_COL.r, CORE_COL.g, CORE_COL.b, 0.10 * vis))
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
-	# 상하 비네트 — 시야를 좁혀 터널감을 강화.
-	func _draw_vignette(vs: Vector2) -> void:
-		var strips: int = 6
-		var band: float = vs.y * 0.16 / float(strips)
-		for i in strips:
-			var a: float = 0.30 * (1.0 - float(i) / float(strips))
-			draw_rect(Rect2(Vector2(0, float(i) * band), Vector2(vs.x, band + 1.0)), Color(0, 0, 0, a), true)
-			draw_rect(Rect2(Vector2(0, vs.y - float(i + 1) * band), Vector2(vs.x, band + 1.0)), Color(0, 0, 0, a), true)
+	# 상하 비네트는 CoreTunnel._ready의 셰이더 ColorRect가 담당(tunnel_vignette.gdshader).
