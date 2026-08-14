@@ -390,6 +390,7 @@ func _on_meta_reset_saves() -> void:
 # 기존 진행도는 백업 안 함 — 디버그 용도라 진행 데이터 손실은 무시 (사용자가 알고 누름).
 func _on_ending_preview_pressed(ending_id: String) -> void:
 	GameState.rec_count = 4  # 수용률 분모 고정 — followed_count로 신뢰 hi/lo 강제.
+	GameState.rival_lure_followed = 0  # 유인 감점 잔재가 유효 수용을 깎아 hi 강제가 깨지는 것 방지.
 	if ending_id == EndingResolver.ENDING_TRUTH:
 		# 진실은 처리·신뢰 무관 — truth_seen만 켜면 수렴.
 		GameState.truth_seen = true

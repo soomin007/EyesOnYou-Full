@@ -33,7 +33,8 @@ func _ready() -> void:
 	# 안전망: 이전 scene에서 paused가 carry되어 Ending이 freeze되는 패턴 차단.
 	get_tree().paused = false
 	# 막3 엔딩 9개(B3): 처리(disposal) × 신뢰(수용률) + 진실(truth_seen) → 엔딩 id.
-	ending_id = EndingResolver.resolve(GameState.disposal_choice, GameState.truth_seen, GameState.followed_count, GameState.rec_count)
+	# 분자는 유효 수용(라이벌 유인 추종 감점 반영) — 게이지(veil_trust_gauge_dots)와 동일 소스.
+	ending_id = EndingResolver.resolve(GameState.disposal_choice, GameState.truth_seen, GameState.effective_followed(), GameState.rec_count)
 	# 런 완주 1회 처리 — 본 엔딩 기록(엔딩 모으기/리플레이 토대) + 완주 카운트 + 진행 저장(run.cfg) 삭제.
 	GameState.record_ending(ending_id)
 	title_label.text = "MISSION COMPLETE"

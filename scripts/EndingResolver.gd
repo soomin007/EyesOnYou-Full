@@ -4,6 +4,7 @@ extends RefCounted
 # 막3 엔딩 9개(B3) — 처리(반출/파기/은닉/잔류) × 신뢰(유대/불신) 8개 + 진실 특수 1개.
 #  - 처리 = GameState.disposal_choice (lab 보스 후 DisposalChoiceOverlay 선택). 단일 소스 = GameState.DISPOSAL_*.
 #  - 신뢰 = VEIL 추천 수용률(followed/rec ≥ 0.5)의 이진값. 어투 trust(climbing)와 분리해 획득 인플레에 강건.
+#    호출부는 분자로 GameState.effective_followed()(라이벌 유인 추종 감점 반영)를 넘긴다(2026-08-14 가중치).
 #  - 진실 = truth_seen(???에서 VEIL-1 reveal 목격) → 처리·신뢰 무관하게 '진실' 엔딩으로 수렴(사용자 확정).
 # 엔딩 id = "<disposal>_hi|lo" 8개 + "truth". 제목·대사는 플레이스홀더(사용자 검토 대기).
 

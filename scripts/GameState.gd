@@ -554,14 +554,21 @@ func veil_tone_color() -> Color:
 # (구 TONE_PREFIXES / veil_tone_prefix 제거 — 2026-06-13. 어투는 신뢰밴드 대사 풀로 운반,
 #  레벨업 추천 앞 lead-in은 VeilDialogue.levelup_leadin. 미사용 dead code였음.)
 
+# 엔딩 신뢰 축 분자 — 추천 수용에 라이벌 유인 가중치를 얹은 유효 수용 횟수(사용자 승인 2026-08-14).
+# 가짜 목소리(? 추천)를 따라간 선택은 "안 따름"(분모만 참)에 더해 한 번 더 깎인다 — 막4 두 목소리
+# 선택이 보통 선택보다 두 배로 무겁다. 게이지와 엔딩 판정이 같은 값을 봐야 하므로 여기가 단일 소스.
+func effective_followed() -> int:
+	return maxi(0, followed_count - rival_lure_followed)
+
 # 신뢰 게이지 5점 문자열 — HUD/루트맵/레벨업/엔딩 공용(드리프트 방지).
-# 2026-08-14 통일: 게이지 = 엔딩 신뢰 축과 같은 지표(추천 수용률). 이전엔 어투 trust(고비 공유로도
+# 2026-08-14 통일: 게이지 = 엔딩 신뢰 축과 같은 지표(유효 수용률). 이전엔 어투 trust(고비 공유로도
 # 상승)를 보여줘 "게이지 보고 엔딩을 노렸는데 어긋난다"는 혼동이 있었다(사용자). 추천을 따르면
-# 차고 무시하면 내려간다. 3칸 이상(수용률 50%+) = 유대(hi) 결말. trust_score는 대사 톤 전용 내부 값.
+# 차고 무시하면 내려가며, 라이벌 유인을 따르면 한 칸 더 꺼진다(감점이 눈에 보이는 피드백).
+# 3칸 이상(50%+) = 유대(hi) 결말. trust_score는 대사 톤 전용 내부 값.
 func veil_trust_gauge_dots() -> String:
 	var filled: int = 0
 	if rec_count > 0:
-		filled = int(round(5.0 * float(followed_count) / float(rec_count)))
+		filled = int(round(5.0 * float(effective_followed()) / float(rec_count)))
 	var dots: String = ""
 	for i in 5:
 		dots += "●" if i < filled else "○"
