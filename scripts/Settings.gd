@@ -99,6 +99,7 @@ func _ready() -> void:
 	tabs.add_child(_scroll_wrap(_build_keybind_tab()))
 	tabs.add_child(_scroll_wrap(_build_av_tab()))
 	tabs.add_child(_scroll_wrap(_build_accessibility_tab()))
+	tabs.add_child(_scroll_wrap(_build_data_tab()))
 	tabs.add_child(_scroll_wrap(_build_credits_tab()))
 	# 디버그 탭은 잠금 해제(GameState.debug_unlocked) 시에만 노출.
 	# 잠금 해제는 Title 화면에서 비밀 키 시퀀스 "snu" 입력으로.
@@ -232,17 +233,12 @@ func _build_debug_tab() -> Control:
 	outer.add_theme_constant_override("margin_top", 18)
 	outer.add_theme_constant_override("margin_bottom", 18)
 
-	# 행이 계속 늘어나는 탭 — 처음부터 스크롤로(고정 패널 오버플로 함정, known_issues).
-	var scroll := ScrollContainer.new()
-	scroll.follow_focus = true
-	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	outer.add_child(scroll)
-
+	# 스크롤은 _scroll_wrap(모든 탭 공통)이 담당한다. 여기서 ScrollContainer를 또 만들면 이중 래핑:
+	# 안쪽 스크롤이 최소 높이를 0으로 보고해 탭 내용 전체가 접혀 사라진다(2026-08-14, known_issues).
 	var v := VBoxContainer.new()
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	v.add_theme_constant_override("separation", 14)
-	scroll.add_child(v)
+	outer.add_child(v)
 
 	v.add_child(_make_section_header("연습장"))
 
@@ -351,6 +347,9 @@ func _meta_status_text() -> String:
 func _refresh_meta_status() -> void:
 	if _meta_status_label != null and is_instance_valid(_meta_status_label):
 		_meta_status_label.text = _meta_status_text()
+	# 데이터 탭 현황도 같이 갱신(디버그 탭 초기화 버튼을 눌러도 두 현황이 어긋나지 않게).
+	if _data_status_label != null and is_instance_valid(_data_status_label):
+		_data_status_label.text = _data_status_text()
 
 func _remove_user_file(fname: String) -> void:
 	var d := DirAccess.open("user://")
@@ -597,6 +596,7 @@ func _on_skin_toggled(pressed: bool) -> void:
 func _scroll_wrap(content: Control) -> ScrollContainer:
 	var sc := ScrollContainer.new()
 	sc.name = content.name
+	sc.follow_focus = true
 	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	sc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -725,6 +725,88 @@ func _on_captions_toggled(pressed: bool, toggle: CheckButton) -> void:
 	# 켤 때 위치/모양을 보여주는 예시 한 줄.
 	if pressed:
 		Accessibility.preview_caption()
+
+# 데이터 탭(모든 유저 노출) — 진행 데이터 초기화. 디버그 탭에만 있던 초기화를 일반 유저용으로
+# 꺼낸 것(사용자 2026-08-14). 파괴적 동작이라 디버그와 달리 2단 확인: 한 번 누르면 확인 문구로
+# 바뀌고, 제한 시간 안에 한 번 더 눌러야 실행. 키 바인드·볼륨·화면·접근성 설정은 유지한다.
+var _data_status_label: Label = null
+var _data_reset_btn: Button = null
+var _data_reset_arm_t: float = 0.0
+const DATA_RESET_ARM_WINDOW: float = 4.0
+const DATA_RESET_LABEL: String = "진행 데이터 초기화"
+const DATA_RESET_CONFIRM_LABEL: String = "정말 초기화할까요? 한 번 더 누르면 실행돼요"
+
+func _build_data_tab() -> Control:
+	var outer := MarginContainer.new()
+	outer.name = "데이터"
+	outer.add_theme_constant_override("margin_left", 16)
+	outer.add_theme_constant_override("margin_right", 16)
+	outer.add_theme_constant_override("margin_top", 18)
+	outer.add_theme_constant_override("margin_bottom", 18)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 14)
+	outer.add_child(v)
+
+	v.add_child(_make_section_header("진행 데이터"))
+	_data_status_label = Label.new()
+	_data_status_label.text = _data_status_text()
+	_data_status_label.add_theme_font_size_override("font_size", 13)
+	_data_status_label.add_theme_color_override("font_color", Color(0.62, 0.72, 0.85))
+	_data_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(_data_status_label)
+
+	var note := Label.new()
+	note.text = "엔딩·도감·이어하기·완주 기록 등 진행 데이터를 처음 상태로 되돌립니다. 키 설정·볼륨·화면·접근성 설정은 유지돼요."
+	note.add_theme_font_size_override("font_size", 13)
+	note.add_theme_color_override("font_color", Color(0.62, 0.72, 0.85))
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(note)
+
+	_data_reset_btn = Button.new()
+	_data_reset_btn.text = DATA_RESET_LABEL
+	_data_reset_btn.custom_minimum_size = Vector2(300, 40)
+	_data_reset_btn.add_theme_font_size_override("font_size", 14)
+	_data_reset_btn.pressed.connect(_on_data_reset_pressed)
+	v.add_child(_data_reset_btn)
+
+	var warn := Label.new()
+	warn.text = "되돌릴 수 없어요. 초기화하면 타이틀 화면으로 돌아갑니다."
+	warn.add_theme_font_size_override("font_size", 12)
+	warn.add_theme_color_override("font_color", Color(0.95, 0.78, 0.5))
+	warn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(warn)
+	return outer
+
+# 유저용 현황 요약. 디버그 현황(_meta_status_text)과 달리 라이벌 기억 등 숨김 시스템은 노출하지 않는다.
+func _data_status_text() -> String:
+	return "완주 %d회 · 엔딩 %d/9 · 도감 %d종 · 이어하기 %s" % [
+		GameState.playthrough_count, GameState.endings_seen.size(), GameState.seen_enemies.size(),
+		"있음" if GameState.has_run() else "없음"]
+
+func _on_data_reset_pressed() -> void:
+	if _data_reset_arm_t <= 0.0:
+		# 1단계: 무장. 확인 문구로 바꾸고 제한 시간 시작(시간이 지나면 _process가 원복).
+		_data_reset_arm_t = DATA_RESET_ARM_WINDOW
+		_data_reset_btn.text = DATA_RESET_CONFIRM_LABEL
+		_data_reset_btn.add_theme_color_override("font_color", Color(0.95, 0.45, 0.4))
+		return
+	_data_reset_arm_t = 0.0
+	# 진행 데이터만 초기화: run.cfg(이어하기)·palimpsest.cfg(재진입) 삭제 + 영속 메타를 메모리에서
+	# 기본값으로 되돌린 뒤 save_settings로 덮어쓴다(settings.cfg의 키·볼륨·화면 값은 그대로 재기록).
+	GameState.clear_run()
+	_remove_user_file("palimpsest.cfg")
+	GameState.reset_meta_memory()
+	GameState.save_settings()
+	# 타이틀로 복귀: 런 도중 초기화해도 다음 RouteMap 자동저장이 run.cfg를 되살리는 누수를 막고,
+	# 타이틀의 이어하기 버튼 표시도 새 상태로 갱신된다.
+	get_tree().paused = false
+	get_tree().change_scene_to_file(SceneRouter.TITLE)
+
+func _disarm_data_reset() -> void:
+	_data_reset_arm_t = 0.0
+	if _data_reset_btn != null and is_instance_valid(_data_reset_btn):
+		_data_reset_btn.text = DATA_RESET_LABEL
+		_data_reset_btn.remove_theme_color_override("font_color")
 
 # 크레딧 탭 — 패널에서 직접 띄우는 오버레이. Settings를 닫지 않고 그 위에 겹쳐 띄움.
 func _build_credits_tab() -> Control:
@@ -908,6 +990,11 @@ func _process(delta: float) -> void:
 	# content_scale_factor를 OrientationGuard가 프레임 뒤 바꿀 수 있어 매 프레임 패널 맞춤 재확인
 	# (_fit_to_viewport는 뷰포트 크기 변화 시에만 실제 재배치 → 저렴).
 	_fit_to_viewport()
+	# 데이터 초기화 2단 확인: 제한 시간이 지나면 무장 해제(문구 원복).
+	if _data_reset_arm_t > 0.0:
+		_data_reset_arm_t -= delta
+		if _data_reset_arm_t <= 0.0:
+			_disarm_data_reset()
 	# 위/아래 hold 연속 이동 — Godot 기본 ui_up/down은 echo로 자동 반복되지 않음.
 	if capturing_action != "":
 		return
@@ -993,6 +1080,8 @@ func _input(event: InputEvent) -> void:
 				elif jb.button_index == JOY_BUTTON_RIGHT_SHOULDER:
 					tab_dir = 1
 		if tab_dir != 0 and tabs != null:
+			# 탭을 떠나면 초기화 무장 해제 — 다른 탭에서 돌아왔을 때 확인 문구가 남아있지 않게.
+			_disarm_data_reset()
 			var n: int = tabs.get_tab_count()
 			if n > 0:
 				tabs.current_tab = (tabs.current_tab + tab_dir + n) % n
