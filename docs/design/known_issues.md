@@ -293,6 +293,11 @@
   "데모에서 ZXC 안 됨"). → 키 배열 개편 시 `SETTINGS_VERSION`을 +1. `version < SETTINGS_VERSION`이면
   키바인드만 폐기되고 도감·볼륨 등 다른 cfg 값은 보존되므로 안전(키만 새 기본으로 리셋). (3→4: e8fc845.)
 
+- **이동체(보스) 기준 상대 오프셋 스폰은 반드시 아레나 경계로 클램프한다.** BossSentinel 페이즈
+  전환 소환이 `보스.x ± 760`인데 ARENA 폭이 1920이라, 보스가 한쪽에 치우친 채 전환되면 스폰점이
+  벽 밖 → patrol이 좌하단 구석에 낀 채 방치(사용자 보고 2회, 2026-08-14 수정: clampf 140~1780 +
+  patrol hunt 모드). 기준점이 *움직이는* 스폰 좌표는 최악 위치(경계)에서의 결과를 좌표로 확인할 것.
+
 - **고정 거치 적(둥지 저격수)을 개체 수 배율로 복제하면 발판 밖 허공에 떨어진다.**
   `_spawn_from_enemies_dict`는 risk 배율(risk3=1.5)로 적 수를 늘릴 때 추가분을 `base_p ± 120px`
   랜덤 오프셋으로 스폰한다. patrol(넓은 지면)엔 맞지만, 둥지 저격수는 64px 단독 발판에 거치돼
@@ -520,6 +525,12 @@
   `get_tree().paused`는 SceneTree 전역이라 scene 전환에 carry된다. overlay/도전방 등에서 paused 해제
   누락 시 다음 scene이 freeze. 새 overlay/scene 추가 시 paused 해제 안전판을 같은 패턴으로 둘 것.
 
+- **시간 구동 풀스크린 연출(글리치 등)은 pause를 명시적으로 다뤄야 한다 — 안 그러면 피크에서
+  얼어붙은 화면이 pause 내내 남는다.** 14-1 글리치 도중 레벨업(트리 pause)이 뜨자 `_GlitchRunner`
+  (기본 PAUSABLE)가 멈춰 최대 강도 왜곡이 레벨업 화면을 덮은 채 정지(사용자 보고 2026-08-14,
+  "매우 눈 아픔"). → 엔벨로프 러너는 `PROCESS_MODE_ALWAYS` + pause 중 빨리 감기(3배속)로 스스로
+  정리되게. 새 풀스크린 연출을 만들면 "이 도중 pause가 오면 화면이 어떻게 남는가"를 항상 검사.
+
 - **검증 하니스가 Stage를 *단독* 부팅하면 `get_tree().paused=true`로 시작 → `_physics_process` 안 돈다.**
   실제 게임은 Briefing._ready가 `paused=false`로 풀고 Stage로 오지만, 래퍼에서 Stage.tscn을 직접
   인스턴스화하면 그 해제를 건너뛰어 트리가 paused로 남는다. 그러면 이동 발판(MovingPlatform) 등
@@ -552,6 +563,12 @@
   main 씬(Main.gd)이 트리에 붙는 중에 같은 프레임에 씬을 교체하려 해 SceneTree가 충돌 경고를 낸다(codex 리뷰,
   2026-06-18 헤드리스 재현). 게임은 동작하나 콘솔에 에러. → `change_scene_to_file.call_deferred(path)`로
   한 프레임 미뤄 전환. `--quit-after 30` 헤드리스 부팅으로 경고 소멸 확인 가능.
+
+- **1회성 안내 대사 플래그는 의도한 스코프의 소유자에 둔다 — 맵마다 재생성되는 노드의 인스턴스
+  변수면 "1회"가 "맵마다 1회"가 된다.** VeilSight 마킹 소개 멘트("위험한 건 제가 먼저 볼게요")가
+  인스턴스 변수 `_intro_called`라 매 맵 첫 위협마다 재생 → "뜬금없이 자주 나온다"(사용자 2026-08-14).
+  → 런당 1회 의도면 GameState 플래그(+`reset()` 초기화), 맵당 1회 의도면 인스턴스 변수. 플래그를
+  만들 때 스코프(런/맵/영속)를 주석으로 선언하고 소유자를 그 스코프와 일치시킬 것.
 
 - **세션 플래그(`playground_active`)는 *해제처가 하나뿐*이면 누수된다 — 해제는 보편 초기화(`reset()`)에 둘 것.**
   디버그 연습장 진입(`Settings._on_playground_pressed`)이 `playground_active=true`만 켜고, 해제는
