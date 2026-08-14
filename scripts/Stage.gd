@@ -5365,9 +5365,9 @@ func _on_false_veil_defeated() -> void:
 		if (e as Node).has_meta("no_marker"):
 			(e as Node).queue_free()
 	_enemies_remaining = 0
-	# "잘 보시네요. 그 눈이 마음에 듭니다" 어색 반려(사용자 2026-08-14) — 어긋난 정중함 유지,
-	# 눈 모티프는 관측 기록 테마로 회수.
-	_show_rival_subtitle("...제 그림을 전부 걷어내셨군요. 그 눈은 기록에 없던 겁니다.", 3.2)
+	# 2차 재작성(사용자: "기록에 없던 겁니다"도 번역투) — 추상 명사 종결 대신 라이벌의 행동
+	# 예고로. 뜻은 동일: 요원이 자기 데이터(관측 기록)를 벗어났다는 인정.
+	_show_rival_subtitle("...제 그림을 전부 걷어내셨군요. 요원 파일을 다시 읽어야겠습니다.", 3.2)
 	get_tree().create_timer(3.4, false).timeout.connect(_rival_final_line)
 
 func _rival_final_line() -> void:
