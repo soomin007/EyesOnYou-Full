@@ -988,7 +988,8 @@ func _show_veil_subtitle(message: String, duration: float, _plain_prefix: bool =
 	# 14-1 가짜 클리어 이후(라이벌이 렌더를 쥔 구간) — 내 VEIL 목소리는 짧게 끊긴다.
 	# 온전한 문장은 보라색(라이벌)만 나온다(사용자 2026-08-14). 정보 전달은 시각 tell이 담당.
 	# 자막 흔들림/지직임은 전부 제거 — 가독성 우선(사용자 2026-08-14 2차: "글씨를 읽을 수 없다").
-	if _rival_phase >= 2 and not goal_reached:
+	var choked: bool = _rival_phase >= 2 and not goal_reached
+	if choked:
 		duration = minf(duration, 1.4)
 	# 어두운 반투명 pill 배경 — 게임 화면 위에서 또렷하게(사용자: 대사 인지 안 됨).
 	var sb := StyleBoxFlat.new()
@@ -1002,7 +1003,9 @@ func _show_veil_subtitle(message: String, duration: float, _plain_prefix: bool =
 	_subtitle_stack_box.add_child(pill)
 	var tw := pill.create_tween()
 	tw.tween_property(pill, "modulate:a", 1.0, 0.12 if fast_in else 0.3)
-	tw.tween_interval(duration)
+	# 타이핑 시간만큼 유지 연장(읽을 시간 보존). 14-1 억압 대사는 연장 없음 — 타이핑 도중
+	# 끊기는 것 자체가 통신 두절 연출.
+	tw.tween_interval(duration if choked else duration + _subtitle_type_time(message))
 	tw.tween_property(pill, "modulate:a", 0.0, 0.5)
 	tw.tween_callback(func() -> void:
 		if is_instance_valid(pill):
@@ -1029,7 +1032,7 @@ func _show_rival_subtitle(message: String, duration: float) -> void:
 	_subtitle_stack_box.add_child(pill)
 	var tw := pill.create_tween()
 	tw.tween_property(pill, "modulate:a", 1.0, 0.35)
-	tw.tween_interval(duration)
+	tw.tween_interval(duration + _subtitle_type_time(message))
 	tw.tween_property(pill, "modulate:a", 0.0, 0.5)
 	tw.tween_callback(func() -> void:
 		if is_instance_valid(pill):
@@ -1065,8 +1068,22 @@ func _build_speaker_pill(speaker: String, sp_color: Color, message: String, msg_
 	msg_l.add_theme_color_override("font_color", msg_color)
 	msg_l.add_theme_color_override("font_outline_color", Color(0, 0, 0))
 	msg_l.add_theme_constant_override("outline_size", 4)
+	# 타자기 출력 — 문장이 한 번에 턱 뜨는 게 어색하다는 피드백(2026-08-14). 글자 단위로 흘려
+	# 쓴다. pill 크기는 전체 텍스트 기준이라(visible_characters는 렌더만 자름) 레이아웃 안 튐.
+	msg_l.visible_characters = 0
+	var total_chars: int = message.length()
+	var type_tw := msg_l.create_tween()
+	type_tw.tween_interval(0.15)
+	type_tw.tween_method(func(v: float) -> void:
+		if is_instance_valid(msg_l):
+			msg_l.visible_characters = int(v)
+	, 0.0, float(total_chars), _subtitle_type_time(message))
 	hb.add_child(msg_l)
 	return pill
+
+# 타자기 소요 시간 — 글자당 22ms, 0.2~1.1s 클램프. 표시 유지 시간 연장에도 같은 값을 쓴다.
+func _subtitle_type_time(message: String) -> float:
+	return clampf(float(message.length()) * 0.022, 0.2, 1.1)
 
 # 화면에 떠있는 모든 자막 일괄 폐기. ARCTURUS 문서 진입처럼 화면을 깨끗이 비워야
 # 하는 상황에서 호출. paused 동안 멈춘 fade-out이 outro 자막 위에 잔재로 남는 문제
@@ -2573,6 +2590,8 @@ func _apply_act_rival_tint() -> void:
 
 # 얇은 바이올렛 가로 밴드 2~3개가 화면을 잠깐 스치는 간섭 플래시(화면 좌표 — 카메라 무관).
 func _rival_interference_flash(layer: CanvasLayer) -> void:
+	if not GameState.screen_fx_enabled:
+		return
 	var vs: Vector2 = get_viewport().get_visible_rect().size
 	var g := Control.new()
 	g.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -4370,6 +4389,8 @@ func _start_boss_glitch_foreshadow() -> void:
 # 짧은 붉은-바이올렛 지직거림 오버레이(거짓 렌더 tell과 같은 톤)를 보스 위에 잠깐 얹는다.
 # modulate 기반이 아니라 별도 오버레이 노드라 보스 피격/페이즈 플래시와 충돌하지 않는다(known_issues).
 func _boss_glitch_flash() -> void:
+	if not GameState.screen_fx_enabled:
+		return
 	if boss == null or not is_instance_valid(boss):
 		return
 	var g := Node2D.new()
@@ -4545,6 +4566,8 @@ var _p1_spawn_timer: Timer = null    # P1 연속 증원 타이머
 var _p1_spawn_idx: int = 0
 var _p1_side: int = 0
 var _p2_flip_timer: Timer = null     # P2 노드 실드 교대 타이머
+var _p2_turrets: Array = []          # P2 벽 포탑 [좌, 우] — 같은 인덱스 기둥이 전원을 댄다
+var _p2_links: Array = []            # 기둥→포탑 전원 케이블 시각(_P2PowerLink)
 var _rival_bar_layer: CanvasLayer = null   # P1·P2 페이즈 목표 바(노드 합산 HP)
 const RIVAL_P1_NODE_HP: int = 6      # P1 지휘 앵커(재밍 기둥) — 기본값. 레벨 스케일은 아래 변수.
 const RIVAL_P2_NODE_HP: int = 10     # P2 제어 노드(교대 실드로 실질 더 김) — 기본값.
@@ -4660,6 +4683,9 @@ func _rival_beat_flash() -> void:
 var _glitch_shader: Shader = null
 
 func _run_glitch(duration: float, peak: float) -> void:
+	# 접근성 — 화면 효과 끄기(광과민 대응). 글리치는 정보 전달이 아니라 톤이라 생략 가능.
+	if not GameState.screen_fx_enabled:
+		return
 	if _glitch_shader == null:
 		_glitch_shader = load("res://assets/shaders/glitch.gdshader") as Shader
 	if _glitch_shader == null:
@@ -4750,6 +4776,7 @@ func _start_rival_p2() -> void:
 		{"x": 110.0, "y": 782.0, "dir": "right", "phase": 0.0},
 		{"x": 1810.0, "y": 782.0, "dir": "left", "phase": 1.3},
 	]
+	_p2_turrets.clear()
 	for entry in turret_cfgs:
 		var d: Dictionary = entry
 		var trap := BulletTrap.new()
@@ -4759,6 +4786,7 @@ func _start_rival_p2() -> void:
 		add_child(trap)
 		trap.setup(_dir_from_str(str(d.get("dir", "left"))), 2.6, float(d.get("phase", 0.0)), 0.7, "periodic", "")
 		_rival_p2_props.append(trap)
+		_p2_turrets.append(trap)
 	_traps_present = true
 	# 위장 함정 1개 — 우측 노드 접근로의 거짓 바닥(§4 문법 재사용, 맵당 1개 준수).
 	if not GameState.story_mode:
@@ -4787,6 +4815,8 @@ func _p2_spawn_nodes() -> void:
 	if _rival_phase != 1 or goal_reached or not is_inside_tree():
 		return
 	SfxPlayer.play("hatch_open")
+	_p2_links.clear()
+	var side: int = 0
 	for cfg in [{"x": 560.0, "d": 1}, {"x": 1360.0, "d": -1}]:
 		var cd: Dictionary = cfg
 		var node := _spawn_enemy(5, Vector2(float(cd.get("x", 960.0)), 790.0))
@@ -4795,6 +4825,19 @@ func _p2_spawn_nodes() -> void:
 		node.set_meta("fs_dir", int(cd.get("d", 1)))
 		var arc := _FlipShieldArc.new()
 		node.add_child(arc)
+		# "부술 이유"를 눈에 보이게(사용자 2026-08-14: 기둥이 무의미) — 기둥이 같은 쪽 벽 포탑에
+		# 전원을 댄다. 케이블 시각 + 기둥 격파 시 그 포탑 정지(_on_p2_node_down).
+		node.killed.connect(_on_p2_node_down.bind(side))
+		if side < _p2_turrets.size() and _p2_turrets[side] is Node2D:
+			var link := _P2PowerLink.new()
+			link.from_pos = (node as Node2D).global_position + Vector2(0.0, -34.0)
+			link.to_pos = (_p2_turrets[side] as Node2D).global_position + Vector2(0.0, -8.0)
+			add_child(link)
+			_p2_links.append(link)
+			_rival_p2_props.append(link)
+		else:
+			_p2_links.append(null)
+		side += 1
 	_enemies_remaining += 2
 	# 실드 교대 타이머.
 	_p2_flip_timer = Timer.new()
@@ -4818,7 +4861,65 @@ func _p2_flip_shields() -> void:
 func _rival_p2_objective_line() -> void:
 	if not is_inside_tree() or goal_reached or _rival_phase != 1:
 		return
-	_show_veil_subtitle("방 전체가 넘어갔습니다. 저 기둥 둘이 제어를 쥐고 있습니다. 방패는 한쪽뿐이니, 등 뒤로 돌거나 폭발로 뚫으십시오.", 4.0)
+	# 케이블 시각과 짝 — 기둥의 기능(포탑 전원)을 한 번만 말로 짚는다.
+	_show_veil_subtitle("포탑 전원이 저 기둥 둘에서 옵니다. 끊는 만큼 조용해져요. 방패는 한쪽뿐입니다.", 3.6)
+
+# P2 기둥 격파 → 그 기둥이 전원을 대던 포탑이 죽는다 — 파괴의 보상이 즉시 체감된다.
+func _on_p2_node_down(_pos: Vector2, side: int) -> void:
+	if side < _p2_links.size():
+		var link = _p2_links[side]
+		if link != null and is_instance_valid(link):
+			(link as Node).call("power_off")
+	if side < _p2_turrets.size():
+		var trap = _p2_turrets[side]
+		if trap != null and is_instance_valid(trap):
+			(trap as Node).set_process(false)   # 주기 진행이 _process 구동 — 정지 = 발사 중단
+			var tw := (trap as Node2D).create_tween()
+			tw.tween_property(trap, "modulate", Color(0.4, 0.42, 0.5, 0.75), 0.5)
+			SfxPlayer.play_at("plate_step_inactive", (trap as Node2D).global_position)
+
+# P2 전원 케이블 — 기둥→포탑을 잇는 처진 바이올렛 라인 + 흐르는 전류 펄스. power_off로 소등.
+class _P2PowerLink extends Node2D:
+	var from_pos: Vector2 = Vector2.ZERO
+	var to_pos: Vector2 = Vector2.ZERO
+	var _t: float = 0.0
+	var _off: bool = false
+	var _off_t: float = 0.0
+
+	func power_off() -> void:
+		_off = true
+
+	func _ready() -> void:
+		z_index = 1
+
+	func _process(delta: float) -> void:
+		_t += delta
+		if _off:
+			_off_t += delta
+			if _off_t > 0.6:
+				queue_free()
+				return
+		queue_redraw()
+
+	func _draw() -> void:
+		var a: float = 0.55
+		if _off:
+			a *= maxf(0.0, 1.0 - _off_t / 0.6)
+		var col := Color(0.72, 0.42, 1.0, a)
+		var seg: int = 14
+		var pts := PackedVector2Array()
+		for i in seg + 1:
+			var k: float = float(i) / float(seg)
+			var p: Vector2 = from_pos.lerp(to_pos, k)
+			p.y += sin(PI * k) * 26.0   # 살짝 처진 케이블
+			pts.append(to_local(p))
+		draw_polyline(pts, col, 2.0, true)
+		if not _off:
+			# 전류 펄스 — 기둥에서 포탑 쪽으로 흐른다(전원 방향).
+			var pk: float = fmod(_t * 0.7, 1.0)
+			var pp: Vector2 = from_pos.lerp(to_pos, pk)
+			pp.y += sin(PI * pk) * 26.0
+			draw_circle(to_local(pp), 3.5, Color(0.9, 0.7, 1.0, minf(1.0, a + 0.35)))
 
 # P2 제어 노드의 교대 실드 표시 — 부모(enemy) 메타 fs_dir 쪽 반구. 막힌 쪽은 면이 있는 실드,
 # 열린 쪽은 따뜻한 노출 글로우("여길 치라"), 교대 순간엔 밝은 스냅(실드가 넘어간 쪽으로 시선 유도).
@@ -5126,17 +5227,18 @@ func _p3_veil_shaken_line() -> void:
 func _p3_tell_line() -> void:
 	if not is_inside_tree() or goal_reached:
 		return
-	_show_veil_subtitle("두꺼운 표식은 제가 그린 것이 아닙니다. 속이 빈 그림입니다. 쏘면 그냥 뚫립니다.", 3.6)
+	# 강의식 3문장 → 2문장 압축("작위적" 반려 2026-08-14). 탄 통과 tell은 시각(찢김)이 담당.
+	_show_veil_subtitle("굵은 표식은 제 것이 아닙니다. 저건 몸이 없어요.", 3.0)
 
 func _p3_unmarked_line() -> void:
 	if not is_inside_tree() or goal_reached or _rival_phase != 2:
 		return
-	_show_veil_subtitle("진짜는 표식 없이 옵니다. 가장자리에서 들어오는 걸 직접 보십시오.", 3.4)
+	_show_veil_subtitle("진짜는 표식 없이 옵니다. 가장자리는 직접 봐요.", 3.0)
 
 # ─── P3 분신전 — 거짓 VEIL(FalseVeil) + 무표시 위협 + 신뢰=지각 보조 ───
 var _false_veil: Node2D = null
 var _p3_assist_timer: Timer = null
-var _p3_assist_idx: int = 0
+var _p3_assist_spoken: bool = false   # 지각 보조 의도 발화 1회(이후 소거는 침묵 — 취소선이 말한다)
 var _p3_bar_layer: CanvasLayer = null
 
 # P3 보스 체력바 — SENTINEL 바 문법 재사용. 잠복/실체는 텍스트 라벨 대신 본체의 시각 언어
@@ -5230,20 +5332,16 @@ func _on_p3_volley() -> void:
 		n.set_meta("no_marker", true)
 	_enemies_remaining += 2
 
-const _P3_ASSIST_LINES: Array = [
-	"가짜 하나 지웁니다.",
-	"그건 제가 그린 표식이 아닙니다. 지웁니다.",
-	"굵은 것부터 지웁니다.",
-]
-
+# 지각 보조는 시안 취소선(시각)이 말한다 — 지울 때마다 말로 중계하던 3종 로테이션은
+# "작위적·오글거림" 반려(사용자 2026-08-14 3차). 첫 소거 때 의도 한 줄만, 이후엔 침묵.
 func _veil_assist_tick() -> void:
 	if goal_reached or _false_veil == null or not is_instance_valid(_false_veil):
 		if _p3_assist_timer != null and is_instance_valid(_p3_assist_timer):
 			_p3_assist_timer.stop()
 		return
-	if bool(_false_veil.call("erase_one_fake")):
-		_show_veil_subtitle(str(_P3_ASSIST_LINES[_p3_assist_idx % _P3_ASSIST_LINES.size()]), 2.2)
-		_p3_assist_idx += 1
+	if bool(_false_veil.call("erase_one_fake")) and not _p3_assist_spoken:
+		_p3_assist_spoken = true
+		_show_veil_subtitle("제 것이 아닌 표식이 섞였습니다. 걷어낼게요.", 2.6)
 
 func _on_false_veil_defeated() -> void:
 	if _rival_phase != 2 or goal_reached:
@@ -6130,6 +6228,8 @@ func _screen_flash(col: Color, fade_in: float, fade_out: float) -> void:
 	tw.tween_callback(layer.queue_free)
 
 func _camera_shake(magnitude: float, duration: float) -> void:
+	if not GameState.camera_shake_enabled:
+		return
 	if camera == null or not is_instance_valid(camera):
 		return
 	var origin: Vector2 = camera.offset

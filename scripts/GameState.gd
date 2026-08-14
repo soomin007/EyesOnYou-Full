@@ -169,6 +169,10 @@ var sfx_volume: float = 1.0
 # 접근성 — settings.cfg에 영속. reset()에서 안 지움(볼륨처럼 사용자 환경 설정).
 var screen_brightness: float = 1.0   # 0.5~1.5 (1.0=기본). Accessibility 오버레이가 반영.
 var sfx_captions: bool = false       # 효과음 자막 (무음 플레이 대응)
+# 연출 강도(2026-08-14 사용자) — 광과민·멀미 대응. 끄면 카메라 흔들림/헤드밥, 화면 효과
+# (글리치 셰이더·간섭 플래시·보스 지직임)를 생략한다. 게임 정보 전달엔 영향 없음.
+var camera_shake_enabled: bool = true
+var screen_fx_enabled: bool = true
 
 # 디스플레이 — settings.cfg에 영속. 환경 설정이라 reset()에서 안 지움.
 # 웹에선 창 크기는 브라우저 캔버스가 정하므로 무의미 → 전체화면 토글만 적용.
@@ -1073,6 +1077,8 @@ func load_settings() -> void:
 	rival_reentry_count = int(cf.get_value("rival", "reentry_count", 0))
 	screen_brightness = clampf(float(cf.get_value("access", "brightness", 1.0)), 0.5, 1.5)
 	sfx_captions = bool(cf.get_value("access", "sfx_captions", false))
+	camera_shake_enabled = bool(cf.get_value("access", "camera_shake", true))
+	screen_fx_enabled = bool(cf.get_value("access", "screen_fx", true))
 	fullscreen = bool(cf.get_value("display", "fullscreen", false))
 	auto_fullscreen = bool(cf.get_value("display", "auto_fullscreen", true))
 	window_size_index = clampi(int(cf.get_value("display", "window_size_index", 0)), 0, WINDOW_SIZES.size() - 1)
@@ -1132,6 +1138,8 @@ func save_settings() -> void:
 	cf.set_value("rival", "reentry_count", rival_reentry_count)
 	cf.set_value("access", "brightness", screen_brightness)
 	cf.set_value("access", "sfx_captions", sfx_captions)
+	cf.set_value("access", "camera_shake", camera_shake_enabled)
+	cf.set_value("access", "screen_fx", screen_fx_enabled)
 	cf.set_value("display", "fullscreen", fullscreen)
 	cf.set_value("display", "auto_fullscreen", auto_fullscreen)
 	cf.set_value("display", "window_size_index", window_size_index)

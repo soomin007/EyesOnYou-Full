@@ -159,9 +159,14 @@ func _update_bob(delta: float) -> void:
 			if _phase == "walk" or _phase == "witness":
 				# 빈 복도라 발소리가 존재감을 가져야 함 — 실플레이 "살짝만 크게"(2026-08-12) 반영 +3dB.
 				SfxPlayer.play("player_step", 1.0)
-	view_bob = Vector2(
-		sin(_bob_phase) * 4.0 * amp,
-		-absf(sin(_bob_phase)) * 5.5 * amp + _clunk_kick * 7.0)
+	# 진폭 하향 4.0/5.5/7.0 → 2.6/3.6/5.0(사용자 2026-08-14: 흔들림 과함). 접근성으로 껐으면
+	# 시각 밥만 제거 — 걸음 리듬(_bob_phase)과 발소리는 유지.
+	if not GameState.camera_shake_enabled:
+		view_bob = Vector2.ZERO
+	else:
+		view_bob = Vector2(
+			sin(_bob_phase) * 2.6 * amp,
+			-absf(sin(_bob_phase)) * 3.6 * amp + _clunk_kick * 5.0)
 
 # ── 순차 점등 — 진행이 이끈다 ───────────────────────────────────────────────
 func _update_lights() -> void:

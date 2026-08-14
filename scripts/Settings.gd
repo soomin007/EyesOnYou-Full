@@ -662,7 +662,50 @@ func _build_accessibility_tab() -> Control:
 	cap_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(cap_note)
 	v.add_child(_make_captions_row())
+
+	var spacer2 := Control.new()
+	spacer2.custom_minimum_size = Vector2(0, 8)
+	v.add_child(spacer2)
+
+	# 연출 강도(2026-08-14 사용자) — 광과민·멀미 대응. 값은 GameState 영속(access/).
+	v.add_child(_make_section_header("연출 강도"))
+	var fx_note := Label.new()
+	fx_note.text = "흔들림이나 번쩍임이 부담스러우면 끄세요. 게임 진행에는 영향 없습니다."
+	fx_note.add_theme_font_size_override("font_size", 13)
+	fx_note.add_theme_color_override("font_color", Color(0.62, 0.72, 0.85))
+	fx_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(fx_note)
+	v.add_child(_make_fx_toggle_row("카메라 흔들림", "camera"))
+	v.add_child(_make_fx_toggle_row("화면 효과 (글리치·번쩍임)", "fx"))
 	return outer
+
+func _make_fx_toggle_row(label_text: String, kind: String) -> Control:
+	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 14)
+	var l := Label.new()
+	l.text = label_text
+	l.custom_minimum_size = Vector2(220, 28)
+	l.add_theme_font_size_override("font_size", 14)
+	l.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hb.add_child(l)
+	var toggle := CheckButton.new()
+	var on: bool = GameState.camera_shake_enabled if kind == "camera" else GameState.screen_fx_enabled
+	toggle.button_pressed = on
+	toggle.text = "켜짐" if on else "꺼짐"
+	toggle.add_theme_font_size_override("font_size", 14)
+	toggle.toggled.connect(_on_fx_toggled.bind(kind, toggle))
+	hb.add_child(toggle)
+	return hb
+
+func _on_fx_toggled(pressed: bool, kind: String, toggle: CheckButton) -> void:
+	if kind == "camera":
+		GameState.camera_shake_enabled = pressed
+	else:
+		GameState.screen_fx_enabled = pressed
+	toggle.text = "켜짐" if pressed else "꺼짐"
+	GameState.save_settings()
+	SfxPlayer.play("ui_slider_tick")
 
 var _brightness_value_label: Label
 
