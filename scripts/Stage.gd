@@ -2923,10 +2923,13 @@ func _escape_cast(color: Color) -> void:
 	rect.material = mat
 	layer.add_child(rect)
 
-# 반출 = 총력 저지: 붉은 경보 캐스트 + 벽면 경광 글로우(느린 호흡, 스트로브 아님).
+# 반출 = 총력 저지: 붉은 경보 캐스트 + 터널 벽면 경광 글로우(느린 호흡, 스트로브 아님).
+# 글로우는 벽이 실제로 있는 터널 구간(x < _TUNNEL_END_X) 안에만 — 터널 밖까지 두면 벽 없는
+# 야경 하늘에 민짜 빨간 원이 떠 "저게 뭐냐"가 된다(2026-08-15 사용자 보고). 야외 구간의
+# 경보 톤은 _escape_cast(붉은 캐스트)가 담당.
 func _escape_tone_extract() -> void:
 	_escape_cast(Color(1.0, 0.86, 0.84))
-	for x in [700.0, 1500.0, 2300.0, 3100.0]:
+	for x in [500.0, 1000.0, 1450.0]:
 		var lamp := _AlarmGlow.new()
 		lamp.position = Vector2(float(x), 120.0)
 		add_child(lamp)
@@ -2937,9 +2940,11 @@ class _AlarmGlow extends Node2D:
 		_t += delta
 		queue_redraw()
 	func _draw() -> void:
-		var a: float = 0.16 + 0.05 * sin(_t * 2.4)   # 약 0.38Hz 왕복 — 저대비 완만
-		draw_circle(Vector2.ZERO, 150.0, Color(0.95, 0.25, 0.2, a))
-		draw_circle(Vector2.ZERO, 60.0, Color(0.95, 0.30, 0.25, a * 1.4))
+		# 민짜 원 대신 동심원 감쇠 — 벽에 번지는 광원으로 읽히게(하드 엣지 제거).
+		var a: float = 0.10 + 0.04 * sin(_t * 2.4)   # 약 0.38Hz 왕복 — 저대비 완만
+		for i in 4:
+			var r: float = 150.0 - 34.0 * float(i)
+			draw_circle(Vector2.ZERO, r, Color(0.95, 0.26, 0.21, a * (0.35 + 0.28 * float(i))))
 
 # 파기 = 붕괴: 주황빛 재 캐스트 + 떨어지는 분진.
 func _escape_tone_destroy() -> void:
@@ -4551,8 +4556,11 @@ func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1, disguise_kind: in
 	col.shape = shape
 	e.add_child(col)
 	# 이스터에그 — 낮은 확률로 황금 희귀 개체(shiny). add_child(→_ready) 전에 켜야 오라가 생성됨.
-	# 연습장(playground)에선 테스트 노이즈 방지로 제외.
-	var shiny: bool = (not GameState.playground_active) and randf() < SHINY_CHANCE
+	# 연습장(playground)에선 테스트 노이즈 방지로 제외. 제외 대상은 엘리트 롤과 동형(2026-08-15
+	# 재머 황금 보고): 재머(kind 5, 장치라 "개체"가 아님 + 라이벌의 손) · 위장/시선 거짓(금색이
+	# 위장을 깨는 모순).
+	var shiny: bool = (not GameState.playground_active) and kind != 5 \
+		and disguise_kind < 0 and not feign and randf() < SHINY_CHANCE
 	e.set("shiny", shiny)
 	e.set("disguise_as", disguise_kind)   # §4 거짓 렌더 — >=0이면 위장 렌더(_ready에서 소비)
 	e.set("feign_ambush", feign)          # §4 시선 거짓 — true면 딴 데 보는 척 기습(patrol, _ready에서 소비)
@@ -4594,7 +4602,8 @@ func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1, disguise_kind: in
 	return e
 
 func _on_enemy_killed(at_position: Vector2, wave_idx: int = -1, shiny: bool = false, elite: bool = false) -> void:
-	GameState.register_kill()
+	GameState.register_kill(elite, shiny)
+	_refresh_hud()   # 킬 점수 실시간 반영(우상단 SCORE)
 	_spawn_orb(at_position + Vector2(0, -20.0))
 	# 엘리트 — 오브 1개 추가(총 가치 2, 위험 증가에 보상 동행 §2).
 	if elite:

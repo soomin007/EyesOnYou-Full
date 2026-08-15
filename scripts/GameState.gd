@@ -348,8 +348,11 @@ var kills_total: int = 0        # 런 누적 처치
 var run_play_secs: float = 0.0  # 런 누적 플레이 시간(스테이지 소요 합, 브리핑·맵선택 제외)
 var stage_time_log: Array = []  # "표시번호|route|초" 문자열 — 맵별 소요 기록(설계 진단)
 
-func register_kill() -> void:
+# 처치 = 정산 카운트 + 실시간 점수(2026-08-15: 종전엔 점수가 클리어 시점에만 올라
+# "실시간으로 안 오른다" 지적). 기본 10, 엘리트 +20, 황금 +40. 클리어 가산(100×스테이지)과 병행.
+func register_kill(elite: bool = false, shiny: bool = false) -> void:
 	kills_total += 1
+	score += 10 + (20 if elite else 0) + (40 if shiny else 0)
 
 func run_time_text() -> String:
 	var total: int = int(run_play_secs)
