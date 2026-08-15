@@ -5100,7 +5100,10 @@ func _start_fake_clear() -> void:
 		var tw := _rival_cast.create_tween()
 		tw.tween_property(_rival_cast, "color", Color(1, 1, 1), 0.8)
 	for p in _rival_p2_props:
-		if p is Node and is_instance_valid(p):
+		# is_instance_valid를 먼저 — 전원 케이블(_P2PowerLink)은 power_off 0.6s 뒤 자체 해제되므로
+		# 배열에 해제된 참조가 남고, 해제 인스턴스에 `is`를 먼저 대면 런타임 에러로 이 함수가
+		# 통째로 중단돼 가짜 클리어 체인이 영구 정지한다(P2→P3 동결, 사용자 재현 3회).
+		if is_instance_valid(p):
 			(p as Node).queue_free()
 	_rival_p2_props.clear()
 	if _rival_bar_layer != null and is_instance_valid(_rival_bar_layer):
