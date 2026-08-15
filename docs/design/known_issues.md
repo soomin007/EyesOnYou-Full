@@ -19,6 +19,13 @@
   누락하면 `InputValidationError: The required parameter questions is missing`로 반복 실패.
   (2026-06-08 여러 번 빈 호출로 실패함.)
 
+- **오류를 고칠 때 "같은 유형의 다른 지점"을 전부 스윕하고 결과를 보고에 포함할 것(사용자 직접
+  등록 지시, 2026-08-15).** 회수 문서의 "문서에 대사·해설 혼입"을 그 지점만 고쳤다가 동형 오류가
+  서버 로그(복구 단편)에 남아 재지적("자꾸 같은 일 여러 번 해서 토큰 낭비"). → 수정 전에 오류의
+  *유형*을 정의하고, 같은 유형이 생길 자리 전부를 grep/열거해 검사(수정 or 이상 없음 확인)한다.
+  예: 문서 규약 위반 = 전 문서 소스(_*_doc_lines·오버레이) / route id 하드코딩 = 옛 id 전체 grep /
+  1회성 플래그 스코프 = 유사 플래그 전수. 자동 메모리 same-type-error-sweep와 동일 규칙.
+
 - **GDScript: untyped Array/Dictionary 인덱싱 시 명시 타입 선언.** `var x := arr[i]` 대신 `var x: Dictionary = arr[i]`.
   `Array[T]`에 untyped Array(사전 리터럴 값, `Dictionary.get` 결과) 직접 대입 금지(런타임 에러).
 

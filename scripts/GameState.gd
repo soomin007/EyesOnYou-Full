@@ -341,6 +341,19 @@ var overwrite_exhausted: bool = false   # 직전 사망이 한도 초과 — Dea
 var rival_lock_beat4_shown: bool = false
 var rival_lock_beat5_shown: bool = false
 var last_clear_flawless: bool = false   # 직전 클리어가 무사망(단일 기록) — Stage 토스트용
+var last_clear_challenge: bool = false  # 직전 클리어가 도전 루트(완수 프리미엄) — Stage 토스트용
+
+# --- 런 정산 통계(2026-08-15 사용자 제안) — 엔딩 정산 화면 + 페이싱 진단용 ---
+var kills_total: int = 0        # 런 누적 처치
+var run_play_secs: float = 0.0  # 런 누적 플레이 시간(스테이지 소요 합, 브리핑·맵선택 제외)
+var stage_time_log: Array = []  # "표시번호|route|초" 문자열 — 맵별 소요 기록(설계 진단)
+
+func register_kill() -> void:
+	kills_total += 1
+
+func run_time_text() -> String:
+	var total: int = int(run_play_secs)
+	return "%d:%02d" % [total / 60, total % 60]
 
 # 라이벌이 잠근 칸 수 — 막4부터 1, 막5부터 2. 부순 잠금(rival_locks_broken)만큼 돌아온다.
 func rival_locks_active() -> int:
@@ -409,6 +422,10 @@ func reset() -> void:
 	rival_lock_beat4_shown = false
 	rival_lock_beat5_shown = false
 	last_clear_flawless = false
+	last_clear_challenge = false
+	kills_total = 0
+	run_play_secs = 0.0
+	stage_time_log = []
 	# 디버그 연습장 플래그 누수 차단 — 연습장을 종료 버튼 아닌 경로(ESC→타이틀 등)로 빠져나오면
 	# playground_active가 true로 남아, 다음 일반 모드 클리어가 _trigger_stage_clear에서 연습장 분기로
 	# 빠져 패널만 뜨고 다음 맵으로 안 넘어가던 치명 버그. reset()은 타이틀 복귀/새 런마다 호출되므로 여기서 해제.
@@ -469,6 +486,10 @@ func start_main_game() -> void:
 	rival_lock_beat4_shown = false
 	rival_lock_beat5_shown = false
 	last_clear_flawless = false
+	last_clear_challenge = false
+	kills_total = 0
+	run_play_secs = 0.0
+	stage_time_log = []
 	clear_pending_snapshots()  # 완주 못 한 이전 런의 막 경계 스냅샷 폐기(승격 오염 방지)
 	playground_active = false  # 연습장 플래그 누수 차단(디버그→일반 모드) — reset()과 동일 방어.
 	_reset_perf_metrics()
@@ -535,6 +556,9 @@ func _finalize_stage_metrics() -> void:
 	var hits: int = max(0, hits_taken - _stage_hits_base)
 	var deaths: int = max(0, death_count - _stage_deaths_base)
 	last_stage_secs = float(Time.get_ticks_msec() - _stage_start_msec) / 1000.0
+	# 런 정산 — 스테이지 소요 누적 + 맵별 기록(페이싱 진단: "맵 하나가 몇 분짜리인가"의 실측).
+	run_play_secs += last_stage_secs
+	stage_time_log.append("%d|%s|%.1f" % [current_stage + 1, current_route_id, last_stage_secs])
 	recent_stage_hits.append(hits)
 	recent_stage_deaths.append(deaths)
 	if recent_stage_hits.size() > 2:
@@ -738,6 +762,13 @@ func on_stage_clear() -> bool:
 		score += 50 * current_stage
 		if add_xp(2, false):
 			leveled = true
+	# 도전 루트 완수 프리미엄 — 1히트 실패·시간 제한·VEIL 차단의 기대 보상 보정(2026-08-15 검토:
+	# 종전엔 클리어 XP가 일반 reward3 맵과 동일한데 킬 기회는 없어 이론상 보상 열위였다).
+	last_clear_challenge = current_route_challenge and not story_mode and not playground_active
+	if last_clear_challenge:
+		score += 100 * current_stage
+		if add_xp(4, false):
+			leveled = true
 	# regen은 획득 시점에 max_hp +1 효과만 — 매 stage HP 풀 회복이라 heal_player 불필요
 	return leveled
 
@@ -905,6 +936,9 @@ func _store_run_state(cf: ConfigFile, section: String) -> void:
 	cf.set_value(section, "rival_lure_followed", rival_lure_followed)
 	cf.set_value(section, "overwrite_left", overwrite_left)
 	cf.set_value(section, "rival_locks_broken", rival_locks_broken)
+	cf.set_value(section, "kills_total", kills_total)
+	cf.set_value(section, "run_play_secs", run_play_secs)
+	cf.set_value(section, "stage_time_log", stage_time_log)
 
 func save_run() -> void:
 	var cf := ConfigFile.new()
@@ -981,6 +1015,11 @@ func _restore_run_state(cf: ConfigFile, section: String) -> void:
 		overwrite_left = overwrite_max()
 	overwrite_left = clampi(overwrite_left, 0, OVERWRITE_BASE)
 	overwrite_exhausted = false
+	kills_total = int(cf.get_value(section, "kills_total", 0))
+	run_play_secs = float(cf.get_value(section, "run_play_secs", 0.0))
+	stage_time_log = []
+	for t in cf.get_value(section, "stage_time_log", []):
+		stage_time_log.append(str(t))
 
 # run.cfg를 GameState에 복원. 성공 시 true(이어하기 → ROUTE_MAP 복귀). 실패 시 false(상태 불변).
 func load_run() -> bool:

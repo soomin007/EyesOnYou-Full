@@ -69,9 +69,6 @@ const ALT_SKIN_TINT: Color = Color(0.68, 1.0, 1.22)
 var _skin_tint: Color = Color(1, 1, 1)
 var _coyote_t: float = 0.0       # 바닥을 떠난 뒤 지상 점프가 아직 유효한 잔여 시간
 var _jump_buffer_t: float = 0.0  # 착지 직전 누른 점프 입력을 기억하는 잔여 시간
-# 글라이드 취소 래치 — 공중에서 아래키를 누르면 켜지고, *착지할 때까지* 글라이드가 꺼진다(사용자 요청:
-# 홀드 말고 그 시점부터 바닥까지 원래 속도 하강). 착지(is_on_floor)에서 해제.
-var _glide_cancelled: bool = false
 # 환경 레버 — Area2D body_entered 시 LeverInteractable이 직접 세팅한다.
 # attack 입력이 사격 대신 레버 당기기로 흡수된다.
 var nearby_lever: Node = null
@@ -314,10 +311,8 @@ func _handle_input(delta: float) -> void:
 			# 수류탄 차징 중 ▼ = 투척 취소(충전/쿨다운 소모 없음). 각도 고정이라 ▼가 비어 취소로 씀.
 			_cancel_grenade_charge()
 		else:
-			# 바닥: 원웨이 발판 통과. 공중: 글라이드 취소(착지까지 원래 속도 하강).
+			# 바닥: 원웨이 발판 통과. (공중 ▼는 비어 있음 — 활강은 점프 홀드 방식이라 취소 키 불필요.)
 			_try_drop_through()
-			if not is_on_floor():
-				_glide_cancelled = true
 
 func _try_drop_through() -> void:
 	if not is_on_floor():
@@ -411,13 +406,15 @@ func _spawn_bullet(idx: int, total: int) -> void:
 	b.damage = 2 if fb_tier >= 1 else 1  # T0=1, T1+=2 고정
 	b.pierce = fb_tier >= 3
 	b.style_tier = fb_tier               # 총알 외형 분기용 (성장 가시화)
-	# multishot T3 — 약한 추적
-	b.tracking = GameState.get_skill_tier("multishot") >= 3
-	# glide T3 — 활강 중(공중 낙하) 사격이 적을 강하게 유도 + 데미지. 재설계(2026-06-15):
-	# '관통'은 사격강화 T3 전담으로 넘기고 활강 T3는 '유도(homing)'를 정체성으로 분리(중복 제거).
-	# → 두 라인 모두 보유 시 활강 중엔 관통(fire_boost) + 유도(glide) 시너지가 자연히 겹친다.
+	# multishot T3 — 사거리 연장(총알 수명 +45%). 추적은 반려(2026-08-15 사용자) — 유도는
+	# glide T3의 정체성이라 중복이었고, 오연사는 "부채꼴을 더 멀리"가 어울린다.
+	if GameState.get_skill_tier("multishot") >= 3:
+		b.lifetime_mult = maxf(b.lifetime_mult, 1.45)
+	# glide T3 — *공중에 떠 있는 동안* 사격이 적을 강하게 유도 + 데미지(2026-08-15 사용자:
+	# 활강 중 한정 → 공중 전체로 확장. 홀드 활강과 조건이 얽혀 발동 창이 너무 좁아지는 것 방지).
+	# '관통'은 사격강화 T3 전담, 활강 T3는 '유도(homing)'가 정체성(중복 제거, 2026-06-15).
 	var gl_tier: int = GameState.get_skill_tier("glide")
-	if gl_tier >= 3 and not is_on_floor() and velocity.y > 0.0:
+	if gl_tier >= 3 and not is_on_floor():
 		b.damage += 1
 		b.tracking = true
 		b.tracking_blend = 0.12      # 약한 추적(0.03)보다 강하게 — "완전 유도" 체감
@@ -612,14 +609,13 @@ func _play_skill_acquire_flash() -> void:
 
 func _apply_gravity(delta: float) -> void:
 	if is_on_floor():
-		_glide_cancelled = false  # 착지 — 글라이드 취소 래치 해제
 		return
 	velocity.y = min(velocity.y + GRAVITY * delta, MAX_FALL_SPEED)
-	# 공중 활강 — T1부터 낙하 시 자동으로 천천히 떨어진다(점프 홀드 불필요 — 패시브).
-	# 아래키를 누르면 그 시점부터 *착지까지* 활강을 끄고 원래 속도로 떨어진다(_glide_cancelled 래치).
-	# T2=활강 중 사격 관통+데미지, T3=유도 — 효과는 _spawn_bullet. 공중 제압 라인(상성: 저격수·드론).
+	# 공중 활강 — 낙하 중 *점프 키를 누르고 있는 동안*만 천천히 떨어진다(홀드 방식,
+	# 2026-08-15 사용자: 자동+아래키 래치 방식 반려 → 홀드로 복귀). 놓으면 즉시 원래 속도.
+	# T3=공중 유도 — 효과는 _spawn_bullet. 공중 제압 라인(상성: 저격수·드론).
 	var glide_tier: int = GameState.get_skill_tier("glide")
-	if glide_tier >= 1 and velocity.y > 0.0 and not _glide_cancelled:
+	if glide_tier >= 1 and velocity.y > 0.0 and Input.is_action_pressed("jump"):
 		var fall_speed: float = GLIDE_FALL_SPEED
 		# 좌우 이동 입력 시 낙하 속도 ↑ (활공 거리·속도 제어).
 		if Input.get_axis("move_left", "move_right") != 0.0:

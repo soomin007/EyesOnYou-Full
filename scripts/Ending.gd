@@ -40,10 +40,23 @@ func _ready() -> void:
 	title_label.text = "MISSION COMPLETE"
 	sub_title_label.text = "결말  %s" % EndingResolver.get_ending_title(ending_id)
 	var truth_mark: String = "   |   진실  ●" if GameState.truth_seen else ""
-	stats_label.text = "신뢰  %s   |   처리  %s   |   사망  %d   |   스코어  %d%s" % [
+	# 런 정산(2026-08-15 사용자 제안) — 시간·피격·처치·스킬을 결말과 함께 남긴다.
+	var skill_names: Array = []
+	for sid in GameState.skills:
+		if SkillTreeData.BASELINE.has(str(sid)):
+			continue
+		var tier: int = int(GameState.skills[sid])
+		var sk: Dictionary = SkillSystem.find_by_id(str(sid), tier)
+		var nm: String = str(sk.get("name", sid))
+		skill_names.append(nm + (" T%d" % tier if tier > 1 else ""))
+	var skill_line: String = "스킬  " + (", ".join(skill_names) if skill_names.size() > 0 else "기본 장비만")
+	stats_label.text = "신뢰  %s   |   처리  %s   |   사망  %d   |   스코어  %d%s\n클리어  %s   |   피격  %d   |   처치  %d\n%s" % [
 		GameState.veil_trust_gauge_dots(), EndingResolver.disposal_label(GameState.disposal_choice),
-		GameState.death_count, GameState.score, truth_mark
+		GameState.death_count, GameState.score, truth_mark,
+		GameState.run_time_text(), GameState.hits_taken, GameState.kills_total, skill_line
 	]
+	# 맵별 소요 실측 — 페이싱 진단용 콘솔 기록(웹 콘솔에서도 회수 가능).
+	print("[RUN] 총 %s · 맵별 소요: %s" % [GameState.run_time_text(), " / ".join(GameState.stage_time_log)])
 	# ??? 방 방문(hidden_visit_count > 0) 또는 ARCTURUS 아카이브 읽음(visited_arcturus) 시
 	# 라이브 lore 라인을 보여주고, 미방문 시엔 짧고 호기심 hint 라인.
 	var explored_lore: bool = GameState.hidden_visit_count > 0 or GameState.visited_arcturus

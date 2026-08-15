@@ -35,7 +35,7 @@ const LINES: Array = [
 		"tiers": [
 			{"name": "삼연사",       "desc": "한 번에 부채꼴 3발",            "active": false},
 			{"name": "오연사",       "desc": "한 번에 부채꼴 5발",            "active": false},
-			{"name": "오연사+추적",  "desc": "5발 + 약한 추적",              "active": false},
+			{"name": "오연사+사거리", "desc": "5발 + 사거리 연장",            "active": false},
 		],
 	},
 	{
@@ -50,9 +50,9 @@ const LINES: Array = [
 	{
 		"id": "glide", "family": FAMILY_MOBILITY,
 		"tiers": [
-			{"name": "공중 활강",   "desc": "낙하 시 자동으로 천천히 떨어진다", "active": false},
+			{"name": "공중 활강",   "desc": "낙하 중 점프 키를 누르고 있으면 천천히 떨어진다", "active": false},
 			{"name": "삼단 점프",   "desc": "공중 점프 1회 추가 (최대 3단)",     "active": false},
-			{"name": "유도 사격",   "desc": "활강 중 사격이 적을 강하게 유도 (데미지 +1)", "active": false},
+			{"name": "유도 사격",   "desc": "공중에서 쏜 사격이 적을 강하게 유도 (데미지 +1)", "active": false},
 		],
 	},
 	{

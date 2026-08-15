@@ -26,6 +26,7 @@ const EDGE_MARGIN: float = 24.0               # 화면 밖 화살표가 가장�
 const RETICLE_R: float = 17.0
 const FADE_IN: float = 0.5                     # 마커가 "그어지는" 등장 시간(스트로크 연출, 인지 강화 ②)
 const CALL_COOLDOWN: float = 18.0             # VEIL이 말로 짚는 최소 간격 (노이즈 방지)
+const CALL_BAND: float = 240.0                # 위협 콜 대상 = 화면 밖 이 거리 이내(조우 직전만 말로)
 const MIN_CALL_TIME: float = 7.0             # 맵 진입 멘트 보호 — 이 전엔 말 안 함
 const GLITCH_DUR: float = 1.2                # 역전 순간 일제 붕괴 연출 길이
 const BLIND_PCT: int = 50                    # degradation 중 VEIL이 영영 못 보는 위협 비율(%) — 페널티 강화
@@ -234,7 +235,12 @@ func _scan_for_call() -> void:
 			continue   # 14-1 P3 무표시 위협(§7.2) — 거짓 VEIL이 가린 신호. 말로도 못 짚는다
 		var spos: Vector2 = xform * wpos
 		var off: bool = spos.x < 0.0 or spos.x > view.x or spos.y < 0.0 or spos.y > view.y
-		if off:
+		# 곧 보일 것만 말로 짚는다(화면 밖 CALL_BAND px 이내) — 감지 반경(1400) 전체를 짚으면
+		# 플레이어가 볼 수 없는 것을 너무 미리 처리해 대사가 헛돈다(2026-08-15 실플레이 지적).
+		# 멀리 있는 위협은 화살표(시각)가 계속 담당하고, 말은 조우 직전에 붙는다.
+		var near_view: bool = spos.x > -CALL_BAND and spos.x < view.x + CALL_BAND \
+			and spos.y > -CALL_BAND and spos.y < view.y + CALL_BAND
+		if off and near_view:
 			_call_threat(spos, view * 0.5)
 			return   # 한 번에 하나만 — _seen 등록은 _draw가 한다
 
@@ -346,7 +352,8 @@ func _draw() -> void:
 		var on_screen: bool = spos.x >= 0.0 and spos.x <= view.x and spos.y >= 0.0 and spos.y <= view.y
 		# ① 런 첫 마커 서명(인지 강화 2026-08-14) — 첫 표식 옆에 1회 "VEIL" 태그를 붙여
 		# 마커·화살표가 시스템 UI가 아니라 VEIL의 행동임을 못박는다. 소개 대사와 별개의 시각 서명.
-		if not GameState.veilsight_tag_shown:
+		# 화면 안 마커에만 — 화면 밖 화살표에 붙이면 서명 순간을 플레이어가 못 본다(2026-08-15 지적).
+		if not GameState.veilsight_tag_shown and on_screen:
 			GameState.veilsight_tag_shown = true
 			_tag_id = id
 			_tag_until = _t + 2.4

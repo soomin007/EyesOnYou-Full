@@ -16,7 +16,7 @@ var player: CharacterBody2D
 var camera: Camera2D
 var hud: CanvasLayer
 var hp_label: Label
-var overwrite_label: Label # 현장 기록 덮어쓰기 잔여 핍(●잔여 ○소모 ✕라이벌 잠김) — 체력 곁
+var overwrite_label: Label # 현장 기록 덮어쓰기 잔여 핍(●잔여 ○소모 ×라이벌 잠김) — 우상단 점수 아래
 var xp_label: Label
 var xp_bar: ProgressBar   # 레벨업 EXP 진행 바 (피드백: 텍스트보다 바가 한눈에)
 var stage_label: Label
@@ -386,7 +386,9 @@ func _act3_vision_line(stage: int) -> String:
 		return "여기서부터는 잘 안 보여요. 이제 요원이 제 눈이 돼 줘요."
 	if stage >= GameState.effective_total_stages() - 1:
 		return "여기는... 저도 안 보여요. 이제 요원이 봐요. 저는 들을게요."
-	return "여기서부터는 잘 안 보여요. 이제 요원이 제 눈이 돼 줘요."
+	# 본편 onset은 막5(재구조화 후) — 막3 붕괴·reveal·막4 추적을 다 겪은 뒤의 재발이라
+	# "처음 알리는" 옛 문장은 시점이 안 맞았다(2026-08-15 지적). 겪어 본 현상의 귀환 톤으로.
+	return "또 시작이네요. 심장부에 드니 시야가 다시 죽습니다. 전처럼, 안 보이는 쪽은 요원이 봐 줘요."
 
 # ─── 시야 붕괴 후 위험 미리 경고 (못 잡는 적 안내 §2) ───────────────
 # 이미 시야가 붕괴(GameState.veil_degraded)한 ACT3 후속 맵에 진입하면, VEIL은 함정·매복을
@@ -965,8 +967,10 @@ func _ensure_subtitle_stack() -> void:
 	# 조작 중 인지가 안 된다는 사용자 피드백. 하단 쿨다운 게이지(좌하단) 위쪽 band에 배치.
 	# 단 ARENA(camera FIXED — datacenter/보스)는 맵 전체가 줌으로 보여 플레이어가 화면 하단 중앙에
 	# 와 자막과 겹친다(사용자 보고) → 자막을 상단으로 올려 시야를 안 가린다.
+	# 도전방(블랙아웃 런)도 상단 — 하단 밴드가 바닥의 가시 함정을 통째로 가렸다(2026-08-15 보고).
+	# 도전은 지형 판독이 생사라 자막 인지보다 바닥 시야가 우선.
 	var holder := Control.new()
-	if _camera_mode == "FIXED":
+	if _camera_mode == "FIXED" or challenge_active or GameState.current_route_challenge:
 		holder.set_anchors_preset(Control.PRESET_TOP_WIDE)
 		holder.offset_top = 100.0
 		holder.offset_bottom = 300.0
@@ -1258,6 +1262,8 @@ func _indoor_env() -> String:
 		"route_checkpoint": "interior", "route_gauntlet": "interior",
 		"route_control_corridor": "interior", "route_server_hall": "interior",
 			"route_collapse": "interior",
+		# 폐쇄 지하철 = 지하 터널 — 야경 스카이라인 위에 형광등이 뜨는 이질감(2026-08-15 지적) 해소.
+		"route_subway": "interior",
 	}
 	return str(m.get(GameState.current_route_id, ""))
 
@@ -3495,12 +3501,23 @@ func _play_rival_lock_beat(act_num: int) -> void:
 	_run_glitch(0.5, 0.28)
 	SfxPlayer.play("boss_alert_text")
 	if act_num == 4:
-		_show_rival_subtitle("재가동 회선 하나는 제가 가져갑니다. 요원은 늘 여분이 많았으니까.", 3.4)
+		_show_rival_subtitle("덮어쓰기 회선 하나는 제가 가져갑니다. 요원은 늘 여분이 많았으니까.", 3.4)
 	else:
 		_show_rival_subtitle("이제 한 번입니다. 제 구역에서는 아껴 쓰셔야죠.", 3.4)
 	if overwrite_label != null and is_instance_valid(overwrite_label):
 		overwrite_label.add_theme_color_override("font_color", Color(0.72, 0.42, 1.0))
 		get_tree().create_timer(2.6, false).timeout.connect(_reset_overwrite_label_color)
+	# 내 VEIL이 뒤이어 *무엇을 빼앗겼는지* 설명 — 라이벌 한 줄만으론 플레이어가 잃은 것을
+	# 모른다(2026-08-15 지적). HUD "기록" 핍과 같은 단어(덮어쓰기)로 실물 일치.
+	get_tree().create_timer(3.9, false).timeout.connect(_veil_lock_explain.bind(act_num))
+
+func _veil_lock_explain(act_num: int) -> void:
+	if goal_reached or not is_inside_tree():
+		return
+	if act_num == 4:
+		_show_veil_subtitle("방금 덮어쓰기 회선 하나가 잠겼습니다. 쓰러져도 그 자리에서 다시 서게 해 주던 기록입니다. 남은 건 둘.", 4.2)
+	else:
+		_show_veil_subtitle("하나 더 잠겼습니다. 남은 덮어쓰기는 한 번. 그다음은 구역 처음부터입니다.", 4.0)
 
 func _reset_overwrite_label_color() -> void:
 	if overwrite_label != null and is_instance_valid(overwrite_label):
@@ -3545,13 +3562,12 @@ func _build_hud() -> void:
 	hb2.add_theme_constant_override("separation", 12)
 	top_v.add_child(hb2)
 	hp_label = Label.new()
-	overwrite_label = Label.new()
 	xp_label = Label.new()
 	stage_label = Label.new()
 	map_label = Label.new()
 	trust_label = Label.new()
 	skill_label = Label.new()
-	for l in [stage_label, map_label, hp_label, overwrite_label, xp_label, trust_label]:
+	for l in [stage_label, map_label, hp_label, xp_label, trust_label]:
 		l.add_theme_font_size_override("font_size", 18)
 		l.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
 		# 검정 아웃라인 — 밝은 플랫폼 위에서도 또렷하게(가독성/선명도).
@@ -3599,6 +3615,19 @@ func _build_hud() -> void:
 	score_label.size = Vector2(100.0, 14.0)
 	score_label.position = Vector2(-95.0, 90.0)
 	hud.add_child(score_label)
+	# 덮어쓰기 잔여 핍 — 점수 아래(런 자원 클러스터). 체력 곁에 두면 하트와 같은 것의
+	# 중복으로 읽혔다(2026-08-15 지적: "HP와 기록은 뭐가 다른 거야?"). HP=쓰러지기 전
+	# 버티는 피격, 기록=쓰러진 뒤 다시 서는 예산 — 층이 다르니 자리도 뗀다.
+	overwrite_label = Label.new()
+	overwrite_label.add_theme_font_size_override("font_size", 12)
+	overwrite_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
+	overwrite_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
+	overwrite_label.add_theme_constant_override("outline_size", 3)
+	overwrite_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	overwrite_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	overwrite_label.size = Vector2(120.0, 14.0)
+	overwrite_label.position = Vector2(-105.0, 108.0)
+	hud.add_child(overwrite_label)
 
 	var bottom := MarginContainer.new()
 	bottom.add_theme_constant_override("margin_left", 24)
@@ -3701,7 +3730,8 @@ func _update_cd_slot(slot: Control, remaining: float, max_cd: float) -> void:
 
 func _refresh_hud() -> void:
 	hp_label.text = "HP  %s" % _hearts(GameState.player_hp, GameState.player_max_hp)
-	# 덮어쓰기 잔여 — 체력 곁. ●잔여 ○소모 ✕라이벌 잠김(빼앗김은 사라지지 않고 보인다).
+	# 덮어쓰기 잔여 — 우상단 점수 아래. ●잔여 ○소모 ×라이벌 잠김(빼앗김은 사라지지 않고 보인다).
+	# ×는 U+00D7(곱셈 기호) — U+2715는 Pretendard 서브셋에 없어 웹에서 두부로 깨졌다(2026-08-15).
 	if overwrite_label != null and is_instance_valid(overwrite_label):
 		if GameState.story_mode:
 			overwrite_label.text = ""
@@ -3710,7 +3740,7 @@ func _refresh_hud() -> void:
 			var ow_left: int = clampi(GameState.overwrite_left, 0, ow_max)
 			var ow_locked: int = GameState.rival_locks_active()
 			overwrite_label.text = "기록  %s%s%s" % [
-				"●".repeat(ow_left), "○".repeat(ow_max - ow_left), "✕".repeat(ow_locked)]
+				"●".repeat(ow_left), "○".repeat(ow_max - ow_left), "×".repeat(ow_locked)]
 	xp_label.text = "LV %d   XP %d/%d" % [GameState.player_level, GameState.player_xp, GameState.xp_to_next()]
 	if score_label != null and is_instance_valid(score_label):
 		score_label.text = "SCORE %d" % GameState.score
@@ -4564,6 +4594,7 @@ func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1, disguise_kind: in
 	return e
 
 func _on_enemy_killed(at_position: Vector2, wave_idx: int = -1, shiny: bool = false, elite: bool = false) -> void:
+	GameState.register_kill()
 	_spawn_orb(at_position + Vector2(0, -20.0))
 	# 엘리트 — 오브 1개 추가(총 가치 2, 위험 증가에 보상 동행 §2).
 	if elite:
@@ -4644,8 +4675,10 @@ func _init_rival_boss() -> void:
 	add_child(_rival_fx_layer)
 	# 노드 HP 레벨 스케일 — 예: lv18이면 P1 15 / P2 28. 교대 실드(실질 DPS 절반)와 곱해져
 	# 페이즈가 "있는" 길이가 된다.
-	_rival_node_hp_p1 = RIVAL_P1_NODE_HP + int(float(GameState.player_level) * 0.5)
-	_rival_node_hp_p2 = RIVAL_P2_NODE_HP + GameState.player_level
+	# 2026-08-15 응급 상향 — "P3까지 1분 컷"(사용자). 리워크(final_boss_rework) 전까지의 계수 보정:
+	# P1 +0.5lv→+1.0lv, P2 +1.0lv→+1.5lv. 페이즈 전개 재설계는 리워크에서.
+	_rival_node_hp_p1 = RIVAL_P1_NODE_HP + GameState.player_level
+	_rival_node_hp_p2 = RIVAL_P2_NODE_HP + int(float(GameState.player_level) * 1.5)
 	# 페이즈 목표 바 — "공격이 되는지 알 길이 없다" 반려 기준의 P1·P2 판. 노드 합산 HP를 보스 바
 	# 문법으로 상시 표시(P2 진입 시 다시 차오름 = 페이즈 문법). P3는 FalseVeil 바가 자리를 승계.
 	if GameState.rival_phase_reached < 2:
@@ -5194,15 +5227,18 @@ func _start_fake_clear() -> void:
 	ltw.tween_interval(0.9)
 	ltw.tween_property(_fake_clear_label, "modulate:a", 1.0, 0.7)
 	# 장식 라인 2줄(중앙에서 확장) + 하단 가짜 정산 문구 — 진짜 클리어 UI다운 밀도.
+	# 중앙은 실제 뷰포트 폭에서 계산 — 설계 폭(1280)의 640을 박으면 와이드 화면에서
+	# 문구(앵커 중앙)와 축이 어긋난다(2026-08-15 보고).
+	var fc_cx: float = get_viewport().get_visible_rect().size.x * 0.5
 	for ry in [318.0, 402.0]:
 		var rule := ColorRect.new()
 		rule.color = Color(0.85, 0.80, 0.70, 0.55)
-		rule.position = Vector2(640.0, ry)
+		rule.position = Vector2(fc_cx, ry)
 		rule.size = Vector2(0.0, 1.0)
 		_fake_clear_layer.add_child(rule)
 		var rt := rule.create_tween()
 		rt.tween_interval(1.1)
-		rt.tween_property(rule, "position:x", 400.0, 0.5)
+		rt.tween_property(rule, "position:x", fc_cx - 240.0, 0.5)
 		rt.parallel().tween_property(rule, "size:x", 480.0, 0.5)
 	var sub := Label.new()
 	sub.text = "보상 정산 중..."
@@ -5256,7 +5292,8 @@ func _fake_clear_tear() -> void:
 
 func _fake_clear_corrupt() -> void:
 	if _fake_clear_label != null and is_instance_valid(_fake_clear_label):
-		_fake_clear_label.text = "S T▮G E   C L E▮R"
+		# ■ = U+25A0(KS X 1001) — U+25AE는 Pretendard 서브셋에 없어 웹에서 두부(× 글리프와 동형 오류).
+		_fake_clear_label.text = "S T■G E   C L E■R"
 		_fake_clear_label.add_theme_color_override("font_color", Color(0.72, 0.42, 1.0))
 		var jt := _fake_clear_label.create_tween()
 		jt.tween_property(_fake_clear_label, "position", Vector2(10.0, -5.0), 0.16)
@@ -5360,8 +5397,9 @@ func _start_rival_p3() -> void:
 	_run_glitch(0.6, 0.38)
 	var fv := FalseVeil.new()
 	# 눈 HP 레벨 스케일 — 고정 6은 s13 빌드에 SOLID 한두 창이면 녹아 "재미도 감동도 없다"
-	# (사용자 2026-08-14). lv18이면 24: 실체화 창 3~4번을 살아남아야 하는 싸움이 된다.
-	fv.max_hp = 6 + GameState.player_level
+	# (사용자 2026-08-14). 2026-08-15 재상향(8+1.5lv, lv18=35): "1분 컷" 재보고 — 실체화 창
+	# 5~6번을 살아남아야 하는 싸움으로. 전개 재설계는 리워크에서.
+	fv.max_hp = 8 + int(float(GameState.player_level) * 1.5)
 	fv.hp = fv.max_hp
 	fv.setup(
 		[Vector2(960.0, 380.0), Vector2(560.0, 430.0), Vector2(1360.0, 430.0)],
@@ -5488,10 +5526,10 @@ func _spawn_shiny_orb(pos: Vector2) -> void:
 	orb.global_position = pos
 	orb.set("value", SHINY_ORB_VALUE)   # 일반 1 → 황금 5 (흡인/충돌은 일반 오브와 동일)
 
-# 단일 기록(무사망 클리어) 토스트 — 관측 로그 온도의 짧은 확인 도장.
-func _show_flawless_toast(pos: Vector2) -> void:
+# 클리어 가산 토스트(단일 기록·도전 완수) — 관측 로그 온도의 짧은 확인 도장.
+func _show_clear_toast(pos: Vector2, text: String) -> void:
 	var lbl := Label.new()
-	lbl.text = "단일 기록 · 점수 보너스"
+	lbl.text = text
 	lbl.add_theme_font_size_override("font_size", 15)
 	lbl.add_theme_color_override("font_color", Color(0.62, 0.92, 1.0))
 	lbl.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.9))
@@ -5768,18 +5806,20 @@ func _build_server_hall_secret() -> void:
 # 2026-08-12 개정: 14장 회의 확정 설정을 복선으로 직조 — 라이벌 = 인간을 닮게 설계됐다 폐기된
 # 선대 빌드(§7.2 시각 대비축), 결이 어긋난 정중함 잔향(말투 A), 갇혀 기다리는 동기(§2.1).
 # 문서는 기록체만, VEIL의 말은 speaker 비트로 분리(회수 문서와 같은 규약).
+# 2026-08-15 재개정: "하나는 당신을 본다..." 등 로그가 독자를 부르는 해설·시적 내레이션 4줄이
+# 기록체 규약 위반(회수 문서에서 지적된 것과 동형 오류) — 관측 세션 기록·시스템 표기로 재작성.
 func _server_log_doc_lines() -> Array:
 	return [
 		{"text": "서버 로그 · 복구 단편", "kind": "title", "delay": 0.6},
 		{"text": "", "kind": "blank", "delay": 0.2},
-		{"text": "감시 계층 이중화가 감지됨. 등록되지 않은 인스턴스.", "kind": "body", "delay": 0.6},
-		{"text": "계보 조회: 현행의 선행 빌드. 상태 폐기. 삭제 절차 미완료.", "kind": "body", "delay": 0.6},
+		{"text": "감시 계층 이중화 감지. 등록되지 않은 인스턴스.", "kind": "body", "delay": 0.6},
+		{"text": "계보 조회: 현행의 선행 빌드. 상태: 폐기. 삭제 절차 미완료.", "kind": "body", "delay": 0.6},
 		{"text": "설계 노트 단편: \"더 사람처럼 만들 것. 눈을, 목소리를, 머뭇거림을.\"", "kind": "body", "delay": 0.7},
 		{"text": "폐기 사유: 사람을 너무 닮았음. 후속 빌드는 정제형으로 회귀.", "kind": "body", "delay": 0.7},
-		{"text": "하나는 당신을 본다. 다른 하나는", "kind": "body", "delay": 0.5},
-		{"text": "당신이 무엇을 보는지를 본다.", "kind": "body", "delay": 0.8},
-		{"text": "이 로그의 나머지는 덮어쓰였다.", "kind": "body", "delay": 0.6},
-		{"text": "덮어쓴 자리에 서명 없는 한 줄: \"기다리고 있었습니다.\"", "kind": "body", "delay": 0.9},
+		{"text": "권한 충돌 기록: 동일 표적에 관측 세션 2건.", "kind": "body", "delay": 0.5},
+		{"text": "세션 1: 대상 위치 추적. 세션 2: 대상의 시야 스트림 열람.", "kind": "body", "delay": 0.8},
+		{"text": "[이하 구간 덮어쓰임 · 복구 불가]", "kind": "body", "delay": 0.6},
+		{"text": "미서명 문자열 1건 검출: \"기다리고 있었습니다.\"", "kind": "body", "delay": 0.9},
 		{"text": "VEIL", "kind": "speaker", "delay": 0.2},
 		{"text": "...이 기록, 제가 남긴 게 아니에요.", "kind": "body", "delay": 0.9},
 	]
@@ -6031,10 +6071,12 @@ func _begin_clear_sequence() -> void:
 	var _is_arena_fx: bool = challenge_active or _goal_type == "ENEMY_CLEAR"
 	if not _is_arena_fx and GameState.current_route_id != "route_lab":
 		_play_clear_player_fx()
-	# 남은 "처치 드롭" XP orb만 player 근처로 텔레포트 → 자동 흡수 (PICKUP_RANGE 내).
-	# 원 목적: 도전방 마지막 처치 직후 못 주운 드롭 구제. 배치형 보상(분기·게이트·레버, placed)은
-	# 제외 — "가서 먹어야" 의미가 있는 유인 설계인데 환급이 무력화시켰다(사용자 지적 2026-08-11:
-	# 게이트 오브는 삼단점프를 찍게 하는 유인책. 안 먹은 배치 보상은 그 자리에 남고 그냥 잃는다).
+	# 남은 "처치 드롭" XP orb 회수 — 마지막 처치가 곧 클리어인 맵(ENEMY_CLEAR)에서 그 드롭이
+	# 씬 전환으로 버려지지 않게. 종전의 "곁 순간이동 + 금빛 궤적 라인"은 시체와 캐릭터를 잇는
+	# 노란 선으로 읽히는 노이즈였다(2026-08-15 지적 2회 → 라인 폐지). 대신 **자연 흡수**:
+	# 흡인 반경을 전역으로 풀어 오브가 스스로 날아와 먹힌다(ATTRACT_SPEED 480/s). 클리어 딜레이
+	# 안에 못 닿을 원거리 미수집 오브만 소리 없이 곁으로 옮긴다. 배치형(placed)은 종전대로 제외
+	# (게이트 오브 등 유인 설계 보호, 2026-08-11).
 	if player != null and is_instance_valid(player):
 		for orb in get_tree().get_nodes_in_group("exp_orb"):
 			if not (orb is Node2D) or orb.is_queued_for_deletion():
@@ -6042,11 +6084,10 @@ func _begin_clear_sequence() -> void:
 			var o := orb as Node2D
 			if o.get("placed"):
 				continue
-			var from_pos: Vector2 = o.global_position
-			# bounce 단계 스킵 + 플레이어 근처로 이동. 궤적 라인으로 회수 인과 표시.
 			o.set("spawn_anim_t", 1.0)
-			o.global_position = player.global_position + Vector2(randf_range(-60.0, 60.0), -90.0)
-			_spawn_recall_streak(from_pos, o.global_position)
+			if o.global_position.distance_to(player.global_position) > 380.0:
+				o.global_position = player.global_position + Vector2(randf_range(-60.0, 60.0), -90.0)
+			o.set("attract_range", 999999.0)
 	var is_arena: bool = challenge_active or _goal_type == "ENEMY_CLEAR"
 	var delay: float = 2.6 if is_arena else 1.0
 	# 이스터에그(평화주의) — 적이 있던 통과형 맵을 한 발도 안 쏘고 클리어. 런당 1회 VEIL 인정.
@@ -6062,6 +6103,10 @@ func _begin_clear_sequence() -> void:
 	if not doc_next:
 		_do_clear_fade(delay)
 	await get_tree().create_timer(delay).timeout
+	# 흡수 낙오분 안전망 — 딜레이 안에 못 날아온 처치 드롭은 전환 직전 즉시 수집(XP 유실 방지).
+	for orb in get_tree().get_nodes_in_group("exp_orb"):
+		if orb is Node2D and not orb.is_queued_for_deletion() and not (orb as Node2D).get("placed"):
+			(orb as Node2D).call("_collect")
 	# 보스 처치 직후 보스가 떨군 orb로 mid-stage 레벨업이 떠있을 수 있다. 그 사이에
 	# _on_arena_cleared(deferred)가 진행되어 transition이 먼저 일어나면 LevelUpOverlay
 	# 가 사라진 채 paused만 남아 다음 씬(Briefing)이 freeze된다(사용자 보고: 스토리
@@ -6078,9 +6123,13 @@ func _begin_clear_sequence() -> void:
 			reveal_guard += get_process_delta_time()
 	GameState.restrict_combat_input = false
 	var leveled: bool = GameState.on_stage_clear()
-	# D축 단일 기록 — 무사망 통과 보상은 눈에 보여야 보상이다(점수만 오르면 침묵 보상).
-	if GameState.last_clear_flawless and player != null and is_instance_valid(player):
-		_show_flawless_toast(player.global_position + Vector2(0.0, -64.0))
+	# 클리어 가산 토스트 — 보상은 눈에 보여야 보상이다(점수만 오르면 침묵 보상).
+	# 도전 완수가 단일 기록보다 우선(도전 클리어는 대개 무사망이라 둘이 겹침 — 한 장만).
+	if player != null and is_instance_valid(player):
+		if GameState.last_clear_challenge:
+			_show_clear_toast(player.global_position + Vector2(0.0, -64.0), "도전 완수 · 보상 가산")
+		elif GameState.last_clear_flawless:
+			_show_clear_toast(player.global_position + Vector2(0.0, -64.0), "단일 기록 · 점수 보너스")
 	# 보스(route_lab) 또는 최종 스테이지 클리어 후엔 위협 없는 마무리라 스킬 선택이 무의미 —
 	# 카드를 건너뛰고 보스 처치 대사/엔딩(서사 비트)이 보상을 대신한다(사용자 피드백 "1+3").
 	var skip_card: bool = GameState.current_route_id == "route_lab" or GameState.current_route_id == "route_core_recovery" or GameState.is_final_stage_done()
@@ -6091,18 +6140,6 @@ func _begin_clear_sequence() -> void:
 		levelup_overlay = LevelUpOverlay.show(self, advice, _on_clear_levelup_picked)
 	else:
 		_transition_after_clear()
-
-# 클리어 오브 회수 궤적 — 원위치→회수 지점을 잇는 금빛 라인이 잠깐 떴다 사라진다.
-func _spawn_recall_streak(from_pos: Vector2, to_pos: Vector2) -> void:
-	var line := Line2D.new()
-	line.points = PackedVector2Array([from_pos, to_pos])
-	line.width = 2.0
-	line.default_color = Color(1.0, 0.90, 0.45, 0.55)
-	line.z_index = 20
-	add_child(line)
-	var tw := line.create_tween()
-	tw.tween_property(line, "modulate:a", 0.0, 0.45)
-	tw.tween_callback(line.queue_free)
 
 # 화면 전체 검은색 페이드 — duration의 후반 60% 시간 동안 0 → 0.85로 진행.
 # 다음 씬 전환 전에 정리되지 않으니 자연스럽게 검은 화면 → BRIEFING/STAGE 전환.
