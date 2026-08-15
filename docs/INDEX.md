@@ -22,6 +22,7 @@
 | └ 다회차 리플레이 대사 변형(제안·검토) | [`design/veil_replay_dialogue.md`](design/veil_replay_dialogue.md) |
 | 톤 원칙 "글로 명시 < 체험으로 체득" | [`design/show_dont_tell.md`](design/show_dont_tell.md) |
 | 막 정체성(막별 성격·팔레트·난이도 램프·전환 비트) | [`design/act_identity.md`](design/act_identity.md) |
+| 런 길이 확대(페이싱) 실행 계획 · 목표 수치·관문 문법 | [`design/pacing_expansion.md`](design/pacing_expansion.md) |
 | 라이벌 VEIL(후반 컨셉·거짓 렌더·14장 보스 2막 구성) | [`design/rival_veil_concept.md`](design/rival_veil_concept.md) |
 | 다회차 지원 3축(기록 재진입·처리별 탈출 4종·라이벌 기억) | [`design/replay_support_plan.md`](design/replay_support_plan.md) |
 | 관측 프레임 세계관 보강(팔림프세스트의 이면) | [`design/lore_expansion.md`](design/lore_expansion.md) |
