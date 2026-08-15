@@ -815,6 +815,7 @@ func _build_world() -> void:
 	_build_defense_core()
 	_build_cover_niches()
 	_build_sweep_beam()
+	_build_mid_gate()
 	_build_route_lines()
 	_build_fake_watchers()
 
@@ -2158,6 +2159,156 @@ func _build_sweep_beam() -> void:
 	var beam := SweepBeam.new()
 	add_child(beam)
 	beam.setup(cfg, niches, s_half)
+	_sweep_beam_node = beam   # 중간 관문 beam 모드가 빔 위치를 읽는다(페이싱 §1)
+
+# ─── 중간 관문(페이싱 확장 §1) — MapData "mid_gate" 구동 ──────────────────
+# {"x", "mode": "lever"|"clear"|"beam", "lever": Vector2(lever 모드), "zone": [x0,x1](clear 모드)}
+# 통과형 맵의 체류 비트: 열릴 때까지 삼단점프로도 못 넘는 솔리드 격벽(높이 480).
+#   lever = 동력 레버(수직·우회 동선) · clear = 관문 구역 경비만 전멸(국소 — 맵 전체 아님,
+#   "모든 적과 싸울 필요 없다" 정체성 보존) · beam = 스캔 빔이 게이트를 지나는 동안만 개방
+#   (빔을 피하는 대신 꽁무니를 쫓아 통과하는 리듬 역전, scanner 전용).
+# 구성 중복 금지(2026-08-16 사용자): 파일럿 4맵이 서로 다른 모드/텍스처를 쓴다.
+var _mid_gate_body: StaticBody2D = null
+var _mid_gate_col: CollisionShape2D = null
+var _mid_gate_visual: Node2D = null
+var _mid_gate_lamp: ColorRect = null
+var _mid_gate_mode: String = ""
+var _mid_gate_x: float = 0.0
+var _mid_gate_guards: Array = []
+var _mid_gate_inited: bool = false
+var _mid_gate_opened: bool = false
+var _mid_gate_pass_open: bool = false   # beam 모드 현재 개방창 상태
+var _mid_gate_hint_shown: bool = false
+var _sweep_beam_node: SweepBeam = null
+
+func _build_mid_gate() -> void:
+	var g: Dictionary = _map_data.get("mid_gate", {})
+	if g.is_empty():
+		return
+	_mid_gate_mode = str(g.get("mode", "lever"))
+	_mid_gate_x = float(g.get("x", 0.0))
+	var gate_h: float = 480.0
+	var top_y: float = GROUND_Y - gate_h
+	_mid_gate_body = StaticBody2D.new()
+	_mid_gate_body.collision_layer = 1
+	_mid_gate_col = CollisionShape2D.new()
+	var shape := RectangleShape2D.new()
+	shape.size = Vector2(48.0, gate_h)
+	_mid_gate_col.shape = shape
+	_mid_gate_body.position = Vector2(_mid_gate_x, top_y + gate_h * 0.5)
+	_mid_gate_body.add_child(_mid_gate_col)
+	add_child(_mid_gate_body)
+	# 시각 — 격벽 패널 + 위험 스트라이프 + 상태 램프. 점멸 없음(광과민 기준: 색 전환만).
+	_mid_gate_visual = Node2D.new()
+	_mid_gate_visual.position = Vector2(_mid_gate_x, top_y)
+	_mid_gate_visual.z_index = 3
+	add_child(_mid_gate_visual)
+	var panel := ColorRect.new()
+	panel.color = Color(0.16, 0.17, 0.21)
+	panel.position = Vector2(-24.0, 0.0)
+	panel.size = Vector2(48.0, gate_h)
+	_mid_gate_visual.add_child(panel)
+	var edge := ColorRect.new()
+	edge.color = Color(0.30, 0.32, 0.38)
+	edge.position = Vector2(-24.0, 0.0)
+	edge.size = Vector2(6.0, gate_h)
+	_mid_gate_visual.add_child(edge)
+	for i in 5:
+		var stripe := ColorRect.new()
+		stripe.color = Color(0.85, 0.65, 0.20, 0.5)
+		stripe.position = Vector2(-18.0, 44.0 + float(i) * 92.0)
+		stripe.size = Vector2(36.0, 14.0)
+		_mid_gate_visual.add_child(stripe)
+	_mid_gate_lamp = ColorRect.new()
+	_mid_gate_lamp.color = Color(0.95, 0.30, 0.25)
+	_mid_gate_lamp.position = Vector2(-8.0, 14.0)
+	_mid_gate_lamp.size = Vector2(16.0, 16.0)
+	_mid_gate_visual.add_child(_mid_gate_lamp)
+	if _mid_gate_mode == "lever":
+		var lv: Vector2 = g.get("lever", Vector2(_mid_gate_x - 480.0, GROUND_Y - 32.0))
+		var lever := _spawn_lever(lv, "mid_gate_power")
+		lever.hint_color = Color(0.95, 0.75, 0.35)
+		lever.pulled.connect(func(_id: String) -> void:
+			_open_mid_gate())
+
+# clear 모드 경비 수집 — 적 스폰이 _build_world 이후라 첫 tick에서 1회 수집한다.
+func _mid_gate_lazy_init() -> void:
+	_mid_gate_inited = true
+	if _mid_gate_mode != "clear":
+		return
+	var zone: Array = (_map_data.get("mid_gate", {}) as Dictionary).get("zone", [])
+	if zone.size() < 2:
+		return
+	for e in get_tree().get_nodes_in_group("enemy"):
+		if not (e is Node2D) or not is_instance_valid(e):
+			continue
+		if (e as Node2D).get("harmless"):
+			continue
+		var ex: float = (e as Node2D).global_position.x
+		if ex >= float(zone[0]) and ex <= float(zone[1]):
+			_mid_gate_guards.append(e)
+			(e as Node).connect("killed", func(_p: Vector2) -> void:
+				_on_mid_gate_guard_down())
+
+func _on_mid_gate_guard_down() -> void:
+	if _mid_gate_opened:
+		return
+	var alive: int = 0
+	for e in _mid_gate_guards:
+		if e is Node2D and is_instance_valid(e) and not (e as Node2D).is_queued_for_deletion() \
+				and not bool((e as Node2D).get("dead")):
+			alive += 1
+	if alive <= 0:
+		_open_mid_gate()
+
+# 영구 개방(lever/clear) — 격벽이 위로 올라가며 사라진다.
+func _open_mid_gate() -> void:
+	if _mid_gate_opened:
+		return
+	_mid_gate_opened = true
+	SfxPlayer.play("gate_unlock")
+	if _mid_gate_col != null and is_instance_valid(_mid_gate_col):
+		_mid_gate_col.set_deferred("disabled", true)
+	if _mid_gate_lamp != null and is_instance_valid(_mid_gate_lamp):
+		_mid_gate_lamp.color = Color(0.40, 0.95, 0.65)
+	if _mid_gate_visual != null and is_instance_valid(_mid_gate_visual):
+		var tw := _mid_gate_visual.create_tween()
+		tw.tween_property(_mid_gate_visual, "position:y",
+			_mid_gate_visual.position.y - 440.0, 0.9).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+
+# beam 모드 개방창 토글 — 빔이 게이트를 지나 앞서가는 동안만 열림.
+func _set_mid_gate_pass(open_now: bool) -> void:
+	if _mid_gate_opened or _mid_gate_pass_open == open_now:
+		return
+	_mid_gate_pass_open = open_now
+	if _mid_gate_col != null and is_instance_valid(_mid_gate_col):
+		_mid_gate_col.set_deferred("disabled", open_now)
+	if _mid_gate_visual != null and is_instance_valid(_mid_gate_visual):
+		_mid_gate_visual.modulate.a = 0.22 if open_now else 1.0
+	if _mid_gate_lamp != null and is_instance_valid(_mid_gate_lamp):
+		_mid_gate_lamp.color = Color(0.40, 0.95, 0.65) if open_now else Color(0.95, 0.30, 0.25)
+	if open_now:
+		SfxPlayer.play("gate_unlock", -10.0)
+
+func _tick_mid_gate(_delta: float) -> void:
+	if _mid_gate_mode == "":
+		return
+	if not _mid_gate_inited:
+		_mid_gate_lazy_init()
+	# 접근 힌트(맵당 1회) — 관문의 목표를 모드별로 전달.
+	if not _mid_gate_hint_shown and not _mid_gate_opened and player != null \
+			and is_instance_valid(player) and absf(player.global_position.x - _mid_gate_x) < 520.0:
+		_mid_gate_hint_shown = true
+		match _mid_gate_mode:
+			"lever":
+				_show_veil_subtitle("격벽이 잠겨 있어요. 근처 동력 레버를 찾으세요.", 3.2)
+			"clear":
+				_show_veil_subtitle("잠긴 게이트입니다. 이 구역 경비를 정리해야 열려요.", 3.2)
+			"beam":
+				_show_veil_subtitle("게이트가 스캔 빔에 동기돼 있어요. 빔이 지나갈 때 뒤따라 통과하세요.", 3.6)
+	if _mid_gate_mode == "beam" and _sweep_beam_node != null and is_instance_valid(_sweep_beam_node):
+		var bx: float = float(_sweep_beam_node.get("_beam_x"))
+		_set_mid_gate_pass(bx > _mid_gate_x + 40.0 and bx < _mid_gate_x + 940.0)
 
 # 차폐 니치 — 빔의 세이프존(비솔리드, 자유 이동). 통로 뒷벽의 오목한 차폐 벽감 + 발밑 사각 마킹.
 # 세이프 판정은 SweepBeam이 x밴드로 하고, 여기선 "여기 서면 스캔 사각"을 읽히게 하는 시각만.
@@ -6393,6 +6544,7 @@ func _process(delta: float) -> void:
 	_tick_escape_transition(delta)
 	_tick_trap_warning()
 	_tick_avoid_warning()
+	_tick_mid_gate(delta)
 
 # 자막창 흔들림은 완전 제거됨(2026-08-14 2차: 잠깐의 등장 떨림조차 "글씨를 읽을 수 없다" 반려).
 # 통신 두절 톤은 14-1 후반의 대사 조기 끊김(_show_veil_subtitle duration 캡)이 담당한다.

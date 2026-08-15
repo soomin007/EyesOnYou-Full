@@ -1113,32 +1113,47 @@ static func _demolition_zone() -> Dictionary:
 
 # ─── 18. 배수 펌프장 (HORIZONTAL, 막1) — 저격 노출 + 좁은 통로 ──
 static func _pump_station() -> Dictionary:
+	# 페이싱 확장 파일럿(2026-08-16, pacing_expansion §1·§3): 3000→6200 + 중간 관문 ⓐ(동력 레버).
+	# 관문 텍스처 = 수직 동선: 격벽 옆 상단 파이프(2840→3060 등반)에 레버 — 펌프장의 배관 수직성.
 	return {
 		"world_type":   "HORIZONTAL",
-		"world_size":   Vector2(3000.0, 720.0),
+		"world_size":   Vector2(6200.0, 720.0),
 		"player_start": Vector2(140.0, 540.0),
 		"goal_type":    "POSITION",
-		"goal_pos":     Vector2(2880.0, 540.0),
+		"goal_pos":     Vector2(6060.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
+		"mid_gate": {"x": 3210.0, "mode": "lever", "lever": Vector2(3060.0, 298.0)},
 		"platforms": [
-			# 펌프/파이프 발판.
+			# 전반 — 펌프/파이프 발판(기존 유지).
 			{"pos": Vector2(540, 460),  "w": 190.0},
 			{"pos": Vector2(1000, 460), "w": 190.0},
 			{"pos": Vector2(1460, 460), "w": 200.0},
 			{"pos": Vector2(1960, 460), "w": 190.0},
 			{"pos": Vector2(2440, 470), "w": 200.0},
+			# 관문 동선 — 상단 파이프 계단(지면→430→330, 레버 자리). Δ190(더블)·Δ100(단일).
+			{"pos": Vector2(2840, 430), "w": 170.0},
+			{"pos": Vector2(3060, 330), "w": 150.0},
+			# 후반 — 격벽 너머 배관 구간.
+			{"pos": Vector2(3560, 460), "w": 200.0},
+			{"pos": Vector2(4060, 440), "w": 190.0},
+			{"pos": Vector2(4560, 460), "w": 200.0},
+			{"pos": Vector2(5060, 440), "w": 190.0},
+			{"pos": Vector2(5560, 470), "w": 200.0},
 		],
 		"enemies": {
-			"patrol": [Vector2(800, 600.0), Vector2(2200, 600.0)],
-			# 저격 — 파이프 위 거치. 사선 끊으며 전진.
-			"sniper": [Vector2(1460, 428.0), Vector2(2440, 438.0)],
+			"patrol": [Vector2(800, 600.0), Vector2(2200, 600.0),
+				Vector2(3700, 600.0), Vector2(4800, 600.0), Vector2(5650, 600.0)],
+			# 저격 — 파이프 위 거치. 전반 2 + 후반 2(사선 끊으며 전진).
+			"sniper": [Vector2(1460, 428.0), Vector2(2440, 438.0),
+				Vector2(4060, 408.0), Vector2(5060, 408.0)],
 			"drone":  [],
-			"bomber": [],
+			"bomber": [Vector2(4350, 600.0)],
 			"shield": [],
 		},
 		"rewards": {
-			"xp_orbs":    [Vector2(1000, 430.0), Vector2(1960, 430.0)],
-			"hp_pickups": [Vector2(2440, 440.0)],
+			"xp_orbs":    [Vector2(1000, 430.0), Vector2(1960, 430.0),
+				Vector2(3060, 300.0), Vector2(4560, 430.0), Vector2(5300, 560.0)],
+			"hp_pickups": [Vector2(2440, 440.0), Vector2(5560, 440.0)],
 		},
 		"spikes": [],
 	}
@@ -1215,39 +1230,57 @@ static func _warehouse() -> Dictionary:
 # ─── 21. 보안 검문소 (HORIZONTAL, 막2) — 저격 + 트립와이어 연동 포탑 ──
 # subway 트립와이어 패턴 재사용: 검문선(레이저)을 가로지르면 앞쪽 포탑 일제 발사.
 static func _checkpoint() -> Dictionary:
+	# 페이싱 확장 파일럿(2026-08-16): 3200→6400 + 중간 관문 ⓑ(국소 전멸 = 검문 게이트).
+	# 관문 텍스처 = 서사 그대로 "검문": 게이트 앞 통제 구역(2780~3330) 경비를 정리해야 개방.
+	# 후반은 검문선 2차 비트(cp2) + 막2 기계 도입(드론)로 전반과 결이 달라진다.
 	return {
 		"world_type":   "HORIZONTAL",
-		"world_size":   Vector2(3200.0, 720.0),
+		"world_size":   Vector2(6400.0, 720.0),
 		"player_start": Vector2(140.0, 540.0),
 		"goal_type":    "POSITION",
-		"goal_pos":     Vector2(3080.0, 540.0),
+		"goal_pos":     Vector2(6260.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
+		"mid_gate": {"x": 3350.0, "mode": "clear", "zone": [2780.0, 3330.0]},
 		"platforms": [
 			{"pos": Vector2(560, 470),  "w": 200.0},
 			{"pos": Vector2(1080, 460), "w": 180.0},
 			{"pos": Vector2(1640, 470), "w": 200.0},
 			{"pos": Vector2(2160, 460), "w": 180.0},
 			{"pos": Vector2(2680, 470), "w": 200.0},
+			# 관문 통제 구역 — 경비 저격 거치대.
+			{"pos": Vector2(3120, 460), "w": 180.0},
+			# 후반 — 2차 검문 구간.
+			{"pos": Vector2(3900, 470), "w": 200.0},
+			{"pos": Vector2(4420, 460), "w": 180.0},
+			{"pos": Vector2(4940, 470), "w": 200.0},
+			{"pos": Vector2(5460, 460), "w": 180.0},
+			{"pos": Vector2(5940, 470), "w": 200.0},
 		],
 		"enemies": {
-			"patrol": [Vector2(820, 600.0), Vector2(2400, 600.0)],
-			"sniper": [Vector2(1640, 438.0)],
-			"drone":  [],
-			"bomber": [],
-			"shield": [Vector2(2160, 600.0)],
+			"patrol": [Vector2(820, 600.0), Vector2(2400, 600.0),
+				Vector2(2900, 600.0), Vector2(4200, 600.0), Vector2(5200, 600.0)],
+			"sniper": [Vector2(1640, 438.0), Vector2(3120, 428.0)],
+			"drone":  [Vector2(4700, 240.0), Vector2(5700, 230.0)],
+			"bomber": [Vector2(5450, 600.0)],
+			"shield": [Vector2(2160, 600.0), Vector2(3080, 600.0)],
 		},
 		"rewards": {
-			"xp_orbs":    [Vector2(1080, 430.0), Vector2(2160, 430.0)],
-			"hp_pickups": [Vector2(2680, 440.0)],
+			"xp_orbs":    [Vector2(1080, 430.0), Vector2(2160, 430.0),
+				Vector2(3120, 430.0), Vector2(4420, 430.0), Vector2(5000, 560.0)],
+			"hp_pickups": [Vector2(2680, 440.0), Vector2(5940, 440.0)],
 		},
 		"spikes": [],
-		# 검문선(세로 레이저) 밟으면 앞쪽 triggered 포탑(cp1) 일제 발사 → 달려들며 회피.
+		# 검문선(세로 레이저) 밟으면 앞쪽 triggered 포탑 일제 발사 → 달려들며 회피.
+		# 전반 cp1(기존) + 후반 cp2(2차 검문 — 관문 넘은 뒤 같은 문법의 고조 반복).
 		"traps": [
 			{"x": 1500, "y": 588.0, "dir": "up", "mode": "triggered", "trigger_id": "cp1", "burst": 3},
 			{"x": 1760, "y": 588.0, "dir": "up", "mode": "triggered", "trigger_id": "cp1", "burst": 3},
+			{"x": 4820, "y": 588.0, "dir": "up", "mode": "triggered", "trigger_id": "cp2", "burst": 3},
+			{"x": 5080, "y": 588.0, "dir": "up", "mode": "triggered", "trigger_id": "cp2", "burst": 3},
 		],
 		"tripwires": [
 			{"x": 1300, "y": 540.0, "dir": "up", "len": 200.0, "trigger_id": "cp1", "cooldown": 2.4},
+			{"x": 4620, "y": 540.0, "dir": "up", "len": 200.0, "trigger_id": "cp2", "cooldown": 2.4},
 		],
 	}
 
@@ -1464,16 +1497,20 @@ static func _gauntlet() -> Dictionary:
 # 횡단≈치명) → 발판이 안전 동선. 단 떨어져도 즉사 아님(dmg2 진입 1회=HP 손실)이라 완주 안전.
 # 중앙 수직 리프트는 XP 보너스(선택 — 메인 동선 아님). cycle 넉넉(5~5.5s)·phase 엇갈림으로 리듬.
 static func _freight_lift() -> Dictionary:
+	# 페이싱 확장 파일럿(2026-08-16): 3300→6000 + 기믹 리듬 연장 ⓒ(관문 없음 — 구성 중복 금지).
+	# 신설 = 릴레이 구간(구덩이 4): 페리 두 대를 공중에서 갈아타는 변주 + 저격 조준 아래 타이밍 점프.
 	return {
 		"world_type":   "HORIZONTAL",
-		"world_size":   Vector2(3300.0, 720.0),
+		"world_size":   Vector2(6000.0, 720.0),
 		"player_start": Vector2(140.0, 520.0),
 		"goal_type":    "POSITION",
-		"goal_pos":     Vector2(3160.0, 540.0),
+		"goal_pos":     Vector2(5860.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
 		"platforms": [
 			# 수직 리프트 상단 보너스 알코브 받침(선택 경로)
 			{"pos": Vector2(1330, 300), "w": 150.0},
+			# 릴레이 구간 감시 저격 거치대(후반) — 갈아타는 동안 조준 압박.
+			{"pos": Vector2(4850, 430), "w": 130.0},
 		],
 		"moving_platforms": [
 			# 구덩이 1 — 수평 화물 리프트(낮음)
@@ -1484,19 +1521,29 @@ static func _freight_lift() -> Dictionary:
 			{"from": Vector2(1580, 480), "to": Vector2(1960, 480), "w": 180.0, "cycle": 5.5, "phase": 0.35},
 			# 구덩이 3 — 수평
 			{"from": Vector2(2440, 520), "to": Vector2(2760, 520), "w": 170.0, "cycle": 5.0, "phase": 0.6},
+			# 구덩이 4 — 릴레이: 페리 1(3350~3900)에서 페리 2(4050~4600)로 공중 갈아타기.
+			# 위상 0.0/0.5 오프셋 — 페리 1이 오른끝에 설 때 페리 2가 왼끝으로 들어온다.
+			{"from": Vector2(3350, 500), "to": Vector2(3900, 500), "w": 170.0, "cycle": 5.5, "phase": 0.0},
+			{"from": Vector2(4050, 460), "to": Vector2(4600, 460), "w": 170.0, "cycle": 5.5, "phase": 0.5},
+			# 구덩이 5 — 마무리 수평(짧게 한 번 더).
+			{"from": Vector2(5000, 520), "to": Vector2(5400, 520), "w": 170.0, "cycle": 5.0, "phase": 0.3},
 		],
 		"enemies": {
-			"patrol": [Vector2(460, 540.0), Vector2(2180, 540.0), Vector2(2980, 540.0)],
-			"sniper": [], "drone": [], "bomber": [], "shield": [],
+			"patrol": [Vector2(460, 540.0), Vector2(2180, 540.0), Vector2(2980, 540.0),
+				Vector2(4780, 540.0), Vector2(5700, 540.0)],
+			"sniper": [Vector2(4850, 398.0)],
+			"drone": [], "bomber": [], "shield": [],
 		},
 		"rewards": {
-			"xp_orbs":    [Vector2(1300, 270.0), Vector2(1360, 270.0)],
-			"hp_pickups": [],
+			"xp_orbs":    [Vector2(1300, 270.0), Vector2(1360, 270.0), Vector2(3975, 430.0)],
+			"hp_pickups": [Vector2(4850, 400.0)],
 		},
 		"spikes": [
 			{"x": 960.0, "w": 300.0, "dmg": 2},    # 구덩이 1
 			{"x": 1770.0, "w": 320.0, "dmg": 2},   # 구덩이 2
 			{"x": 2600.0, "w": 300.0, "dmg": 2},   # 구덩이 3
+			{"x": 3980.0, "w": 1300.0, "dmg": 2},  # 구덩이 4 — 릴레이 전체(3330~4630)
+			{"x": 5200.0, "w": 400.0, "dmg": 2},   # 구덩이 5
 		],
 	}
 
@@ -1684,35 +1731,44 @@ static func _core_defense() -> Dictionary:
 #   · 세이프 판정은 x밴드(니치)만 — 니치 x구간(±90) 안이면 높이 무관 안전. 니치 사이 갭이 위험 구간.
 # 램프: risk3(막2 고조). 적은 최소(빔이 주역). 배경=감시 스캐너 시그니처(checkpoint 스캔 확장).
 static func _scanner_sweep() -> Dictionary:
+	# 페이싱 확장 파일럿(2026-08-16): 3800→6600 + 중간 관문 = 빔 동기 게이트(beam 모드).
+	# 관문 텍스처 = 리듬 역전: 니치(3520)에서 빔을 기다렸다가, 빔이 게이트를 지나는 순간
+	# 꽁무니를 쫓아 통과한다(피하던 빔을 한 번은 따라 달리는 변주). 후반은 니치 간격이
+	# 440→620으로 벌어져 같은 리듬의 고조 + 노출 구간에 patrol이 선다.
 	return {
 		"world_type":   "HORIZONTAL",
-		"world_size":   Vector2(3800.0, 720.0),
+		"world_size":   Vector2(6600.0, 720.0),
 		"player_start": Vector2(180.0, 540.0),
 		"goal_type":    "POSITION",
-		"goal_pos":     Vector2(3700.0, 540.0),
+		"goal_pos":     Vector2(6480.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
+		"mid_gate": {"x": 3700.0, "mode": "beam"},
 		# 수직 스캔 빔 — 왼→오 훑기, rest 후 반복. y_bot은 렌더용(판정은 x밴드).
 		"sweep_beam": {
-			"x_start": -60.0, "x_end": 3860.0, "y_top": -120.0, "y_bot": 640.0,
+			"x_start": -60.0, "x_end": 6660.0, "y_top": -120.0, "y_bot": 640.0,
 			"speed": 380.0, "rest": 1.8, "telegraph": 0.7, "beam_half": 24.0,
 		},
 		# 차폐 니치(세이프 밴드 중심 x) — 빔이 지날 때 이 x구간(±niche_half)에 있으면 스캔 사각.
 		# 첫 니치(480)는 시작점(180) 가까이 둬 첫 빔(rest 1.8+tele 0.7=2.5s) 전에 도달 가능.
-		"cover_niches": [480.0, 900.0, 1340.0, 1780.0, 2220.0, 2660.0, 3100.0, 3520.0],
+		# 3520 = 게이트(3700) 대기 니치. 후반 4140~6000은 간격 620(전반 440)으로 고조.
+		"cover_niches": [480.0, 900.0, 1340.0, 1780.0, 2220.0, 2660.0, 3100.0, 3520.0,
+			4140.0, 4760.0, 5380.0, 6000.0],
 		"niche_half": 90.0,
 		"platforms": [],
 		# 최소 — 니치 사이 갭에 배치. 빔 리듬 사이에 처리하거나 지나친다(빔이 주역).
 		"enemies": {
-			"patrol": [Vector2(1120, 540.0), Vector2(2440, 540.0)],
+			"patrol": [Vector2(1120, 540.0), Vector2(2440, 540.0),
+				Vector2(4450, 540.0), Vector2(5690, 540.0)],
 			"sniper": [], "drone": [], "bomber": [], "shield": [],
 			# 막4 재머 흔해짐(act_identity §6) — 후반 니치(3100) 오염: 대피처에 서면 시야가 꺼진다.
-			# 빔 rest 동안 니치 안에서 부술 수 있어(HP3) fair. 마지막 니치(3520)는 반경(340) 밖 = 탈출구.
+			# 빔 rest 동안 니치 안에서 부술 수 있어(HP3) fair. 대기 니치(3520)는 반경(340) 밖.
 			"jammer": [Vector2(3100, 540.0)],
 		},
 		"rewards": {
-			# 갭(노출 구간)의 xp = 빔 리듬을 타야 회수 / 니치(1780) 안 hp = 안전 회복.
-			"xp_orbs":    [Vector2(690, 540.0), Vector2(1560, 540.0), Vector2(2000, 540.0), Vector2(2880, 540.0), Vector2(3300, 540.0)],
-			"hp_pickups": [Vector2(1780, 540.0)],
+			# 갭(노출 구간)의 xp = 빔 리듬을 타야 회수 / 니치 안 hp = 안전 회복.
+			"xp_orbs":    [Vector2(690, 540.0), Vector2(1560, 540.0), Vector2(2000, 540.0),
+				Vector2(2880, 540.0), Vector2(3300, 540.0), Vector2(4450, 540.0), Vector2(5070, 540.0)],
+			"hp_pickups": [Vector2(1780, 540.0), Vector2(5380, 540.0)],
 		},
 		"spikes": [],
 	}
