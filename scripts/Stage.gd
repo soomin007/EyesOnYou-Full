@@ -16,6 +16,7 @@ var player: CharacterBody2D
 var camera: Camera2D
 var hud: CanvasLayer
 var hp_label: Label
+var overwrite_label: Label # 현장 기록 덮어쓰기 잔여 핍(●잔여 ○소모 ✕라이벌 잠김) — 체력 곁
 var xp_label: Label
 var xp_bar: ProgressBar   # 레벨업 EXP 진행 바 (피드백: 텍스트보다 바가 한눈에)
 var stage_label: Label
@@ -3461,6 +3462,50 @@ func _build_camera() -> void:
 			player.add_child(camera)
 	camera.make_current()
 
+# --- 덮어쓰기 한도(사망 예산) 연출 — 수치는 GameState가 진실, 여기는 전달만 ---
+
+# 14-1 P2/P3 도달 — 라이벌 잠금을 부순다(런 영속, 사망 P1 리셋에도 유지). 부순 칸은 채워서 반환.
+func _break_rival_lock(count: int) -> void:
+	if GameState.story_mode or GameState.rival_locks_broken >= count:
+		return
+	GameState.rival_locks_broken = count
+	GameState.overwrite_left = clampi(GameState.overwrite_left + 1, 0, GameState.overwrite_max())
+	SfxPlayer.play("gate_unlock")
+	_refresh_hud()
+
+# 막4/5 첫 스테이지 — 라이벌이 덮어쓰기 회선을 잠그는 비트(런당 각 1회). 강탈은 보여야
+# 강탈이라 ? 한 줄 + 핍 라벨을 바이올렛으로 잠깐 물들인다. 수치는 overwrite_max()가
+# 막 함수로 이미 반영하므로 이 비트는 전달 전담(각본 비트 = 죽음 반응형 아님, 공정).
+func _maybe_rival_lock_beat() -> void:
+	if GameState.story_mode or GameState.playground_active:
+		return
+	if not GameState.is_act_start(GameState.current_stage):
+		return
+	var act: int = GameState.act_for_stage(GameState.current_stage)
+	if act == 3 and not GameState.rival_lock_beat4_shown:
+		GameState.rival_lock_beat4_shown = true
+		get_tree().create_timer(4.2, false).timeout.connect(_play_rival_lock_beat.bind(4))
+	elif act == 4 and not GameState.rival_lock_beat5_shown:
+		GameState.rival_lock_beat5_shown = true
+		get_tree().create_timer(4.2, false).timeout.connect(_play_rival_lock_beat.bind(5))
+
+func _play_rival_lock_beat(act_num: int) -> void:
+	if goal_reached or not is_inside_tree():
+		return
+	_run_glitch(0.5, 0.28)
+	SfxPlayer.play("boss_alert_text")
+	if act_num == 4:
+		_show_rival_subtitle("재가동 회선 하나는 제가 가져갑니다. 요원은 늘 여분이 많았으니까.", 3.4)
+	else:
+		_show_rival_subtitle("이제 한 번입니다. 제 구역에서는 아껴 쓰셔야죠.", 3.4)
+	if overwrite_label != null and is_instance_valid(overwrite_label):
+		overwrite_label.add_theme_color_override("font_color", Color(0.72, 0.42, 1.0))
+		get_tree().create_timer(2.6, false).timeout.connect(_reset_overwrite_label_color)
+
+func _reset_overwrite_label_color() -> void:
+	if overwrite_label != null and is_instance_valid(overwrite_label):
+		overwrite_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
+
 func _build_hud() -> void:
 	hud = CanvasLayer.new()
 	add_child(hud)
@@ -3500,12 +3545,13 @@ func _build_hud() -> void:
 	hb2.add_theme_constant_override("separation", 12)
 	top_v.add_child(hb2)
 	hp_label = Label.new()
+	overwrite_label = Label.new()
 	xp_label = Label.new()
 	stage_label = Label.new()
 	map_label = Label.new()
 	trust_label = Label.new()
 	skill_label = Label.new()
-	for l in [stage_label, map_label, hp_label, xp_label, trust_label]:
+	for l in [stage_label, map_label, hp_label, overwrite_label, xp_label, trust_label]:
 		l.add_theme_font_size_override("font_size", 18)
 		l.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
 		# 검정 아웃라인 — 밝은 플랫폼 위에서도 또렷하게(가독성/선명도).
@@ -3518,6 +3564,7 @@ func _build_hud() -> void:
 	skill_label.add_theme_constant_override("outline_size", 3)
 	hb2.add_child(skill_label)
 	_refresh_hud()
+	_maybe_rival_lock_beat()
 
 	# 상시 VEIL 눈 — 게임 내내 우상단에 "VEIL이 함께 본다"를 띄운다(튜토리얼 눈과 동일, 더 작게).
 	# 시야 붕괴(veil_degraded) 시 BriefingVisual이 알아서 글리치(드롭아웃·지터·흐려짐).
@@ -3654,6 +3701,16 @@ func _update_cd_slot(slot: Control, remaining: float, max_cd: float) -> void:
 
 func _refresh_hud() -> void:
 	hp_label.text = "HP  %s" % _hearts(GameState.player_hp, GameState.player_max_hp)
+	# 덮어쓰기 잔여 — 체력 곁. ●잔여 ○소모 ✕라이벌 잠김(빼앗김은 사라지지 않고 보인다).
+	if overwrite_label != null and is_instance_valid(overwrite_label):
+		if GameState.story_mode:
+			overwrite_label.text = ""
+		else:
+			var ow_max: int = GameState.overwrite_max()
+			var ow_left: int = clampi(GameState.overwrite_left, 0, ow_max)
+			var ow_locked: int = GameState.rival_locks_active()
+			overwrite_label.text = "기록  %s%s%s" % [
+				"●".repeat(ow_left), "○".repeat(ow_max - ow_left), "✕".repeat(ow_locked)]
 	xp_label.text = "LV %d   XP %d/%d" % [GameState.player_level, GameState.player_xp, GameState.xp_to_next()]
 	if score_label != null and is_instance_valid(score_label):
 		score_label.text = "SCORE %d" % GameState.score
@@ -4757,6 +4814,7 @@ func _start_rival_p2() -> void:
 		return
 	_rival_phase = 1
 	GameState.rival_phase_reached = 1
+	_break_rival_lock(1)
 	if _p1_spawn_timer != null and is_instance_valid(_p1_spawn_timer):
 		_p1_spawn_timer.stop()
 	_despawn_rival_mobs()
@@ -5298,6 +5356,7 @@ func _start_rival_p3() -> void:
 	_rival_phase = 2
 	_rival_hold = true
 	GameState.rival_phase_reached = 2
+	_break_rival_lock(2)
 	_run_glitch(0.6, 0.38)
 	var fv := FalseVeil.new()
 	# 눈 HP 레벨 스케일 — 고정 6은 s13 빌드에 SOLID 한두 창이면 녹아 "재미도 감동도 없다"
@@ -5428,6 +5487,22 @@ func _spawn_shiny_orb(pos: Vector2) -> void:
 	add_child(orb)
 	orb.global_position = pos
 	orb.set("value", SHINY_ORB_VALUE)   # 일반 1 → 황금 5 (흡인/충돌은 일반 오브와 동일)
+
+# 단일 기록(무사망 클리어) 토스트 — 관측 로그 온도의 짧은 확인 도장.
+func _show_flawless_toast(pos: Vector2) -> void:
+	var lbl := Label.new()
+	lbl.text = "단일 기록 · 점수 보너스"
+	lbl.add_theme_font_size_override("font_size", 15)
+	lbl.add_theme_color_override("font_color", Color(0.62, 0.92, 1.0))
+	lbl.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.9))
+	lbl.add_theme_constant_override("outline_size", 3)
+	lbl.z_index = 40
+	add_child(lbl)
+	lbl.global_position = pos + Vector2(-64.0, 0.0)
+	var tw := lbl.create_tween()
+	tw.tween_property(lbl, "global_position:y", lbl.global_position.y - 26.0, 1.1)
+	tw.parallel().tween_property(lbl, "modulate:a", 0.0, 1.1)
+	tw.tween_callback(lbl.queue_free)
 
 func _show_shiny_toast(pos: Vector2) -> void:
 	var lbl := Label.new()
@@ -6003,6 +6078,9 @@ func _begin_clear_sequence() -> void:
 			reveal_guard += get_process_delta_time()
 	GameState.restrict_combat_input = false
 	var leveled: bool = GameState.on_stage_clear()
+	# D축 단일 기록 — 무사망 통과 보상은 눈에 보여야 보상이다(점수만 오르면 침묵 보상).
+	if GameState.last_clear_flawless and player != null and is_instance_valid(player):
+		_show_flawless_toast(player.global_position + Vector2(0.0, -64.0))
 	# 보스(route_lab) 또는 최종 스테이지 클리어 후엔 위협 없는 마무리라 스킬 선택이 무의미 —
 	# 카드를 건너뛰고 보스 처치 대사/엔딩(서사 비트)이 보상을 대신한다(사용자 피드백 "1+3").
 	var skip_card: bool = GameState.current_route_id == "route_lab" or GameState.current_route_id == "route_core_recovery" or GameState.is_final_stage_done()

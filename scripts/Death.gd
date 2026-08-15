@@ -24,7 +24,19 @@ func _ready() -> void:
 	# 첫 사망에만 다회차 hint — 너무 적극적이지 않게, VEIL 톤으로 슬쩍.
 	if GameState.death_count == 1:
 		full_text += "\n\n...요원, 다른 결말도 있을지 몰라요."
-	stats_label.text = "사망 횟수  %d  /  도달 스테이지  %d" % [GameState.death_count, GameState.current_stage + 1]
+	# 덮어쓰기 한도 세리머니 — 소진 사망(기록 오염)은 재개 지점이 달라지므로 반드시 여기서 고지.
+	# 마지막 1회를 쓴 사망에도 다음 실패의 무게를 예고(시스템 브래킷 문법 = 힌트 표기와 통일).
+	if not GameState.story_mode and not GameState.playground_active:
+		if GameState.overwrite_exhausted:
+			full_text += "\n\n[ 기록 덮어쓰기 한도 초과 · 잔존 구간(막 %d 경계)에서 재개 ]" \
+				% (GameState.act_for_stage(GameState.current_stage) + 1)
+		elif GameState.overwrite_left <= 0:
+			full_text += "\n\n[ 덮어쓰기 잔여 0 · 다음 실패는 잔존 구간에서 재개 ]"
+	if GameState.story_mode or GameState.playground_active:
+		stats_label.text = "사망 횟수  %d  /  도달 스테이지  %d" % [GameState.death_count, GameState.current_stage + 1]
+	else:
+		stats_label.text = "사망 횟수  %d  /  도달 스테이지  %d  /  기록 덮어쓰기 잔여  %d" \
+			% [GameState.death_count, GameState.current_stage + 1, GameState.overwrite_left]
 	text_label.text = ""
 	hint_label.text = ""
 	# BGM 그대로 두되 살짝 먹먹하게 — 트랙 전환 없이 -12dB ducking.
@@ -75,6 +87,12 @@ func _input(event: InputEvent) -> void:
 
 func _restart_stage() -> void:
 	GameState.player_hp = GameState.player_max_hp
+	# 한도 소진(기록 오염) — 잔존 구간(막 첫 스테이지) 재개. current_stage 후퇴·저장은
+	# register_death가 이미 마쳤고, 여기선 경로만 브리핑으로 바꾼다(루트 재선택 필요).
+	if GameState.overwrite_exhausted:
+		GameState.overwrite_exhausted = false
+		get_tree().change_scene_to_file(SceneRouter.BRIEFING)
+		return
 	# 14-1 보스전 사망 = 항상 P1부터(2026-08-15 사용자 확정). 사망 경로 한정 —
 	# 연습장 페이즈 직행·_init_rival_boss 체크포인트 분기는 그대로 쓴다.
 	if GameState.current_route_id == "route_core_recovery":
