@@ -13,7 +13,8 @@
 |---|---|
 | 게임 개요·조작·구조 요약(공개용) | [`../README.md`](../README.md) |
 | 코드/씬 구조·게임플레이 사양·시스템 수치 | [`SPEC.md`](SPEC.md) |
-| 스토리 캐논·인게임 텍스트 전량 | [`STORY.md`](STORY.md) |
+| 스토리 캐논(세계관·서사 정사) | [`STORY.md`](STORY.md) |
+| 유저 노출 대사 원문 전량(KO 보존 · EN 대비 수집본) | [`dialogue/INDEX.md`](dialogue/INDEX.md) |
 | 스킬 트리·스킬-적 상성·글라이드/폭발물 밸런스·XP | [`design/growth_system.md`](design/growth_system.md) |
 | 맵 좌표·4템플릿·보스/웨이브·이스터에그·도전방 | [`design/world_layout.md`](design/world_layout.md) |
 | VEIL 어투(신뢰 COLD/THAW/WARM)·엔딩 점수 축·취약함 게이트 | [`design/veil_trust_arc.md`](design/veil_trust_arc.md) |
@@ -41,7 +42,8 @@
 ## 단일 진실의 원칙
 
 - **진행/우선순위 = backlog**, 게임 개요 = README, 구현 디테일·사양 = SPEC. (제품 초기 정의 PRD는 완성 단계라 `archive/`로 보냄 — 비목표 등 의도 기록만 이력 보존.)
-- **STORY**: 인게임 텍스트·스토리 캐논의 단일 진실. 코드 대사 풀(VeilDialogue 등)이 어긋나면 STORY를 따른다.
+- **STORY**: 스토리 캐논(세계관·서사)의 단일 진실. 인게임 대사의 현행 원문은 **코드가 진실**이며,
+  수집본은 [`dialogue/`](dialogue/INDEX.md)(2026-08-15, i18n 전 단계). 대사를 코드에서 바꾸면 대사집도 같은 커밋에서 갱신.
 - **growth_system / world_layout**: 스킬·맵 메커닉의 단일 진실. 다른 문서는 요약을 복제하지 말고 이 문서를 링크한다.
 - **show_dont_tell**: 텍스트/연출 의사결정의 상위 기준.
 
