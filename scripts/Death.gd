@@ -75,4 +75,8 @@ func _input(event: InputEvent) -> void:
 
 func _restart_stage() -> void:
 	GameState.player_hp = GameState.player_max_hp
+	# 14-1 보스전 사망 = 항상 P1부터(2026-08-15 사용자 확정). 사망 경로 한정 —
+	# 연습장 페이즈 직행·_init_rival_boss 체크포인트 분기는 그대로 쓴다.
+	if GameState.current_route_id == "route_core_recovery":
+		GameState.rival_phase_reached = 0
 	get_tree().change_scene_to_file(SceneRouter.STAGE)
