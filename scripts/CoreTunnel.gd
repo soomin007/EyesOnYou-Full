@@ -327,8 +327,19 @@ func _advance_confession() -> void:
 	var ln: Dictionary = _conf_lines[_conf_idx]
 	_conf_idx += 1
 	var dur: float = float(ln.get("dur", 3.8))
-	_conf_label.text = "VEIL   " + str(ln.get("text", ""))
+	var line: String = str(ln.get("text", ""))
+	_conf_label.text = "VEIL   " + line
 	SfxPlayer.play("veil_subtitle_in")
+	# 타자기 출력: Stage 자막과 동일 규격(글자당 22ms, 0.2~1.1s 클램프). 태그는 즉시,
+	# 대사만 흘려 쓴다. 진행 타이머(dur+1.0)가 별도라 표시 간격은 늘리지 않는다.
+	var prefix_len: int = _conf_label.text.length() - line.length()
+	_conf_label.visible_characters = prefix_len
+	var type_tw := _conf_label.create_tween()
+	type_tw.tween_interval(0.15)
+	type_tw.tween_method(func(v: float) -> void:
+		if is_instance_valid(_conf_label):
+			_conf_label.visible_characters = int(v)
+	, float(prefix_len), float(_conf_label.text.length()), clampf(float(line.length()) * 0.022, 0.2, 1.1))
 	var tw := _conf_label.create_tween()
 	tw.tween_property(_conf_label, "modulate:a", 1.0, 0.4)
 	tw.tween_interval(dur)

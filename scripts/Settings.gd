@@ -584,11 +584,15 @@ func _on_auto_fullscreen_toggled(pressed: bool) -> void:
 	GameState.save_settings()
 	SfxPlayer.play("ui_slider_tick")
 
-# 숨은 스킨(대체 색) 입기 토글 — 해금 플래그는 건드리지 않는다. 다음 스테이지 진입부터 반영.
+# 숨은 스킨(대체 색) 입기 토글: 해금 플래그는 건드리지 않는다. 살아있는 플레이어가 있으면
+# 즉시 반영. "다음 스테이지부터"는 안 바뀐 걸로 오인됨(사용자 2026-08-16).
 func _on_skin_toggled(pressed: bool) -> void:
 	GameState.alt_skin_enabled = pressed
 	if _skin_toggle != null:
 		_skin_toggle.text = "켜짐" if pressed else "꺼짐"
+	var p := get_tree().get_first_node_in_group("player")
+	if p != null and p.has_method("refresh_alt_skin"):
+		p.call("refresh_alt_skin")
 	GameState.save_settings()
 	SfxPlayer.play("ui_slider_tick")
 

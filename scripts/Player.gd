@@ -76,6 +76,10 @@ var dash_timer: float = 0.0
 var dash_cd: float = 0.0
 var skill_cd: float = 0.0
 var invuln: float = 0.0
+# 클리어 연출 보호: 연출 동안 게임이 pause되지 않아 잔여 위협(추격 벽·탄·빔)이 플레이어를
+# 죽일 수 있다(사용자 2026-08-16, 붕괴 회랑 엔딩 멘트 중 사망). invuln과 달리 깜빡임 없음.
+# Stage._begin_clear_sequence가 켜고 씬 전환까지 유지.
+var clear_protect: bool = false
 # 수류탄 차징 상태
 var _charging: bool = false
 var _grenade_charge: float = 0.0
@@ -102,6 +106,17 @@ var barrier_indicator: Node2D = null
 # (T1/T2는 GameState.skills에서 erase되어 1회용이라 이 상태를 안 씀.)
 var shield_spent: bool = false
 var shield_recharge_t: float = 0.0
+
+# 숨은 스킨 토글 즉시 반영: 설정 오버레이에서 그룹 "player" 경유로 호출. 플래시 리셋 목표
+# (_skin_tint)까지 함께 바꿔야 이후 부활·피격 플래시가 옛 색으로 되돌리지 않는다.
+# 알파는 보존: invuln 깜빡임(modulate.a)이 진행 중일 수 있다.
+func refresh_alt_skin() -> void:
+	if GameState.alt_skin_unlocked and GameState.alt_skin_enabled:
+		_skin_tint = ALT_SKIN_TINT
+	else:
+		_skin_tint = Color(1, 1, 1)
+	if visual != null:
+		visual.modulate = Color(_skin_tint.r, _skin_tint.g, _skin_tint.b, visual.modulate.a)
 
 func _ready() -> void:
 	add_to_group("player")
@@ -629,6 +644,8 @@ func take_hit(amount: int) -> void:
 		return
 	if GameState.debug_invincible and GameState.playground_active:
 		return   # 디버그 무적 — 연습장에서만 적용(일반 모드엔 영향 없음). 데미지·피격카운트·barrier 스킵
+	if clear_protect:
+		return   # 클리어 연출 중: 피해·피격카운트·barrier 전부 스킵(위 var 주석)
 	if invuln > 0.0:
 		return
 	# 실력 추적 — invuln을 통과한 실제 타격마다 1회 카운트(barrier 흡수·스토리 무피해 포함).

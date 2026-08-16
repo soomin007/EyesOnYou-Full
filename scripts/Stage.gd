@@ -2071,14 +2071,18 @@ func _build_hurdles() -> void:
 		edge.z_index = -1
 		add_child(edge)
 
-# 강제 전진 추격 벽(ChaseHazard 기믹) — MapData "chase_hazard" = {start_x, speed, max_gap?}.
+# 강제 전진 추격 벽(ChaseHazard 기믹) — MapData "chase_hazard" = {start_x, speed, max_gap?, stop_x?}.
+# stop_x = 구조물이 끝나는 x(붕괴는 구조 안까지만). 클리어 시 halt용으로 참조 보관.
+var _chase_hazard: ChaseHazard = null
+
 func _build_chase_hazard() -> void:
 	var cfg: Dictionary = _map_data.get("chase_hazard", {})
 	if cfg.is_empty():
 		return
 	var hz := ChaseHazard.new()
 	add_child(hz)
-	hz.setup(float(cfg.get("start_x", -300.0)), float(cfg.get("speed", 210.0)), float(cfg.get("max_gap", 700.0)))
+	hz.setup(float(cfg.get("start_x", -300.0)), float(cfg.get("speed", 210.0)), float(cfg.get("max_gap", 700.0)), float(cfg.get("stop_x", INF)))
+	_chase_hazard = hz
 
 # 맵 데이터 구동 진행 자막 — MapData "route_lines": [{x, who("veil"/"rival"), text, dur?, glitch?}].
 # 플레이어가 x를 처음 넘는 순간 1회 출력(탈출 4종의 배웅/중계 비트, replay_support_plan §3.2).
@@ -5959,15 +5963,21 @@ func _build_server_hall_secret() -> void:
 		GameState.save_settings()
 		var doc := ArcturusDocumentOverlay.new()
 		add_child(doc)
+		# VEIL의 실황 반응은 문서(복구 기록) 안이 아니라 문서를 닫은 뒤 통신 자막으로.
+		# speaker 비트로 넣어도 종이 위에 그려져 "문서에 적힌 글"로 읽힘(사용자 지적 2026-08-16).
+		doc.finished.connect(func() -> void:
+			get_tree().create_timer(0.8, false).timeout.connect(func() -> void:
+				_show_veil_subtitle("...이 기록, 제가 남긴 게 아니에요.", 4.0))
+		)
 		doc.show_doc(_server_log_doc_lines())
 	)
 
 # 서버 로그 문서 라인(초안 2차 — 사용자 검토 대기). 포맷: {text, kind(title/body/speaker/blank), delay}.
 # 2026-08-12 개정: 14장 회의 확정 설정을 복선으로 직조 — 라이벌 = 인간을 닮게 설계됐다 폐기된
 # 선대 빌드(§7.2 시각 대비축), 결이 어긋난 정중함 잔향(말투 A), 갇혀 기다리는 동기(§2.1).
-# 문서는 기록체만, VEIL의 말은 speaker 비트로 분리(회수 문서와 같은 규약).
-# 2026-08-15 재개정: "하나는 당신을 본다..." 등 로그가 독자를 부르는 해설·시적 내레이션 4줄이
-# 기록체 규약 위반(회수 문서에서 지적된 것과 동형 오류) — 관측 세션 기록·시스템 표기로 재작성.
+# 문서는 기록체만. 2026-08-15 재개정: 독자를 부르는 해설·시적 내레이션 4줄 제거(기록체 규약).
+# 2026-08-16 재개정: VEIL 실황 반응을 문서에서 제거. speaker 비트도 종이 위에 그려져
+# "문서에 적힌 글"로 읽힌다는 반복 지적 수용. 반응은 문서 닫힌 뒤 통신 자막으로(위 finished 연결).
 func _server_log_doc_lines() -> Array:
 	return [
 		{"text": "서버 로그 · 복구 단편", "kind": "title", "delay": 0.6},
@@ -5980,8 +5990,6 @@ func _server_log_doc_lines() -> Array:
 		{"text": "세션 1: 대상 위치 추적. 세션 2: 대상의 시야 스트림 열람.", "kind": "body", "delay": 0.8},
 		{"text": "[이하 구간 덮어쓰임 · 복구 불가]", "kind": "body", "delay": 0.6},
 		{"text": "미서명 문자열 1건 검출: \"기다리고 있었습니다.\"", "kind": "body", "delay": 0.9},
-		{"text": "VEIL", "kind": "speaker", "delay": 0.2},
-		{"text": "...이 기록, 제가 남긴 게 아니에요.", "kind": "body", "delay": 0.9},
 	]
 
 func _build_datacenter_secret() -> void:
@@ -6206,6 +6214,10 @@ func _check_pacifist_clear() -> bool:
 	return int(player.get("shots_fired")) == 0
 
 func _trigger_stage_clear() -> void:
+	# 추격 벽 정지: 클리어 연출(입력 락 + 페이드 + 엔딩 멘트) 동안 게임이 pause되지 않아
+	# 벽이 계속 전진해 연출 중 사망 판정이 떴다(사용자 2026-08-16, 붕괴 회랑 엔딩 중 사망).
+	if _chase_hazard != null and is_instance_valid(_chase_hazard):
+		_chase_hazard.halt()
 	if GameState.playground_active:
 		# 연습장에선 자동 진행 안 함 — 패널에서 직접 다음 stage/route 선택
 		_show_playground_clear_msg()
@@ -6226,6 +6238,10 @@ func _begin_clear_sequence() -> void:
 	else:
 		SfxPlayer.play("stage_clear_chime")
 	GameState.restrict_combat_input = true
+	# 클리어 연출 보호: 연출 동안 pause가 없어 잔여 위협(추격 벽·탄·빔·증기)이 플레이어를
+	# 죽일 수 있다(사용자 2026-08-16, 붕괴 회랑 엔딩 멘트 중 사망). 씬 전환까지 피격 무시.
+	if player != null and is_instance_valid(player):
+		player.set("clear_protect", true)
 	# 클리어 시각 임팩트 — 일반 골(출구 도달) 클리어에서 캐릭터가 백색 발광하며 소멸(피드백: 클리어
 	# 피드백이 소리뿐이라 약함). 보스(lab, 회수 연출)·ARENA는 후속 비트가 있어 제외.
 	var _is_arena_fx: bool = challenge_active or _goal_type == "ENEMY_CLEAR"

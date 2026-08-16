@@ -18,6 +18,12 @@ const V_BOT: float = 820.0
 
 var speed: float = 210.0
 var max_gap: float = 700.0
+# 선두가 이 x에 도달하면 전진 종료: 붕괴는 구조물 안까지만(건물 밖 야외까지 벽이 따라오면
+# 서사가 깨진다는 지적, 사용자 2026-08-16). INF = 제한 없음(전 구간 실내 맵).
+var stop_x: float = INF
+# 클리어 시퀀스 진입 시 Stage가 halt() 호출: 전진·피해 전부 정지. 엔딩 연출 중
+# 벽이 따라잡아 사망 판정이 뜨는 문제 차단(사용자 2026-08-16).
+var _halted: bool = false
 # 캡 추격 속도 상한 — 이전엔 max_gap 초과 시 벽을 플레이어 뒤로 *즉시 스냅*해서, 대시 순간 벽이
 # 플레이어 속도를 그대로 미러링하는 게 들켰다(사용자 체감 2026-08-10 "대시 쓰니 같이 빨리 옴").
 # 이제 상한 속도로만 따라붙는다: 대시(720)로는 잠깐 거리를 벌 수 있지만 달리기(240)보다 빨라
@@ -26,15 +32,22 @@ const CATCHUP_SPEED: float = 340.0
 var _edge_x: float = -300.0       # 선두(치명) edge의 월드 x
 var _dmg_cd: float = 0.0
 
-func setup(start_x: float, spd: float, gap: float = 700.0) -> void:
+func setup(start_x: float, spd: float, gap: float = 700.0, stop: float = INF) -> void:
 	_edge_x = start_x
 	speed = maxf(spd, 20.0)
 	max_gap = maxf(gap, 200.0)
+	stop_x = stop
 	z_index = 4                    # 플레이어(0) 위 — 삼켜지면 벽이 플레이어를 덮는다
 	position = Vector2(_edge_x, 0.0)
 
+# 전진·피해 완전 정지(클리어 시퀀스 진입 시 Stage가 호출). 시각은 그대로 남는다.
+func halt() -> void:
+	_halted = true
+
 func _physics_process(delta: float) -> void:
 	if not is_inside_tree():
+		return
+	if _halted:
 		return
 	_edge_x += speed * delta
 	var p: Node = get_tree().get_first_node_in_group("player")
@@ -44,12 +57,15 @@ func _physics_process(delta: float) -> void:
 		if px - _edge_x > max_gap:
 			var target_x: float = px - max_gap
 			_edge_x = minf(_edge_x + (CATCHUP_SPEED - speed) * delta, target_x)
-		# 선두 안쪽으로 삼켜짐 → 치명.
+		# 구조물 끝 도달 = 전진 종료(캡 추격 포함). 피해 판정 전에 클램프.
+		_edge_x = minf(_edge_x, stop_x)
+		# 선두 안쪽으로 삼켜짐 → 치명. 정지한 벽에 스스로 들어가는 것도 여전히 치명.
 		_dmg_cd -= delta
 		if px < _edge_x - GRACE and _dmg_cd <= 0.0:
 			if p.has_method("take_hit"):
 				p.call("take_hit", DMG)
 			_dmg_cd = 0.3
+	_edge_x = minf(_edge_x, stop_x)
 	position.x = _edge_x
 	queue_redraw()
 

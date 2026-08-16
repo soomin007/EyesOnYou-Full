@@ -690,7 +690,10 @@ static func _escape_destroy() -> Dictionary:
 		"goal_pos":     Vector2(3680.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
 		"elite_chance": 0.0,
-		"chase_hazard": {"start_x": -300.0, "speed": 225.0, "max_gap": 680.0},
+		# stop_x 1560: 붕괴 벽은 터널(구조물, _TUNNEL_END_X=1600) 안까지만 전진하고 출구에서 멎는다.
+		# 건물 밖 야외까지 똑같이 따라오면 붕괴 서사가 깨진다(사용자 2026-08-16). 터널 밖은
+		# BGM 감쇠·야경과 함께 "빠져나왔다"의 이완 구간(잔해 허들·경계 1기만 유지).
+		"chase_hazard": {"start_x": -300.0, "speed": 225.0, "max_gap": 680.0, "stop_x": 1560.0},
 		"platforms": [
 			{"pos": Vector2(1600, 470), "w": 130.0},
 			{"pos": Vector2(2900, 460), "w": 130.0},
