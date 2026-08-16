@@ -143,9 +143,14 @@ func _on_body_entered(body: Node) -> void:
 		if not pierce:
 			queue_free()
 	elif body.is_in_group("platform"):
-		# 원웨이 발판(머리 높이 포함)은 *통과* — 점프로 뚫고 오르는 지형이라 수평 사격을 막을 이유가 없다.
-		# 코앞에서 쐈는데 발판에 막히는 불편 제거(사용자: 개발 초기부터 보고). 이동 발판도 "platform"이라 동일.
-		return
+		# 원웨이 발판: 기본 탄은 *막히고*, 관통(사격강화 T3)만 적처럼 발판도 꿰뚫는다
+		# (2026-08-16 사용자 결정: 전면 통과를 걷어내고 스킬 효과로 승격). 경위: 데모 초기
+		# "코앞 사격이 발판에 막힌다"로 전면 통과시켰으나(c46b8ce), 유도 T3로 탄이 위로 휘며
+		# "지형 무시"로 읽힘. 솔리드(벽·바닥·허들)는 관통도 못 뚫는다(아래 분기).
+		if pierce:
+			return
+		SfxPlayer.play_at("bullet_impact_wall", global_position)
+		queue_free()
 	elif body is StaticBody2D:
 		# 벽/바닥 충돌 — 사라짐. 경계벽·바닥은 "수직 벽"이 아니라 impact SFX 생략.
 		var skip_sfx: bool = body.is_in_group("boundary_wall") or body.is_in_group("ground")
