@@ -271,53 +271,120 @@ static func _sewers() -> Dictionary:
 		],
 	}
 
-# ─── 4. 폐쇄 지하철 (HORIZONTAL, 매우 긴 가로 + 낮은 천장) ─────
+# ─── 4. 폐쇄 지하철 · **노선 체인 3방**(map_identity_rework §4, 2026-08-16 재설계) ─────
+# 정체성 = "SILO-7이 덮어쓴 폐역"(캐논). 지하철에서만 가능한 것 = 열차와 선로:
+# 방1 승강장(전투·개찰 잔해) → 방2 선로(무인 화물 열차 해저드 = 시그니처) → 방3 환승홀
+# (정차 차량 지붕 + 하향 포탑 + 트립와이어 = 원 지하철 전투 문법 압축). 낮은 천장(480) 유지.
+# 원 맵의 "끝 ~1000px 공백"(7/2 정리 잔재)은 체인 재구성으로 해소.
 static func _subway() -> Dictionary:
+	return {"segments": [_subway_platform(), _subway_tracks(), _subway_transfer()]}
+
+# 방1 · 승강장. 폐역 홀 전투: 개찰 잔해 허들 + 경비. 승강장 단(낮은 발판)이 지형.
+static func _subway_platform() -> Dictionary:
 	return {
 		"world_type":   "HORIZONTAL",
-		"world_size":   Vector2(5600.0, 480.0),
+		"world_size":   Vector2(2000.0, 480.0),
 		"player_start": Vector2(140.0, 380.0),
 		"goal_type":    "POSITION",
-		"goal_pos":     Vector2(5480.0, 380.0),
+		"goal_pos":     Vector2(1900.0, 380.0),
 		"camera_mode":  "HORIZONTAL",
-		"ground_y":     420.0,  # 지면 높이 커스텀 (천장 낮음 강조)
+		"ground_y":     420.0,
+		"ambience":     "subway_platform",
+		"indoor_env":   "interior",
 		"platforms": [
-			# 열차 지붕
-			{"pos": Vector2(600, 220),  "w": 700.0},
-			{"pos": Vector2(1600, 220), "w": 700.0},
-			{"pos": Vector2(2700, 220), "w": 700.0},
-			{"pos": Vector2(3800, 220), "w": 700.0},
-			# 지붕 진입 발판 (객차 측면)
-			{"pos": Vector2(560, 320),  "w": 60.0},
-			{"pos": Vector2(1560, 320), "w": 60.0},
-			{"pos": Vector2(2660, 320), "w": 60.0},
-			# 지면 잔해
-			{"pos": Vector2(1380, 380), "w": 100.0},
-			{"pos": Vector2(2480, 380), "w": 100.0},
-			{"pos": Vector2(3580, 380), "w": 100.0},
+			{"pos": Vector2(700, 340),  "w": 260.0},   # 승강장 단
+			{"pos": Vector2(1350, 340), "w": 260.0},
+		],
+		"hurdles": [
+			{"x": 520.0,  "w": 40.0, "h": 70.0},   # 개찰구 잔해
+			{"x": 1120.0, "w": 40.0, "h": 70.0},
 		],
 		"enemies": {
-			"patrol": [Vector2(800, 420.0), Vector2(2000, 420.0), Vector2(3200, 420.0), Vector2(4400, 420.0)],
-			"sniper": [Vector2(900, 200.0), Vector2(2900, 200.0)],
-			"drone":  [],
-			"bomber": [],
-			"shield": [Vector2(1500, 420.0), Vector2(3500, 420.0)],
+			"patrol": [Vector2(650, 420.0), Vector2(1500, 420.0)],
+			"sniper": [], "drone": [], "bomber": [],
+			"shield": [Vector2(1000, 420.0)],
+		},
+		"rewards": {"xp_orbs": [Vector2(1330, 310.0), Vector2(1370, 310.0)], "hp_pickups": []},
+		"spikes": [],
+	}
+
+# 방2 · 선로. 시그니처 = 무인 화물 열차(TrainHazard): 신호등 적색 전환(2.2s 예고) 후 고속 통과,
+# 대뎀 2 + 넉백(즉사 아님, 사용자 확정). 대피 = 벽감(cover_niches) / 승강장 조각 단차 / 타이밍 점프.
+static func _subway_tracks() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(3000.0, 480.0),
+		"player_start": Vector2(140.0, 380.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(2880.0, 380.0),
+		"camera_mode":  "HORIZONTAL",
+		"ground_y":     420.0,
+		"ambience":     "subway_tracks",
+		"indoor_env":   "interior",
+		"train_hazard": {"interval": 8.5, "telegraph": 2.2, "speed": 2400.0, "dmg": 2, "lights": [500.0, 1300.0, 2100.0, 2800.0]},
+		"cover_niches": [650.0, 1350.0, 2050.0, 2700.0],
+		"niche_half":   90.0,
+		"platforms": [
+			# 승강장 조각 단차 · 열차 대역(바닥 위 130px) 밖 = 세이프.
+			{"pos": Vector2(950, 270),  "w": 220.0},
+			{"pos": Vector2(2400, 270), "w": 220.0},
+		],
+		"enemies": {
+			"patrol": [Vector2(1700, 420.0)],
+			"sniper": [], "drone": [], "bomber": [], "shield": [],
+		},
+		"route_lines": [
+			{"x": 260.0, "who": "veil", "text": "선로가 아직 살아 있어요. 신호가 붉어지면 열차입니다. 벽감이나 단 위로.", "dur": 3.6},
+		],
+		"rewards": {
+			# 위험 보상 · 벽감 사이 선로 위(열차 리스크를 지나야 먹는다).
+			"xp_orbs":    [Vector2(1000, 390.0), Vector2(1750, 390.0), Vector2(2450, 390.0)],
+			"hp_pickups": [],
+		},
+		"spikes": [],
+		# 자동 가시 폴백 차단 · 열차+벽감 리듬이 시그니처라 가시 소음 금지(벽감 옆 가시 오염 방지).
+		"no_spike_fallback": true,
+	}
+
+# 방3 · 환승홀. 원 지하철의 전투 문법 압축: 정차 차량 지붕 + 하향 포탑 + 트립와이어.
+static func _subway_transfer() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(2600.0, 480.0),
+		"player_start": Vector2(140.0, 380.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(2480.0, 380.0),
+		"camera_mode":  "HORIZONTAL",
+		"ground_y":     420.0,
+		"ambience":     "subway_transfer",
+		"indoor_env":   "interior",
+		"platforms": [
+			# 정차 차량 지붕 2량 + 진입 발판 + 지면 잔해
+			{"pos": Vector2(600, 220),  "w": 700.0},
+			{"pos": Vector2(1700, 220), "w": 700.0},
+			{"pos": Vector2(560, 320),  "w": 60.0},
+			{"pos": Vector2(1660, 320), "w": 60.0},
+			{"pos": Vector2(1380, 380), "w": 100.0},
+		],
+		"enemies": {
+			"patrol": [Vector2(800, 420.0), Vector2(2000, 420.0)],
+			"sniper": [Vector2(900, 200.0)],
+			"drone":  [], "bomber": [],
+			"shield": [Vector2(1500, 420.0)],
 		},
 		"rewards": {
 			"xp_orbs":    [Vector2(2000, 200.0), Vector2(2050, 200.0)],
 			"hp_pickups": [],
 		},
 		"spikes": [],
-		# 발사 함정 — 지붕 밑면 장착 하향 포탑 + 바닥 포탑. 탐지선(tripwire)은 포탑과 분리 배치:
-		# x1350 레이저를 가로지르면 앞쪽(1550/1780) 포탑이 일제 발사 → 달려들며 회피.
+		# 하향 포탑 + 탐지선 · 원 지하철 배치 압축(x1350 레이저 → 앞쪽 1550/1780 일제 발사).
 		"traps": [
-			{"x": 700,  "y": 238.0, "dir": "down", "interval": 1.6, "phase": 0.0},   # 지붕1 밑 (주기)
+			{"x": 700,  "y": 238.0, "dir": "down", "interval": 1.6, "phase": 0.0},
 			{"x": 1550, "y": 238.0, "dir": "down", "mode": "triggered", "trigger_id": "tw1", "burst": 3},
 			{"x": 1780, "y": 238.0, "dir": "down", "mode": "triggered", "trigger_id": "tw1", "burst": 3},
-			{"x": 2800, "y": 238.0, "dir": "down", "interval": 1.6, "phase": 0.6},    # 지붕3 밑 (주기)
+			{"x": 2100, "y": 238.0, "dir": "down", "interval": 1.6, "phase": 0.6},
 		],
 		"tripwires": [
-			# 통로 가로지르는 세로 레이저 — 밟으면 앞쪽 triggered 포탑(tw1) 발동.
 			{"x": 1350, "y": 235.0, "dir": "down", "len": 200.0, "trigger_id": "tw1", "cooldown": 2.4},
 		],
 	}

@@ -80,6 +80,16 @@ var invuln: float = 0.0
 # 죽일 수 있다(사용자 2026-08-16, 붕괴 회랑 엔딩 멘트 중 사망). invuln과 달리 깜빡임 없음.
 # Stage._begin_clear_sequence가 켜고 씬 전환까지 유지.
 var clear_protect: bool = false
+# 외부 넉백(열차 등) · _handle_input이 지속 시간 동안 입력 대신 이 속도를 쓴다.
+var _knockback_v: Vector2 = Vector2.ZERO
+var _knockback_t: float = 0.0
+
+# 외부 충격(열차 피격 등)이 부르는 넉백. y는 즉시 1회 적용(점프 물리에 맡김), x는 dur 동안 유지.
+func apply_knockback(v: Vector2, dur: float = 0.25) -> void:
+	_knockback_v = v
+	_knockback_t = dur
+	if v.y != 0.0:
+		velocity.y = v.y
 # 수류탄 차징 상태
 var _charging: bool = false
 var _grenade_charge: float = 0.0
@@ -281,7 +291,11 @@ func _handle_input(delta: float) -> void:
 	if dir != 0.0:
 		facing = 1 if dir > 0.0 else -1
 
-	if dash_timer > 0.0:
+	if _knockback_t > 0.0:
+		# 외부 넉백(열차 등) 우선 · 잠깐 입력 대신 임펄스 속도. 대시보다도 우선(치인 쪽이 진실).
+		_knockback_t = maxf(_knockback_t - delta, 0.0)
+		velocity.x = _knockback_v.x
+	elif dash_timer > 0.0:
 		# dash_boost T2 = 대시 거리 +30% → 속도 *1.3 (지속시간은 그대로라 거리 늘어남)
 		var dash_speed_mult: float = 1.3 if GameState.get_skill_tier("dash_boost") >= 2 else 1.0
 		velocity.x = float(facing) * DASH_SPEED * dash_speed_mult

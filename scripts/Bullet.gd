@@ -112,9 +112,12 @@ func _apply_tracking(_delta: float) -> void:
 	angle = lerp(angle, target_angle, tracking_blend)
 
 func _find_nearest_enemy() -> Node2D:
+	# "enemy" + "boss_hittable"(그룹 밖 보스체, 14-1 거짓 VEIL 실체 등) 둘 다 추적 대상.
+	# 충돌(131행)·수류탄(Grenade)은 이미 두 그룹을 보는데 유도 타깃 스캔만 enemy뿐이라
+	# P3 실체에 유도가 안 먹혔다(사용자 2026-08-16, 동형 오류 스윕으로 수정).
 	var nearest: Node2D = null
 	var min_d: float = 99999.0
-	for e in get_tree().get_nodes_in_group("enemy"):
+	for e in get_tree().get_nodes_in_group("enemy") + get_tree().get_nodes_in_group("boss_hittable"):
 		if not (e is Node2D):
 			continue
 		if e in hit_enemies:

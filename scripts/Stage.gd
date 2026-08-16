@@ -818,6 +818,7 @@ func _build_world() -> void:
 	_build_defense_core()
 	_build_cover_niches()
 	_build_sweep_beam()
+	_build_train_hazard()
 	_build_mid_gate()
 	_build_route_lines()
 	_build_fake_watchers()
@@ -2585,6 +2586,10 @@ func _build_hazards() -> void:
 			_build_spike(sx, sw, sy, sd)
 		return
 	# 폴백 (디버그/플레이그라운드)
+	# 세그먼트가 명시 차단 가능 · 지하철 방2(선로)는 자동 가시가 벽감 세이프존 옆에 깔려
+	# 열차 회피 동선을 오염시킨다(2026-08-16 스크린샷 검증에서 발견).
+	if bool(_map_data.get("no_spike_fallback", false)):
+		return
 	if not "함정" in GameState.current_route_tags:
 		return
 	var rng := RandomNumberGenerator.new()
@@ -2845,6 +2850,18 @@ func _build_route_ambience() -> void:
 			_escape_tone_destroy()
 			_apply_act_rival_tint()
 			return
+		"subway_platform":
+			_ambience_subway_platform()
+			_apply_act_rival_tint()
+			return
+		"subway_tracks":
+			_ambience_subway_tracks()
+			_apply_act_rival_tint()
+			return
+		"subway_transfer":
+			_ambience_subway_transfer()
+			_apply_act_rival_tint()
+			return
 	match GameState.current_route_id:
 		"route_sewers":
 			_ambience_sewers()
@@ -2855,7 +2872,8 @@ func _build_route_ambience() -> void:
 		"route_back_alley":
 			_ambience_back_alley()
 		"route_subway":
-			_ambience_subway()
+			# 노선 체인 재설계(2026-08-16) 후 각 방의 ambience 키가 선점 · 이 분기는 안전망.
+			_ambience_subway_platform()
 		"route_cooling":
 			_ambience_cooling()
 		"route_watchtower":
@@ -3140,12 +3158,16 @@ func _ambience_back_alley() -> void:
 	# 그래피티 — 외곽 시작 지점 벽에 코드명 한 줄. 계속 등장하는 PROJECT VEIL의 첫 등장.
 	_add_lore_label(Vector2(1700.0, GROUND_Y - 320.0), "PROJECT VEIL\n시험 단계", Color(0.95, 0.78, 0.35, 0.50), 14)
 
-func _ambience_subway() -> void:
-	# 깜빡이는 형광등 — 일부에 tween으로 깜빡임
+# (구 _ambience_subway는 노선 체인 재설계로 삭제 · 표지판 두 종은 방1/방2 배경으로 이주.)
+
+# ─── 폐쇄 지하철 방1 · 승강장(HORIZONTAL) 시그니처 배경 ───────────
+# 폐역 승강장: 형광등 + 스크린도어 잔해 프레임 + 노선도 패널 + 벤치. SILO-7 표지판은 여기로.
+func _ambience_subway_platform() -> void:
+	var w: float = STAGE_LENGTH
 	var rng := RandomNumberGenerator.new()
 	rng.seed = GameState.current_stage * 89 + 7
 	var x: float = 300.0
-	while x < STAGE_LENGTH:
+	while x < w:
 		var tube := ColorRect.new()
 		tube.color = Color(0.85, 0.92, 1.0, 0.65)
 		tube.position = Vector2(x - 60.0, -180.0)
@@ -3158,9 +3180,143 @@ func _ambience_subway() -> void:
 			tw.tween_property(tube, "modulate:a", 0.15, rng.randf_range(0.05, 0.15))
 			tw.tween_property(tube, "modulate:a", 1.0, rng.randf_range(0.4, 1.2))
 		x += rng.randf_range(380.0, 620.0)
-	# 표지판 — 폐쇄된 지하철 표시. SILO-7 코드명 노출.
-	_add_lore_label(Vector2(1100.0, GROUND_Y - 280.0), "SILO-7  접근 통로\n폐쇄: 2025.11", Color(0.65, 0.72, 0.85, 0.55), 14)
-	_add_lore_label(Vector2(3800.0, GROUND_Y - 280.0), "MAINTENANCE ONLY\nARCTURUS 발주", Color(0.65, 0.72, 0.85, 0.45), 13)
+	# 스크린도어 잔해 · 기둥 쌍 + 상부 프레임(문짝은 뜯겨 없음).
+	var sx: float = 380.0
+	while sx < w - 200.0:
+		var frame_top := ColorRect.new()
+		frame_top.color = Color(0.20, 0.22, 0.27)
+		frame_top.position = Vector2(sx, 150.0)
+		frame_top.size = Vector2(220.0, 8.0)
+		frame_top.z_index = -9
+		add_child(frame_top)
+		for px2 in [sx, sx + 214.0]:
+			var post := ColorRect.new()
+			post.color = Color(0.18, 0.20, 0.24)
+			post.position = Vector2(float(px2), 150.0)
+			post.size = Vector2(6.0, GROUND_Y - 150.0)
+			post.z_index = -9
+			add_child(post)
+		sx += rng.randf_range(520.0, 760.0)
+	# 노선도 패널 · 도시의 흔적(두 노선 색 라인).
+	var panel := ColorRect.new()
+	panel.color = Color(0.88, 0.90, 0.94, 0.85)
+	panel.position = Vector2(240.0, 200.0)
+	panel.size = Vector2(150.0, 88.0)
+	panel.z_index = -8
+	add_child(panel)
+	for entry in [[Color(0.20, 0.55, 0.85), 228.0], [Color(0.85, 0.45, 0.20), 254.0]]:
+		var e: Array = entry
+		var ln := ColorRect.new()
+		ln.color = e[0]
+		ln.position = Vector2(252.0, float(e[1]))
+		ln.size = Vector2(126.0, 6.0)
+		ln.z_index = -7
+		add_child(ln)
+	# 벤치 실루엣.
+	for bx in [800.0, 1550.0]:
+		var seat := ColorRect.new()
+		seat.color = Color(0.14, 0.15, 0.18)
+		seat.position = Vector2(float(bx), GROUND_Y - 34.0)
+		seat.size = Vector2(120.0, 12.0)
+		seat.z_index = -8
+		add_child(seat)
+		for lx in [bx + 8.0, bx + 104.0]:
+			var leg := ColorRect.new()
+			leg.color = Color(0.12, 0.13, 0.16)
+			leg.position = Vector2(float(lx), GROUND_Y - 22.0)
+			leg.size = Vector2(8.0, 22.0)
+			leg.z_index = -8
+			add_child(leg)
+	_add_lore_label(Vector2(430.0, 176.0), "SILO-7  접근 통로\n폐쇄: 2025.11", Color(0.65, 0.72, 0.85, 0.55), 14)
+	_add_lore_label(Vector2(float(int(STAGE_LENGTH) - 500), GROUND_Y - 260.0), "선로 방면 →", Color(0.65, 0.72, 0.85, 0.5), 14)
+
+# ─── 폐쇄 지하철 방2 · 선로(HORIZONTAL) 시그니처 배경 ───────────
+# 살아 있는 선로: 침목 + 레일 + 터널 아치 기둥. 신호등은 TrainHazard가 관리(상태 연동).
+func _ambience_subway_tracks() -> void:
+	var w: float = STAGE_LENGTH
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 97 + 5
+	# 레일 2줄 · 바닥 표면 바로 아래.
+	for ry in [GROUND_Y + 6.0, GROUND_Y + 20.0]:
+		var rail := ColorRect.new()
+		rail.color = Color(0.42, 0.45, 0.52, 0.9)
+		rail.position = Vector2(-200.0, float(ry))
+		rail.size = Vector2(w + 400.0, 4.0)
+		rail.z_index = -4
+		add_child(rail)
+	# 침목 · 가로 반복.
+	var tx: float = -100.0
+	while tx < w + 100.0:
+		var tie := ColorRect.new()
+		tie.color = Color(0.16, 0.14, 0.12)
+		tie.position = Vector2(tx, GROUND_Y + 2.0)
+		tie.size = Vector2(16.0, 26.0)
+		tie.z_index = -5
+		add_child(tie)
+		tx += 90.0
+	# 터널 아치 기둥 · 어둡고 굵게, 천장 리브와 함께.
+	var ax: float = 260.0
+	while ax < w:
+		var rib := ColorRect.new()
+		rib.color = Color(0.10, 0.11, 0.14)
+		rib.position = Vector2(ax, -200.0)
+		rib.size = Vector2(26.0, GROUND_Y + 200.0)
+		rib.z_index = -11
+		add_child(rib)
+		ax += rng.randf_range(440.0, 560.0)
+	# 드문 작업등 · 붉은 톤 낮게(선로 = 위험 구역 무드).
+	var lx2: float = 700.0
+	while lx2 < w:
+		var work := ColorRect.new()
+		work.color = Color(0.9, 0.45, 0.25, 0.12)
+		work.position = Vector2(lx2 - 50.0, -100.0)
+		work.size = Vector2(100.0, GROUND_Y + 100.0)
+		work.z_index = -7
+		add_child(work)
+		lx2 += rng.randf_range(900.0, 1300.0)
+	_add_lore_label(Vector2(240.0, GROUND_Y - 260.0), "선로 진입 금지 · 무인 운행 중", Color(0.9, 0.45, 0.25, 0.6), 14)
+	_add_lore_label(Vector2(float(int(STAGE_LENGTH) - 640), GROUND_Y - 260.0), "MAINTENANCE ONLY\nARCTURUS 발주", Color(0.65, 0.72, 0.85, 0.45), 13)
+
+# ─── 폐쇄 지하철 방3 · 환승홀(HORIZONTAL) 시그니처 배경 ───────────
+# 환승 통로: 형광등 + 벽면 계단 실루엣 + 개찰 게이트 잔해. 정차 차량(발판)이 전투 지형.
+func _ambience_subway_transfer() -> void:
+	var w: float = STAGE_LENGTH
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 101 + 13
+	var x: float = 300.0
+	while x < w:
+		var tube := ColorRect.new()
+		tube.color = Color(0.85, 0.92, 1.0, 0.65)
+		tube.position = Vector2(x - 60.0, -180.0)
+		tube.size = Vector2(120.0, 4.0)
+		tube.z_index = -6
+		add_child(tube)
+		if rng.randf() < 0.3:
+			var tw := tube.create_tween()
+			tw.set_loops()
+			tw.tween_property(tube, "modulate:a", 0.2, rng.randf_range(0.05, 0.15))
+			tw.tween_property(tube, "modulate:a", 1.0, rng.randf_range(0.4, 1.2))
+		x += rng.randf_range(420.0, 680.0)
+	# 벽면 계단 실루엣 · 지상으로 오르는 환승 계단(배경 로어).
+	for base_x in [500.0, float(int(w) - 800)]:
+		for i in 5:
+			var step := ColorRect.new()
+			step.color = Color(0.13, 0.14, 0.17)
+			step.position = Vector2(float(base_x) + float(i) * 44.0, 260.0 - float(i) * 26.0)
+			step.size = Vector2(44.0, 14.0)
+			step.z_index = -10
+			add_child(step)
+	# 개찰 게이트 잔해 · 짧은 기둥 열.
+	var gx: float = 1150.0
+	for i in 4:
+		var gate := ColorRect.new()
+		gate.color = Color(0.20, 0.22, 0.26)
+		gate.position = Vector2(gx + float(i) * 70.0, GROUND_Y - 46.0)
+		gate.size = Vector2(12.0, 46.0)
+		gate.z_index = -8
+		add_child(gate)
+	_add_lore_label(Vector2(560.0, 150.0), "환승 → 지상", Color(0.65, 0.72, 0.85, 0.55), 14)
+	_add_lore_label(Vector2(1120.0, GROUND_Y - 260.0), "개찰 구역 · 통행 기록 없음", Color(0.65, 0.72, 0.85, 0.45), 13)
 
 func _ambience_cooling() -> void:
 	# 냉각 시설 — 수직 파이프 라인, 차가운 푸른 톤
@@ -6352,6 +6508,16 @@ func _on_goal_reached(body: Node) -> void:
 		_begin_segment_transition()
 		return
 	_trigger_stage_clear()
+
+# 무인 화물 열차(TrainHazard) · MapData "train_hazard" 키. 벽감(cover_niches) 값을 세이프존으로 공유.
+func _build_train_hazard() -> void:
+	var cfg: Dictionary = _map_data.get("train_hazard", {})
+	if cfg.is_empty():
+		return
+	var th := TrainHazard.new()
+	add_child(th)
+	var niche_xs: Array = _map_data.get("cover_niches", [])
+	th.setup(cfg, GROUND_Y, STAGE_LENGTH, niche_xs, float(_map_data.get("niche_half", 90.0)))
 
 # 방 체인 전환(map_identity_rework §2) · RouteMap/Briefing 없이 짧은 문 전환으로 다음 방 로드.
 # XP·HP·성장은 GameState 소유라 유지되고, 스테이지 타이머는 record_route_choice 기준이라 체인

@@ -645,7 +645,9 @@
   실내 방에 도시 야경 스카이라인이 깔림, 실측으로 발견) ⓒ 진입 멘트는 `current_segment == 0`
   게이트(안 하면 방마다 반복) ⓓ Stage._ready 풀 힐도 세그먼트 0 게이트(체인은 한 스테이지) ·
   세그먼트 리셋은 GameState(reset/record_route_choice/register_death/load_run) + 디버그 점프
-  (Playground 2곳·Settings 1곳) 전부에 둔다.
+  (Playground 2곳·Settings 1곳) 전부에 둔다. ⓔ "함정" 태그 라우트는 spikes가 비면 자동 가시
+  폴백이 깔린다(Stage._build_spikes) · 기믹 동선을 오염시키면 `no_spike_fallback` 키로 차단
+  (지하철 방2 선로: 자동 가시가 벽감 세이프존 옆에 깔렸던 사례, 스크린샷 검증에서 발견).
 
 - **씬 하니스에서 `SceneTree._initialize` 시점에 `root.add_child`한 노드는 아직 `is_inside_tree()`가
   false다.** ChaseHazard 검증 하니스가 이 가드에 걸려 "전진 0"으로 조용히 무의미한 PASS를 냈다

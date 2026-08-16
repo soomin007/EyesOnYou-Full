@@ -81,8 +81,8 @@ const ALL_ROUTES: Array = [
 		# 막1(외곽) 진입 bridge — 외벽 단계 안에서만. 막2부터는 내부 맵.
 		"min_stage": 1, "max_stage": 2,
 		"tags": ["근접전", "함정", "전투"],
-		"veil_comment": "옛 지하철이에요. 좁고 어두워요. 대시 써서 함정 넘어가세요.",
-		"entry_comment": "지하철 통로예요. 좁아요. 한 번에 멀리 가요.",
+		"veil_comment": "옛 지하철이에요. 폐역인데 선로는 살아 있어요. 신호등을 봐 두세요.",
+		"entry_comment": "폐역 승강장이에요. 선로 구간에선 오래 서 있지 마세요. 신호가 울리면 비켜요.",
 		"stage_color": Color(0.08, 0.10, 0.14),
 	},
 	{
