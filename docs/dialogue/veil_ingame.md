@@ -299,7 +299,8 @@
 | `_ambience_scanner` | 보안 스캔 · 감시 활성 | |
 | `_ambience_reactor` | 반응로 제어실 · 코어 방어 | |
 | `_ambience_holdout` | 통제 구역 봉쇄 · 저지선 | |
-| `_ambience_core_recovery` | 최심부 · 코어 격납 구역 | |
+| `_ambience_core_arena` | 코어 관제홀 · 최상위 권한 구역 | |
+| `_ambience_core_arena` | OBSERVATION DECK | |
 | `_ambience_back_alley` | PROJECT VEIL⏎시험 단계 | |
 | `_ambience_subway_platform` | SILO-7  접근 통로⏎폐쇄: 2025.11 | |
 | `_ambience_subway_platform` | 선로 방면 → | |
@@ -320,7 +321,7 @@
 | `VeilDialogue.gd` | 0 (막 문턱 멘트는 briefing_routes.md §3) |
 | `GameState.gd` | 0 (막 이름은 ui.md) |
 | `Stage.gd` (자막·라벨) | 29 |
-| `Stage.gd` (환경 라벨 부록) | 29 |
+| `Stage.gd` (환경 라벨 부록) | 30 |
 | `VeilSight.gd` | 16 |
 | `Enemy.gd` | 4 |
 | `DefenseCore.gd` | 1 |

@@ -115,9 +115,11 @@ func _find_nearest_enemy() -> Node2D:
 	# "enemy" + "boss_hittable"(그룹 밖 보스체, 14-1 거짓 VEIL 실체 등) 둘 다 추적 대상.
 	# 충돌(131행)·수류탄(Grenade)은 이미 두 그룹을 보는데 유도 타깃 스캔만 enemy뿐이라
 	# P3 실체에 유도가 안 먹혔다(사용자 2026-08-16, 동형 오류 스윕으로 수정).
+	# + "homing_decoy"(P3 가짜 눈·가짜 병사) · 유도탄이 미끼도 쫓아야 "유도 방향 = 공짜 판별"이
+	# 안 된다(유도만 실체를 쫓으면 게임이 너무 쉬워진다는 사용자 지적, 같은 날).
 	var nearest: Node2D = null
 	var min_d: float = 99999.0
-	for e in get_tree().get_nodes_in_group("enemy") + get_tree().get_nodes_in_group("boss_hittable"):
+	for e in get_tree().get_nodes_in_group("enemy") + get_tree().get_nodes_in_group("boss_hittable") + get_tree().get_nodes_in_group("homing_decoy"):
 		if not (e is Node2D):
 			continue
 		if e in hit_enemies:
@@ -143,12 +145,10 @@ func _on_body_entered(body: Node) -> void:
 		if not pierce:
 			queue_free()
 	elif body.is_in_group("platform"):
-		# 원웨이 발판: 기본 탄은 *막히고*, 관통(사격강화 T3)만 적처럼 발판도 꿰뚫는다
-		# (2026-08-16 사용자 결정: 전면 통과를 걷어내고 스킬 효과로 승격). 경위: 데모 초기
-		# "코앞 사격이 발판에 막힌다"로 전면 통과시켰으나(c46b8ce), 유도 T3로 탄이 위로 휘며
-		# "지형 무시"로 읽힘. 솔리드(벽·바닥·허들)는 관통도 못 뚫는다(아래 분기).
-		if pierce:
-			return
+		# 원웨이 발판도 탄을 막는다(관통 포함). 경위: 데모 초기 "코앞 사격이 발판에 막힌다"로
+		# 전면 통과(c46b8ce) → 유도 T3로 "지형 무시"로 읽혀 차단(2026-08-16) → 관통 스킬로
+		# 승격 시도 → 오연사+유도와 겹치면 지형 무시 전천후 사격 = 밸런스 붕괴(사용자 재지적,
+		# 같은 날) · 최종 철회. 관통은 적 관통만 담당한다.
 		SfxPlayer.play_at("bullet_impact_wall", global_position)
 		queue_free()
 	elif body is StaticBody2D:

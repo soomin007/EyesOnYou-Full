@@ -27,7 +27,7 @@ const LINES: Array = [
 		"tiers": [
 			{"name": "사격 강화",   "desc": "사격 데미지 +1",                  "active": false},
 			{"name": "속사",       "desc": "연사 속도 +40%, 사격 후 잠깐 이동 가속", "active": false},
-			{"name": "관통",       "desc": "총알 1체 추가 관통 + 발판 관통",   "active": false},
+			{"name": "관통",       "desc": "총알 1체 추가 관통",               "active": false},
 		],
 	},
 	{

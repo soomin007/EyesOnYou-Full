@@ -310,27 +310,36 @@ static func _subway_platform() -> Dictionary:
 
 # 방2 · 선로. 시그니처 = 무인 화물 열차(TrainHazard): 신호등 적색 전환(2.2s 예고) 후 고속 통과,
 # 대뎀 2 + 넉백(즉사 아님, 사용자 확정). 대피 = 벽감(cover_niches) / 승강장 조각 단차 / 타이밍 점프.
+# 2026-08-16 확장(사용자: "짧고 단조롭고 기믹이 한 번만 나온다"): 3000→4600 + interval 8.5→6.5
+# (주파 ~30초에 열차 4~5회 조우) + 정차 화물차 잔해(허들 = 봉크 시 시간 손실 → 열차 리스크) +
+# 벽감 간격 불규칙 + 단차 3개.
 static func _subway_tracks() -> Dictionary:
 	return {
 		"world_type":   "HORIZONTAL",
-		"world_size":   Vector2(3000.0, 480.0),
+		"world_size":   Vector2(4600.0, 480.0),
 		"player_start": Vector2(140.0, 380.0),
 		"goal_type":    "POSITION",
-		"goal_pos":     Vector2(2880.0, 380.0),
+		"goal_pos":     Vector2(4480.0, 380.0),
 		"camera_mode":  "HORIZONTAL",
 		"ground_y":     420.0,
 		"ambience":     "subway_tracks",
 		"indoor_env":   "interior",
-		"train_hazard": {"interval": 8.5, "telegraph": 2.2, "speed": 2400.0, "dmg": 2, "lights": [500.0, 1300.0, 2100.0, 2800.0]},
-		"cover_niches": [650.0, 1350.0, 2050.0, 2700.0],
+		"train_hazard": {"interval": 6.5, "telegraph": 2.2, "speed": 2400.0, "dmg": 2, "lights": [500.0, 1500.0, 2500.0, 3500.0, 4300.0]},
+		"cover_niches": [650.0, 1500.0, 2200.0, 3150.0, 4050.0],
 		"niche_half":   90.0,
 		"platforms": [
 			# 승강장 조각 단차 · 열차 대역(바닥 위 130px) 밖 = 세이프.
 			{"pos": Vector2(950, 270),  "w": 220.0},
-			{"pos": Vector2(2400, 270), "w": 220.0},
+			{"pos": Vector2(2650, 270), "w": 220.0},
+			{"pos": Vector2(3750, 270), "w": 220.0},
+		],
+		"hurdles": [
+			# 정차 화물차 잔해 · 선로 위 장애물(넘다 봉크 = 시간 손실 → 열차가 온다).
+			{"x": 1850.0, "w": 54.0, "h": 100.0},
+			{"x": 3450.0, "w": 46.0, "h": 90.0},
 		],
 		"enemies": {
-			"patrol": [Vector2(1700, 420.0)],
+			"patrol": [Vector2(1700, 420.0), Vector2(3300, 420.0)],
 			"sniper": [], "drone": [], "bomber": [], "shield": [],
 		},
 		"route_lines": [
@@ -338,7 +347,7 @@ static func _subway_tracks() -> Dictionary:
 		],
 		"rewards": {
 			# 위험 보상 · 벽감 사이 선로 위(열차 리스크를 지나야 먹는다).
-			"xp_orbs":    [Vector2(1000, 390.0), Vector2(1750, 390.0), Vector2(2450, 390.0)],
+			"xp_orbs":    [Vector2(1200, 390.0), Vector2(2900, 390.0), Vector2(3950, 390.0)],
 			"hp_pickups": [],
 		},
 		"spikes": [],
@@ -1502,41 +1511,50 @@ static func _control_corridor() -> Dictionary:
 	}
 
 # ─── 24. 핵심 회수 (ARENA, 막5 s13) — 14-1 라이벌 보스전 ──
-# 5막 엔드게임 진입. 클리어(ENEMY_CLEAR, 페이즈 완주)하면 Stage가 회수 문서 + 처리 선택을 띄운다
-# (route_core_recovery id로 트리거, 막3 lab서 이주 — 이후 14-2 터널로 이주 예정).
-# 시그니처 배경 = Stage._ambience_core_recovery(심장부 수렴 — 격벽 아치·데이터 펄스·코어 글로우).
-# 2026-08-12 재구성: 통과 통로 → 14-1 라이벌 보스 아레나(§7.2 P1 지휘 → P2 빙의).
-# P1 = 웨이브 전원 엘리트("라이벌의 군대", elite_chance 1.0 세트피스) + 재밍 노드가 그늘을 만든다.
-# P2(코드, Stage._start_rival_p2) = 소등 + 벽 포탑 + 위장 함정 + 제어 노드 2기(측면 발판 위).
-# 도달 보장(known_issues): 지상 820→측면 640(더블점프 245>180)→중앙 520(풀점프 130>120).
+# 5막 엔드게임 진입. 클리어(ENEMY_CLEAR, 페이즈 완주)하면 14-2 터널로 잇는다.
+# **2026-08-16 리워크(final_boss_rework §2.1, 사용자 확정)**: 1920×900 단층 → 2400×1300
+# **수직 복층 코어 관제홀**(지상층 + 중층 발판 링 + 상층 관측 데크). 카메라 FIXED → 완만 추적.
+# 시그니처 배경 = Stage._ambience_core_arena(거대 코어 링 + 회전 관측 링 + 데이터 폭포).
+# P1 = 목표형 전투: 상층 데크의 **관측 안테나** 2기(재머 격상 · 잡몹은 끝없는 소규모 투입).
+# P2(Stage._start_rival_p2) = 소등 + 벽 포탑 4기(하/중층) + 위장 함정 + 중계 안테나 2기 +
+# 층별 교대 스윕. P3 = 거짓 VEIL + 가짜 눈 동반(변주 3단).
+# 점프 등급(known_issues 도달 보장, 더블점프 245): 지상 1220→중층 1040(Δ180)→계단 880(Δ160)
+# →데크 720(Δ160) / 중앙 1000→860(Δ140).
 static func _core_recovery() -> Dictionary:
 	return {
 		"world_type":   "ARENA",
-		"world_size":   Vector2(1920.0, 900.0),
-		"player_start": Vector2(960.0, 750.0),
+		"world_size":   Vector2(2400.0, 1300.0),
+		"player_start": Vector2(1200.0, 1150.0),
 		"goal_type":    "ENEMY_CLEAR",
 		"goal_pos":     Vector2.ZERO,
-		"camera_mode":  "FIXED",
-		"ground_y":     820.0,
+		"camera_mode":  "ARENA_FOLLOW",
+		"ground_y":     1220.0,
 		"rival_boss":   true,
 		"waves_hunt":   true,
 		"elite_chance": 1.0,
 		"arena_clear_xp": 4,
 		"platforms": [
-			{"pos": Vector2(430, 640),  "w": 170.0},
-			{"pos": Vector2(1490, 640), "w": 170.0},
-			{"pos": Vector2(960, 520),  "w": 200.0},
+			# 중층 링
+			{"pos": Vector2(350, 1040),  "w": 230.0},
+			{"pos": Vector2(1200, 1000), "w": 280.0},
+			{"pos": Vector2(2050, 1040), "w": 230.0},
+			# 중앙 상단(회복 지점 · P1 소모 보전)
+			{"pos": Vector2(1200, 860),  "w": 220.0},
+			# 상층 연결 계단
+			{"pos": Vector2(700, 880),   "w": 160.0},
+			{"pos": Vector2(1700, 880),  "w": 160.0},
+			# 상층 관측 데크(안테나 자리)
+			{"pos": Vector2(450, 720),   "w": 300.0},
+			{"pos": Vector2(1950, 720),  "w": 300.0},
 		],
-		# P1 재설계(2026-08-12 2차 — "전멸전은 몰살 빌드에 무력" 반려): 웨이브 대신 **목표형 전투**.
-		# 초기 스폰 = 좌우 발판의 재밍 기둥(지휘 앵커) 2기뿐. 잡몹은 Stage가 끝없이 소규모 투입
-		# (_p1_trickle_tick — 전멸 불가). 출구 = 기둥 파괴뿐 → 관통·유도 만렙 빌드도 목표를 향해
-		# 싸우게 된다. 기둥의 재밍 그늘이 좌우 절반의 마커를 지운다(§7.2 "재밍 그늘").
+		# P1 목표형 전투: 초기 스폰 = 상층 데크의 관측 안테나(jammer 로직 재사용) 2기뿐.
+		# 잡몹은 Stage가 끝없이 소규모 투입(_p1_trickle_tick · 전멸 불가). 출구 = 안테나 파괴뿐.
+		# 안테나의 재밍 그늘이 좌우 절반의 마커를 지운다(§7.2 "재밍 그늘").
 		"enemies": {
 			"patrol": [], "sniper": [], "drone": [], "bomber": [], "shield": [],
-			"jammer": [Vector2(430, 610.0), Vector2(1490, 610.0)],
+			"jammer": [Vector2(450, 690.0), Vector2(1950, 690.0)],
 		},
-		# 중앙 상단 회복 1 — P1 소모 보전(P2 진입 전 들를 이유).
-		"rewards": {"xp_orbs": [], "hp_pickups": [Vector2(960, 490.0)]},
+		"rewards": {"xp_orbs": [], "hp_pickups": [Vector2(1200, 830.0)]},
 		"spikes": [],
 	}
 

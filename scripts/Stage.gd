@@ -138,6 +138,11 @@ const _ROUTE_TRACKS: Dictionary = {
 
 func _apply_bgm_for_current_route() -> void:
 	var rid: String = GameState.current_route_id
+	# 14-1 최종보스전 · 전용 트랙(Chrome Grit, 구 boss 슬롯 복권). confront(Violet Signal)는
+	# 막5 전체와 공유돼 고유성이 없었다(사용자 확인 2026-08-16, final_boss_rework §4-③).
+	if rid == "route_core_recovery":
+		BgmPlayer.play("boss")
+		return
 	# 특수 라우트(보스/히든)는 막 무관 우선.
 	if rid == "route_lab" or rid == "route_hidden":
 		BgmPlayer.play(str(_ROUTE_TRACKS.get(rid, "early")))
@@ -1199,7 +1204,7 @@ func _build_background() -> void:
 	if _ienv != "":
 		_build_indoor_backdrop(_ienv)
 		return
-	# 핵심 회수는 자체 완결 배경(_ambience_core_recovery) — 최심부에 도시 스카이라인은 모순.
+	# 핵심 회수는 자체 완결 배경(_ambience_core_arena) · 최심부에 도시 스카이라인은 모순.
 	if GameState.current_route_id == "route_core_recovery":
 		return
 	var rng := RandomNumberGenerator.new()
@@ -2933,7 +2938,7 @@ func _build_route_ambience() -> void:
 		"route_holdout":
 			_ambience_holdout()
 		"route_core_recovery":
-			_ambience_core_recovery()
+			_ambience_core_arena()
 	_apply_act_rival_tint()
 
 # ─── 막4/5 라이벌 침식 — 고유색(바이올렛 캐스트) + 가끔 화면 간섭 플래시 (act_identity §6·§7) ───
@@ -2986,114 +2991,124 @@ func _rival_interference_flash(layer: CanvasLayer) -> void:
 	tw.tween_property(g, "modulate:a", 0.0, 0.16)
 	tw.tween_callback(g.queue_free)
 
-# ─── 핵심 회수 — 시설 심장부 접근 통로 시그니처 (act_identity §7) ───
-# 모든 것이 한 점(코어)으로 수렴하는 그림: 격벽 아치가 갈수록 죄어들고, 벽면 케이블이 우측으로
-# 수렴하며, 그 위를 데이터 펄스가 코어 방향으로 흐른다 — 시안(내 VEIL)과 바이올렛(라이벌)이
-# 같은 심장에서 나온다. 우측 끝 코어 글로우는 느리게 맥동(박동). 향후 14-1/14-2 2막 구성(컨셉
-# §7.1)의 밑칠 — 코어는 "저 너머"로만 암시한다.
-func _ambience_core_recovery() -> void:
-	var w: float = STAGE_LENGTH
+# ─── 코어 관제홀(14-1 리워크 §2.1) · 복층 아레나 시그니처 배경 ───
+# "방 전체가 라이벌이다"의 무대: 중앙 안쪽 벽의 **거대 코어 링**(14-2 코어의 원경 실루엣 ·
+# 여기서 처음 보이고 14-2에서 대면) + 회전 관측 링 2겹 + 데이터 폭포 + 심발광 팔레트
+# (어두운 바탕 + 시안/바이올렛 광원). 격벽 기둥은 원경(z -16)으로 밀고 주기 슬립(거짓 렌더 티)
+# · 파괴 대상 오인 방지(리워크 진단 ③).
+func _ambience_core_arena() -> void:
+	var w: float = _world_size.x
+	var h: float = _world_size.y
 	var rng := RandomNumberGenerator.new()
 	rng.seed = GameState.current_stage * 719 + 13
-	# 뒷벽·천장 슬래브 — 심부 격납 톤(어두운 바이올렛 혼입).
+	# 뒷벽 · 심부 격납 톤. 상부는 더 어둡게(높이감), 지상층 밴드는 살짝 밝게.
 	var wall := ColorRect.new()
-	wall.color = Color(0.09, 0.07, 0.12)
+	wall.color = Color(0.07, 0.055, 0.11)
 	wall.position = Vector2(-200.0, -300.0)
-	wall.size = Vector2(w + 400.0, GROUND_Y + 360.0)
+	wall.size = Vector2(w + 400.0, h + 600.0)
 	wall.z_index = -18
 	add_child(wall)
-	var ceil_r := ColorRect.new()
-	ceil_r.color = Color(0.05, 0.04, 0.08)
-	ceil_r.position = Vector2(-200.0, -300.0)
-	ceil_r.size = Vector2(w + 400.0, 214.0)
-	ceil_r.z_index = -17
-	add_child(ceil_r)
-	# 격벽 아치(보안 게이트 프레임) — 코어에 가까워질수록 간격이 좁아지는 "죄어드는" 리듬.
-	var arch_x: float = 240.0
-	var arch_gap: float = 560.0
-	var arch_i: int = 0
-	while arch_x < w:
-		var post_col := Color(0.13, 0.10, 0.18)
-		for sx in [arch_x - 34.0, arch_x + 34.0]:
-			var post := ColorRect.new()
-			post.color = post_col
-			post.position = Vector2(sx - 10.0, -86.0)
-			post.size = Vector2(20.0, GROUND_Y + 86.0)
-			post.z_index = -15
-			add_child(post)
-		var lintel := ColorRect.new()
-		lintel.color = post_col.lightened(0.10)
-		lintel.position = Vector2(arch_x - 50.0, -86.0)
-		lintel.size = Vector2(100.0, 16.0)
-		lintel.z_index = -15
-		add_child(lintel)
-		# 아치 상태등 — 시안/바이올렛 교대(두 존재가 같은 곳을 가리킨다).
-		var lamp := ColorRect.new()
-		var viol: bool = arch_i % 2 == 1
-		lamp.color = Color(0.72, 0.42, 1.0, 0.75) if viol else Color(0.40, 0.90, 1.0, 0.75)
-		lamp.position = Vector2(arch_x - 5.0, -64.0)
-		lamp.size = Vector2(10.0, 6.0)
-		lamp.z_index = -14
-		add_child(lamp)
-		arch_x += arch_gap
-		arch_gap = maxf(360.0, arch_gap - 45.0)
-		arch_i += 1
-	# 케이블 다발 — 좌측 상·하단에서 우측 한 점(코어)으로 수렴하는 사선(Polygon2D 얇은 쿼드).
-	var converge := Vector2(w + 80.0, 340.0)
-	var cable_starts: Array = [-70.0, -28.0, GROUND_Y - 36.0, GROUND_Y + 6.0]
-	for i in cable_starts.size():
-		var sy: float = cable_starts[i]
-		var th: float = 5.0
-		var cable := Polygon2D.new()
-		cable.color = Color(0.16, 0.12, 0.22, 0.85)
-		cable.polygon = PackedVector2Array([
-			Vector2(-200.0, sy), converge,
-			converge + Vector2(0.0, th), Vector2(-200.0, sy + th),
+	var top_shade := ColorRect.new()
+	top_shade.color = Color(0.04, 0.03, 0.07)
+	top_shade.position = Vector2(-200.0, -300.0)
+	top_shade.size = Vector2(w + 400.0, 560.0)
+	top_shade.z_index = -17
+	add_child(top_shade)
+	var floor_band := ColorRect.new()
+	floor_band.color = Color(0.10, 0.08, 0.14)
+	floor_band.position = Vector2(-200.0, GROUND_Y - 60.0)
+	floor_band.size = Vector2(w + 400.0, h - GROUND_Y + 360.0)
+	floor_band.z_index = -17
+	add_child(floor_band)
+	# 거대 코어 링 + 회전 관측 링 · 중앙 안쪽 벽(전용 스피너 노드가 회전·맥동을 그린다).
+	var spinner := _CoreRingSpinner.new()
+	spinner.position = Vector2(w * 0.5, 520.0)
+	spinner.z_index = -15
+	add_child(spinner)
+	# 원경 격벽 기둥 · 얇고 어둡게, 주기 슬립(거짓 렌더 티: "이건 그림이다").
+	for px in [220.0, 640.0, 1060.0, 1340.0, 1760.0, 2180.0]:
+		var pillar := ColorRect.new()
+		pillar.color = Color(0.11, 0.085, 0.16)
+		pillar.position = Vector2(float(px) - 14.0, -100.0)
+		pillar.size = Vector2(28.0, GROUND_Y + 100.0)
+		pillar.z_index = -16
+		add_child(pillar)
+		for ny in [340.0, 760.0]:
+			var notch := ColorRect.new()
+			notch.color = Color(0.16, 0.12, 0.22)
+			notch.position = Vector2(float(px) - 18.0, float(ny))
+			notch.size = Vector2(36.0, 6.0)
+			notch.z_index = -16
+			add_child(notch)
+		var ptw := pillar.create_tween()
+		ptw.set_loops()
+		ptw.tween_interval(rng.randf_range(2.2, 4.6))
+		ptw.tween_property(pillar, "position:x", float(px) - 14.0 + 4.0, 0.06)
+		ptw.tween_property(pillar, "position:x", float(px) - 14.0, 0.08)
+	# 데이터 폭포 · 세로로 흘러내리는 문자열 스트립(시안/바이올렛 교대, 저알파).
+	for i in 6:
+		var cx: float = 180.0 + float(i) * 400.0 + rng.randf_range(-60.0, 60.0)
+		for s in 2:
+			var strip := ColorRect.new()
+			var viol: bool = (i + s) % 2 == 0
+			strip.color = Color(0.72, 0.42, 1.0, 0.13) if viol else Color(0.40, 0.90, 1.0, 0.13)
+			strip.size = Vector2(3.0, rng.randf_range(70.0, 150.0))
+			strip.position = Vector2(cx + float(s) * 8.0, -160.0)
+			strip.z_index = -14
+			add_child(strip)
+			var stw := strip.create_tween()
+			stw.set_loops()
+			stw.tween_interval(rng.randf_range(0.0, 2.8))
+			stw.tween_property(strip, "position:y", h + 60.0, rng.randf_range(3.4, 6.2)).from(-160.0)
+	# 층 지지 스트럿 · 중층·데크 발판 아래 사선 버팀(구조가 "지어져 있다"는 감각).
+	for entry in [[350.0, 1040.0], [1200.0, 1000.0], [2050.0, 1040.0], [450.0, 720.0], [1950.0, 720.0], [1200.0, 860.0]]:
+		var e: Array = entry
+		var strut := Polygon2D.new()
+		strut.color = Color(0.13, 0.10, 0.19, 0.9)
+		var bx: float = float(e[0])
+		var by: float = float(e[1])
+		strut.polygon = PackedVector2Array([
+			Vector2(bx - 8.0, by), Vector2(bx + 8.0, by),
+			Vector2(bx + 30.0, by + 120.0), Vector2(bx - 30.0, by + 120.0),
 		])
-		cable.z_index = -13
-		add_child(cable)
-		# 데이터 펄스 — 케이블을 따라 코어 방향으로 흐르는 빛줄기. 시안/바이올렛 혼재.
-		# 천장 케이블(위 2가닥)에만 — 지면 높이 케이블의 밝은 광점(12×5, 알파 0.9, 총알급 속도)이
-		# 몸통 높이를 날아 시안 티어 총알과 오인됐다(2026-08-11 피드백). 가늘고 긴 저알파 스트릭 +
-		# 감속으로 "배관 속 신호"로만 읽히게.
-		if sy < 0.0:
-			for p in 2:
-				var pulse := ColorRect.new()
-				var viol2: bool = (i + p) % 2 == 0
-				pulse.color = Color(0.72, 0.42, 1.0, 0.32) if viol2 else Color(0.40, 0.90, 1.0, 0.32)
-				pulse.size = Vector2(26.0, 3.0)
-				pulse.z_index = -12
-				add_child(pulse)
-				var start := Vector2(-100.0, sy)
-				var tw := pulse.create_tween()
-				tw.set_loops()
-				tw.tween_interval(rng.randf_range(0.2, 2.4))
-				tw.tween_property(pulse, "position", converge, rng.randf_range(9.0, 14.0)).from(start)
-	# 코어 글로우 — 우측 끝 세로 워시 3겹 + 느린 맥동(심장 박동).
-	var glow_steps: Array = [
-		{"x": w - 260.0, "a": 0.05},
-		{"x": w - 140.0, "a": 0.10},
-		{"x": w - 60.0,  "a": 0.16},
-	]
-	for gdef in glow_steps:
-		var gd: Dictionary = gdef
-		var glow := ColorRect.new()
-		glow.color = Color(0.80, 0.58, 1.0, float(gd["a"]))
-		glow.position = Vector2(float(gd["x"]), -300.0)
-		glow.size = Vector2(w + 200.0 - float(gd["x"]), GROUND_Y + 360.0)
-		glow.z_index = -11
-		add_child(glow)
-	var heart := ColorRect.new()
-	heart.color = Color(0.92, 0.80, 1.0, 0.12)
-	heart.position = Vector2(w - 30.0, -300.0)
-	heart.size = Vector2(230.0, GROUND_Y + 360.0)
-	heart.z_index = -11
-	add_child(heart)
-	var htw := heart.create_tween()
-	htw.set_loops()
-	htw.tween_property(heart, "modulate:a", 0.45, 1.15)
-	htw.tween_property(heart, "modulate:a", 1.0, 1.25)
-	_add_lore_label(Vector2(360.0, -30.0), "최심부 · 코어 격납 구역", Color(0.80, 0.58, 1.0, 0.45), 15)
+		strut.z_index = -13
+		add_child(strut)
+	# 상단 관측 레일 · 데크 위 크레인 레일 한 줄(원경).
+	var rail := ColorRect.new()
+	rail.color = Color(0.14, 0.11, 0.20)
+	rail.position = Vector2(120.0, 250.0)
+	rail.size = Vector2(w - 240.0, 8.0)
+	rail.z_index = -15
+	add_child(rail)
+	_add_lore_label(Vector2(300.0, GROUND_Y - 250.0), "코어 관제홀 · 최상위 권한 구역", Color(0.80, 0.58, 1.0, 0.45), 15)
+	_add_lore_label(Vector2(float(int(w) - 780), 640.0), "OBSERVATION DECK", Color(0.40, 0.90, 1.0, 0.35), 13)
+
+# 코어 링 스피너 · 거대 코어 글로우(느린 박동) + 원근 타원 관측 링 2겹(반대 방향 회전).
+class _CoreRingSpinner extends Node2D:
+	var _t: float = 0.0
+	func _process(delta: float) -> void:
+		_t += delta
+		queue_redraw()
+	func _draw() -> void:
+		var pulse: float = 0.5 + 0.5 * sin(_t * 0.9)
+		draw_circle(Vector2.ZERO, 150.0, Color(0.72, 0.42, 1.0, 0.05 + 0.03 * pulse))
+		draw_circle(Vector2.ZERO, 100.0, Color(0.40, 0.90, 1.0, 0.06 + 0.03 * pulse))
+		draw_circle(Vector2.ZERO, 48.0, Color(0.88, 0.78, 1.0, 0.10 + 0.05 * pulse))
+		# 관측 링 1 · 시안, 원근 타원. 링 위 관측 노드 점 4개가 함께 돈다.
+		draw_set_transform(Vector2.ZERO, _t * 0.22, Vector2(1.0, 0.34))
+		draw_arc(Vector2.ZERO, 300.0, 0.0, TAU, 48, Color(0.40, 0.90, 1.0, 0.20), 2.5, true)
+		for i in 4:
+			var ang: float = TAU * float(i) / 4.0
+			draw_circle(Vector2(cos(ang), sin(ang)) * 300.0, 7.0, Color(0.40, 0.90, 1.0, 0.45))
+		# 관측 링 2 · 바이올렛, 반대 방향.
+		draw_set_transform(Vector2.ZERO, -_t * 0.15, Vector2(1.0, 0.30))
+		draw_arc(Vector2.ZERO, 380.0, 0.0, TAU, 56, Color(0.72, 0.42, 1.0, 0.17), 2.5, true)
+		for i in 3:
+			var ang2: float = TAU * float(i) / 3.0
+			draw_circle(Vector2(cos(ang2), sin(ang2)) * 380.0, 6.0, Color(0.72, 0.42, 1.0, 0.4))
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+# (구 수렴 통로 배경(_ambience_core_recovery)은 리워크로 삭제 · 아레나 배경이 대체.)
 
 func _ambience_sewers() -> void:
 	# 화면 가장자리 어두운 비네트 (CanvasLayer 위에 띄움) + 바닥 옅은 안개
@@ -3973,6 +3988,14 @@ func _build_camera() -> void:
 			camera.zoom = Vector2(zoom_fit, zoom_fit)
 			add_child(camera)
 			camera.global_position = _world_size * 0.5
+		"ARENA_FOLLOW":
+			# 복층 아레나(14-1 리워크 §2.1) · 양 축 완만 추적 + 기본 살짝 줌 아웃(무대 스케일 체감).
+			camera.limit_left = 0
+			camera.limit_right = int(_world_size.x)
+			camera.limit_top = 0
+			camera.limit_bottom = int(_world_size.y)
+			camera.zoom = Vector2(0.85, 0.85)
+			player.add_child(camera)
 		_:
 			# 폴백
 			camera.limit_left = 0
@@ -5187,6 +5210,63 @@ const _P1_TYPES: Array = [0, 3, 2, 0, 4, 2, 3, 0]   # patrol·bomber·drone 회�
 func _rival_boss_active() -> bool:
 	return bool(_map_data.get("rival_boss", false))
 
+# 관측 안테나(final_boss_rework §2.2) · P1 목표물의 격 상향: 44px 재머 장치 → ~200px 타워.
+# 재머(enemy type 5)는 로직 코어(피격 대상·재밍 그늘)로 남고, 이 노드는 그 자리의 타워 비주얼
+# + 붕괴 연출(접시 낙하 + 필드 파문 + 빔 소멸). small = P2 중계 안테나(소형 변형).
+class _RivalAntenna extends Node2D:
+	var small: bool = false
+	var _t: float = 0.0
+	var _collapsed: bool = false
+	var _col_t: float = 0.0
+
+	func _ready() -> void:
+		z_index = 1   # 재머 장치(적, z 2+)보다 뒤 · 배경 구조물
+
+	func collapse() -> void:
+		if _collapsed:
+			return
+		_collapsed = true
+		_col_t = 0.0
+
+	func _process(delta: float) -> void:
+		_t += delta
+		if _collapsed:
+			_col_t += delta
+		queue_redraw()
+
+	func _draw() -> void:
+		var h: float = 110.0 if small else 200.0
+		var alive: float = 1.0 if not _collapsed else maxf(0.0, 1.0 - _col_t / 0.9)
+		# 마스트 + 리브 · 붕괴 후에도 잔해로 남는다(전장의 흔적).
+		var mast := Color(0.15, 0.12, 0.20) if not _collapsed else Color(0.10, 0.09, 0.13)
+		draw_rect(Rect2(Vector2(-7.0, -h), Vector2(14.0, h)), mast)
+		draw_rect(Rect2(Vector2(-7.0, -h), Vector2(14.0, h)), Color(0.45, 0.32, 0.62, 0.35 + 0.35 * alive), false, 2.0)
+		for i in 3:
+			var ry: float = -h * (0.30 + 0.25 * float(i))
+			draw_rect(Rect2(Vector2(-20.0, ry), Vector2(40.0, 5.0)), mast.lightened(0.06))
+		# 라이벌 광선 · 접시에서 하늘로 뻗는 바이올렛 빔(가동 중에만, 완만 맥동).
+		if not _collapsed:
+			var ba: float = 0.22 + 0.08 * sin(_t * 1.7)
+			draw_line(Vector2(0.0, -h - 14.0), Vector2(0.0, -h - 620.0), Color(0.72, 0.42, 1.0, ba), 5.0)
+			draw_line(Vector2(0.0, -h - 14.0), Vector2(0.0, -h - 620.0), Color(0.90, 0.72, 1.0, ba + 0.10), 2.0)
+		# 회전 접시(상단) · 붕괴 시 낙하하며 사라진다.
+		if _col_t < 1.2:
+			var dish_y: float = -h - 12.0 + (_col_t * _col_t * 320.0 if _collapsed else 0.0)
+			var spin: float = _t * (2.2 if not _collapsed else 0.3) + (_col_t * 4.0 if _collapsed else 0.0)
+			var da: float = 1.0 if not _collapsed else maxf(0.0, 1.0 - _col_t / 1.1)
+			draw_set_transform(Vector2(0.0, dish_y), spin, Vector2(1.0, 0.45))
+			draw_arc(Vector2.ZERO, 26.0 if not small else 18.0, 0.0, TAU, 24, Color(0.72, 0.42, 1.0, 0.85 * da), 3.0, true)
+			draw_arc(Vector2.ZERO, 15.0 if not small else 10.0, 0.0, TAU, 18, Color(0.88, 0.70, 1.0, 0.6 * da), 2.0, true)
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		# 기부 필드 링 · 방출부(재머 장치) 주변 완만 맥동.
+		if not _collapsed:
+			var fa: float = 0.30 + 0.12 * sin(_t * 2.1)
+			draw_arc(Vector2(0.0, -16.0), 36.0, 0.0, TAU, 28, Color(0.72, 0.42, 1.0, fa), 2.0, true)
+		# 붕괴 파문 · 필드가 터지며 걷힌다.
+		if _collapsed and _col_t < 0.8:
+			var k: float = _col_t / 0.8
+			draw_arc(Vector2(0.0, -h * 0.4), 40.0 + 150.0 * k, 0.0, TAU, 36, Color(0.85, 0.60, 1.0, 0.55 * (1.0 - k)), 3.0, true)
+
 func _init_rival_boss() -> void:
 	_rival_fx_layer = CanvasLayer.new()
 	_rival_fx_layer.layer = 12
@@ -5216,11 +5296,18 @@ func _init_rival_boss() -> void:
 		else:
 			call_deferred("_start_rival_p2")
 		return
-	# P1 목표 태깅 — MapData가 스폰한 재밍 기둥 2기 = 지휘 앵커(전부 파괴 = P2). hp 상향.
+	# P1 목표 태깅 · MapData가 스폰한 재머 2기 = 지휘 앵커(전부 파괴 = P2). hp 상향.
+	# 리워크(§2.2): 재머 장치 뒤에 관측 안테나 타워를 세워 목표물의 격을 올린다. 장치 = 방출부.
 	for e in get_tree().get_nodes_in_group("enemy"):
 		if int((e as Node).get("enemy_type")) == 5:
 			(e as Node).set_meta("rival_node", true)
 			(e as Node).set("hp", _rival_node_hp_p1)
+			var ant := _RivalAntenna.new()
+			ant.position = (e as Node2D).global_position + Vector2(0.0, 30.0)
+			add_child(ant)
+			(e as Node).connect("killed", func(_pos: Vector2) -> void:
+				if is_instance_valid(ant):
+					ant.collapse())
 	# P1 연속 증원 — 전멸이 목표가 아니다(만렙 관통·유도 빌드가 클러스터를 몰살해도 다음이 온다).
 	# 소규모 투입이 끝없이 이어져 긴박을 만들고, 출구는 기둥 파괴뿐(목표형 전투 재설계 2026-08-12).
 	_p1_spawn_timer = Timer.new()
@@ -5248,11 +5335,11 @@ func _p1_trickle_tick() -> void:
 	var kind: int = int(_P1_TYPES[_p1_spawn_idx % _P1_TYPES.size()])
 	_p1_spawn_idx += 1
 	_p1_side = 1 if _p1_side <= 0 else -1
-	var px: float = 180.0 if _p1_side < 0 else 1740.0
-	var pos := Vector2(px, 300.0 if kind == 2 else 790.0)
+	var px: float = 180.0 if _p1_side < 0 else 2220.0
+	var pos := Vector2(px, 520.0 if kind == 2 else 1190.0)
 	var tel := _WaveSpawnTelegraph.new()
 	tel.lifetime = 0.6
-	tel.position = Vector2(px, 790.0)
+	tel.position = Vector2(px, 1190.0)
 	add_child(tel)
 	get_tree().create_timer(0.6, false).timeout.connect(_p1_do_spawn.bind(kind, pos))
 
@@ -5357,8 +5444,8 @@ func _rival_intro_line() -> void:
 func _rival_intro_veil_line() -> void:
 	if not is_inside_tree() or goal_reached:
 		return
-	# "기둥"이라고 하면 배경 격벽을 찾게 된다(사용자 2026-08-14) — 실물(재머 장치)과 단어 일치.
-	_show_veil_subtitle("적은 끝이 없습니다. 다 잡을 필요는 없어요. 증원은 좌우의 재머가 부릅니다. 저것부터 부수십시오.", 3.8)
+	# 실물과 단어 일치 원칙(2026-08-14 "기둥" 반려) · 리워크 후 실물 = 상층 데크의 관측 안테나.
+	_show_veil_subtitle("적은 끝이 없습니다. 다 잡을 필요는 없어요. 증원은 위층의 관측 안테나가 부릅니다. 저것부터 부수십시오.", 3.8)
 
 func _start_rival_p2() -> void:
 	if _rival_phase != 0 or goal_reached or not is_inside_tree():
@@ -5381,10 +5468,13 @@ func _start_rival_p2() -> void:
 	add_child(_rival_cast)
 	var tw := _rival_cast.create_tween()
 	tw.tween_property(_rival_cast, "color", Color(0.50, 0.43, 0.60), 1.4)
-	# 벽 포탑 2기 — holdout 문법(텔레그래프 있는 주기 사격, 엇갈린 위상).
+	# 벽 포탑 4기 · 하층/중층 좌우(리워크 §2.3 밀도 상향: 복층이라 층마다 사선이 다르다).
+	# 인덱스 규약: [좌하, 우하, 좌중, 우중] · 노드 side 0(좌) 격파 = 0·2 정지, side 1 = 1·3.
 	var turret_cfgs: Array = [
-		{"x": 110.0, "y": 782.0, "dir": "right", "phase": 0.0},
-		{"x": 1810.0, "y": 782.0, "dir": "left", "phase": 1.3},
+		{"x": 110.0,  "y": 1182.0, "dir": "right", "phase": 0.0},
+		{"x": 2290.0, "y": 1182.0, "dir": "left",  "phase": 1.3},
+		{"x": 110.0,  "y": 1002.0, "dir": "right", "phase": 0.7},
+		{"x": 2290.0, "y": 1002.0, "dir": "left",  "phase": 2.0},
 	]
 	_p2_turrets.clear()
 	for entry in turret_cfgs:
@@ -5398,18 +5488,19 @@ func _start_rival_p2() -> void:
 		_rival_p2_props.append(trap)
 		_p2_turrets.append(trap)
 	_traps_present = true
-	# 위장 함정 1개 — 우측 노드 접근로의 거짓 바닥(§4 문법 재사용, 맵당 1개 준수).
+	# 위장 함정 1개 · 지상 중앙 우측 접근로의 거짓 바닥(§4 문법 재사용, 맵당 1개 준수).
 	if not GameState.story_mode:
-		var parts: Array = _spawn_disguised_spike(1220.0, 814.0, 110.0, 2)
+		var parts: Array = _spawn_disguised_spike(1450.0, 1214.0, 110.0, 2)
 		for p in parts:
 			if p != null:
 				_rival_p2_props.append(p)
-	# 제어 노드는 즉시 놓지 않는다 — 소등과 동시에 바닥에서 그냥 생겨 "뜬금없다"는 반려
+	# 제어 노드(중계 안테나)는 즉시 놓지 않는다 · 소등과 동시에 그냥 생겨 "뜬금없다"는 반려
 	# (사용자 2026-08-14). 스폰 텔레그래프 1.1s → 등장 스냅(SFX) 순서로 도착을 예고한다.
-	for cfg in [{"x": 560.0}, {"x": 1360.0}]:
+	# 위치 = 중층 측면 발판 위(복층 동선 강제).
+	for cfg in [{"x": 350.0}, {"x": 2050.0}]:
 		var tel := _WaveSpawnTelegraph.new()
 		tel.lifetime = 1.1
-		tel.position = Vector2(float((cfg as Dictionary).get("x", 960.0)), 790.0)
+		tel.position = Vector2(float((cfg as Dictionary).get("x", 1200.0)), 1010.0)
 		add_child(tel)
 	get_tree().create_timer(1.1, false).timeout.connect(_p2_spawn_nodes)
 	# 스윕 + 이동 격벽 — 바이올렛 소거 벽이 방을 훑고, 세이프존(격벽)이 매 사이클 옮겨 다닌다
@@ -5427,16 +5518,25 @@ func _p2_spawn_nodes() -> void:
 	SfxPlayer.play("hatch_open")
 	_p2_links.clear()
 	var side: int = 0
-	for cfg in [{"x": 560.0, "d": 1}, {"x": 1360.0, "d": -1}]:
+	for cfg in [{"x": 350.0, "d": 1}, {"x": 2050.0, "d": -1}]:
 		var cd: Dictionary = cfg
-		var node := _spawn_enemy(5, Vector2(float(cd.get("x", 960.0)), 790.0))
+		var node := _spawn_enemy(5, Vector2(float(cd.get("x", 1200.0)), 1010.0))
 		node.set("hp", _rival_node_hp_p2)
 		node.set_meta("rival_node", true)
 		node.set_meta("fs_dir", int(cd.get("d", 1)))
 		var arc := _FlipShieldArc.new()
 		node.add_child(arc)
-		# "부술 이유"를 눈에 보이게(사용자 2026-08-14: 기둥이 무의미) — 기둥이 같은 쪽 벽 포탑에
-		# 전원을 댄다. 케이블 시각 + 기둥 격파 시 그 포탑 정지(_on_p2_node_down).
+		# 소형 중계 안테나 비주얼(리워크 §2.3: 노드도 안테나의 소형 변형으로 격상).
+		var ant := _RivalAntenna.new()
+		ant.small = true
+		ant.position = (node as Node2D).global_position + Vector2(0.0, 30.0)
+		add_child(ant)
+		_rival_p2_props.append(ant)
+		node.connect("killed", func(_pos: Vector2) -> void:
+			if is_instance_valid(ant):
+				ant.collapse())
+		# "부술 이유"를 눈에 보이게(사용자 2026-08-14) · 노드가 같은 쪽 벽 포탑(상하 2기)에
+		# 전원을 댄다. 케이블 시각 + 격파 시 그쪽 포탑 정지(_on_p2_node_down).
 		node.killed.connect(_on_p2_node_down.bind(side))
 		if side < _p2_turrets.size() and _p2_turrets[side] is Node2D:
 			var link := _P2PowerLink.new()
@@ -5471,17 +5571,19 @@ func _p2_flip_shields() -> void:
 func _rival_p2_objective_line() -> void:
 	if not is_inside_tree() or goal_reached or _rival_phase != 1:
 		return
-	# 케이블 시각과 짝 — 장치의 기능(포탑 전원)을 한 번만 말로 짚는다. 단어는 실물(재머)과 일치.
-	_show_veil_subtitle("포탑 전원이 저 재머 둘에서 옵니다. 끊는 만큼 조용해져요. 방패는 한쪽뿐입니다.", 3.6)
+	# 케이블 시각과 짝 · 장치의 기능(포탑 전원)을 한 번만 말로 짚는다. 단어는 실물(중계 안테나)과 일치.
+	_show_veil_subtitle("포탑 전원이 저 중계 안테나 둘에서 옵니다. 끊는 만큼 조용해져요. 방패는 한쪽뿐입니다.", 3.6)
 
-# P2 기둥 격파 → 그 기둥이 전원을 대던 포탑이 죽는다 — 파괴의 보상이 즉시 체감된다.
+# P2 노드 격파 → 그 노드가 전원을 대던 같은 쪽 포탑(하·중층 2기)이 죽는다 · 파괴의 보상 즉시 체감.
 func _on_p2_node_down(_pos: Vector2, side: int) -> void:
 	if side < _p2_links.size():
 		var link = _p2_links[side]
 		if link != null and is_instance_valid(link):
 			(link as Node).call("power_off")
-	if side < _p2_turrets.size():
-		var trap = _p2_turrets[side]
+	for t_idx in [side, side + 2]:
+		if t_idx >= _p2_turrets.size():
+			continue
+		var trap = _p2_turrets[t_idx]
 		if trap != null and is_instance_valid(trap):
 			(trap as Node).set_process(false)   # 주기 진행이 _process 구동 — 정지 = 발사 중단
 			var tw := (trap as Node2D).create_tween()
@@ -5613,14 +5715,21 @@ func _build_rival_node_bar() -> void:
 	upd.fill = fill
 	_rival_bar_layer.add_child(upd)
 
-# P2 스윕 — 바이올렛 소거 벽이 좌우로 방을 훑는다. 세이프존 = 올라온 격벽 뒤(x밴드).
+# P2 스윕 · 바이올렛 소거 벽이 좌우로 방을 훑는다. 리워크(§2.3) **층별 교대**: 사이클마다
+# 하층 밴드(지상, y>1100)와 상층 밴드(중층+데크, y<=1100)를 번갈아 훑는다.
+# 세이프 = 다른 층으로 옮기거나(수직 회피), 하층 스윕은 올라온 격벽 뒤(x밴드)도 세이프.
 # 격벽 슬롯 4개 중 2개가 매 사이클 다른 자리에 올라온다 — 안전지대가 옮겨 다닌다.
 class _RivalSweep extends Node2D:
-	const SLOTS: Array = [300.0, 800.0, 1120.0, 1620.0]
+	const SLOTS: Array = [350.0, 950.0, 1450.0, 2050.0]
+	const W: float = 2400.0
+	const H: float = 1300.0
+	const GROUND: float = 1220.0
+	const BAND_SPLIT: float = 1100.0   # 하층/상층 밴드 경계
 	var phase: String = "rest"
 	var t: float = 0.0
 	var wall_x: float = -100.0
 	var from_left: bool = true
+	var low_band: bool = true          # 이번 사이클이 하층 스윕인가(사이클마다 교대)
 	var active: Array = [0, 2]
 	var rise_k: float = 0.0
 	var cycle: int = 0
@@ -5634,6 +5743,7 @@ class _RivalSweep extends Node2D:
 					phase = "rise"
 					t = 0.0
 					cycle += 1
+					low_band = cycle % 2 == 1
 					active = [cycle % 4, (cycle + 2) % 4]
 					rise_k = 0.0
 					SfxPlayer.play("drop_platform_descend", -4.0)
@@ -5648,14 +5758,18 @@ class _RivalSweep extends Node2D:
 				if t > 1.0:
 					phase = "sweep"
 					t = 0.0
-					wall_x = -80.0 if from_left else 2000.0
+					wall_x = -80.0 if from_left else W + 80.0
 			"sweep":
 				wall_x += 1050.0 * delta * (1.0 if from_left else -1.0)
 				_check_player()
-				if wall_x < -100.0 or wall_x > 2020.0:
+				if wall_x < -100.0 or wall_x > W + 100.0:
 					phase = "rest"
 					t = 0.0
 		queue_redraw()
+	func _band_top() -> float:
+		return BAND_SPLIT if low_band else 0.0
+	func _band_bot() -> float:
+		return H if low_band else BAND_SPLIT
 	func _check_player() -> void:
 		var tree := get_tree()
 		if tree == null:
@@ -5664,32 +5778,40 @@ class _RivalSweep extends Node2D:
 		if arr.size() == 0:
 			return
 		var p := arr[0] as Node2D
+		var py: float = p.global_position.y
+		# 밴드 밖(다른 층) = 세이프 · 층별 교대의 핵심 회피.
+		if py < _band_top() or py > _band_bot():
+			return
 		if absf(p.global_position.x - wall_x) > 34.0:
 			return
-		for idx in active:
-			if absf(p.global_position.x - float(SLOTS[idx])) < 52.0:
-				return   # 격벽 뒤 — 세이프
+		# 하층 스윕은 격벽 뒤도 세이프(격벽은 지상 슬롯에만 있다).
+		if low_band:
+			for idx in active:
+				if absf(p.global_position.x - float(SLOTS[idx])) < 52.0:
+					return
 		if p.has_method("take_hit"):
 			p.take_hit(1)
 	func _draw() -> void:
-		# 격벽 슬롯 바닥 소켓(상시) + 올라온 격벽 기둥.
+		# 격벽 슬롯 바닥 소켓(상시) + 올라온 격벽 기둥(하층 스윕 사이클에만 상승).
 		for i in SLOTS.size():
 			var x: float = float(SLOTS[i])
-			draw_rect(Rect2(Vector2(x - 34.0, 816.0), Vector2(68.0, 6.0)), Color(0.35, 0.30, 0.45, 0.7), true)
-			if i in active:
+			draw_rect(Rect2(Vector2(x - 34.0, GROUND - 4.0), Vector2(68.0, 6.0)), Color(0.35, 0.30, 0.45, 0.7), true)
+			if i in active and low_band:
 				var h: float = 190.0 * rise_k
-				draw_rect(Rect2(Vector2(x - 26.0, 820.0 - h), Vector2(52.0, h)), Color(0.16, 0.14, 0.22), true)
-				draw_rect(Rect2(Vector2(x - 26.0, 820.0 - h), Vector2(52.0, h)), Color(0.72, 0.42, 1.0, 0.5), false, 2.0)
-				draw_rect(Rect2(Vector2(x - 30.0, 820.0 - h - 6.0), Vector2(60.0, 6.0)), Color(0.45, 0.32, 0.6), true)
-		# 경고 — 진입 방향 가장자리 광(저대비 완만 맥동).
+				draw_rect(Rect2(Vector2(x - 26.0, GROUND - h), Vector2(52.0, h)), Color(0.16, 0.14, 0.22), true)
+				draw_rect(Rect2(Vector2(x - 26.0, GROUND - h), Vector2(52.0, h)), Color(0.72, 0.42, 1.0, 0.5), false, 2.0)
+				draw_rect(Rect2(Vector2(x - 30.0, GROUND - h - 6.0), Vector2(60.0, 6.0)), Color(0.45, 0.32, 0.6), true)
+		# 경고 · 진입 방향 가장자리 광 + 이번 밴드 표시(어느 층을 훑는지 미리 보인다).
 		if phase == "warn":
-			var wx: float = 40.0 if from_left else 1880.0
+			var wx: float = 40.0 if from_left else W - 120.0
 			var wa: float = 0.25 + 0.12 * sin(t * 9.0)
-			draw_rect(Rect2(Vector2(wx - 40.0, 0.0), Vector2(80.0, 900.0)), Color(0.72, 0.42, 1.0, wa), true)
-		# 스윕 벽.
+			draw_rect(Rect2(Vector2(wx - 40.0, _band_top()), Vector2(80.0, _band_bot() - _band_top())), Color(0.72, 0.42, 1.0, wa), true)
+			draw_rect(Rect2(Vector2(0.0, _band_top()), Vector2(W, 3.0)), Color(0.72, 0.42, 1.0, 0.35), true)
+			draw_rect(Rect2(Vector2(0.0, _band_bot() - 3.0), Vector2(W, 3.0)), Color(0.72, 0.42, 1.0, 0.35), true)
+		# 스윕 벽 · 이번 밴드 높이만.
 		if phase == "sweep":
-			draw_rect(Rect2(Vector2(wall_x - 26.0, 0.0), Vector2(52.0, 900.0)), Color(0.72, 0.42, 1.0, 0.30), true)
-			draw_rect(Rect2(Vector2(wall_x - 6.0, 0.0), Vector2(12.0, 900.0)), Color(0.88, 0.62, 1.0, 0.55), true)
+			draw_rect(Rect2(Vector2(wall_x - 26.0, _band_top()), Vector2(52.0, _band_bot() - _band_top())), Color(0.72, 0.42, 1.0, 0.30), true)
+			draw_rect(Rect2(Vector2(wall_x - 6.0, _band_top()), Vector2(12.0, _band_bot() - _band_top())), Color(0.88, 0.62, 1.0, 0.55), true)
 
 # ─── 가짜 클리어(§7.2 확정 연출) — P2 종료를 "이긴 척"으로 위장한다 ───
 # 진짜 클리어 문법 재현(챔 + 소등 페이드 + STAGE CLEAR 문구) → 글리치 찢김 → 거짓 VEIL 등장.
@@ -5919,13 +6041,17 @@ func _start_rival_p3() -> void:
 	# 5~6번을 살아남아야 하는 싸움으로. 전개 재설계는 리워크에서.
 	fv.max_hp = 8 + int(float(GameState.player_level) * 1.5)
 	fv.hp = fv.max_hp
+	# 리워크(§2.4) · 복층 무대 좌표: 실체화 3지점(중앙 상/좌상/우상 = 중반 텔레포트 지점 겸용),
+	# 가짜 마커는 지상·중층·데크에 분산. 가짜 눈(동반 미끼)은 FalseVeil이 자체 관리.
 	fv.setup(
-		[Vector2(960.0, 380.0), Vector2(560.0, 430.0), Vector2(1360.0, 430.0)],
-		[Vector2(300.0, 790.0), Vector2(700.0, 790.0), Vector2(1200.0, 790.0), Vector2(1650.0, 790.0),
-		Vector2(430.0, 610.0), Vector2(1490.0, 610.0), Vector2(960.0, 490.0)])
+		[Vector2(1200.0, 560.0), Vector2(620.0, 640.0), Vector2(1780.0, 640.0)],
+		[Vector2(350.0, 1190.0), Vector2(850.0, 1190.0), Vector2(1550.0, 1190.0), Vector2(2050.0, 1190.0),
+		Vector2(350.0, 1010.0), Vector2(2050.0, 1010.0), Vector2(700.0, 850.0), Vector2(1700.0, 850.0),
+		Vector2(1200.0, 830.0)])
 	fv.volley_started.connect(_on_p3_volley)
 	fv.defeated.connect(_on_false_veil_defeated)
-	fv.position = Vector2(960.0, 400.0)
+	fv.stage_shifted.connect(_on_p3_stage_shifted)
+	fv.position = Vector2(1200.0, 600.0)
 	add_child(fv)
 	_false_veil = fv
 	_build_fv_bar(fv)
@@ -5937,6 +6063,35 @@ func _start_rival_p3() -> void:
 		add_child(_p3_assist_timer)
 		_p3_assist_timer.timeout.connect(_veil_assist_tick)
 		_p3_assist_timer.start()
+
+# P3 변주 전환(리워크 §2.4) · FalseVeil이 HP 문턱(66%/33%)에서 알린다.
+# 1 = 중반: 텔레포트 실체화 개시 비트. 2 = 후반: 방 렌더 붕괴 · 주기 글리치 + 카메라 미진.
+var _p3_shudder_timer: Timer = null
+
+func _on_p3_stage_shifted(stage_idx: int) -> void:
+	if goal_reached or not is_inside_tree():
+		return
+	_run_glitch(0.55, 0.32)
+	_rival_beat_flash()
+	SfxPlayer.play("boss_phase_change")
+	if stage_idx == 1:
+		_show_rival_subtitle("잘 보시네요. 그럼 자리를 옮겨 가며 하죠.", 3.0)
+	elif stage_idx == 2:
+		_show_rival_subtitle("...방이 저를 못 버티기 시작하는군요. 서두르겠습니다.", 3.2)
+		_p3_shudder_timer = Timer.new()
+		_p3_shudder_timer.wait_time = 3.2
+		add_child(_p3_shudder_timer)
+		_p3_shudder_timer.timeout.connect(_p3_room_shudder)
+		_p3_shudder_timer.start()
+
+# 후반 · 방 렌더가 흔들린다(짧은 글리치 + 미세 흔들림, 광과민 기준 내 저강도).
+func _p3_room_shudder() -> void:
+	if goal_reached or _false_veil == null or not is_instance_valid(_false_veil):
+		if _p3_shudder_timer != null and is_instance_valid(_p3_shudder_timer):
+			_p3_shudder_timer.stop()
+		return
+	_run_glitch(0.35, 0.22)
+	_camera_shake(3.0, 0.18)
 
 # P3 볼리 — 가짜 마커 세례와 동시에 "무표시 진짜 위협" 투입(VeilSight가 마커 생략).
 # 누적 상한 3 — 안 잡고 버티는 플레이어에게 무한 적체 방지.
@@ -5950,7 +6105,7 @@ func _on_p3_volley() -> void:
 	if alive_p3 >= 3:
 		return
 	SfxPlayer.play("hatch_open")
-	for p in [Vector2(180.0, 790.0), Vector2(1740.0, 790.0)]:
+	for p in [Vector2(180.0, 1190.0), Vector2(2220.0, 1190.0)]:
 		var n := _spawn_enemy(0, p)
 		n.set_meta("no_marker", true)
 	_enemies_remaining += 2
@@ -5975,9 +6130,15 @@ func _on_false_veil_defeated() -> void:
 	GameState.save_settings()
 	if _p3_assist_timer != null and is_instance_valid(_p3_assist_timer):
 		_p3_assist_timer.stop()
+	if _p3_shudder_timer != null and is_instance_valid(_p3_shudder_timer):
+		_p3_shudder_timer.stop()
 	if _p3_bar_layer != null and is_instance_valid(_p3_bar_layer):
 		_p3_bar_layer.queue_free()
 		_p3_bar_layer = null
+	# 격파 슬로우 비트(§2.4) · 시간이 잠깐 늘어지고 눈이 천천히 감긴다(FalseVeil DYING 연출과 정렬).
+	Engine.time_scale = 0.35
+	get_tree().create_timer(0.55, true, false, true).timeout.connect(func() -> void:
+		Engine.time_scale = 1.0)
 	# 잔여 무표시 위협 정리 — 분신이 소멸하면 그 손도 흩어진다.
 	for e in get_tree().get_nodes_in_group("enemy"):
 		if (e as Node).has_meta("no_marker"):
@@ -6007,7 +6168,7 @@ func _rival_boss_release() -> void:
 	if bonus_xp > 0:
 		GameState.add_xp(bonus_xp, false)
 	_goal_type = "POSITION"
-	_goal_pos = Vector2(1840.0, 760.0)
+	_goal_pos = Vector2(2280.0, 1160.0)
 	_build_goal_position()
 	SfxPlayer.play("gate_unlock")
 
