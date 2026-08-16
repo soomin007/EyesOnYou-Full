@@ -292,6 +292,10 @@
 | `_ambience_testing` | 실험 구역 · 관측 | |
 | `_ambience_gauntlet` | 함정 통로 · 경고 | |
 | `_ambience_collapse` | 붕괴 진행 · 대피 | |
+| `_ambience_collapse_shaft` | 격리 구획 승강로 · B7 | |
+| `_ambience_collapse_shaft` | 지상 방면 ↑ | |
+| `_ambience_collapse_mezz` | 중층 정비 통로 · B2 | |
+| `_ambience_collapse_mezz` | 지상 출구 → | |
 | `_ambience_scanner` | 보안 스캔 · 감시 활성 | |
 | `_ambience_reactor` | 반응로 제어실 · 코어 방어 | |
 | `_ambience_holdout` | 통제 구역 봉쇄 · 저지선 | |
@@ -312,7 +316,7 @@
 | `VeilDialogue.gd` | 0 (막 문턱 멘트는 briefing_routes.md §3) |
 | `GameState.gd` | 0 (막 이름은 ui.md) |
 | `Stage.gd` (자막·라벨) | 29 |
-| `Stage.gd` (환경 라벨 부록) | 21 |
+| `Stage.gd` (환경 라벨 부록) | 25 |
 | `VeilSight.gd` | 16 |
 | `Enemy.gd` | 4 |
 | `DefenseCore.gd` | 1 |

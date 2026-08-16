@@ -638,3 +638,17 @@
   `Player.clear_protect`(깜빡임 없는 피격 무시, invuln과 별개)로 모든 잔여 위협(빔·탄·증기 포함)을
   씬 전환까지 무시. 새 지속 해저드를 만들면 halt 경로에 합류시킨다. 또한 구역 서사가 있는
   해저드(붕괴 = 구조물 안)는 경계 밖으로 못 나가게 한다(`chase_hazard.stop_x`, 터널 출구에서 정지).
+
+- **방 체인 세그먼트를 새로 만들 때 체크리스트** (붕괴 회랑 구현에서 확인된 라우트 기반 배선들,
+  2026-08-16): 세그먼트 layout은 라우트 id가 아니라 자기 키로 배경을 골라야 한다 ·
+  ⓐ `ambience` 키(없으면 라우트 매핑 배경이 전 방에 깔림) ⓑ `indoor_env` 키(없으면 HORIZONTAL
+  실내 방에 도시 야경 스카이라인이 깔림, 실측으로 발견) ⓒ 진입 멘트는 `current_segment == 0`
+  게이트(안 하면 방마다 반복) ⓓ Stage._ready 풀 힐도 세그먼트 0 게이트(체인은 한 스테이지) ·
+  세그먼트 리셋은 GameState(reset/record_route_choice/register_death/load_run) + 디버그 점프
+  (Playground 2곳·Settings 1곳) 전부에 둔다.
+
+- **씬 하니스에서 `SceneTree._initialize` 시점에 `root.add_child`한 노드는 아직 `is_inside_tree()`가
+  false다.** ChaseHazard 검증 하니스가 이 가드에 걸려 "전진 0"으로 조용히 무의미한 PASS를 냈다
+  (2026-08-16, 첫 결과 A_edge=-300이 그대로라 발견). → 노드 상태 검증은 첫 `physics_frame` 시그널
+  이후에 시작하고, **"움직였는지"를 단언에 포함**해(동결 비교만 하면 아무것도 안 움직여도 PASS)
+  가짜 통과를 차단한다.

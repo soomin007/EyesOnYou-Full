@@ -186,14 +186,14 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_escape_destroy",
 		"name": "붕괴 회랑",
-		"description": "소각과 함께 시설 제어가 무너졌다. 뒤에서부터 구조가 내려앉는다.",
+		"description": "소각과 함께 시설 제어가 무너졌다. 아래에서부터 구조가 내려앉는다.",
 		"risk": 3, "reward": 2,
 		"hidden": false, "unique": false,
 		"min_stage": 14, "max_stage": 14, "available_stages": [14],
 		"disposal": "destroy",
 		"tags": ["노출"],
 		"veil_comment": "소각 여파로 구조가 버티질 못해요. 멈추지만 않으면 돼요.",
-		"entry_comment": "뒤가 무너지기 시작했어요. 돌아볼 시간 없어요. 앞으로만 가요.",
+		"entry_comment": "아래에서부터 무너지고 있어요. 돌아볼 시간 없어요. 위로 가요.",
 		"stage_color": Color(0.20, 0.12, 0.08),
 	},
 	{

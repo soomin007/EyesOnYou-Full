@@ -55,7 +55,9 @@ func _ready() -> void:
 	# 안전망: 이전 scene에서 paused=true 상태가 carry되어 새 stage가 freeze되는 패턴 차단
 	# (LevelUpOverlay/도전방 fail 등에서 paused 해제 누락 시 빈 화면).
 	get_tree().paused = false
-	GameState.player_hp = GameState.player_max_hp
+	# 방 체인 중간 방(세그먼트 1+)은 HP 유지 · 체인은 한 스테이지다. 진입 풀 힐은 첫 방만.
+	if GameState.current_segment == 0:
+		GameState.player_hp = GameState.player_max_hp
 	# BGM — 맵별 트랙 선택. ??? 방은 Gravity Static, 보스 맵은 Chrome Grit,
 	# 그 외에는 stage_index 기반으로 Cold Gear(초중반)/Cold Wire(중후반) 분기.
 	# Death 화면에서 set_ducked(true)였다면 stage 재진입에서 원복.
@@ -187,7 +189,8 @@ func _setup_veil_mistakes() -> void:
 	# 겹침 없이 깔끔하게(VeilSight는 이미 degraded로 시작). 그 외 맵은 평소대로 entry_comment.
 	if GameState.veil_reversal_pending:
 		_show_veil_subtitle(_act3_vision_line(GameState.current_stage), 4.4, false, true)
-	else:
+	elif GameState.current_segment == 0:
+		# 방 체인 중간 방(세그먼트 1+)은 진입 멘트 반복 안 함 · 첫 방에서 이미 들었다.
 		var entry: String = ""
 		var entry_rep: String = ""
 		for r in RouteData.ALL_ROUTES:
@@ -1254,6 +1257,11 @@ func _add_silhouette_pillar(pos: Vector2, size: Vector2, color: Color, z: int) -
 # env별 팔레트로 톤을 구분해 "새 맵이 다 똑같은 야경" 문제를 해소. 시그니처 소품(주차 구획선·배관·물)은
 # 각 _ambience_* 가 이 배경 위에 얹는다. 빈 env(원래 데모 맵)는 기존 스카이라인 유지.
 func _indoor_env() -> String:
+	# 방 체인 세그먼트 · layout "indoor_env" 키가 라우트 매핑보다 우선(방마다 실내/실외가 다르다).
+	# _map_data가 아직 빈 시점(배경이 platforms보다 먼저)이라 get_layout을 직접 조회.
+	var seg_env: String = str(MapData.get_layout(GameState.current_route_id).get("indoor_env", ""))
+	if seg_env != "":
+		return seg_env
 	var m: Dictionary = {
 		"route_parking_lot": "garage", "route_car_cover": "garage",
 		"route_pump_station": "water", "route_condenser": "water",
@@ -1711,6 +1719,177 @@ func _ambience_collapse() -> void:
 		lx += rng.randf_range(700.0, 1000.0)
 	_add_lore_label(Vector2(360.0, -30.0), "붕괴 진행 · 대피", Color(0.9, 0.4, 0.25, 0.55), 15)
 
+# ─── 붕괴 회랑 방1 · 격리 구획 승강 샤프트(VERTICAL_UP) 시그니처 배경 ───────────
+# 지하 격리 구획에서 지상으로 오르는 콘크리트 샤프트: 양쪽 벽 + 이음매 + 배관 + 비상등(느린 맥동)
+# + 아래쪽 소각 열기. 차오르는 붕괴 자체는 ChaseHazard(y_up)가 그린다.
+func _ambience_collapse_shaft() -> void:
+	var h: float = _world_size.y
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 613 + 3
+	var back := ColorRect.new()
+	back.color = Color(0.085, 0.09, 0.11)
+	back.position = Vector2(-200.0, -300.0)
+	back.size = Vector2(1680.0, h + 600.0)
+	back.z_index = -18
+	add_child(back)
+	for wx in [0.0, 1210.0]:
+		var wall := ColorRect.new()
+		wall.color = Color(0.14, 0.15, 0.17)
+		wall.position = Vector2(float(wx), -300.0)
+		wall.size = Vector2(70.0, h + 600.0)
+		wall.z_index = -14
+		add_child(wall)
+	# 벽 이음매(수평 띠) · 층위감. 아래로 갈수록 그을음 톤.
+	var sy: float = 240.0
+	while sy < h:
+		var seam := ColorRect.new()
+		var soot: float = clampf((sy / h) * 0.05, 0.0, 0.05)
+		seam.color = Color(0.06 + soot, 0.06, 0.07)
+		seam.position = Vector2(0.0, sy)
+		seam.size = Vector2(1280.0, 4.0)
+		seam.z_index = -13
+		add_child(seam)
+		sy += 320.0
+	for px in [110.0, 1170.0]:
+		var pipe := ColorRect.new()
+		pipe.color = Color(0.20, 0.21, 0.24)
+		pipe.position = Vector2(float(px), -300.0)
+		pipe.size = Vector2(8.0, h + 600.0)
+		pipe.z_index = -12
+		add_child(pipe)
+	# 벽 균열 · 아래쪽일수록 잦다(붕괴가 아래에서 온다).
+	var cy: float = h * 0.35
+	while cy < h - 100.0:
+		var crack := Line2D.new()
+		crack.width = 2.0
+		crack.default_color = Color(0.05, 0.05, 0.06, 0.7)
+		var pts := PackedVector2Array()
+		var cx: float = rng.randf_range(120.0, 1120.0)
+		var yy: float = cy
+		for i in 4:
+			pts.append(Vector2(cx, yy))
+			cx += rng.randf_range(-60.0, 60.0)
+			yy += rng.randf_range(30.0, 70.0)
+		crack.points = pts
+		crack.z_index = -11
+		add_child(crack)
+		cy += rng.randf_range(240.0, 420.0)
+	# 비상등 · 좌우 교대, 느린 맥동(광과민: 점멸 아님, 0.9~1.4s 왕복).
+	var ly: float = 500.0
+	var side: int = 0
+	while ly < h - 200.0:
+		var lamp := ColorRect.new()
+		lamp.color = Color(0.9, 0.3, 0.2, 0.9)
+		lamp.position = Vector2(84.0 if side % 2 == 0 else 1172.0, ly)
+		lamp.size = Vector2(24.0, 10.0)
+		lamp.z_index = -10
+		add_child(lamp)
+		var glow := ColorRect.new()
+		glow.color = Color(0.9, 0.3, 0.2, 0.10)
+		glow.position = lamp.position + Vector2(-60.0, -46.0)
+		glow.size = Vector2(144.0, 102.0)
+		glow.z_index = -10
+		add_child(glow)
+		var tl := glow.create_tween()
+		tl.set_loops()
+		tl.tween_property(glow, "modulate:a", 0.45, rng.randf_range(0.9, 1.4))
+		tl.tween_property(glow, "modulate:a", 1.0, rng.randf_range(0.9, 1.4))
+		ly += 520.0
+		side += 1
+	# 하부 소각 열기 · 샤프트 바닥 쪽에 잦아드는 주황 캐스트(정적, 붕괴 edge와 별개).
+	var heat := ColorRect.new()
+	heat.color = Color(0.55, 0.25, 0.12, 0.10)
+	heat.position = Vector2(0.0, h - 700.0)
+	heat.size = Vector2(1280.0, 700.0)
+	heat.z_index = -9
+	add_child(heat)
+	_add_lore_label(Vector2(200.0, h - 260.0), "격리 구획 승강로 · B7", Color(0.9, 0.4, 0.25, 0.55), 15)
+	_add_lore_label(Vector2(430.0, 400.0), "지상 방면 ↑", Color(0.55, 0.85, 0.95, 0.5), 15)
+
+# ─── 붕괴 회랑 방2 · 중층 정비 복도(HORIZONTAL) 시그니처 배경 ───────────
+# 구조가 "무너지는 중": 기울어진 천장 패널 + 늘어진 케이블 + 균열 + 분진 + 비상등.
+# 갱도(_ambience_collapse)와 같은 붕괴 문법이되 갱목·낙석 대신 시설 내장재.
+func _ambience_collapse_mezz() -> void:
+	var w: float = STAGE_LENGTH
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 677 + 9
+	# 기울어진 천장 패널 · 한쪽 고정이 풀려 매달린 내장재.
+	var px2: float = 350.0
+	while px2 < w:
+		var panel := ColorRect.new()
+		panel.color = Color(0.17, 0.17, 0.19)
+		panel.position = Vector2(px2, -40.0)
+		panel.size = Vector2(rng.randf_range(120.0, 200.0), 16.0)
+		panel.rotation = rng.randf_range(0.10, 0.28) * (1.0 if rng.randf() < 0.5 else -1.0)
+		panel.z_index = -11
+		add_child(panel)
+		px2 += rng.randf_range(420.0, 700.0)
+	# 늘어진 케이블 · 천장에서 처진 호.
+	var kx: float = 250.0
+	while kx < w:
+		var cable := Line2D.new()
+		cable.width = 2.0
+		cable.default_color = Color(0.08, 0.08, 0.10, 0.85)
+		var pts := PackedVector2Array()
+		var span: float = rng.randf_range(120.0, 220.0)
+		var sag: float = rng.randf_range(50.0, 110.0)
+		for i in 7:
+			var t: float = float(i) / 6.0
+			pts.append(Vector2(kx + span * t, -60.0 + sag * sin(t * PI)))
+		cable.points = pts
+		cable.z_index = -10
+		add_child(cable)
+		kx += rng.randf_range(380.0, 640.0)
+	# 벽 균열 + 분진(갱도 문법 재사용, 밀도 낮게).
+	var cx2: float = 300.0
+	while cx2 < w:
+		var crack := Line2D.new()
+		crack.width = 2.0
+		crack.default_color = Color(0.05, 0.05, 0.06, 0.7)
+		var pts2 := PackedVector2Array()
+		var ccx: float = cx2
+		var yy: float = rng.randf_range(-140.0, GROUND_Y - 160.0)
+		for i in 5:
+			pts2.append(Vector2(ccx, yy))
+			ccx += rng.randf_range(20.0, 50.0)
+			yy += rng.randf_range(-40.0, 60.0)
+		crack.points = pts2
+		crack.z_index = -13
+		add_child(crack)
+		cx2 += rng.randf_range(340.0, 560.0)
+	for i in 6:
+		var deb := ColorRect.new()
+		deb.color = Color(0.20, 0.18, 0.16, 0.8)
+		deb.position = Vector2(rng.randf_range(0.0, w), rng.randf_range(-200.0, 0.0))
+		var ds: float = rng.randf_range(3.0, 6.0)
+		deb.size = Vector2(ds, ds)
+		deb.z_index = -5
+		add_child(deb)
+		var td := deb.create_tween()
+		td.set_loops()
+		td.tween_property(deb, "position:y", GROUND_Y, rng.randf_range(1.6, 3.2))
+		td.tween_property(deb, "position:y", rng.randf_range(-200.0, -60.0), 0.0)
+	var dust := ColorRect.new()
+	dust.color = Color(0.30, 0.26, 0.22, 0.07)
+	dust.position = Vector2(-200.0, -100.0)
+	dust.size = Vector2(w + 400.0, 240.0)
+	dust.z_index = -6
+	add_child(dust)
+	# 비상등 · 느린 맥동 2기. (알파 0.30은 실내 배경 위에서 빨간 기둥으로 읽혀 축소.)
+	for lx2 in [700.0, 1700.0]:
+		var light := ColorRect.new()
+		light.color = Color(0.9, 0.25, 0.2, 0.16)
+		light.position = Vector2(float(lx2) - 40.0, -100.0)
+		light.size = Vector2(80.0, 640.0)
+		light.z_index = -7
+		add_child(light)
+		var tl2 := light.create_tween()
+		tl2.set_loops()
+		tl2.tween_property(light, "modulate:a", 0.4, rng.randf_range(0.9, 1.3))
+		tl2.tween_property(light, "modulate:a", 1.0, rng.randf_range(0.9, 1.3))
+	_add_lore_label(Vector2(340.0, -20.0), "중층 정비 통로 · B2", Color(0.9, 0.4, 0.25, 0.55), 15)
+	_add_lore_label(Vector2(float(int(w) - 560), -20.0), "지상 출구 →", Color(0.55, 0.85, 0.95, 0.5), 15)
+
 # ─── 감시 회랑 (HORIZONTAL) — 쓸어내는 스캔 빔 맵 시그니처 배경 ───────────
 # 보안 스캔 시설: 천장 스캔 레일 + 벽면 감시 그리드 + 매달린 감시 렌즈(시안 맥동) + 스캔라인 스트로브.
 # checkpoint 스캐너 정체성 확장. 니치 세이프존 렌더는 _build_cover_niches(기믹 시각)가 담당.
@@ -2071,8 +2250,10 @@ func _build_hurdles() -> void:
 		edge.z_index = -1
 		add_child(edge)
 
-# 강제 전진 추격 벽(ChaseHazard 기믹) — MapData "chase_hazard" = {start_x, speed, max_gap?, stop_x?}.
-# stop_x = 구조물이 끝나는 x(붕괴는 구조 안까지만). 클리어 시 halt용으로 참조 보관.
+# 강제 전진 추격 붕괴(ChaseHazard 기믹) · MapData "chase_hazard" =
+# {start_x, speed, max_gap?, stop_x?, axis?("x"/"y_up"), catchup?}. start_x·stop_x는 axis가
+# "y_up"이면 y 좌표를 담는다. stop = 구조물 끝(붕괴는 구조 안까지만). 클리어/세그먼트 전환 시
+# halt용으로 참조 보관.
 var _chase_hazard: ChaseHazard = null
 
 func _build_chase_hazard() -> void:
@@ -2081,7 +2262,7 @@ func _build_chase_hazard() -> void:
 		return
 	var hz := ChaseHazard.new()
 	add_child(hz)
-	hz.setup(float(cfg.get("start_x", -300.0)), float(cfg.get("speed", 210.0)), float(cfg.get("max_gap", 700.0)), float(cfg.get("stop_x", INF)))
+	hz.setup(float(cfg.get("start_x", -300.0)), float(cfg.get("speed", 210.0)), float(cfg.get("max_gap", 700.0)), float(cfg.get("stop_x", INF)), str(cfg.get("axis", "x")), float(cfg.get("catchup", 340.0)))
 	_chase_hazard = hz
 
 # 맵 데이터 구동 진행 자막 — MapData "route_lines": [{x, who("veil"/"rival"), text, dur?, glitch?}].
@@ -2108,12 +2289,17 @@ class _RouteLineTriggers extends Node:
 		var players := tree.get_nodes_in_group("player")
 		if players.is_empty():
 			return
-		var px: float = (players[0] as Node2D).global_position.x
+		var ppos: Vector2 = (players[0] as Node2D).global_position
 		for i in lines.size():
 			if i in _fired:
 				continue
 			var d: Dictionary = lines[i]
-			if px < float(d.get("x", 0.0)):
+			# 트리거 축 · "y" 키가 있으면 상승 맵용(플레이어가 그 높이 위로 오르면 발화),
+			# 없으면 기존 수평(x 통과) 트리거.
+			if d.has("y"):
+				if ppos.y > float(d.get("y", 0.0)):
+					continue
+			elif ppos.x < float(d.get("x", 0.0)):
 				continue
 			_fired.append(i)
 			var txt: String = str(d.get("text", ""))
@@ -2647,6 +2833,18 @@ func _set_spike_group_active(group: Node2D, active: bool) -> void:
 
 func _build_route_ambience() -> void:
 	# 루트별 시각 분위기 — 콜리전 없는 ColorRect/Polygon overlay만 사용.
+	# 방 체인 세그먼트는 layout의 "ambience" 키가 라우트 매핑보다 우선(방마다 배경이 다르다).
+	match str(_map_data.get("ambience", "")):
+		"collapse_shaft":
+			_ambience_collapse_shaft()
+			_escape_tone_destroy()
+			_apply_act_rival_tint()
+			return
+		"collapse_mezz":
+			_ambience_collapse_mezz()
+			_escape_tone_destroy()
+			_apply_act_rival_tint()
+			return
 	match GameState.current_route_id:
 		"route_sewers":
 			_ambience_sewers()
@@ -6149,7 +6347,41 @@ func _on_goal_reached(body: Node) -> void:
 		GameState.add_xp(challenge_xp_on_clear, false)
 		_show_veil_subtitle("혼자 해냈네요, 요원.", 2.5)
 	goal_reached = true
+	# 방 체인 · 마지막 방이 아니면 스테이지 클리어가 아니라 다음 방으로 문 전환.
+	if int(_map_data.get("segment_count", 1)) > int(_map_data.get("segment_index", 0)) + 1:
+		_begin_segment_transition()
+		return
 	_trigger_stage_clear()
+
+# 방 체인 전환(map_identity_rework §2) · RouteMap/Briefing 없이 짧은 문 전환으로 다음 방 로드.
+# XP·HP·성장은 GameState 소유라 유지되고, 스테이지 타이머는 record_route_choice 기준이라 체인
+# 합산이 자동이다([RUN] 로그·정산도 한 스테이지로 잡힘). 클리어 챔·발광·토스트·on_stage_clear는
+# 마지막 방에서만 · 중간 방은 "지나간다"로 읽혀야 한다. 사망은 register_death가 세그먼트를
+# 0으로 되돌려 체인 첫 방부터 재개.
+func _begin_segment_transition() -> void:
+	GameState.restrict_combat_input = true
+	# 전환 연출 중 잔여 위협 무력화 · 클리어 시퀀스와 같은 함정(known_issues 2026-08-16) 예방.
+	if _chase_hazard != null and is_instance_valid(_chase_hazard):
+		_chase_hazard.halt()
+	if player != null and is_instance_valid(player):
+		player.set("clear_protect", true)
+	# 처치 드롭 회수 · 클리어 시퀀스와 동일한 자연 흡수 + 전환 직전 낙오분 수집(placed 제외).
+	if player != null and is_instance_valid(player):
+		for orb in get_tree().get_nodes_in_group("exp_orb"):
+			if orb is Node2D and not orb.is_queued_for_deletion() and not (orb as Node2D).get("placed"):
+				(orb as Node2D).set("spawn_anim_t", 1.0)
+				(orb as Node2D).set("attract_range", 999999.0)
+	SfxPlayer.play("hatch_open")
+	_do_clear_fade(0.55)
+	await get_tree().create_timer(0.6).timeout
+	for orb in get_tree().get_nodes_in_group("exp_orb"):
+		if orb is Node2D and not orb.is_queued_for_deletion() and not (orb as Node2D).get("placed"):
+			(orb as Node2D).call("_collect")
+	# 중간 방에서 레벨업 오브를 먹었을 수 있다 · 오버레이 정리 전 전환 금지(빈 화면 freeze 함정).
+	while pending_levelup:
+		await get_tree().process_frame
+	GameState.current_segment += 1
+	SceneRouter.go(get_tree(), SceneRouter.STAGE)
 
 func _setup_arena_clear_tracking() -> void:
 	# ARENA — _spawn_enemies가 끝난 시점이라 group에 등록된 적 수가 곧 카운트.

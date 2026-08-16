@@ -133,6 +133,11 @@ var rival_reentry_count: int = 0              # 기록 재진입 사용 누적
 
 var skills: Dictionary = {}
 var current_route_id: String = ""
+# 방 체인(map_identity_rework §2) · 현재 맵의 세그먼트 인덱스. MapData.get_layout이 읽어
+# segments 배열에서 해당 방을 돌려준다. 세그먼트 전환(Stage)만 +1, 그 외(맵 선택·사망·리셋·
+# 이어하기 로드·디버그 점프)는 전부 0으로 · "사망은 체인 첫 방부터" 문법. 직렬화 안 함
+# (run.cfg 자동저장은 RouteMap 진입 시점이라 체인 중간 상태가 저장될 일 없음).
+var current_segment: int = 0
 var current_route_tags: Array = []
 var current_route_risk: int = 1   # 1~3, 적 수 배율 + 행동 강화에 사용
 var current_route_reward: int = 1  # 1~3, 클리어 시 보너스 XP에 사용
@@ -387,6 +392,7 @@ func reset() -> void:
 	followed_veil_last_choice = false
 	skills = STARTING_SKILLS.duplicate()
 	current_route_id = ""
+	current_segment = 0
 	current_route_tags = []
 	current_route_risk = 1
 	current_route_reward = 1
@@ -451,6 +457,7 @@ func start_main_game() -> void:
 	last_veil_recommended_route = ""
 	followed_veil_last_choice = false
 	current_route_id = ""
+	current_segment = 0
 	current_route_tags = []
 	current_route_risk = 1
 	current_route_reward = 1
@@ -510,6 +517,7 @@ func record_route_choice(route: Dictionary, recommended_id: String) -> void:
 	var rid: String = route.get("id", "")
 	route_history.append(rid)
 	current_route_id = rid
+	current_segment = 0
 	current_route_tags = route.get("tags", [])
 	current_route_risk = int(route.get("risk", 1))
 	current_route_reward = int(route.get("reward", 1))
@@ -723,6 +731,7 @@ func is_dead() -> bool:
 
 func register_death() -> void:
 	death_count += 1
+	current_segment = 0   # 방 체인 · 사망 재개는 체인 첫 방부터(스토리·연습장 포함)
 	# 덮어쓰기 한도 — 사망 = 현장 기록 1회 덮어쓰기. 소진 상태의 사망은 기록 오염:
 	# 여기서 즉시 잔존 구간(그 막 첫 스테이지)으로 후퇴시키고 저장까지 마쳐,
 	# 타이틀 이탈 후 이어하기로도 무를 수 없게 한다(이어하기 무름 방지).
@@ -982,6 +991,7 @@ func _restore_run_state(cf: ConfigFile, section: String) -> void:
 	for k in saved_skills:
 		skills[str(k)] = int(saved_skills[k])
 	current_route_id = str(cf.get_value(section, "current_route_id", ""))
+	current_segment = 0   # 방 체인 · 이어하기는 항상 체인 첫 방부터(중간 상태는 저장 안 됨)
 	current_route_tags = []
 	for t in cf.get_value(section, "current_route_tags", []):
 		current_route_tags.append(str(t))

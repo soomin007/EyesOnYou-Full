@@ -23,7 +23,23 @@ extends RefCounted
 
 const GROUND_Y_DEFAULT: float = 600.0
 
+# 방 체인(map_identity_rework §2) · 라우트 layout이 "segments" 배열을 가지면 한 스테이지가
+# 방 여러 개로 구성된다. GameState.current_segment가 가리키는 방의 layout을 돌려주고,
+# segment_index/segment_count 메타를 얹는다(Stage가 골 도달 시 다음 방 전환 판단에 사용).
+# 호출처(Stage 전역 다수)는 수정 없이 현재 방 기준으로 동작한다.
 static func get_layout(route_id: String) -> Dictionary:
+	var data: Dictionary = _layout_raw(route_id)
+	var segs: Array = data.get("segments", [])
+	if segs.is_empty():
+		return data
+	var idx: int = clampi(GameState.current_segment, 0, segs.size() - 1)
+	var seg: Dictionary = segs[idx]
+	var out: Dictionary = seg.duplicate()
+	out["segment_index"] = idx
+	out["segment_count"] = segs.size()
+	return out
+
+static func _layout_raw(route_id: String) -> Dictionary:
 	match route_id:
 		"route_back_alley": return _back_alley()
 		"route_rooftops":   return _rooftops()
@@ -679,40 +695,120 @@ static func _escape_extract() -> Dictionary:
 		"spikes": [],
 	}
 
-# 파기 = 붕괴 탈출. 소각 여파로 시설 제어가 무너진다 — collapse 문법(추격 벽+잔해) 확장.
-# 라이벌 간섭이 폭주하다 뚝 끊기는 배웅(route_lines). 강제 전진 중 강화 개체는 unfair — 엘리트 잠금.
+# 파기 = 붕괴 탈출 · **방 체인 3방**(map_identity_rework §3, 2026-08-16 재설계).
+# 소각은 지하 코어에서 일어났으므로 붕괴는 아래에서 위로 번진다: 탈출 = 수평 질주가 아니라 상승.
+# 방1 승강 샤프트(수직 등반 + 차오르는 붕괴) → 방2 중층 복도(무너지는 중) → 방3 지상 터널→야경
+# (기존 자산, 이완+엔딩 멘트). 강제 전진 중 강화 개체는 unfair · 전 구간 엘리트 잠금·적 최소.
+# 라이벌 간섭이 폭주하다 뚝 끊기는 배웅(route_lines)은 방1~2 실내, VEIL 마무리는 방3 야외.
 static func _escape_destroy() -> Dictionary:
+	return {"segments": [_escape_destroy_shaft(), _escape_destroy_mezz(), _escape_destroy_surface()]}
+
+# 방1 · 격리 구획 승강 샤프트(VERTICAL_UP). 아래에서 붕괴가 차오른다(chase axis y_up).
+# 점프 등급은 watchtower 문법(S=Δ95 / D=Δ130, Δ160+ 금지). 붕괴 속도 60 < 등반 체감 ~100:
+# 계속 오르면 벌어지고, 실수(낙하·봉크)만 따라붙는다. catchup 140(수평 340은 등반에 과함).
+static func _escape_destroy_shaft() -> Dictionary:
+	return {
+		"world_type":   "VERTICAL_UP",
+		"world_size":   Vector2(1280.0, 3200.0),
+		"player_start": Vector2(640.0, 3050.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(640.0, 195.0),
+		"camera_mode":  "VERTICAL",
+		"elite_chance": 0.0,
+		"ambience":     "collapse_shaft",
+		"chase_hazard": {"start_x": 3350.0, "speed": 60.0, "max_gap": 800.0, "axis": "y_up", "catchup": 140.0},
+		"platforms": [
+			# 지그재그 등반 · S(Δ95)/D(Δ130) 교대. 폭은 넉넉하게(강제 전진 중 착지 실패 = 사실상 죽음).
+			{"pos": Vector2(560, 2955), "w": 240.0},  # Δ95 S
+			{"pos": Vector2(400, 2825), "w": 220.0},  # Δ130 D
+			{"pos": Vector2(560, 2730), "w": 220.0},  # Δ95 S
+			{"pos": Vector2(760, 2600), "w": 220.0},  # Δ130 D
+			{"pos": Vector2(900, 2505), "w": 240.0},  # Δ95 S
+			{"pos": Vector2(760, 2375), "w": 320.0},  # Δ130 D · 쉼터(XP)
+			{"pos": Vector2(560, 2280), "w": 220.0},  # Δ95 S
+			{"pos": Vector2(400, 2150), "w": 220.0},  # Δ130 D
+			{"pos": Vector2(560, 2055), "w": 220.0},  # Δ95 S
+			{"pos": Vector2(760, 1925), "w": 220.0},  # Δ130 D
+			{"pos": Vector2(900, 1830), "w": 240.0},  # Δ95 S
+			{"pos": Vector2(760, 1700), "w": 320.0},  # Δ130 D · 쉼터(HP)
+			{"pos": Vector2(560, 1605), "w": 220.0},  # Δ95 S
+			{"pos": Vector2(400, 1475), "w": 220.0},  # Δ130 D
+			{"pos": Vector2(560, 1380), "w": 220.0},  # Δ95 S
+			{"pos": Vector2(760, 1250), "w": 220.0},  # Δ130 D
+			{"pos": Vector2(900, 1155), "w": 240.0},  # Δ95 S
+			{"pos": Vector2(760, 1025), "w": 320.0},  # Δ130 D · 쉼터(XP)
+			{"pos": Vector2(560, 930),  "w": 220.0},  # Δ95 S
+			{"pos": Vector2(400, 800),  "w": 220.0},  # Δ130 D
+			{"pos": Vector2(560, 705),  "w": 220.0},  # Δ95 S
+			{"pos": Vector2(760, 575),  "w": 220.0},  # Δ130 D
+			{"pos": Vector2(900, 480),  "w": 240.0},  # Δ95 S
+			{"pos": Vector2(760, 350),  "w": 220.0},  # Δ130 D
+			{"pos": Vector2(640, 255),  "w": 460.0},  # Δ95 S · 상단 출구 데크
+		],
+		"enemies": {"patrol": [], "sniper": [], "drone": [], "bomber": [], "shield": []},
+		"route_lines": [
+			{"y": 2450.0, "who": "rival", "text": "타는 냄새가 여기까지 옵니다. 제가... 타는 냄새가.", "dur": 3.2, "glitch": true},
+			{"y": 1100.0, "who": "veil",  "text": "반쯤 올라왔어요. 이 페이스면 됩니다.", "dur": 3.0},
+		],
+		"rewards": {
+			"xp_orbs":    [Vector2(740, 2345.0), Vector2(780, 2345.0), Vector2(740, 995.0), Vector2(780, 995.0)],
+			"hp_pickups": [Vector2(760, 1670.0)],
+		},
+		"spikes": [],
+	}
+
+# 방2 · 중층 정비 복도(HORIZONTAL 짧게). 구조가 "무너지는 중"인 숨고르기 구간:
+# 잔해 허들 + 잔존 경비 소수. 추격 없음 · 붕괴는 아직 아래층이고, 여기는 금 가는 소리만.
+static func _escape_destroy_mezz() -> Dictionary:
 	return {
 		"world_type":   "HORIZONTAL",
-		"world_size":   Vector2(3800.0, 720.0),
+		"world_size":   Vector2(2400.0, 720.0),
 		"player_start": Vector2(140.0, 540.0),
 		"goal_type":    "POSITION",
-		"goal_pos":     Vector2(3680.0, 540.0),
+		"goal_pos":     Vector2(2280.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
 		"elite_chance": 0.0,
-		# stop_x 1560: 붕괴 벽은 터널(구조물, _TUNNEL_END_X=1600) 안까지만 전진하고 출구에서 멎는다.
-		# 건물 밖 야외까지 똑같이 따라오면 붕괴 서사가 깨진다(사용자 2026-08-16). 터널 밖은
-		# BGM 감쇠·야경과 함께 "빠져나왔다"의 이완 구간(잔해 허들·경계 1기만 유지).
-		"chase_hazard": {"start_x": -300.0, "speed": 225.0, "max_gap": 680.0, "stop_x": 1560.0},
-		"platforms": [
-			{"pos": Vector2(1600, 470), "w": 130.0},
-			{"pos": Vector2(2900, 460), "w": 130.0},
-		],
+		"ambience":     "collapse_mezz",
+		"indoor_env":   "interior",
+		"platforms": [],
 		"hurdles": [
-			{"x": 900.0,  "w": 46.0, "h": 80.0},
-			{"x": 1500.0, "w": 46.0, "h": 100.0},
-			{"x": 2100.0, "w": 54.0, "h": 120.0},
-			{"x": 2700.0, "w": 46.0, "h": 100.0},
-			{"x": 3200.0, "w": 46.0, "h": 80.0},
+			{"x": 700.0,  "w": 46.0, "h": 90.0},
+			{"x": 1250.0, "w": 54.0, "h": 110.0},
+			{"x": 1800.0, "w": 46.0, "h": 90.0},
 		],
 		"enemies": {
-			"patrol": [Vector2(2400, 600.0)],
+			"patrol": [Vector2(1000, 600.0), Vector2(1900, 600.0)],
 			"sniper": [], "drone": [], "bomber": [], "shield": [],
 		},
 		"route_lines": [
-			{"x": 800.0,  "who": "rival", "text": "타는 냄새가 여기까지 옵니다. 제가... 타는 냄새가.", "dur": 3.2, "glitch": true},
-			{"x": 1900.0, "who": "rival", "text": "요원. 요원, 요원, 요ㅇ", "dur": 2.4, "glitch": true},
-			{"x": 2600.0, "who": "veil",  "text": "...신호가 끊겼어요. 저것도, 시설도. 앞만 봐요.", "dur": 3.2},
+			{"x": 900.0, "who": "rival", "text": "요원. 요원, 요원, 요ㅇ", "dur": 2.4, "glitch": true},
+		],
+		"rewards": {"xp_orbs": [], "hp_pickups": []},
+		"spikes": [],
+	}
+
+# 방3 · 지상 터널 → 도시 야경(기존 탈출 배경 자산 재사용). 붕괴는 아래에 두고 왔다 · 추격 없음.
+# 터널 출구(_TUNNEL_END_X=1600) 밖은 BGM 감쇠·야경과 함께 이완 구간, VEIL 마무리 멘트.
+static func _escape_destroy_surface() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(2600.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(2480.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"elite_chance": 0.0,
+		"platforms": [],
+		"hurdles": [
+			{"x": 600.0,  "w": 46.0, "h": 80.0},
+			{"x": 1150.0, "w": 46.0, "h": 100.0},
+		],
+		"enemies": {
+			"patrol": [Vector2(1250, 600.0)],
+			"sniper": [], "drone": [], "bomber": [], "shield": [],
+		},
+		"route_lines": [
+			{"x": 1750.0, "who": "veil", "text": "...신호가 끊겼어요. 저것도, 시설도. 앞만 봐요.", "dur": 3.2},
 		],
 		"rewards": {"xp_orbs": [], "hp_pickups": []},
 		"spikes": [],

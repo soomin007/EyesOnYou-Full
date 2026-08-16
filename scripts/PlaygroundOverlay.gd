@@ -436,6 +436,7 @@ func _on_stage_pressed(idx: int) -> void:
 
 func _on_route_pressed(rid: String) -> void:
 	GameState.current_route_id = rid
+	GameState.current_segment = 0   # 방 체인 · 디버그 점프는 항상 첫 방부터
 	# 맵 선택 시 그 맵의 기본 위험/보상/스테이지로 자동 설정(직관적 테스트 — 사용자 요청).
 	# (이후 Risk/Reward/스테이지 행에서 따로 미세조정 가능.)
 	for r in RouteData.ALL_ROUTES:
@@ -488,6 +489,7 @@ func _on_tunnel_proto() -> void:
 # 14-1 보스 페이즈 직행(0=P1 1=P2 2=P3) — 체크포인트 경로(_init_rival_boss)가 해당 페이즈부터 연다.
 func _on_ch14_phase(phase: int) -> void:
 	GameState.current_route_id = "route_core_recovery"
+	GameState.current_segment = 0
 	GameState.current_stage = 13
 	GameState.current_route_risk = 3
 	GameState.current_route_reward = 3

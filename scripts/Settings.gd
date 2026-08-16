@@ -411,6 +411,7 @@ func _on_playground_pressed() -> void:
 	# 재머가 있는 맵으로 바로 시작(보스 맵 lab의 자폭 경보음 우회 + 진입 즉시 재머 확인).
 	# stage 0 유지 — 막3 시야붕괴 onset이 재머 붕괴와 겹쳐 헷갈리는 것 방지. 다른 맵은 HUD 패널에서 전환.
 	GameState.current_route_id = "route_server_hall"
+	GameState.current_segment = 0
 	GameState.current_route_tags = ["전투", "드론", "원거리"]
 	GameState.current_route_risk = 3
 	GameState.current_route_reward = 3
