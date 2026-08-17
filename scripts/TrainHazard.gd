@@ -8,8 +8,13 @@ extends Node2D
 # (사용자 확정 2026-08-16: 즉사 대신 대뎀+넉백). 대피 = 벽감(niche) 안 / 단차 위 / 타이밍 점프.
 # 광과민: 점멸 없음 · 신호등은 색 전환 후 유지.
 #
-# 사용: MapData "train_hazard" = {interval?, telegraph?, speed?, dmg?, lights?: [x...]}.
+# 사용: MapData "train_hazard" = {interval?, telegraph?, speed?, dmg?, lights?: [x...], triggers?: [x...]}.
 # 벽감은 기존 "cover_niches"/"niche_half"를 그대로 읽는다(시각 = Stage._build_cover_niches).
+#
+# 조우 횟수 보장(2026-08-17): 주기식은 실주기 = interval + telegraph + 통과(~2.6s)라 빠른 주파
+# (길이÷240)에선 조우가 계산보다 적게 나온다(known_issues "체류 시간" 규칙 · "4~5회라더니 2회").
+# triggers = 플레이어가 그 x를 지나는 순간 다음 열차 예고를 즉시 시작하는 위치 트리거 ·
+# 플레이 속도와 무관하게 트리거 수만큼의 조우를 보장한다. interval은 정지 시 배경 리듬용 폴백.
 
 const TRAIN_W: float = 520.0
 const TRAIN_H: float = 130.0     # 저상 화물 열차 · 이단 점프(~190px) 정점이면 넘을 수 있는 높이
@@ -27,7 +32,9 @@ var x_min: float = -800.0        # 통과 시작/끝 x(맵 밖 여유)
 var x_max: float = 6000.0
 var niches: Array = []           # 세이프 벽감 x 중심들(cover_niches와 동일 값)
 var niche_half: float = 90.0
+var triggers: Array = []         # 조우 보장 위치 트리거 x들(오름차순) · 지나면 즉시 예고 시작
 
+var _trigger_idx: int = 0
 var _state: int = S.IDLE
 var _t: float = 0.0
 var _dir: int = 1                # 통과 방향 · 매회 교대
@@ -45,6 +52,7 @@ func setup(cfg: Dictionary, g_y: float, stage_len: float, niche_xs: Array, n_hal
 	x_max = stage_len + TRAIN_W + 300.0
 	niches = niche_xs
 	niche_half = n_half
+	triggers = cfg.get("triggers", [])
 	add_to_group("train_hazard")  # 조회용(하니스·향후 VEIL 콜아웃 연동)
 	z_index = 6                   # 플레이어 위 · 치이면 차체가 덮는 그림
 	_t = interval * 0.55          # 첫 열차는 조금 이르게 · 기믹을 초반에 한 번 보여준다
@@ -78,6 +86,12 @@ func _physics_process(delta: float) -> void:
 	_t -= delta
 	match _state:
 		S.IDLE:
+			# 위치 트리거 · 통과 중 지나쳤어도 IDLE 복귀 시 조건이 남아 있어 이어서 발동(누락 없음).
+			if _trigger_idx < triggers.size():
+				var p: Node = get_tree().get_first_node_in_group("player")
+				if p is Node2D and (p as Node2D).global_position.x >= float(triggers[_trigger_idx]):
+					_trigger_idx += 1
+					_t = 0.0
 			if _t <= 0.0:
 				_state = S.TELEGRAPH
 				_t = telegraph

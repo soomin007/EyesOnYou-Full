@@ -279,7 +279,9 @@ static func _sewers() -> Dictionary:
 static func _subway() -> Dictionary:
 	return {"segments": [_subway_platform(), _subway_tracks(), _subway_transfer()]}
 
-# 방1 · 승강장. 폐역 홀 전투: 개찰 잔해 허들 + 경비. 승강장 단(낮은 발판)이 지형.
+# 방1 · 승강장. 폐역 홀 전투: 트인 홀 + 경비. 승강장 단(낮은 발판)이 지형.
+# 2026-08-17 정리(사용자): 무릎 높이 솔리드 잔해 제거(총알만 먹고 이동만 불편) +
+# 자동 가시 폴백 차단(정체불명 가시가 깔리던 문제 · known_issues "자동 가시 폴백").
 static func _subway_platform() -> Dictionary:
 	return {
 		"world_type":   "HORIZONTAL",
@@ -290,14 +292,10 @@ static func _subway_platform() -> Dictionary:
 		"camera_mode":  "HORIZONTAL",
 		"ground_y":     420.0,
 		"ambience":     "subway_platform",
-		"indoor_env":   "interior",
+		"indoor_env":   "subway",
 		"platforms": [
 			{"pos": Vector2(700, 340),  "w": 260.0},   # 승강장 단
 			{"pos": Vector2(1350, 340), "w": 260.0},
-		],
-		"hurdles": [
-			{"x": 520.0,  "w": 40.0, "h": 70.0},   # 개찰구 잔해
-			{"x": 1120.0, "w": 40.0, "h": 70.0},
 		],
 		"enemies": {
 			"patrol": [Vector2(650, 420.0), Vector2(1500, 420.0)],
@@ -306,13 +304,15 @@ static func _subway_platform() -> Dictionary:
 		},
 		"rewards": {"xp_orbs": [Vector2(1330, 310.0), Vector2(1370, 310.0)], "hp_pickups": []},
 		"spikes": [],
+		"no_spike_fallback": true,
 	}
 
 # 방2 · 선로. 시그니처 = 무인 화물 열차(TrainHazard): 신호등 적색 전환(2.2s 예고) 후 고속 통과,
-# 대뎀 2 + 넉백(즉사 아님, 사용자 확정). 대피 = 벽감(cover_niches) / 승강장 조각 단차 / 타이밍 점프.
-# 2026-08-16 확장(사용자: "짧고 단조롭고 기믹이 한 번만 나온다"): 3000→4600 + interval 8.5→6.5
-# (주파 ~30초에 열차 4~5회 조우) + 정차 화물차 잔해(허들 = 봉크 시 시간 손실 → 열차 리스크) +
-# 벽감 간격 불규칙 + 단차 3개.
+# 대뎀 2 + 넉백(즉사 아님, 사용자 확정). 대피 = 벽의 홈(cover_niches) / 승강장 조각 단차 / 타이밍 점프.
+# 2026-08-17 재설계(사용자 "4~5회라더니 2회"): 주기식은 실주기 11.3s(interval 6.5 + 예고 2.2 +
+# 통과 2.6)라 주파 19s(4600÷240)에 최대 2회 · 과대평가였다. 조우 횟수는 **위치 트리거 4개**로
+# 보장(플레이 속도 무관, known_issues "체류 시간" 규칙). interval은 정지 시 배경 리듬용 폴백.
+# 무릎 높이 화물차 잔해 솔리드는 제거(총알만 먹음 · 방1과 동형 정리).
 static func _subway_tracks() -> Dictionary:
 	return {
 		"world_type":   "HORIZONTAL",
@@ -323,8 +323,10 @@ static func _subway_tracks() -> Dictionary:
 		"camera_mode":  "HORIZONTAL",
 		"ground_y":     420.0,
 		"ambience":     "subway_tracks",
-		"indoor_env":   "interior",
-		"train_hazard": {"interval": 6.5, "telegraph": 2.2, "speed": 2400.0, "dmg": 2, "lights": [500.0, 1500.0, 2500.0, 3500.0, 4300.0]},
+		"indoor_env":   "subway",
+		"train_hazard": {"interval": 9.0, "telegraph": 2.2, "speed": 2400.0, "dmg": 2,
+			"triggers": [520.0, 1680.0, 2840.0, 4000.0],
+			"lights": [500.0, 1500.0, 2500.0, 3500.0, 4300.0]},
 		"cover_niches": [650.0, 1500.0, 2200.0, 3150.0, 4050.0],
 		"niche_half":   90.0,
 		"platforms": [
@@ -333,17 +335,12 @@ static func _subway_tracks() -> Dictionary:
 			{"pos": Vector2(2650, 270), "w": 220.0},
 			{"pos": Vector2(3750, 270), "w": 220.0},
 		],
-		"hurdles": [
-			# 정차 화물차 잔해 · 선로 위 장애물(넘다 봉크 = 시간 손실 → 열차가 온다).
-			{"x": 1850.0, "w": 54.0, "h": 100.0},
-			{"x": 3450.0, "w": 46.0, "h": 90.0},
-		],
 		"enemies": {
 			"patrol": [Vector2(1700, 420.0), Vector2(3300, 420.0)],
 			"sniper": [], "drone": [], "bomber": [], "shield": [],
 		},
 		"route_lines": [
-			{"x": 260.0, "who": "veil", "text": "선로가 아직 살아 있어요. 신호가 붉어지면 열차입니다. 벽감이나 단 위로.", "dur": 3.6},
+			{"x": 260.0, "who": "veil", "text": "선로가 아직 살아 있어요. 신호가 붉어지면 열차가 옵니다. 벽에 파인 홈이나 높은 발판으로 피하세요.", "dur": 4.0},
 		],
 		"rewards": {
 			# 위험 보상 · 벽감 사이 선로 위(열차 리스크를 지나야 먹는다).
@@ -366,7 +363,7 @@ static func _subway_transfer() -> Dictionary:
 		"camera_mode":  "HORIZONTAL",
 		"ground_y":     420.0,
 		"ambience":     "subway_transfer",
-		"indoor_env":   "interior",
+		"indoor_env":   "subway",
 		"platforms": [
 			# 정차 차량 지붕 2량 + 진입 발판 + 지면 잔해
 			{"pos": Vector2(600, 220),  "w": 700.0},
@@ -396,6 +393,8 @@ static func _subway_transfer() -> Dictionary:
 		"tripwires": [
 			{"x": 1350, "y": 235.0, "dir": "down", "len": 200.0, "trigger_id": "tw1", "cooldown": 2.4},
 		],
+		# 자동 가시 폴백 차단 · 방1과 동형(체인 세그먼트 전부 명시, known_issues).
+		"no_spike_fallback": true,
 	}
 
 # ─── 5. 냉각 시설 (VERTICAL_UP, 지그재그 파이프 + 비밀 스팟) ──

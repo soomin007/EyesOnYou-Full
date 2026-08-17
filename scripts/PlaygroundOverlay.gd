@@ -8,6 +8,16 @@ extends Node
 # 루트 목록은 RouteData.ALL_ROUTES 단일 소스에서 파생한다(_build_route_section). 예전엔 여기에 12개를
 # 하드코딩해서 새 맵(반응로 제어실·붕괴 갱도 등 17종)이 연습장에 안 뜨는 문제가 있었다(2026-07-04 수정).
 
+# 엔딩 에필로그(처리별 탈출 4종 + 스토리 원형) 직행 · disposal_choice까지 세팅해야 맵이
+# 실런과 같은 룰(경보 밀도·붕괴·수색·배웅)로 뜬다. 일반 루트 버튼에선 제외(아래 필터).
+const ENDING_ESCAPES: Array = [
+	{"rid": "route_escape_extract", "label": "반출·봉쇄", "disposal": "extract"},
+	{"rid": "route_escape_destroy", "label": "파기·붕괴", "disposal": "destroy"},
+	{"rid": "route_escape_conceal", "label": "은닉·갱도", "disposal": "conceal"},
+	{"rid": "route_escape_leave",   "label": "잔류·무인", "disposal": "leave"},
+	{"rid": "route_escape",         "label": "원형(스토리)", "disposal": ""},
+]
+
 # 스킬 라인 — 연습장에서 티어 자유 조정용(짧은 라벨).
 const SKILL_LINES: Array = [
 	{"id": "fire_boost", "label": "사격강화"},
@@ -90,71 +100,75 @@ func _open_panel() -> void:
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	outer.add_child(v)
 
-	# 14장 구간 바로가기 — 맨 위 고정(맨 아래에 두면 오버플로로 안 보였음, 2026-08-12).
-	# 보스 페이즈 직행은 체크포인트 플래그(rival_phase_reached) 재활용 — 별도 배선 없음.
+	# ── 섹션 1 · 종반 직행 · 보스 페이즈 + 엔딩 에필로그. 맨 위 고정(오버플로로 안 보였던
+	# 이력, 2026-08-12) + 별도 세팅(페이즈 플래그·처리 플래그)이 필요해 일반 루트와 분리.
+	v.add_child(_make_section_header("종반 직행", Color(0.82, 0.60, 1.0)))
 	var ch14 := HBoxContainer.new()
 	ch14.add_theme_constant_override("separation", 6)
 	ch14.add_child(_make_row_label("14장"))
 	var first14: Button = null
 	for entry in [["14-1 P1", 0], ["14-1 P2", 1], ["14-1 P3", 2]]:
 		var e14: Array = entry
-		var b14 := Button.new()
-		b14.text = str(e14[0])
-		b14.add_theme_font_size_override("font_size", 13)
+		var b14 := _mini_button(str(e14[0]))
 		b14.pressed.connect(_on_ch14_phase.bind(int(e14[1])))
 		ch14.add_child(b14)
 		if first14 == null:
 			first14 = b14
-	var t_proto := Button.new()
-	t_proto.text = "14-2 프로토"
-	t_proto.add_theme_font_size_override("font_size", 13)
+	var t_proto := _mini_button("14-2 프로토")
 	t_proto.pressed.connect(_on_tunnel_proto)
 	ch14.add_child(t_proto)
-	var t_live := Button.new()
-	t_live.text = "14-2 실런"
-	t_live.add_theme_font_size_override("font_size", 13)
+	var t_live := _mini_button("14-2 실런")
 	t_live.pressed.connect(_on_tunnel_live)
 	ch14.add_child(t_live)
 	v.add_child(ch14)
+	var end_hb := HBoxContainer.new()
+	end_hb.add_theme_constant_override("separation", 6)
+	end_hb.add_child(_make_row_label("엔딩"))
+	for entry in ENDING_ESCAPES:
+		var ed: Dictionary = entry
+		var be := _mini_button(str(ed.get("label", "")))
+		be.tooltip_text = str(ed.get("rid", ""))
+		be.pressed.connect(_on_ending_escape.bind(str(ed.get("rid", "")), str(ed.get("disposal", ""))))
+		end_hb.add_child(be)
+	v.add_child(end_hb)
 	v.add_child(HSeparator.new())
 
+	# ── 섹션 2 · 진행 · 스테이지/위험·보상/루트.
+	v.add_child(_make_section_header("진행 · 맵", Color(0.60, 0.80, 0.95)))
 	v.add_child(_build_stage_row())
+	v.add_child(_build_risk_reward_row())
 	v.add_child(_build_route_section())
-	v.add_child(_build_int_row("Risk", "current_route_risk", _on_risk_pressed))
-	v.add_child(_build_int_row("Reward", "current_route_reward", _on_reward_pressed))
-	v.add_child(_build_veil_row())
-
 	v.add_child(HSeparator.new())
-	v.add_child(_make_row_label("스킬 (3계열 · 티어 직접 지정)"))
+
+	# ── 섹션 3 · 빌드 · 스킬 3계열 + 기본기 + 전체 조작.
+	v.add_child(_make_section_header("빌드 · 스킬 (티어 직접 지정)", Color(0.95, 0.75, 0.45)))
 	v.add_child(_build_skill_families())
 	v.add_child(_build_baseline_row())
-	v.add_child(_build_skill_quick_row())
-
 	v.add_child(HSeparator.new())
-	var inv_hb := HBoxContainer.new()
-	inv_hb.add_theme_constant_override("separation", 6)
-	inv_hb.add_child(_make_row_label("무적"))
+
+	# ── 섹션 4 · 토글 + 종료.
+	var tg_hb := HBoxContainer.new()
+	tg_hb.add_theme_constant_override("separation", 14)
+	tg_hb.add_child(_make_row_label("토글"))
 	var inv_cb := CheckButton.new()
-	inv_cb.text = "피해 무시"
+	inv_cb.text = "무적"
 	inv_cb.button_pressed = GameState.debug_invincible
 	inv_cb.add_theme_font_size_override("font_size", 13)
 	inv_cb.toggled.connect(_on_invincible_toggled)
-	inv_hb.add_child(inv_cb)
-	v.add_child(inv_hb)
-
-	var el_hb := HBoxContainer.new()
-	el_hb.add_theme_constant_override("separation", 6)
-	el_hb.add_child(_make_row_label("엘리트"))
+	tg_hb.add_child(inv_cb)
 	var el_cb := CheckButton.new()
-	el_cb.text = "강제 승격 (전 타입 체험)"
+	el_cb.text = "엘리트 강제"
 	el_cb.button_pressed = GameState.debug_force_elite
 	el_cb.add_theme_font_size_override("font_size", 13)
 	el_cb.toggled.connect(_on_force_elite_toggled)
-	el_hb.add_child(el_cb)
-	v.add_child(el_hb)
-
-	var sep := HSeparator.new()
-	v.add_child(sep)
+	tg_hb.add_child(el_cb)
+	var vd_cb := CheckButton.new()
+	vd_cb.text = "시야 붕괴"
+	vd_cb.button_pressed = GameState.veil_degraded
+	vd_cb.add_theme_font_size_override("font_size", 13)
+	vd_cb.toggled.connect(_on_veil_degraded_cb)
+	tg_hb.add_child(vd_cb)
+	v.add_child(tg_hb)
 	var exit_btn := Button.new()
 	exit_btn.text = "연습장 종료 (타이틀로)"
 	exit_btn.add_theme_font_size_override("font_size", 13)
@@ -222,7 +236,12 @@ func _build_route_section() -> HBoxContainer:
 	var special: Array = []
 	for r in RouteData.ALL_ROUTES:
 		var route: Dictionary = r
-		if str(route.get("id", "")) == "":
+		var rid_s: String = str(route.get("id", ""))
+		if rid_s == "":
+			continue
+		# 종반 직행 섹션이 전담하는 맵은 일반 목록에서 제외 · 처리 플래그(disposal_choice)나
+		# 페이즈 플래그(rival_phase_reached) 세팅 없이 들어가면 실런과 다른 룰로 뜬다(중복+혼란).
+		if route.has("disposal") or bool(route.get("story_only", false)) or rid_s == "route_core_recovery":
 			continue
 		if not route.has("min_stage"):
 			special.append(route)
@@ -308,19 +327,32 @@ func _layout_has_jammer(layout: Dictionary) -> bool:
 			return true
 	return false
 
-func _build_int_row(label_text: String, prop_name: String, cb: Callable) -> HBoxContainer:
+# 위험·보상 한 줄 통합 · 행 수 절감(패널 정리, 사용자 2026-08-17 "깔끔하고 직관적이게").
+func _build_risk_reward_row() -> HBoxContainer:
 	var hb := HBoxContainer.new()
 	hb.add_theme_constant_override("separation", 6)
-	hb.add_child(_make_row_label(label_text))
+	hb.add_child(_make_row_label("위험/보상"))
 	for n in [1, 2, 3]:
 		var b := Button.new()
-		b.text = "%d" % n
-		b.custom_minimum_size = Vector2(36, 28)
+		b.text = "위%d" % n
+		b.custom_minimum_size = Vector2(44, 28)
 		b.add_theme_font_size_override("font_size", 13)
-		if int(GameState.get(prop_name)) == n:
+		if GameState.current_route_risk == n:
 			b.disabled = true
-		b.pressed.connect(cb.bind(n))
+		b.pressed.connect(_on_risk_pressed.bind(n))
 		hb.add_child(b)
+	var gap := Label.new()
+	gap.text = "  "
+	hb.add_child(gap)
+	for n in [1, 2, 3]:
+		var b2 := Button.new()
+		b2.text = "보%d" % n
+		b2.custom_minimum_size = Vector2(44, 28)
+		b2.add_theme_font_size_override("font_size", 13)
+		if GameState.current_route_reward == n:
+			b2.disabled = true
+		b2.pressed.connect(_on_reward_pressed.bind(n))
+		hb.add_child(b2)
 	return hb
 
 # 스킬 라인 한 줄 — 0/1/2/3 티어 버튼(현재 티어는 disabled로 표시).
@@ -370,23 +402,11 @@ func _build_skill_families() -> HBoxContainer:
 	return cols
 
 # 시야 붕괴(veil_degraded) 토글 — ACT3 진입 경고/붕괴 톤 대사·비네트를 연습장에서 테스트.
-func _build_veil_row() -> HBoxContainer:
-	var hb := HBoxContainer.new()
-	hb.add_theme_constant_override("separation", 6)
-	hb.add_child(_make_row_label("시야"))
-	var b := Button.new()
-	b.text = "붕괴 %s" % ("켜짐" if GameState.veil_degraded else "꺼짐")
-	b.custom_minimum_size = Vector2(110, 26)
-	b.add_theme_font_size_override("font_size", 12)
-	b.pressed.connect(_on_veil_degraded_toggle)
-	hb.add_child(b)
-	return hb
-
-func _on_veil_degraded_toggle() -> void:
-	GameState.veil_degraded = not GameState.veil_degraded
+func _on_veil_degraded_cb(on: bool) -> void:
+	GameState.veil_degraded = on
 	_reload()
 
-# 베이스라인(대시·이중점프) on/off.
+# 베이스라인(대시·이중점프) on/off + 전체 조작 한 줄 통합(패널 정리 2026-08-17).
 func _build_baseline_row() -> HBoxContainer:
 	var hb := HBoxContainer.new()
 	hb.add_theme_constant_override("separation", 6)
@@ -400,13 +420,9 @@ func _build_baseline_row() -> HBoxContainer:
 		b.add_theme_font_size_override("font_size", 12)
 		b.pressed.connect(_on_skill_set.bind(bid, 0 if has else 1))
 		hb.add_child(b)
-	return hb
-
-# 빠른 전체 조작.
-func _build_skill_quick_row() -> HBoxContainer:
-	var hb := HBoxContainer.new()
-	hb.add_theme_constant_override("separation", 6)
-	hb.add_child(_make_row_label(""))
+	var gap := Label.new()
+	gap.text = "  "
+	hb.add_child(gap)
 	var b_max := Button.new()
 	b_max.text = "전체 MAX"
 	b_max.add_theme_font_size_override("font_size", 12)
@@ -418,6 +434,20 @@ func _build_skill_quick_row() -> HBoxContainer:
 	b_clr.pressed.connect(_on_skill_all.bind(0))
 	hb.add_child(b_clr)
 	return hb
+
+# 섹션 헤더 · 패널을 훑어 읽는 기준선(색 = 섹션 성격).
+func _make_section_header(text: String, col: Color) -> Label:
+	var l := Label.new()
+	l.text = text
+	l.add_theme_font_size_override("font_size", 13)
+	l.add_theme_color_override("font_color", col)
+	return l
+
+func _mini_button(text: String) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.add_theme_font_size_override("font_size", 13)
+	return b
 
 func _make_row_label(text: String) -> Label:
 	var l := Label.new()
@@ -485,6 +515,21 @@ func _on_tunnel_proto() -> void:
 	# 플래그 누수 차단: 터널의 모든 퇴장 경로는 Title(reset)로 가지만, 여기서도 미리 끈다.
 	GameState.playground_active = false
 	SceneRouter.go(get_tree(), SceneRouter.CORE_TUNNEL)
+
+# 엔딩 에필로그 직행 · 처리 플래그 + s14 + 해당 탈출 맵. 원형(스토리)은 disposal 없이 뜬다.
+func _on_ending_escape(rid: String, disposal: String) -> void:
+	GameState.disposal_choice = disposal
+	GameState.current_route_id = rid
+	GameState.current_segment = 0
+	GameState.current_stage = 14
+	for r in RouteData.ALL_ROUTES:
+		var route: Dictionary = r
+		if str(route.get("id", "")) == rid:
+			GameState.current_route_tags = route.get("tags", [])
+			GameState.current_route_risk = int(route.get("risk", GameState.current_route_risk))
+			GameState.current_route_reward = int(route.get("reward", GameState.current_route_reward))
+			break
+	_reload()
 
 # 14-1 보스 페이즈 직행(0=P1 1=P2 2=P3) — 체크포인트 경로(_init_rival_boss)가 해당 페이즈부터 연다.
 func _on_ch14_phase(phase: int) -> void:

@@ -1308,6 +1308,24 @@ func _build_indoor_backdrop(env: String) -> void:
 	ceil_edge.size = Vector2(w + 400.0, 3.0)
 	ceil_edge.z_index = -15
 	add_child(ceil_edge)
+	# 지하철 · 지지 기둥 없음. 등간격 수직 스트라이프가 "맵이 다 똑같은" 인상의 주범이었고
+	# (known_issues "수직 기둥" 규칙, 사용자 2026-08-17), 지하철의 정체성은 수평(선로·타일 줄눈).
+	# 벽 타일 밴드 + 가로 줄눈 2줄만 깔고, 방별 시그니처는 각 _ambience_subway_*가 얹는다.
+	if env == "subway":
+		var wall := ColorRect.new()
+		wall.color = pillar_col.lightened(0.05)
+		wall.position = Vector2(-200.0, 130.0)
+		wall.size = Vector2(w + 400.0, GROUND_Y - 130.0 + 60.0)
+		wall.z_index = -15
+		add_child(wall)
+		for gy in [210.0, 330.0]:
+			var grout := ColorRect.new()
+			grout.color = Color(accent.r, accent.g, accent.b, 0.10)
+			grout.position = Vector2(-200.0, float(gy))
+			grout.size = Vector2(w + 400.0, 2.0)
+			grout.z_index = -14
+			add_child(grout)
+		return
 	# 지지 기둥 + 기둥 사이 천장 형광등 — 반복되는 실내 홀.
 	var gap: float = 360.0
 	var x: float = 140.0
@@ -3195,23 +3213,24 @@ func _ambience_subway_platform() -> void:
 			tw.tween_property(tube, "modulate:a", 0.15, rng.randf_range(0.05, 0.15))
 			tw.tween_property(tube, "modulate:a", 1.0, rng.randf_range(0.4, 1.2))
 		x += rng.randf_range(380.0, 620.0)
-	# 스크린도어 잔해 · 기둥 쌍 + 상부 프레임(문짝은 뜯겨 없음).
-	var sx: float = 380.0
-	while sx < w - 200.0:
-		var frame_top := ColorRect.new()
-		frame_top.color = Color(0.20, 0.22, 0.27)
-		frame_top.position = Vector2(sx, 150.0)
-		frame_top.size = Vector2(220.0, 8.0)
-		frame_top.z_index = -9
-		add_child(frame_top)
-		for px2 in [sx, sx + 214.0]:
-			var post := ColorRect.new()
-			post.color = Color(0.18, 0.20, 0.24)
-			post.position = Vector2(float(px2), 150.0)
-			post.size = Vector2(6.0, GROUND_Y - 150.0)
-			post.z_index = -9
-			add_child(post)
-		sx += rng.randf_range(520.0, 760.0)
+	# 승강장 안전선 · 노란 점선 띠(수평 모티프). 스크린도어 기둥 쌍은 제거 ·
+	# 수직 스트라이프 반복 금지(known_issues, 사용자 2026-08-17 "그놈의 기둥") +
+	# 솔리드 잔해와 겹쳐 뭐가 총알을 막는지 안 읽히던 문제.
+	var edge_line := ColorRect.new()
+	edge_line.color = Color(0.85, 0.72, 0.25, 0.45)
+	edge_line.position = Vector2(0.0, GROUND_Y - 4.0)
+	edge_line.size = Vector2(w, 2.0)
+	edge_line.z_index = -6
+	add_child(edge_line)
+	var dx: float = 40.0
+	while dx < w:
+		var dash := ColorRect.new()
+		dash.color = Color(0.85, 0.72, 0.25, 0.55)
+		dash.position = Vector2(dx, GROUND_Y - 12.0)
+		dash.size = Vector2(34.0, 6.0)
+		dash.z_index = -6
+		add_child(dash)
+		dx += 110.0
 	# 노선도 패널 · 도시의 흔적(두 노선 색 라인).
 	var panel := ColorRect.new()
 	panel.color = Color(0.88, 0.90, 0.94, 0.85)
@@ -3246,7 +3265,9 @@ func _ambience_subway_platform() -> void:
 	_add_lore_label(Vector2(float(int(STAGE_LENGTH) - 500), GROUND_Y - 260.0), "선로 방면 →", Color(0.65, 0.72, 0.85, 0.5), 14)
 
 # ─── 폐쇄 지하철 방2 · 선로(HORIZONTAL) 시그니처 배경 ───────────
-# 살아 있는 선로: 침목 + 레일 + 터널 아치 기둥. 신호등은 TrainHazard가 관리(상태 연동).
+# 살아 있는 선로: 침목 + 레일 + 낮은 천장 + 벽면 케이블 트레이(전부 수평 모티프 ·
+# 아치 기둥은 수직 스트라이프 반복이라 제거, known_issues 2026-08-17).
+# 신호등은 TrainHazard가 관리(상태 연동).
 func _ambience_subway_tracks() -> void:
 	var w: float = STAGE_LENGTH
 	var rng := RandomNumberGenerator.new()
@@ -3269,16 +3290,28 @@ func _ambience_subway_tracks() -> void:
 		tie.z_index = -5
 		add_child(tie)
 		tx += 90.0
-	# 터널 아치 기둥 · 어둡고 굵게, 천장 리브와 함께.
-	var ax: float = 260.0
-	while ax < w:
-		var rib := ColorRect.new()
-		rib.color = Color(0.10, 0.11, 0.14)
-		rib.position = Vector2(ax, -200.0)
-		rib.size = Vector2(26.0, GROUND_Y + 200.0)
-		rib.z_index = -11
-		add_child(rib)
-		ax += rng.randf_range(440.0, 560.0)
+	# 낮은 터널 천장 · 승강장(방1)보다 눌린 단면 · 방끼리 실루엣이 달라야 한다(사용자 2026-08-17
+	# "다 방이 똑같이 생긴 느낌"). 시각 전용 밴드(z -12, 동선 무간섭).
+	var low_ceil := ColorRect.new()
+	low_ceil.color = Color(0.07, 0.08, 0.10)
+	low_ceil.position = Vector2(-200.0, -92.0)
+	low_ceil.size = Vector2(w + 400.0, 152.0)
+	low_ceil.z_index = -12
+	add_child(low_ceil)
+	var low_edge := ColorRect.new()
+	low_edge.color = Color(0.9, 0.45, 0.25, 0.20)
+	low_edge.position = Vector2(-200.0, 60.0)
+	low_edge.size = Vector2(w + 400.0, 3.0)
+	low_edge.z_index = -11
+	add_child(low_edge)
+	# 벽면 케이블 트레이 · 터널 내벽을 따라 달리는 가로 배관 2줄.
+	for cy in [150.0, 186.0]:
+		var tray := ColorRect.new()
+		tray.color = Color(0.12, 0.13, 0.16)
+		tray.position = Vector2(-200.0, float(cy))
+		tray.size = Vector2(w + 400.0, 10.0)
+		tray.z_index = -11
+		add_child(tray)
 	# 드문 작업등 · 붉은 톤 낮게(선로 = 위험 구역 무드).
 	var lx2: float = 700.0
 	while lx2 < w:
@@ -5267,6 +5300,52 @@ class _RivalAntenna extends Node2D:
 			var k: float = _col_t / 0.8
 			draw_arc(Vector2(0.0, -h * 0.4), 40.0 + 150.0 * k, 0.0, TAU, 36, Color(0.85, 0.60, 1.0, 0.55 * (1.0 - k)), 3.0, true)
 
+# P2 제어 코어 · 낮은 돔 소켓(수평 실루엣). P1 관측 안테나(수직 마스트)와 실루엣 어휘를
+# 일부러 바꾼다(known_issues "수직 기둥" 규칙 · "P2가 P1과 별 차이 없다" 사용자 2026-08-17).
+class _P2CoreSocket extends Node2D:
+	var _t: float = 0.0
+	var _collapsed: bool = false
+	var _col_t: float = 0.0
+
+	func collapse() -> void:
+		_collapsed = true
+
+	func _ready() -> void:
+		z_index = -1   # 노드(장치) 뒤에 깔리는 소켓
+
+	func _process(delta: float) -> void:
+		_t += delta
+		if _collapsed:
+			_col_t += delta
+		queue_redraw()
+
+	func _draw() -> void:
+		var alive: float = 0.0 if _collapsed else 1.0
+		# 바닥 소켓 플레이트 + 좌우 수평 핀 · 발판에 박힌 낮은 구조.
+		var plate := Color(0.15, 0.12, 0.20) if not _collapsed else Color(0.10, 0.09, 0.13)
+		draw_rect(Rect2(Vector2(-46.0, -10.0), Vector2(92.0, 10.0)), plate)
+		draw_rect(Rect2(Vector2(-46.0, -10.0), Vector2(92.0, 10.0)), Color(0.45, 0.32, 0.62, 0.35 + 0.35 * alive), false, 2.0)
+		for sx in [-64.0, 50.0]:
+			draw_rect(Rect2(Vector2(float(sx), -7.0), Vector2(14.0, 5.0)), plate.lightened(0.08))
+		# 낮은 돔 쉘 · 붕괴 시 주저앉으며 사라진다.
+		var dome_a: float = 1.0 if not _collapsed else maxf(0.0, 1.0 - _col_t / 1.1)
+		var squash: float = 1.0
+		if _collapsed:
+			squash = 1.0 - (minf(_col_t, 0.8) / 0.8) * 0.55
+		draw_set_transform(Vector2(0.0, -10.0), 0.0, Vector2(1.0, squash))
+		draw_arc(Vector2.ZERO, 34.0, PI, TAU, 22, Color(0.22, 0.17, 0.30, dome_a), 5.0, true)
+		draw_arc(Vector2.ZERO, 24.0, PI, TAU, 18, Color(0.45, 0.32, 0.62, (0.5 + 0.2 * alive) * dome_a), 2.0, true)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		# 코어 구체 · 완만 맥동(±5% 안팎, 광과민 기준).
+		if not _collapsed:
+			var pulse: float = 0.75 + 0.05 * sin(_t * 2.0)
+			draw_circle(Vector2(0.0, -22.0), 9.0, Color(0.72, 0.42, 1.0, pulse))
+			draw_circle(Vector2(0.0, -22.0), 4.5, Color(0.92, 0.78, 1.0, pulse))
+		# 붕괴 파문.
+		if _collapsed and _col_t < 0.8:
+			var k: float = _col_t / 0.8
+			draw_arc(Vector2(0.0, -18.0), 26.0 + 110.0 * k, 0.0, TAU, 30, Color(0.85, 0.60, 1.0, 0.55 * (1.0 - k)), 3.0, true)
+
 func _init_rival_boss() -> void:
 	_rival_fx_layer = CanvasLayer.new()
 	_rival_fx_layer.layer = 12
@@ -5494,7 +5573,7 @@ func _start_rival_p2() -> void:
 		for p in parts:
 			if p != null:
 				_rival_p2_props.append(p)
-	# 제어 노드(중계 안테나)는 즉시 놓지 않는다 · 소등과 동시에 그냥 생겨 "뜬금없다"는 반려
+	# 제어 노드(제어 코어)는 즉시 놓지 않는다 · 소등과 동시에 그냥 생겨 "뜬금없다"는 반려
 	# (사용자 2026-08-14). 스폰 텔레그래프 1.1s → 등장 스냅(SFX) 순서로 도착을 예고한다.
 	# 위치 = 중층 측면 발판 위(복층 동선 강제).
 	for cfg in [{"x": 350.0}, {"x": 2050.0}]:
@@ -5526,15 +5605,15 @@ func _p2_spawn_nodes() -> void:
 		node.set_meta("fs_dir", int(cd.get("d", 1)))
 		var arc := _FlipShieldArc.new()
 		node.add_child(arc)
-		# 소형 중계 안테나 비주얼(리워크 §2.3: 노드도 안테나의 소형 변형으로 격상).
-		var ant := _RivalAntenna.new()
-		ant.small = true
-		ant.position = (node as Node2D).global_position + Vector2(0.0, 30.0)
-		add_child(ant)
-		_rival_p2_props.append(ant)
+		# 제어 코어 소켓 비주얼 · P1 안테나(수직)와 어휘를 바꾼 낮은 돔(2026-08-17,
+		# "P2가 P1과 별 차이 없다 + 그놈의 기둥" 반영. 이전: 소형 안테나 마스트 재사용).
+		var sock := _P2CoreSocket.new()
+		sock.position = (node as Node2D).global_position + Vector2(0.0, 30.0)
+		add_child(sock)
+		_rival_p2_props.append(sock)
 		node.connect("killed", func(_pos: Vector2) -> void:
-			if is_instance_valid(ant):
-				ant.collapse())
+			if is_instance_valid(sock):
+				sock.collapse())
 		# "부술 이유"를 눈에 보이게(사용자 2026-08-14) · 노드가 같은 쪽 벽 포탑(상하 2기)에
 		# 전원을 댄다. 케이블 시각 + 격파 시 그쪽 포탑 정지(_on_p2_node_down).
 		node.killed.connect(_on_p2_node_down.bind(side))
@@ -5571,8 +5650,8 @@ func _p2_flip_shields() -> void:
 func _rival_p2_objective_line() -> void:
 	if not is_inside_tree() or goal_reached or _rival_phase != 1:
 		return
-	# 케이블 시각과 짝 · 장치의 기능(포탑 전원)을 한 번만 말로 짚는다. 단어는 실물(중계 안테나)과 일치.
-	_show_veil_subtitle("포탑 전원이 저 중계 안테나 둘에서 옵니다. 끊는 만큼 조용해져요. 방패는 한쪽뿐입니다.", 3.6)
+	# 케이블 시각과 짝 · 장치의 기능(포탑 전원)을 한 번만 말로 짚는다. 단어는 실물(제어 코어)과 일치.
+	_show_veil_subtitle("포탑 전원이 발판의 저 낮은 제어 코어 둘에서 옵니다. 끊는 만큼 조용해져요. 방패는 한쪽뿐입니다.", 3.6)
 
 # P2 노드 격파 → 그 노드가 전원을 대던 같은 쪽 포탑(하·중층 2기)이 죽는다 · 파괴의 보상 즉시 체감.
 func _on_p2_node_down(_pos: Vector2, side: int) -> void:
@@ -5978,7 +6057,16 @@ func _p3_unmarked_line() -> void:
 var _false_veil: Node2D = null
 var _p3_assist_timer: Timer = null
 var _p3_assist_spoken: bool = false   # 지각 보조 의도 발화 1회(이후 소거는 침묵 — 취소선이 말한다)
+var _p3_cap_spoken: bool = false      # 창당 피해 상한 해설 1회(버그가 아니라 룰임을 알린다)
 var _p3_bar_layer: CanvasLayer = null
+
+# 창당 피해 상한 도달(조기 재잠복) · 첫 회에만 룰을 말로 짚는다. "탄이 안 박힌다"가
+# 버그로 읽히지 않게(2026-08-17 상한 도입과 한 세트).
+func _on_p3_window_capped() -> void:
+	if _p3_cap_spoken or not is_inside_tree() or goal_reached:
+		return
+	_p3_cap_spoken = true
+	_show_veil_subtitle("깊게는 안 박힙니다. 몸을 물렸어요. 실체화 창마다 조금씩, 확실하게.", 3.2)
 
 # P3 보스 체력바 — SENTINEL 바 문법 재사용. 잠복/실체는 텍스트 라벨 대신 본체의 시각 언어
 # (잠복 = 스캔라인 그림 + 탄 통과 파문 / 실체 = 꽉 찬 몸 + 링)와 바 밝기로만 전달
@@ -6051,6 +6139,7 @@ func _start_rival_p3() -> void:
 	fv.volley_started.connect(_on_p3_volley)
 	fv.defeated.connect(_on_false_veil_defeated)
 	fv.stage_shifted.connect(_on_p3_stage_shifted)
+	fv.window_capped.connect(_on_p3_window_capped)
 	fv.position = Vector2(1200.0, 600.0)
 	add_child(fv)
 	_false_veil = fv

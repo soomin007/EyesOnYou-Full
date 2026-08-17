@@ -16,11 +16,15 @@ signal volley_started
 # 리워크(§2.4) 변주 3단 · HP 문턱(66%/33%) 통과 시 emit. 1=중반(텔레포트 실체화),
 # 2=후반(창 짧고 잦게 + 방 렌더 붕괴 연출은 Stage 담당).
 signal stage_shifted(stage_idx: int)
+# 실체화 창당 피해 상한 도달(조기 재잠복) · Stage가 첫 회에 VEIL 해설 1회를 단다.
+signal window_capped
 
 enum State { PHASED, TELE, SOLID, DYING }
 
 const MAX_HP: int = 6   # 기본값 — Stage가 레벨 스케일로 덮어쓴다(max_hp/hp)
-const PHASED_DUR: float = 7.0
+# 잠복 7.0 → 5.2 (2026-08-17): 상한 도입으로 창 수가 늘어난 만큼 창 사이 대기를 줄인다
+# ("실체화 될 때까지 기다린다"가 지루하다는 지적과 정합).
+const PHASED_DUR: float = 5.2
 const TELE_DUR: float = 0.7
 const SOLID_DUR: float = 3.4
 const FAKES_PER_VOLLEY: int = 4
@@ -50,6 +54,9 @@ var _anchor_idx: int = 0
 var _fake_spots: Array = []             # 가짜 마커 후보 위치(순환)
 var _spot_idx: int = 0
 var _fakes: Array = []                  # 살아있는 _FakeMarker 참조
+# 실체화 창당 피해 누적(상한 = max_hp/6) · 고DPS 빌드의 "첫 창에 끝" 차단(2026-08-17).
+var _window_dmg: int = 0
+var _next_phased_scale: float = 1.0     # 상한 도달 직후의 잠복만 짧게(화력의 보상)
 
 func setup(anchors: Array, fake_spots: Array) -> void:
 	_anchors = anchors
@@ -82,6 +89,7 @@ func _ready() -> void:
 func _enter_phased() -> void:
 	state = State.PHASED
 	_state_t = 0.0
+	_window_dmg = 0
 	if not _anchors.is_empty():
 		_anchor_idx = (_anchor_idx + 1) % _anchors.size()
 	if _decoy != null and is_instance_valid(_decoy):
@@ -145,9 +153,10 @@ func _physics_process(delta: float) -> void:
 		State.PHASED:
 			_drift(delta)
 			_update_blink(delta)
-			if _state_t >= phased_dur:
+			if _state_t >= phased_dur * _next_phased_scale:
 				state = State.TELE
 				_state_t = 0.0
+				_next_phased_scale = 1.0
 				# 중반+(변주 §2.4): 실체화 위치가 3지점 텔레포트 · 드리프트로 예측되던 위치가
 				# 튄다. 가짜 눈도 동시에 다른 지점으로 튀어 "어느 쪽이 진짜인가"가 매번 갱신.
 				if fight_stage >= 1 and not _anchors.is_empty():
@@ -212,6 +221,16 @@ func take_damage(amount: int, _from_dir: int = 0) -> void:
 		# 잠복 중엔 실체가 없다 — 탄이 흘러나감(공정: 실체화 창이 명확히 보임).
 		SfxPlayer.play_at("bullet_deflect_shield", global_position, -6.0)
 		return
+	# 실체화 창당 피해 상한 · "실체화까지 기다렸다 쏘면 5초 컷"(사용자 2026-08-17) 차단.
+	# 상한 = max_hp/6 → 어떤 화력이든 실체화 창 ~6번은 상대해야 변주 3단이 실제로 등장.
+	# 저DPS 빌드는 상한에 닿지 않으므로 영향 없음.
+	var cap: int = maxi(3, int(ceil(float(max_hp) / 6.0)))
+	var allowed: int = cap - _window_dmg
+	if allowed <= 0:
+		SfxPlayer.play_at("bullet_deflect_shield", global_position, -6.0)
+		return
+	amount = mini(amount, allowed)
+	_window_dmg += amount
 	hp -= amount
 	_hit_flash_t = 0.25
 	SfxPlayer.play_at("bullet_impact_enemy", global_position)
@@ -237,6 +256,14 @@ func take_damage(amount: int, _from_dir: int = 0) -> void:
 			_decoy.begin_erase()
 		collision_layer = 0
 		emit_signal("defeated")
+	elif _window_dmg >= cap:
+		# 상한 도달 · 깊게 박히기 전에 몸을 물린다(조기 재잠복). 화력의 보상 = 다음 잠복이 짧다.
+		collision_layer = 0
+		_hit_flash_t = 0.35
+		_next_phased_scale = 0.6
+		SfxPlayer.play_at("bullet_deflect_shield", global_position, -4.0)
+		emit_signal("window_capped")
+		_enter_phased()
 
 func _clear_fakes() -> void:
 	for m in _fakes:
