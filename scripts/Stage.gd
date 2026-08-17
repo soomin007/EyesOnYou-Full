@@ -829,6 +829,9 @@ func _build_world() -> void:
 	_build_wind()
 	_build_arc_zones()
 	_build_debris_zones()
+	_build_conveyors()
+	_build_shutters()
+	_build_drips()
 	_build_mid_gate()
 	_build_route_lines()
 	_build_fake_watchers()
@@ -7303,7 +7306,8 @@ func _on_searchlight_alert(ppos: Vector2) -> void:
 	SfxPlayer.play("siren_flash", -8.0)
 	if not _searchlight_line_shown:
 		_searchlight_line_shown = true
-		_show_veil_subtitle("탐조등에 걸렸어요. 경비가 이쪽으로 옵니다.", 3.2)
+		# "감시등" = 감시탑 탐조등·순찰로 경계등의 상위 일상어(맵 공용 콜아웃).
+		_show_veil_subtitle("감시등에 걸렸어요. 경비가 이쪽으로 옵니다.", 3.2)
 	if _searchlight_reinforced >= 2:
 		return
 	_searchlight_reinforced += 1
@@ -7358,6 +7362,27 @@ func _build_debris_zones() -> void:
 		var fd := FallingDebris.new()
 		add_child(fd)
 		fd.setup(entry, GROUND_Y)
+
+# 컨베이어(ConveyorBelt) · MapData "conveyors" 키. 물류 창고 시그니처(확산 6호).
+func _build_conveyors() -> void:
+	for entry in _map_data.get("conveyors", []):
+		var cb := ConveyorBelt.new()
+		add_child(cb)
+		cb.setup(entry, GROUND_Y)
+
+# 차단 셔터(CycleShutter) · MapData "shutters" 키. 지하 주차장 시그니처(확산 7호).
+func _build_shutters() -> void:
+	for entry in _map_data.get("shutters", []):
+		var sh := CycleShutter.new()
+		add_child(sh)
+		sh.setup(entry, GROUND_Y)
+
+# 응축수 낙수(CondensateDrip) · MapData "drips" 키. 응축기 시그니처(확산 8호 · 증기 교체).
+func _build_drips() -> void:
+	for entry in _map_data.get("drips", []):
+		var dp := CondensateDrip.new()
+		add_child(dp)
+		dp.setup(entry, GROUND_Y)
 
 # 방 체인 전환(map_identity_rework §2) · RouteMap/Briefing 없이 짧은 문 전환으로 다음 방 로드.
 # XP·HP·성장은 GameState 소유라 유지되고, 스테이지 타이머는 record_route_choice 기준이라 체인

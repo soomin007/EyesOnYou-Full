@@ -21,6 +21,7 @@ var from_ang: float = PI - 0.4
 var to_ang: float = PI + 0.4
 var period: float = 7.0
 var length: float = 950.0
+var pole_h: float = 0.0   # >0이면 하우징 아래 지주를 그린다(지상 경계등 · 외곽 순찰로)
 
 var _t: float = 0.0
 var _exposure: float = 0.0
@@ -37,6 +38,7 @@ func setup(cfg: Dictionary) -> void:
 	to_ang = deg_to_rad(float(cfg.get("to_deg", 200.0)))
 	period = float(cfg.get("period", 7.0))
 	length = float(cfg.get("len", 950.0))
+	pole_h = float(cfg.get("pole_h", 0.0))
 	z_index = -2   # 배우 뒤 · 배경 위(빛은 공간에 깔린다)
 	add_to_group("searchlight")
 
@@ -105,6 +107,10 @@ func _draw() -> void:
 			pts.append(Vector2.from_angle(a) * r)
 			cols.append(Color(col.r, col.g, col.b, base_a * (1.0 - r / length)))
 		draw_polygon(pts, cols)
+	# 지주(지상 경계등) · 하우징 아래로 지면까지.
+	if pole_h > 0.0:
+		draw_rect(Rect2(Vector2(-4.0, 8.0), Vector2(8.0, pole_h)), Color(0.14, 0.15, 0.18))
+		draw_rect(Rect2(Vector2(-4.0, 8.0), Vector2(2.0, pole_h)), Color(0.24, 0.26, 0.32))
 	# 하우징 · 마운트 + 렌즈(경보 시 붉게 유지 · 점멸 없음).
 	draw_rect(Rect2(Vector2(-10.0, -10.0), Vector2(20.0, 20.0)), Color(0.10, 0.11, 0.15))
 	draw_circle(Vector2.ZERO, 6.0, Color(col.r, col.g, col.b, 0.9))
