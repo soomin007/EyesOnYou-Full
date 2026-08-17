@@ -1374,32 +1374,196 @@ func _build_indoor_backdrop(env: String) -> void:
 			grout.z_index = -14
 			add_child(grout)
 		return
-	# 지지 기둥 + 기둥 사이 천장 형광등 — 반복되는 실내 홀.
+	# 천장 형광등 + 빛 원뿔 · 전 실내 공통(등간격 램프는 천장 조명이라 디제시스에 맞다).
 	var gap: float = 360.0
-	var x: float = 140.0
-	while x < w:
-		var cw: float = 46.0
-		var col := ColorRect.new()
-		col.color = pillar_col
-		col.position = Vector2(x - cw * 0.5, -92.0)
-		col.size = Vector2(cw, GROUND_Y + 60.0)
-		col.z_index = -14
-		add_child(col)
-		var hl := ColorRect.new()
-		hl.color = pillar_col.lightened(0.12)
-		hl.position = Vector2(x - cw * 0.5, -92.0)
-		hl.size = Vector2(4.0, GROUND_Y + 60.0)
-		hl.z_index = -13
-		add_child(hl)
+	var lx: float = 140.0
+	while lx < w:
 		var lamp := ColorRect.new()
 		lamp.color = Color(accent.r, accent.g, accent.b, 0.42)
-		lamp.position = Vector2(x + gap * 0.5 - 55.0, -78.0)
+		lamp.position = Vector2(lx + gap * 0.5 - 55.0, -78.0)
 		lamp.size = Vector2(110.0, 5.0)
 		lamp.z_index = -12
 		add_child(lamp)
-		# 빛 원뿔 · 형광등이 공간을 실제로 비추는 층(2026-08-17 폴리시).
-		_add_light_cone(x + gap * 0.5, -73.0, 110.0, 250.0, 320.0, Color(accent.r, accent.g, accent.b, 0.06), -12)
-		x += gap
+		_add_light_cone(lx + gap * 0.5, -73.0, 110.0, 250.0, 320.0, Color(accent.r, accent.g, accent.b, 0.06), -12)
+		lx += gap
+	# env별 벽 구조 · 전 실내 공통이던 등간격 지지 기둥 폐지(known_issues "수직 기둥" 규칙 ·
+	# "맵이 다 똑같다"의 주범). 환경마다 그 장소다운 벽 어휘를 쓴다(2026-08-17).
+	match env:
+		"garage":
+			_backdrop_garage(pillar_col, accent, w)       # 콘크리트 기둥 = 주차장의 디제시스(유지·폴리시)
+		"water":
+			_backdrop_water(pillar_col, accent, w)        # 수평 배관 번들 + 습기 얼룩
+		"electrical":
+			_backdrop_electrical(pillar_col, accent, w)   # 배전 패널 + 케이블 트레이
+		"warehouse":
+			_backdrop_warehouse(pillar_col, accent, w)    # 상부 트러스 보 + 걸이 체인
+		_:
+			_backdrop_interior(pillar_col, accent, w)     # 벽 패널 이음새 + 드문 문 프레임
+
+# 주차장 · 콘크리트 기둥(이 env만 기둥이 디제시스). 그라디언트 + 베이스 스커트 + 주의 띠.
+func _backdrop_garage(pillar_col: Color, _accent: Color, w: float) -> void:
+	var x: float = 180.0
+	while x < w:
+		_add_vgrad(Vector2(x - 27.0, -92.0), Vector2(54.0, GROUND_Y + 60.0),
+			pillar_col.lightened(0.10), pillar_col.darkened(0.15), -14)
+		var hl := ColorRect.new()
+		hl.color = pillar_col.lightened(0.16)
+		hl.position = Vector2(x - 27.0, -92.0)
+		hl.size = Vector2(4.0, GROUND_Y + 60.0)
+		hl.z_index = -13
+		add_child(hl)
+		var stripe := ColorRect.new()
+		stripe.color = Color(0.85, 0.68, 0.25, 0.35)
+		stripe.position = Vector2(x - 27.0, GROUND_Y - 140.0)
+		stripe.size = Vector2(54.0, 14.0)
+		stripe.z_index = -13
+		add_child(stripe)
+		var base := ColorRect.new()
+		base.color = pillar_col.darkened(0.30)
+		base.position = Vector2(x - 30.0, GROUND_Y - 34.0)
+		base.size = Vector2(60.0, 34.0)
+		base.z_index = -13
+		add_child(base)
+		x += 470.0
+
+# 펌프장/응축기 · 벽을 달리는 대구경 배관 번들(수평) + 행어 + 바닥 습기 얼룩.
+func _backdrop_water(pillar_col: Color, accent: Color, w: float) -> void:
+	for entry in [[168.0, 20.0], [206.0, 12.0]]:
+		var e: Array = entry
+		var pipe := ColorRect.new()
+		pipe.color = pillar_col.lightened(0.06)
+		pipe.position = Vector2(-200.0, float(e[0]))
+		pipe.size = Vector2(w + 400.0, float(e[1]))
+		pipe.z_index = -14
+		add_child(pipe)
+		var glint := ColorRect.new()
+		glint.color = Color(accent.r, accent.g, accent.b, 0.20)
+		glint.position = Vector2(-200.0, float(e[0]) + 3.0)
+		glint.size = Vector2(w + 400.0, 2.0)
+		glint.z_index = -13
+		add_child(glint)
+	var hx: float = 260.0
+	while hx < w:
+		var hang := ColorRect.new()
+		hang.color = pillar_col.darkened(0.2)
+		hang.position = Vector2(hx, 146.0)
+		hang.size = Vector2(6.0, 22.0)
+		hang.z_index = -14
+		add_child(hang)
+		hx += 430.0
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 337 + 7
+	for i in 5:
+		var bx: float = rng.randf_range(200.0, w - 200.0)
+		_add_vgrad(Vector2(bx, GROUND_Y - rng.randf_range(60.0, 120.0)),
+			Vector2(rng.randf_range(60.0, 130.0), 80.0),
+			Color(0.05, 0.09, 0.10, 0.0), Color(0.05, 0.09, 0.10, 0.35), -13)
+
+# 변전소/중계소 · 벽면 배전 패널 + 케이블 트레이(수평) + 패널로 내려가는 드롭 케이블.
+func _backdrop_electrical(pillar_col: Color, accent: Color, w: float) -> void:
+	var tray := ColorRect.new()
+	tray.color = pillar_col.darkened(0.1)
+	tray.position = Vector2(-200.0, 150.0)
+	tray.size = Vector2(w + 400.0, 9.0)
+	tray.z_index = -14
+	add_child(tray)
+	var px: float = 300.0
+	while px < w:
+		var panel := ColorRect.new()
+		panel.color = pillar_col.lightened(0.08)
+		panel.position = Vector2(px, 208.0)
+		panel.size = Vector2(130.0, 92.0)
+		panel.z_index = -14
+		add_child(panel)
+		var pframe := ColorRect.new()
+		pframe.color = pillar_col.darkened(0.25)
+		pframe.position = Vector2(px + 4.0, 212.0)
+		pframe.size = Vector2(122.0, 84.0)
+		pframe.z_index = -13
+		add_child(pframe)
+		var cable := ColorRect.new()
+		cable.color = pillar_col.darkened(0.05)
+		cable.position = Vector2(px + 62.0, 159.0)
+		cable.size = Vector2(3.0, 49.0)
+		cable.z_index = -14
+		add_child(cable)
+		for di in 2:
+			var dot := ColorRect.new()
+			dot.color = Color(accent.r, accent.g, accent.b, 0.7)
+			dot.position = Vector2(px + 14.0 + float(di) * 14.0, 220.0)
+			dot.size = Vector2(5.0, 5.0)
+			dot.z_index = -12
+			add_child(dot)
+		px += 560.0
+
+# 창고 · 상부 트러스 보(수평 + 사선 브레이스) + 드문 걸이 체인.
+func _backdrop_warehouse(pillar_col: Color, _accent: Color, w: float) -> void:
+	var beam := ColorRect.new()
+	beam.color = pillar_col.lightened(0.05)
+	beam.position = Vector2(-200.0, 36.0)
+	beam.size = Vector2(w + 400.0, 10.0)
+	beam.z_index = -14
+	add_child(beam)
+	var bx: float = 60.0
+	var flip: bool = false
+	while bx < w:
+		var brace := Polygon2D.new()
+		brace.color = pillar_col.darkened(0.1)
+		var x1: float = bx + (150.0 if not flip else 0.0)
+		var x2: float = bx + (0.0 if not flip else 150.0)
+		brace.polygon = PackedVector2Array([
+			Vector2(x1, 46.0), Vector2(x1 + 6.0, 46.0),
+			Vector2(x2 + 6.0, 96.0), Vector2(x2, 96.0)])
+		brace.z_index = -14
+		add_child(brace)
+		flip = not flip
+		bx += 150.0
+	var cx: float = 520.0
+	while cx < w:
+		var chain := ColorRect.new()
+		chain.color = pillar_col.darkened(0.15)
+		chain.position = Vector2(cx, 46.0)
+		chain.size = Vector2(2.0, 52.0)
+		chain.z_index = -14
+		add_child(chain)
+		var hook := ColorRect.new()
+		hook.color = pillar_col.lightened(0.1)
+		hook.position = Vector2(cx - 3.0, 98.0)
+		hook.size = Vector2(8.0, 6.0)
+		hook.z_index = -14
+		add_child(hook)
+		cx += 760.0
+
+# 일반 시설 · 벽 패널 가로 이음새 + 걸레받이 + 드문 문 프레임(오목).
+func _backdrop_interior(pillar_col: Color, accent: Color, w: float) -> void:
+	for sy in [214.0, 372.0]:
+		var seam := ColorRect.new()
+		seam.color = Color(accent.r, accent.g, accent.b, 0.07)
+		seam.position = Vector2(-200.0, float(sy))
+		seam.size = Vector2(w + 400.0, 2.0)
+		seam.z_index = -14
+		add_child(seam)
+	var skirt := ColorRect.new()
+	skirt.color = pillar_col.darkened(0.25)
+	skirt.position = Vector2(-200.0, GROUND_Y - 16.0)
+	skirt.size = Vector2(w + 400.0, 16.0)
+	skirt.z_index = -14
+	add_child(skirt)
+	var dx: float = 420.0
+	while dx < w - 200.0:
+		var frame := ColorRect.new()
+		frame.color = pillar_col.darkened(0.30)
+		frame.position = Vector2(dx, GROUND_Y - 170.0)
+		frame.size = Vector2(92.0, 170.0)
+		frame.z_index = -14
+		add_child(frame)
+		var lintel := ColorRect.new()
+		lintel.color = Color(accent.r, accent.g, accent.b, 0.22)
+		lintel.position = Vector2(dx + 6.0, GROUND_Y - 164.0)
+		lintel.size = Vector2(80.0, 3.0)
+		lintel.z_index = -13
+		add_child(lintel)
+		dx += 860.0
 
 # ─── 실내 맵 시그니처 소품 ────────────────────────────────────
 # 지하 주차장 / 차량 엄폐 통로 — 주차 구획선 + 배경 주차 차량 실루엣(차 존재 신호) + 층 표지.
@@ -4109,14 +4273,29 @@ func _build_wall(x: float) -> void:
 	var wh: float = wall_height
 	_add_filled_rect(Vector2(wx, wtop), Vector2(60.0, wh), Color(0.06, 0.07, 0.09))
 	# 안쪽 면(보이는 쪽) — STAGE_LENGTH 끝(x>STAGE_LENGTH)이면 왼쪽이 안쪽, 시작(x<0)이면 오른쪽이 안쪽
-	var inner_x: float = (wx + 56.0) if x < 0.0 else wx
+	var inner_left: bool = x >= 0.0   # 우측 벽이면 왼쪽 면이 실내를 향한다
+	var inner_x: float = wx if inner_left else (wx + 56.0)
+	# 안쪽 면 그라디언트 · 실내 빛을 받는 면(플랫 슬래브 탈피, 2026-08-17 폴리시).
+	var face_grad := Polygon2D.new()
+	var gx0: float = inner_x if inner_left else inner_x - 14.0
+	face_grad.polygon = PackedVector2Array([
+		Vector2(gx0, wtop), Vector2(gx0 + 18.0, wtop),
+		Vector2(gx0 + 18.0, wtop + wh), Vector2(gx0, wtop + wh)])
+	var fg_in := Color(0.16, 0.18, 0.24, 0.5)
+	var fg_out := Color(0.16, 0.18, 0.24, 0.0)
+	face_grad.vertex_colors = PackedColorArray(
+		[fg_in, fg_out, fg_out, fg_in] if inner_left else [fg_out, fg_in, fg_in, fg_out])
+	face_grad.z_index = -2
+	add_child(face_grad)
+	# 안쪽 모서리 발광 · env 액센트 색조(발판·지평선과 같은 계열).
+	var wacc: Color = _env_palette(_indoor_env())["accent"]
 	var glow := ColorRect.new()
-	glow.color = Color(0.55, 0.78, 0.95, 0.55)
+	glow.color = Color(wacc.r, wacc.g, wacc.b, 0.5)
 	glow.position = Vector2(inner_x, wtop)
 	glow.size = Vector2(2.0, wh)
 	glow.z_index = -2
 	add_child(glow)
-	# 수평 패널 분할 라인 (60px 간격)
+	# 수평 패널 분할 라인 (60px 간격) + 이음새 볼트 점(안쪽 면 · 구조물 질감)
 	var ly: float = wtop + 40.0
 	while ly < wtop + wh:
 		var seam := ColorRect.new()
@@ -4124,6 +4303,12 @@ func _build_wall(x: float) -> void:
 		seam.position = Vector2(wx, ly)
 		seam.size = Vector2(60.0, 1.0)
 		add_child(seam)
+		var bolt := ColorRect.new()
+		bolt.color = Color(0.30, 0.34, 0.42, 0.8)
+		bolt.position = Vector2(inner_x + (5.0 if inner_left else -7.0), ly - 3.0)
+		bolt.size = Vector2(2.0, 2.0)
+		bolt.z_index = -2
+		add_child(bolt)
 		ly += 60.0
 
 func _build_player() -> void:
@@ -4143,6 +4328,11 @@ func _build_player() -> void:
 	player.died.connect(_on_player_died)
 	player.damaged.connect(_on_player_damaged)
 	player.revived.connect(_on_player_revived)
+	# 접지 그림자 · 점프 중에도 착지 지점이 바닥에 남는다(전 엔티티 공통 폴리시 2026-08-17).
+	var psh := GroundShadow.new()
+	psh.target = player
+	psh.base_width = 30.0
+	add_child(psh)
 
 func _build_camera() -> void:
 	camera = Camera2D.new()
@@ -5312,6 +5502,12 @@ func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1, disguise_kind: in
 				_elite_spawned += 1
 	e.set("elite", elite)
 	add_child(e)
+	# 접지 그림자 · 재머(장치)는 제외, 나머지 전 유닛(공중 드론 포함 = 지면 투영이 높이감).
+	if kind != 5:
+		var esh := GroundShadow.new()
+		esh.target = e
+		esh.base_width = 30.0 if kind in [0, 4] else 24.0
+		add_child(esh)
 	_had_enemies = true   # 이스터에그(평화주의) — 적이 있던 맵에서만 인정
 	e.global_position = pos
 	# 측면 단독 둥지 저격수(회피 전용) 태깅 — VEIL이 "정면으론 못 잡는다"를 짚어주는 대상.
@@ -6617,12 +6813,28 @@ func _spawn_orb(pos: Vector2, static_placement: bool = false, attract_range: flo
 		halo.z_index = -1
 		orb.add_child(halo)
 	else:
+		# 마름모 + 옅은 후광 + 완만한 숨쉬기(2026-08-17 폴리시 · 플랫 정사각 탈피).
 		sprite.color = Color(0.4, 0.95, 0.6)
 		sprite.position = Vector2(-6.0, -6.0)
 		sprite.size = Vector2(12.0, 12.0)
+		sprite.pivot_offset = Vector2(6.0, 6.0)
+		sprite.rotation = deg_to_rad(45.0)
+		var halo_n := ColorRect.new()
+		halo_n.color = Color(0.4, 0.95, 0.6, 0.14)
+		halo_n.position = Vector2(-10.0, -10.0)
+		halo_n.size = Vector2(20.0, 20.0)
+		halo_n.pivot_offset = Vector2(10.0, 10.0)
+		halo_n.rotation = deg_to_rad(45.0)
+		halo_n.z_index = -1
+		orb.add_child(halo_n)
 	orb.add_child(sprite)
 	add_child(orb)
 	orb.global_position = pos
+	# 숨쉬기 · 느린 스케일 맥동(점멸 아님).
+	var breathe := orb.create_tween()
+	breathe.set_loops()
+	breathe.tween_property(orb, "scale", Vector2(1.12, 1.12), 0.9).set_trans(Tween.TRANS_SINE)
+	breathe.tween_property(orb, "scale", Vector2(1.0, 1.0), 0.9).set_trans(Tween.TRANS_SINE)
 	if static_placement:
 		# bounce 스킵 — 즉시 attract 단계로. placed = 클리어 환급 제외(가서 먹어야 하는 보상).
 		orb.set("spawn_anim_t", 1.0)
@@ -6975,17 +7187,40 @@ func _build_goal_position() -> void:
 	shape.size = Vector2(60.0, 200.0)
 	col.shape = shape
 	goal.add_child(col)
-	var visual := ColorRect.new()
-	visual.color = Color(0.95, 0.85, 0.3, 0.45)
-	visual.position = Vector2(-30.0, -100.0)
-	visual.size = Vector2(60.0, 200.0)
-	goal.add_child(visual)
-	# 골 빛기둥
-	var beam := ColorRect.new()
-	beam.color = Color(0.95, 0.85, 0.3, 0.18)
-	beam.position = Vector2(-90.0, -300.0)
-	beam.size = Vector2(180.0, 600.0)
-	goal.add_child(beam)
+	# 골 비주얼 폴리시(2026-08-17) · 플랫 노란 사각 2장 → 그라디언트 문 + 위로 잦아드는
+	# 빛기둥 + 바닥 착지 글로우. "문/출구" 가독(외곽선·라벨)은 유지.
+	var door := Polygon2D.new()
+	door.polygon = PackedVector2Array([
+		Vector2(-30.0, -100.0), Vector2(30.0, -100.0), Vector2(30.0, 100.0), Vector2(-30.0, 100.0)])
+	door.vertex_colors = PackedColorArray([
+		Color(0.95, 0.85, 0.3, 0.16), Color(0.95, 0.85, 0.3, 0.16),
+		Color(1.0, 0.92, 0.5, 0.55), Color(1.0, 0.92, 0.5, 0.55)])
+	goal.add_child(door)
+	# 빛기둥 · 바닥에서 위로 잦아드는 세로 그라디언트(넓은 겹 + 좁은 코어 겹).
+	for entry in [[180.0, 0.14, 600.0], [80.0, 0.20, 460.0]]:
+		var e: Array = entry
+		var bw: float = float(e[0])
+		var beam := Polygon2D.new()
+		beam.polygon = PackedVector2Array([
+			Vector2(-bw * 0.5, 100.0 - float(e[2])), Vector2(bw * 0.5, 100.0 - float(e[2])),
+			Vector2(bw * 0.5, 100.0), Vector2(-bw * 0.5, 100.0)])
+		beam.vertex_colors = PackedColorArray([
+			Color(0.95, 0.85, 0.3, 0.0), Color(0.95, 0.85, 0.3, 0.0),
+			Color(0.95, 0.85, 0.3, float(e[1])), Color(0.95, 0.85, 0.3, float(e[1]))])
+		goal.add_child(beam)
+	# 바닥 착지 글로우 · 문 아래 얇고 밝은 띠 + 옆으로 번지는 빛.
+	var base_core := ColorRect.new()
+	base_core.color = Color(1.0, 0.94, 0.6, 0.85)
+	base_core.position = Vector2(-34.0, 97.0)
+	base_core.size = Vector2(68.0, 3.0)
+	goal.add_child(base_core)
+	var base_spread := Polygon2D.new()
+	base_spread.polygon = PackedVector2Array([
+		Vector2(-90.0, 96.0), Vector2(90.0, 96.0), Vector2(90.0, 100.0), Vector2(-90.0, 100.0)])
+	base_spread.vertex_colors = PackedColorArray([
+		Color(1.0, 0.9, 0.5, 0.0), Color(1.0, 0.9, 0.5, 0.0),
+		Color(1.0, 0.9, 0.5, 0.35), Color(1.0, 0.9, 0.5, 0.35)])
+	goal.add_child(base_spread)
 	# 박스 외곽선 — "배경 장식"이 아니라 *문/출구*로 읽히게(피드백: 노란 네모가 끝인지 모름).
 	var border := Line2D.new()
 	border.points = PackedVector2Array([
