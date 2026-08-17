@@ -88,7 +88,8 @@ var _stinger_active: bool = false
 var _stinger_label: Label = null
 var _replay_btn: Button = null
 var _morph_tween: Tween = null
-const GLITCH_CHARS: String = "▒░█▓◇◆#@%&/\\?ㅁㅇㄹㅂㅈ"
+# 블록 셰이드(U+2591~2593·2588)는 Pretendard 미커버 = 두부 위험. 커버 확인된 문자로 대체(2026-08-18).
+const GLITCH_CHARS: String = "■□▪◇◆#@%&/\\?ㅁㅇㄹㅂㅈ"
 const REPLAY_LABEL: String = "다시 플레이하기"
 const REPLAY_LABEL_GLITCH: String = "베일의 진실에 더 다가가기"
 

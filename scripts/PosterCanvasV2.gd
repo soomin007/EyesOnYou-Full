@@ -344,7 +344,7 @@ func _build_text() -> void:
 		COL_VEIL * Color(1, 1, 1, 0.9), HORIZONTAL_ALIGNMENT_RIGHT, false)
 	_label("초보자가 어디서 막히는지 듣고 있어요", Vector2(fb_x, FOOT_Y + 26.0), fb_w, 13,
 		COL_GRAY, HORIZONTAL_ALIGNMENT_RIGHT, false)
-	_label("✎ " + fb_url, Vector2(fb_x, FOOT_Y + 46.0), fb_w, 13,
+	_label("· " + fb_url, Vector2(fb_x, FOOT_Y + 46.0), fb_w, 13,
 		COL_VEIL * Color(1, 1, 1, 0.75), HORIZONTAL_ALIGNMENT_RIGHT, false)
 
 func _sup_captions(cy: float) -> void:

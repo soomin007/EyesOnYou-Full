@@ -197,7 +197,9 @@ func _tier_dots(owned: int) -> String:
 		else:
 			s += "○"
 		if t < SkillTreeData.TIER_MAX:
-			s += "─"
+			# 연결선 U+2500(─)은 Pretendard 미커버 = 환경 따라 빈 네모(두부). 공백으로 잇는다
+			# (2026-08-18 사용자 발견 · 폰트 커버 전수 스캔으로 노출 3곳 일괄 수정).
+			s += " "
 	return s
 
 func _active_note(d: Dictionary) -> String:
@@ -222,17 +224,20 @@ func _show_line_desc(line_id: String, fam: String, is_baseline: bool) -> void:
 	var owned: int = GameState.get_skill_tier(line_id)
 	var t1name: String = str(SkillTreeData.find_tier(line_id, 1).get("name", line_id))
 	txt += "[b][color=#%s]%s 계열[/color][/b]    [color=#7a8088](보유 T%d / 3)[/color]\n" % [fam_hex, t1name, owned]
+	# 단계 이름과 효과 설명이 같은 색으로 이어져 경계가 안 보인다는 지적(2026-08-18):
+	# 이름까지는 상태색, 설명은 중립 회색으로 분리. 굵기 차이는 반려 이력([b] faux-bold 과함).
+	var ds_hex: String = "9aa0a8"
 	for t in range(1, SkillTreeData.TIER_MAX + 1):
 		var td: Dictionary = SkillTreeData.find_tier(line_id, t)
 		var nm: String = str(td.get("name", ""))
 		var ds: String = str(td.get("desc", ""))
 		var note: String = _active_note(td)
 		if t <= owned:
-			txt += "[color=#%s]✓ T%d  %s  %s[/color]%s\n" % [fam_hex, t, nm, ds, note]
+			txt += "[color=#%s]✓ T%d  %s[/color]   [color=#%s]%s[/color]%s\n" % [fam_hex, t, nm, ds_hex, ds, note]
 		elif t == owned + 1:
-			txt += "[color=#%s]▶ T%d  %s  %s  (다음 선택 가능)[/color]%s\n" % [next_hex, t, nm, ds, note]
+			txt += "[color=#%s]▶ T%d  %s  (다음 선택 가능)[/color]   [color=#%s]%s[/color]%s\n" % [next_hex, t, nm, ds_hex, ds, note]
 		else:
-			txt += "[color=#%s]· T%d  %s  %s  (잠김)[/color]%s\n" % [lock_hex, t, nm, ds, note]
+			txt += "[color=#%s]· T%d  %s  (잠김)[/color]   [color=#5c626b]%s[/color]%s\n" % [lock_hex, t, nm, ds, note]
 	desc_label.text = txt
 
 func _input(event: InputEvent) -> void:
