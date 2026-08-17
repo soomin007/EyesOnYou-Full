@@ -2517,13 +2517,14 @@ func _tick_mid_gate(_delta: float) -> void:
 	if not _mid_gate_hint_shown and not _mid_gate_opened and player != null \
 			and is_instance_valid(player) and absf(player.global_position.x - _mid_gate_x) < 520.0:
 		_mid_gate_hint_shown = true
+		# 문구는 화면에 보이는 것의 일상어만 · 설계 용어(격벽·동기) 노출 금지(사용자 2026-08-17).
 		match _mid_gate_mode:
 			"lever":
-				_show_veil_subtitle("격벽이 잠겨 있어요. 근처 동력 레버를 찾으세요.", 3.2)
+				_show_veil_subtitle("게이트가 잠겨 있어요. 근처 동력 레버를 찾으세요.", 3.2)
 			"clear":
 				_show_veil_subtitle("잠긴 게이트입니다. 이 구역 경비를 정리해야 열려요.", 3.2)
 			"beam":
-				_show_veil_subtitle("게이트가 스캔 빔에 동기돼 있어요. 빔이 지나갈 때 뒤따라 통과하세요.", 3.6)
+				_show_veil_subtitle("게이트는 스캔 빔이 지나갈 때만 열려요. 빔을 뒤따라 통과하세요.", 3.6)
 	if _mid_gate_mode == "beam" and _sweep_beam_node != null and is_instance_valid(_sweep_beam_node):
 		var bx: float = float(_sweep_beam_node.get("_beam_x"))
 		_set_mid_gate_pass(bx > _mid_gate_x + 40.0 and bx < _mid_gate_x + 940.0)
@@ -5895,6 +5896,7 @@ class _SweepBulkhead extends AnimatableBody2D:
 	var ground_y: float = 1220.0
 	var raised: bool = false
 	var _k: float = 0.0        # 0 = 수납(바닥 아래) / 1 = 완전 상승
+	var _t: float = 0.0        # 상승 상태 장식 애니(에너지 펄스·캡 라이트, 완만)
 
 	func _ready() -> void:
 		sync_to_physics = false
@@ -5913,10 +5915,12 @@ class _SweepBulkhead extends AnimatableBody2D:
 		raised = r
 
 	func _physics_process(delta: float) -> void:
+		_t += delta
 		var target: float = 1.0 if raised else 0.0
 		if absf(_k - target) > 0.0001:
 			_k = move_toward(_k, target, delta / 0.7)
 			_apply()
+		if _k > 0.0:
 			queue_redraw()
 
 	func _apply() -> void:
@@ -5925,14 +5929,43 @@ class _SweepBulkhead extends AnimatableBody2D:
 
 	func _draw() -> void:
 		# 바닥 위로 나온 부분만 그린다(수납분이 지면 아래 배경 위로 비치지 않게).
+		# 폴리시(2026-08-17 "투박하다"): 그라디언트 강판 + 패널 이음새 + 좌우 엣지 라이트 +
+		# 중앙 에너지 심(위로 흐르는 펄스) + 베벨 캡. 전부 완만/연속(광과민 기준).
 		var top_local: float = -BH * 0.5
 		var cut: float = ground_y - position.y   # 지면의 로컬 y
 		var vis_h: float = minf(BH, maxf(0.0, cut - top_local))
 		if vis_h <= 1.0:
 			return
-		draw_rect(Rect2(Vector2(-BW * 0.5, top_local), Vector2(BW, vis_h)), Color(0.16, 0.14, 0.22))
-		draw_rect(Rect2(Vector2(-BW * 0.5, top_local), Vector2(BW, vis_h)), Color(0.72, 0.42, 1.0, 0.5), false, 2.0)
-		draw_rect(Rect2(Vector2(-BW * 0.5 - 4.0, top_local - 6.0), Vector2(BW + 8.0, 6.0)), Color(0.45, 0.32, 0.6))
+		var hw: float = BW * 0.5
+		var bot: float = top_local + vis_h
+		# 몸체 · 상단이 살짝 밝은 강판 그라디언트(정점 색 보간).
+		var kk: float = vis_h / BH
+		var c_top := Color(0.27, 0.23, 0.38)
+		var c_bot := c_top.lerp(Color(0.12, 0.10, 0.17), kk)
+		draw_polygon(
+			PackedVector2Array([Vector2(-hw, top_local), Vector2(hw, top_local), Vector2(hw, bot), Vector2(-hw, bot)]),
+			PackedColorArray([c_top, c_top, c_bot, c_bot]))
+		# 패널 이음새 · 어두운 골 + 아래 1px 하이라이트(강판 분절감).
+		for seam_k in [0.33, 0.66]:
+			var sy: float = top_local + BH * float(seam_k)
+			if sy > top_local + 3.0 and sy < bot - 3.0:
+				draw_rect(Rect2(Vector2(-hw + 3.0, sy), Vector2(BW - 6.0, 2.0)), Color(0.07, 0.06, 0.11, 0.9))
+				draw_rect(Rect2(Vector2(-hw + 3.0, sy + 2.0), Vector2(BW - 6.0, 1.0)), Color(0.55, 0.42, 0.75, 0.25))
+		# 좌우 엣지 라이트 · 은은한 글로우 + 얇은 밝은 선.
+		for ex in [-hw, hw - 2.0]:
+			draw_rect(Rect2(Vector2(float(ex) - 1.0, top_local), Vector2(4.0, vis_h)), Color(0.62, 0.40, 0.95, 0.16))
+			draw_rect(Rect2(Vector2(float(ex), top_local), Vector2(2.0, vis_h)), Color(0.80, 0.58, 1.0, 0.55))
+		# 중앙 에너지 심 · 위로 흐르는 펄스 점(동력이 올라오는 물건이라는 시각 언어).
+		draw_rect(Rect2(Vector2(-1.0, top_local + 4.0), Vector2(2.0, maxf(0.0, vis_h - 8.0))), Color(0.72, 0.42, 1.0, 0.20))
+		if _k > 0.95 and vis_h > 30.0:
+			var pk: float = 1.0 - fmod(_t * 0.45, 1.0)
+			var py: float = top_local + 8.0 + (vis_h - 16.0) * pk
+			draw_circle(Vector2(0.0, py), 2.6, Color(0.90, 0.75, 1.0, 0.8))
+		# 상단 베벨 캡 + 라이트 스트립(완만 맥동 ±5%).
+		var cap_a: float = 0.85 + 0.05 * sin(_t * 1.8)
+		draw_rect(Rect2(Vector2(-hw - 5.0, top_local - 8.0), Vector2(BW + 10.0, 8.0)), Color(0.34, 0.28, 0.48))
+		draw_rect(Rect2(Vector2(-hw - 5.0, top_local - 8.0), Vector2(BW + 10.0, 2.0)), Color(0.62, 0.50, 0.85, 0.8))
+		draw_rect(Rect2(Vector2(-hw + 2.0, top_local - 6.0), Vector2(BW - 4.0, 3.0)), Color(0.85, 0.65, 1.0, cap_a * 0.55))
 
 class _RivalSweep extends Node2D:
 	const SLOTS: Array = [350.0, 950.0, 1450.0, 2050.0]
@@ -5972,10 +6005,11 @@ class _RivalSweep extends Node2D:
 						(bulkheads[i] as _SweepBulkhead).set_raised(low_band and (i in active))
 					SfxPlayer.play("drop_platform_descend", -4.0)
 					# 첫 하층 사이클에 격벽의 쓰임을 한 번만 말로(실물 상호작용 3종 고지).
+					# 단어는 화면에 보이는 것의 일상어만("격벽·소거" 조어 반려, 사용자 2026-08-17).
 					if low_band and host != null and is_instance_valid(host) \
 							and not bool(host.get("_p2_bulkhead_spoken")):
 						host.set("_p2_bulkhead_spoken", true)
-						host.call("_show_veil_subtitle", "격벽 뒤는 소거를 피합니다. 밟고 올라서도, 탄막이로 써도 됩니다.", 3.4)
+						host.call("_show_veil_subtitle", "바닥에서 올라온 벽 뒤에 서면 훑고 지나가는 보랏빛을 피합니다. 밟고 올라서도 되고, 총알도 막아 줘요.", 4.0)
 			"rise":
 				if t > 0.9:
 					phase = "warn"
@@ -6021,9 +6055,14 @@ class _RivalSweep extends Node2D:
 			p.take_hit(1)
 	func _draw() -> void:
 		# 격벽 슬롯 바닥 소켓(상시) · 격벽 본체는 _SweepBulkhead(실물)가 자체 렌더.
+		# 소켓 폴리시: 베벨 플레이트 + 상승 중엔 슬릿 발광(어느 슬롯이 살아있는지 읽힘).
 		for i in SLOTS.size():
 			var x: float = float(SLOTS[i])
 			draw_rect(Rect2(Vector2(x - 34.0, GROUND - 4.0), Vector2(68.0, 6.0)), Color(0.35, 0.30, 0.45, 0.7), true)
+			draw_rect(Rect2(Vector2(x - 34.0, GROUND - 4.0), Vector2(68.0, 2.0)), Color(0.58, 0.48, 0.78, 0.5), true)
+			if i < bulkheads.size() and bulkheads[i] != null and is_instance_valid(bulkheads[i]) \
+					and float((bulkheads[i] as Node).get("_k")) > 0.02:
+				draw_rect(Rect2(Vector2(x - 28.0, GROUND - 3.0), Vector2(56.0, 3.0)), Color(0.85, 0.62, 1.0, 0.55), true)
 		# 경고 · 진입 방향 가장자리 광 + 이번 밴드 표시(어느 층을 훑는지 미리 보인다).
 		if phase == "warn":
 			var wx: float = 40.0 if from_left else W - 120.0
@@ -6031,10 +6070,24 @@ class _RivalSweep extends Node2D:
 			draw_rect(Rect2(Vector2(wx - 40.0, _band_top()), Vector2(80.0, _band_bot() - _band_top())), Color(0.72, 0.42, 1.0, wa), true)
 			draw_rect(Rect2(Vector2(0.0, _band_top()), Vector2(W, 3.0)), Color(0.72, 0.42, 1.0, 0.35), true)
 			draw_rect(Rect2(Vector2(0.0, _band_bot() - 3.0), Vector2(W, 3.0)), Color(0.72, 0.42, 1.0, 0.35), true)
-		# 스윕 벽 · 이번 밴드 높이만.
+		# 스윕 벽 · 커튼 폴리시(2026-08-17 "투박하다"): 진행 반대쪽으로 사라지는 그라디언트
+		# 꼬리 + 밝은 전연(리딩 엣지) + 잔상 라인. 연속 이동이라 점멸 아님(광과민 기준).
 		if phase == "sweep":
-			draw_rect(Rect2(Vector2(wall_x - 26.0, _band_top()), Vector2(52.0, _band_bot() - _band_top())), Color(0.72, 0.42, 1.0, 0.30), true)
-			draw_rect(Rect2(Vector2(wall_x - 6.0, _band_top()), Vector2(12.0, _band_bot() - _band_top())), Color(0.88, 0.62, 1.0, 0.55), true)
+			var bt: float = _band_top()
+			var bb: float = _band_bot()
+			var dirn: float = 1.0 if from_left else -1.0
+			var lead: float = wall_x + dirn * 6.0
+			var tail: float = wall_x - dirn * 130.0
+			var c_lead := Color(0.72, 0.42, 1.0, 0.32)
+			var c_tail := Color(0.72, 0.42, 1.0, 0.0)
+			draw_polygon(
+				PackedVector2Array([Vector2(tail, bt), Vector2(lead, bt), Vector2(lead, bb), Vector2(tail, bb)]),
+				PackedColorArray([c_tail, c_lead, c_lead, c_tail]))
+			draw_rect(Rect2(Vector2(wall_x - 5.0, bt), Vector2(10.0, bb - bt)), Color(0.88, 0.62, 1.0, 0.50), true)
+			draw_rect(Rect2(Vector2(wall_x - 1.5, bt), Vector2(3.0, bb - bt)), Color(0.98, 0.88, 1.0, 0.85), true)
+			for off in [34.0, 72.0]:
+				var sxx: float = wall_x - dirn * float(off)
+				draw_rect(Rect2(Vector2(sxx - 1.0, bt), Vector2(2.0, bb - bt)), Color(0.80, 0.55, 1.0, 0.12), true)
 
 # ─── 가짜 클리어(§7.2 확정 연출) — P2 종료를 "이긴 척"으로 위장한다 ───
 # 진짜 클리어 문법 재현(챔 + 소등 페이드 + STAGE CLEAR 문구) → 글리치 찢김 → 거짓 VEIL 등장.
@@ -6210,7 +6263,8 @@ func _on_p3_window_capped() -> void:
 	if _p3_cap_spoken or not is_inside_tree() or goal_reached:
 		return
 	_p3_cap_spoken = true
-	_show_veil_subtitle("깊게는 안 박힙니다. 몸을 물렸어요. 실체화 창마다 조금씩, 확실하게.", 3.2)
+	# "실체화 창"은 설계 용어 · 플레이어에겐 보이는 대로("모습을 드러낼 때"). 2026-08-17.
+	_show_veil_subtitle("깊게는 안 박힙니다. 몸을 물렸어요. 모습을 드러낼 때마다 조금씩, 확실하게.", 3.2)
 
 # P3 보스 체력바 — SENTINEL 바 문법 재사용. 잠복/실체는 텍스트 라벨 대신 본체의 시각 언어
 # (잠복 = 스캔라인 그림 + 탄 통과 파문 / 실체 = 꽉 찬 몸 + 링)와 바 밝기로만 전달
