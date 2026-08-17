@@ -57,6 +57,9 @@ var _fakes: Array = []                  # 살아있는 _FakeMarker 참조
 # 실체화 창당 피해 누적(상한 = max_hp/6) · 고DPS 빌드의 "첫 창에 끝" 차단(2026-08-17).
 var _window_dmg: int = 0
 var _next_phased_scale: float = 1.0     # 상한 도달 직후의 잠복만 짧게(화력의 보상)
+# 텔레포트 워프 연출(중반+ 변주) · 이전 자리에 소멸 파문을 남긴다.
+var _warp_from: Vector2 = Vector2.ZERO
+var _warp_t: float = 0.0
 
 func setup(anchors: Array, fake_spots: Array) -> void:
 	_anchors = anchors
@@ -129,6 +132,7 @@ func _physics_process(delta: float) -> void:
 	_hit_flash_t = maxf(0.0, _hit_flash_t - delta)
 	_ripple_t = maxf(0.0, _ripple_t - delta)
 	_ripple_cd = maxf(0.0, _ripple_cd - delta)
+	_warp_t = maxf(0.0, _warp_t - delta)
 	# 잠복/응시 중 탄이 몸을 지나가면 파문 — "박히지 않고 통과한다"를 그 자리에서 보여준다.
 	if (state == State.PHASED or state == State.TELE) and _ripple_cd <= 0.0:
 		var btree := get_tree()
@@ -159,8 +163,12 @@ func _physics_process(delta: float) -> void:
 				_next_phased_scale = 1.0
 				# 중반+(변주 §2.4): 실체화 위치가 3지점 텔레포트 · 드리프트로 예측되던 위치가
 				# 튄다. 가짜 눈도 동시에 다른 지점으로 튀어 "어느 쪽이 진짜인가"가 매번 갱신.
+				# 워프 연출(사용자 2026-08-17 "위치 초기화 텔레포트가 맞나?") · 의도된 변주지만
+				# 연출 없이 스냅해 버그처럼 읽혔다 · 이전 자리 소멸 파문을 남겨 "옮겨 갔다"로.
 				if fight_stage >= 1 and not _anchors.is_empty():
 					_anchor_idx = (_anchor_idx + 1 + (randi() % maxi(1, _anchors.size() - 1))) % _anchors.size()
+					_warp_from = global_position
+					_warp_t = 0.4
 					global_position = _anchors[_anchor_idx]
 					if _decoy != null and is_instance_valid(_decoy):
 						_decoy.tele_jump()
@@ -282,6 +290,14 @@ func _find_player() -> Node2D:
 
 # ─── 렌더 — 유기적 눈(그로테스크 배제: 곡선·부드러운 발광·정갈한 도상) ───
 func _draw() -> void:
+	# 워프 소멸 파문 · 이전 자리에서 잦아드는 링 2겹 + 새 자리로 향한 흐릿한 궤적
+	# (텔레포트가 버그가 아니라 이동으로 읽히게 · 연속 감쇠, 점멸 없음).
+	if _warp_t > 0.0:
+		var wk: float = 1.0 - _warp_t / 0.4
+		var rel: Vector2 = _warp_from - global_position
+		draw_arc(rel, 14.0 + 34.0 * wk, 0.0, TAU, 24, Color(0.72, 0.42, 1.0, 0.55 * (1.0 - wk)), 2.5, true)
+		draw_arc(rel, 6.0 + 18.0 * wk, 0.0, TAU, 18, Color(0.90, 0.75, 1.0, 0.4 * (1.0 - wk)), 2.0, true)
+		draw_line(rel * (1.0 - wk), Vector2.ZERO, Color(0.72, 0.42, 1.0, 0.25 * (1.0 - wk)), 2.0)
 	var a: float = 1.0
 	match state:
 		State.PHASED:

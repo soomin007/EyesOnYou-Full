@@ -5646,6 +5646,7 @@ class _RivalAntenna extends Node2D:
 	var _t: float = 0.0
 	var _collapsed: bool = false
 	var _col_t: float = 0.0
+	var _jolt_t: float = 0.0   # 피격 흔들림(타격감 · 사용자 2026-08-17 "맞는지 모르겠다")
 
 	func _ready() -> void:
 		z_index = 1   # 재머 장치(적, z 2+)보다 뒤 · 배경 구조물
@@ -5656,13 +5657,20 @@ class _RivalAntenna extends Node2D:
 		_collapsed = true
 		_col_t = 0.0
 
+	func jolt() -> void:
+		_jolt_t = 0.22
+
 	func _process(delta: float) -> void:
 		_t += delta
+		_jolt_t = maxf(0.0, _jolt_t - delta)
 		if _collapsed:
 			_col_t += delta
 		queue_redraw()
 
 	func _draw() -> void:
+		# 피격 흔들림 · 마스트가 잠깐 떨린다(연속 감쇠 · 점멸 아님).
+		if _jolt_t > 0.0:
+			draw_set_transform(Vector2(sin(_t * 70.0) * 4.0 * (_jolt_t / 0.22), 0.0), 0.0, Vector2.ONE)
 		var h: float = 110.0 if small else 200.0
 		var alive: float = 1.0 if not _collapsed else maxf(0.0, 1.0 - _col_t / 0.9)
 		# 마스트 + 리브 · 붕괴 후에도 잔해로 남는다(전장의 흔적).
@@ -5701,20 +5709,27 @@ class _P2CoreSocket extends Node2D:
 	var _t: float = 0.0
 	var _collapsed: bool = false
 	var _col_t: float = 0.0
+	var _jolt_t: float = 0.0   # 피격 흔들림(타격감)
 
 	func collapse() -> void:
 		_collapsed = true
+
+	func jolt() -> void:
+		_jolt_t = 0.22
 
 	func _ready() -> void:
 		z_index = -1   # 노드(장치) 뒤에 깔리는 소켓
 
 	func _process(delta: float) -> void:
 		_t += delta
+		_jolt_t = maxf(0.0, _jolt_t - delta)
 		if _collapsed:
 			_col_t += delta
 		queue_redraw()
 
 	func _draw() -> void:
+		if _jolt_t > 0.0:
+			draw_set_transform(Vector2(sin(_t * 70.0) * 3.0 * (_jolt_t / 0.22), 0.0), 0.0, Vector2.ONE)
 		var alive: float = 0.0 if _collapsed else 1.0
 		# 바닥 소켓 플레이트 + 좌우 수평 핀 · 발판에 박힌 낮은 구조.
 		var plate := Color(0.15, 0.12, 0.20) if not _collapsed else Color(0.10, 0.09, 0.13)
@@ -5740,6 +5755,46 @@ class _P2CoreSocket extends Node2D:
 		if _collapsed and _col_t < 0.8:
 			var k: float = _col_t / 0.8
 			draw_arc(Vector2(0.0, -18.0), 26.0 + 110.0 * k, 0.0, TAU, 30, Color(0.85, 0.60, 1.0, 0.55 * (1.0 - k)), 3.0, true)
+
+# 목표 노드 피격 피드백 · 미니 HP 바 + 피격 플래시·파문 + 프롭 흔들림 콜백
+# (사용자 2026-08-17 "맞고 있다는 타격감이 없어 부숴야 하는지도, 부숴지고 있는지도
+# 모르겠다"). hp를 폴링해 감소 순간을 잡는다(시그널 불요 · 노드 사망 시 자체 정리).
+class _NodeHpPip extends Node2D:
+	var target: Node = null
+	var max_hp: int = 10
+	var jolt_cb: Callable = Callable()
+	var _last_hp: int = -1
+	var _flash_t: float = 0.0
+
+	func _ready() -> void:
+		z_index = 6
+
+	func _physics_process(delta: float) -> void:
+		if target == null or not is_instance_valid(target) or bool(target.get("dead")):
+			queue_free()
+			return
+		global_position = (target as Node2D).global_position + Vector2(0.0, -66.0)
+		var hp: int = int(target.get("hp"))
+		if _last_hp >= 0 and hp < _last_hp:
+			_flash_t = 0.22
+			if jolt_cb.is_valid():
+				jolt_cb.call()
+		_last_hp = hp
+		_flash_t = maxf(0.0, _flash_t - delta)
+		queue_redraw()
+
+	func _draw() -> void:
+		if _last_hp < 0:
+			return
+		var w: float = 56.0
+		var ratio: float = clampf(float(_last_hp) / maxf(1.0, float(max_hp)), 0.0, 1.0)
+		draw_rect(Rect2(Vector2(-w * 0.5 - 1.0, -4.0), Vector2(w + 2.0, 8.0)), Color(0.0, 0.0, 0.0, 0.6))
+		var fill_col := Color(1.0, 1.0, 1.0) if _flash_t > 0.0 else Color(0.85, 0.55, 1.0)
+		draw_rect(Rect2(Vector2(-w * 0.5, -3.0), Vector2(w * ratio, 6.0)), fill_col)
+		# 피격 파문 링 · 장치 쪽으로 퍼진다(맞았다는 즉각 신호).
+		if _flash_t > 0.0:
+			var k: float = 1.0 - _flash_t / 0.22
+			draw_arc(Vector2(0.0, 40.0), 12.0 + 26.0 * k, 0.0, TAU, 20, Color(1.0, 0.85, 1.0, 0.7 * (1.0 - k)), 2.5, true)
 
 func _init_rival_boss() -> void:
 	_rival_fx_layer = CanvasLayer.new()
@@ -5782,6 +5837,12 @@ func _init_rival_boss() -> void:
 			(e as Node).connect("killed", func(_pos: Vector2) -> void:
 				if is_instance_valid(ant):
 					ant.collapse())
+			# 피격 피드백 · 미니 HP 바 + 안테나 흔들림(타격감).
+			var pip := _NodeHpPip.new()
+			pip.target = e
+			pip.max_hp = _rival_node_hp_p1
+			pip.jolt_cb = Callable(ant, "jolt")
+			add_child(pip)
 	# P1 연속 증원 — 전멸이 목표가 아니다(만렙 관통·유도 빌드가 클러스터를 몰살해도 다음이 온다).
 	# 소규모 투입이 끝없이 이어져 긴박을 만들고, 출구는 기둥 파괴뿐(목표형 전투 재설계 2026-08-12).
 	_p1_spawn_timer = Timer.new()
@@ -5962,6 +6023,11 @@ func _start_rival_p2() -> void:
 		_rival_p2_props.append(trap)
 		_p2_turrets.append(trap)
 	_traps_present = true
+	# 온보딩 유예(사용자 2026-08-17 "어두워지고 뿅뿅대서 설명 대사를 읽을 수 없다") ·
+	# 포탑은 5.5s 뒤 가동 · 소등 연출과 목표 안내(3.8s)를 읽을 틈을 준다.
+	for t2 in _p2_turrets:
+		(t2 as Node).set_process(false)
+	get_tree().create_timer(5.5, false).timeout.connect(_p2_enable_turrets)
 	# 위장 함정 1개 · 지상 중앙 우측 접근로의 거짓 바닥(§4 문법 재사용, 맵당 1개 준수).
 	if not GameState.story_mode:
 		var parts: Array = _spawn_disguised_spike(1450.0, 1214.0, 110.0, 2)
@@ -5982,6 +6048,7 @@ func _start_rival_p2() -> void:
 	var sweep := _RivalSweep.new()
 	sweep.host = self   # 첫 격벽 상승 힌트 1회(_p2_bulkhead_spoken)
 	add_child(sweep)
+	sweep.t = -2.0      # 온보딩 유예 · 첫 격벽 상승을 4.6s로 늦춰 안내 대사를 읽게
 	_rival_p2_props.append(sweep)
 
 # P2 제어 노드 2기 실스폰(텔레그래프 1.1s 뒤) — 지상, **교대 실드**: 막힌 쪽 탄은 무효
@@ -6010,6 +6077,13 @@ func _p2_spawn_nodes() -> void:
 		node.connect("killed", func(_pos: Vector2) -> void:
 			if is_instance_valid(sock):
 				sock.collapse())
+		# 피격 피드백 · 미니 HP 바 + 소켓 흔들림(타격감 · P1과 동형).
+		var pip2 := _NodeHpPip.new()
+		pip2.target = node
+		pip2.max_hp = _rival_node_hp_p2
+		pip2.jolt_cb = Callable(sock, "jolt")
+		add_child(pip2)
+		_rival_p2_props.append(pip2)
 		# "부술 이유"를 눈에 보이게(사용자 2026-08-14) · 노드가 같은 쪽 벽 포탑(상하 2기)에
 		# 전원을 댄다. 케이블 시각 + 격파 시 그쪽 포탑 정지(_on_p2_node_down).
 		node.killed.connect(_on_p2_node_down.bind(side))
@@ -6043,6 +6117,14 @@ func _p2_flip_shields() -> void:
 			(e as Node).set_meta("fs_flip_ms", Time.get_ticks_msec())
 	SfxPlayer.play("plate_step_active", -6.0)
 
+# P2 온보딩 유예 해제 · 노드 격파로 이미 꺼진 포탑(powered_off)은 되살리지 않는다.
+func _p2_enable_turrets() -> void:
+	if _rival_phase != 1 or goal_reached or not is_inside_tree():
+		return
+	for t2 in _p2_turrets:
+		if t2 != null and is_instance_valid(t2) and not (t2 as Node).has_meta("powered_off"):
+			(t2 as Node).set_process(true)
+
 func _rival_p2_objective_line() -> void:
 	if not is_inside_tree() or goal_reached or _rival_phase != 1:
 		return
@@ -6060,6 +6142,7 @@ func _on_p2_node_down(_pos: Vector2, side: int) -> void:
 			continue
 		var trap = _p2_turrets[t_idx]
 		if trap != null and is_instance_valid(trap):
+			(trap as Node).set_meta("powered_off", true)   # 온보딩 유예 해제 타이머가 되살리지 않게
 			(trap as Node).set_process(false)   # 주기 진행이 _process 구동 — 정지 = 발사 중단
 			var tw := (trap as Node2D).create_tween()
 			tw.tween_property(trap, "modulate", Color(0.4, 0.42, 0.5, 0.75), 0.5)
