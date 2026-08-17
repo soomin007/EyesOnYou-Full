@@ -198,7 +198,56 @@ static func _rooftops() -> Dictionary:
 # ─── 3. 지하 인입로 (VERTICAL_DOWN) ───────────────────────────
 # 위에서 아래로 내려감 — 분기 좌(적 많음/XP) vs 우(가시 함정/HP)
 # 가시는 우측 통로의 다른 y에 분산 배치 (이전엔 spike y 버그로 모두 GROUND_Y에 겹침)
+# ─── 지하 인입로 · **수위 체인 2방**(map_identity_rework §5 "하수도 = 수위 변화", 2026-08-17) ─
+# 정체성 = 옛 배수로의 살아 있는 펌프. 방1 유입 수로(수평 · 수위 리듬 학습) → 방2 침수 정션
+# (기존 수직 하강 + 하부 침수 사이클 = "빠졌을 때 내려간다"). 확산(④) 첫 적용.
 static func _sewers() -> Dictionary:
+	return {"segments": [_sewers_inflow(), _sewers_junction()]}
+
+# 방1 · 유입 수로. 수위 사이클 도입 · 물이 차면 대피 발판으로, 빠지면 바닥으로 전진.
+# 체류 하한 = 2200÷240 ≈ 9s + 사이클 대기 → 수위 1~2회 조우(계산 근거, known_issues 규칙).
+static func _sewers_inflow() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(2200.0, 720.0),
+		"player_start": Vector2(140.0, 560.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(2080.0, 560.0),
+		"camera_mode":  "HORIZONTAL",
+		"ambience":     "sewer_inflow",
+		# 실내(지하) · 수평 맵 기본 배경의 도시 실루엣이 지하 배수로에 새는 것 차단
+		# (지하철 2026-08-15 지적과 동형). subway env = 기둥 없는 터널 벽.
+		"indoor_env":   "subway",
+		"water_level": {"low_y": 700.0, "high_y": 530.0, "rise": 2.0, "hold_high": 3.2,
+			"fall": 1.6, "hold_low": 4.5},
+		"platforms": [
+			# 대피 스텝 · 만수위(530)보다 위. 어디서든 반 박자면 닿는 간격(최대 공백 ~265px).
+			{"pos": Vector2(520, 470),  "w": 180.0},
+			{"pos": Vector2(1050, 460), "w": 200.0},
+			{"pos": Vector2(1580, 470), "w": 180.0},
+			{"pos": Vector2(2000, 480), "w": 160.0},
+		],
+		"enemies": {
+			"patrol": [Vector2(760, 560.0), Vector2(1700, 560.0)],
+			"sniper": [], "bomber": [], "shield": [],
+			"drone":  [Vector2(1300, 430.0)],
+		},
+		"route_lines": [
+			{"x": 240.0, "who": "veil", "text": "펌프가 아직 살아 있습니다. 물이 차오르면 높은 발판으로 오르세요. 잠긴 채 버티면 몸이 상해요.", "dur": 4.0},
+		],
+		"rewards": {
+			# 바닥 보상 · 수위가 낮을 때만 편하게 줍는다(리듬과 보상의 결합).
+			"xp_orbs":    [Vector2(900, 570.0), Vector2(1350, 570.0)],
+			"hp_pickups": [],
+		},
+		"spikes": [],
+		# 수위 리듬이 시그니처 · 자동 가시 폴백 차단(체인 세그먼트 전부 명시, known_issues).
+		"no_spike_fallback": true,
+	}
+
+# 방2 · 침수 정션. 기존 수직 하강 레이아웃 + 하부 침수 사이클(합류부 y1520 아래가 잠긴다).
+# 물이 빠졌을 때 하강, 차오르면 합류부(y1440) 위에서 대기 · 잠긴 채 강행도 선택(피해 감수).
+static func _sewers_junction() -> Dictionary:
 	return {
 		"world_type":   "VERTICAL_DOWN",
 		"world_size":   Vector2(1280.0, 2400.0),
@@ -206,6 +255,12 @@ static func _sewers() -> Dictionary:
 		"goal_type":    "POSITION",
 		"goal_pos":     Vector2(640.0, 2250.0),
 		"camera_mode":  "VERTICAL",
+		"ambience":     "sewer_junction",
+		"water_level": {"low_y": 2500.0, "high_y": 1520.0, "rise": 2.6, "hold_high": 5.0,
+			"fall": 2.2, "hold_low": 9.0, "start_delay": 0.5},
+		"route_lines": [
+			{"y_down": 900.0, "who": "veil", "text": "아래는 물이 오르내리는 구간입니다. 빠졌을 때 내려가고, 차오르면 위에서 기다리세요.", "dur": 4.0},
+		],
 		"platforms": [
 			# 진입 → 상층 (낙하)
 			{"pos": Vector2(560, 280), "w": 200.0},

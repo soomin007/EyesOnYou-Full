@@ -58,7 +58,7 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_sewers",
 		"name": "지하 인입로",
-		"description": "시설이 들어서기 전부터 있던 옛 배수로. 보안망 밖이라 함정으로 막아뒀다.",
+		"description": "시설이 들어서기 전부터 있던 옛 배수로. 펌프가 살아 있어 물이 주기적으로 차오른다.",
 		"risk": 2,
 		"reward": 3,
 		"hidden": false,
@@ -66,8 +66,8 @@ const ALL_ROUTES: Array = [
 		# 지상(rooftops) 직후 깊은 지하로 가는 게 어색해 stage 2 이후로 한정. 5막: 막1(0-2) 안에 유지.
 		"min_stage": 2, "max_stage": 2,
 		"tags": ["근접전", "어두운_환경", "함정", "전투"],
-		"veil_comment": "지하로 빠지는 길이에요. 함정만 조심하면 빠르고 보상도 커요.",
-		"entry_comment": "아래로 내려가요. 통로 끝에 출구가 있어요. 발 밑 봐요.",
+		"veil_comment": "지하 배수로예요. 펌프가 아직 돌아서 물이 오르내려요. 높은 발판을 봐 두세요.",
+		"entry_comment": "아래로 빠지는 길이에요. 물이 차면 오르고, 빠지면 내려가요. 발 밑도 봐요.",
 		"stage_color": Color(0.18, 0.22, 0.20),
 	},
 	{

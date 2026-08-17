@@ -824,6 +824,7 @@ func _build_world() -> void:
 	_build_cover_niches()
 	_build_sweep_beam()
 	_build_train_hazard()
+	_build_water_level()
 	_build_mid_gate()
 	_build_route_lines()
 	_build_fake_watchers()
@@ -2318,10 +2319,13 @@ class _RouteLineTriggers extends Node:
 			if i in _fired:
 				continue
 			var d: Dictionary = lines[i]
-			# 트리거 축 · "y" 키가 있으면 상승 맵용(플레이어가 그 높이 위로 오르면 발화),
-			# 없으면 기존 수평(x 통과) 트리거.
+			# 트리거 축 · "y" = 상승 맵(그 높이 위로 오르면) / "y_down" = 하강 맵(그 깊이
+			# 아래로 내려가면) / 기본 = 수평(x 통과).
 			if d.has("y"):
 				if ppos.y > float(d.get("y", 0.0)):
+					continue
+			elif d.has("y_down"):
+				if ppos.y < float(d.get("y_down", 0.0)):
 					continue
 			elif ppos.x < float(d.get("x", 0.0)):
 				continue
@@ -2885,6 +2889,14 @@ func _build_route_ambience() -> void:
 			_ambience_subway_transfer()
 			_apply_act_rival_tint()
 			return
+		"sewer_inflow":
+			_ambience_sewer_inflow()
+			_apply_act_rival_tint()
+			return
+		"sewer_junction":
+			_ambience_sewer_junction()
+			_apply_act_rival_tint()
+			return
 	match GameState.current_route_id:
 		"route_sewers":
 			_ambience_sewers()
@@ -3149,6 +3161,78 @@ func _ambience_sewers() -> void:
 			v.set_anchors_preset(Control.PRESET_RIGHT_WIDE)
 			v.offset_left = -180.0
 		vignette.add_child(v)
+
+# ─── 지하 인입로 방1 · 유입 수로(HORIZONTAL) 시그니처 배경 ───────────
+# 수평 모티프만(수직 스트라이프 금지 규칙): 대구경 배관 2줄 + 벽의 물때 자국(과거 수위의
+# 디제시스 힌트 = 만수위 예고) + 천장 그레이팅 슬릿. 안개·비네트는 하수도 공통 톤 재사용.
+func _ambience_sewer_inflow() -> void:
+	_ambience_sewers()
+	var w: float = STAGE_LENGTH
+	# 벽면 대구경 배관 · 가로 2줄(위쪽 벽).
+	for entry in [[210.0, 18.0], [252.0, 12.0]]:
+		var e: Array = entry
+		var pipe := ColorRect.new()
+		pipe.color = Color(0.14, 0.19, 0.18)
+		pipe.position = Vector2(-200.0, float(e[0]))
+		pipe.size = Vector2(w + 400.0, float(e[1]))
+		pipe.z_index = -9
+		add_child(pipe)
+		var glint := ColorRect.new()
+		glint.color = Color(0.35, 0.55, 0.50, 0.25)
+		glint.position = Vector2(-200.0, float(e[0]) + 2.0)
+		glint.size = Vector2(w + 400.0, 2.0)
+		glint.z_index = -8
+		add_child(glint)
+	# 물때 자국 · 만수위(530)·중간 수위 높이의 어두운 가로 밴드 · "여기까지 찼었다".
+	for my in [530.0, 566.0]:
+		var mark := ColorRect.new()
+		mark.color = Color(0.10, 0.16, 0.14, 0.55)
+		mark.position = Vector2(-200.0, float(my))
+		mark.size = Vector2(w + 400.0, 4.0)
+		mark.z_index = -7
+		add_child(mark)
+	# 천장 그레이팅 슬릿 · 가로 대시 열(위에서 새는 빛).
+	var gx: float = 300.0
+	while gx < w:
+		var slit := ColorRect.new()
+		slit.color = Color(0.55, 0.75, 0.70, 0.16)
+		slit.position = Vector2(gx, 96.0)
+		slit.size = Vector2(90.0, 5.0)
+		slit.z_index = -9
+		add_child(slit)
+		gx += 480.0
+	_add_lore_label(Vector2(300.0, 150.0), "구 배수 간선 · 펌프 가동 중", Color(0.55, 0.75, 0.70, 0.5), 14)
+
+# ─── 지하 인입로 방2 · 침수 정션(VERTICAL_DOWN) 시그니처 배경 ───────────
+# 기존 하수도 톤 + 만수위 자국 링(하강 중 "여기부터 잠긴다"가 벽에 보임) + 하단 펌프 실루엣.
+func _ambience_sewer_junction() -> void:
+	_ambience_sewers()
+	# 만수위 자국 · high_y(1520) 높이의 벽 좌우 가로 밴드.
+	for side_x in [0.0, 1180.0]:
+		var mark := ColorRect.new()
+		mark.color = Color(0.10, 0.16, 0.14, 0.6)
+		mark.position = Vector2(float(side_x), 1520.0)
+		mark.size = Vector2(100.0, 5.0)
+		mark.z_index = -7
+		add_child(mark)
+	# 하단 펌프 실루엣 · 바닥 곁 낮은 기계(수평 실루엣 + 완만 맥동 램프).
+	var body := ColorRect.new()
+	body.color = Color(0.12, 0.15, 0.14)
+	body.position = Vector2(80.0, 2190.0)
+	body.size = Vector2(180.0, 60.0)
+	body.z_index = -8
+	add_child(body)
+	var lamp := ColorRect.new()
+	lamp.color = Color(0.45, 0.75, 0.65, 0.7)
+	lamp.position = Vector2(96.0, 2202.0)
+	lamp.size = Vector2(10.0, 10.0)
+	lamp.z_index = -7
+	add_child(lamp)
+	var tw := lamp.create_tween()
+	tw.set_loops()
+	tw.tween_property(lamp, "modulate:a", 0.45, 1.4)
+	tw.tween_property(lamp, "modulate:a", 1.0, 1.4)
+	_add_lore_label(Vector2(430.0, 1470.0), "정션 P-3 · 만수위 주의", Color(0.55, 0.75, 0.70, 0.5), 14)
 
 func _ambience_rooftops() -> void:
 	# 별 점 + 멀리 도시 실루엣은 _build_background의 기둥이 이미 함
@@ -5230,6 +5314,7 @@ var _p1_side: int = 0
 var _p2_flip_timer: Timer = null     # P2 노드 실드 교대 타이머
 var _p2_turrets: Array = []          # P2 벽 포탑 [좌, 우] — 같은 인덱스 기둥이 전원을 댄다
 var _p2_links: Array = []            # 기둥→포탑 전원 케이블 시각(_P2PowerLink)
+var _p2_bulkhead_spoken: bool = false   # 승강 격벽 쓰임 힌트 1회(_RivalSweep이 세팅)
 var _rival_bar_layer: CanvasLayer = null   # P1·P2 페이즈 목표 바(노드 합산 HP)
 const RIVAL_P1_NODE_HP: int = 6      # P1 지휘 앵커(재밍 기둥) — 기본값. 레벨 스케일은 아래 변수.
 const RIVAL_P2_NODE_HP: int = 10     # P2 제어 노드(교대 실드로 실질 더 김) — 기본값.
@@ -5585,6 +5670,7 @@ func _start_rival_p2() -> void:
 	# 스윕 + 이동 격벽 — 바이올렛 소거 벽이 방을 훑고, 세이프존(격벽)이 매 사이클 옮겨 다닌다
 	# (§7.2 "격벽 이동·안전지대가 옮겨 다님"의 구현).
 	var sweep := _RivalSweep.new()
+	sweep.host = self   # 첫 격벽 상승 힌트 1회(_p2_bulkhead_spoken)
 	add_child(sweep)
 	_rival_p2_props.append(sweep)
 
@@ -5798,22 +5884,80 @@ func _build_rival_node_bar() -> void:
 # 하층 밴드(지상, y>1100)와 상층 밴드(중층+데크, y<=1100)를 번갈아 훑는다.
 # 세이프 = 다른 층으로 옮기거나(수직 회피), 하층 스윕은 올라온 격벽 뒤(x밴드)도 세이프.
 # 격벽 슬롯 4개 중 2개가 매 사이클 다른 자리에 올라온다 — 안전지대가 옮겨 다닌다.
+# P2 승강 격벽 · 시각 전용이던 보라 기둥의 실물화(사용자 2026-08-17 "총알을 막는 것도,
+# 밟을 수 있는 것도 아닌데 왜 시야만 가리냐"). 솔리드 = 포탑/플레이어 탄 차단 + 밟고
+# 올라설 수 있음 + 하층 소거 벽의 엄폐. 올라올 때 위에 서 있으면 리프트처럼 들어올린다
+# (MovingPlatform과 동형: AnimatableBody 직접 이동·sync_to_physics 끔). 렌더는 플레이어
+# 뒤(z -1 절대)라 시야를 가리지 않고, 수납분은 지면 아래로 클리핑해 그린다.
+class _SweepBulkhead extends AnimatableBody2D:
+	const BW: float = 52.0
+	const BH: float = 190.0
+	var ground_y: float = 1220.0
+	var raised: bool = false
+	var _k: float = 0.0        # 0 = 수납(바닥 아래) / 1 = 완전 상승
+
+	func _ready() -> void:
+		sync_to_physics = false
+		collision_layer = 1    # 월드 · 플레이어 착지 + 양측 탄 차단
+		collision_mask = 0
+		z_as_relative = false
+		z_index = -1
+		var col := CollisionShape2D.new()
+		var shape := RectangleShape2D.new()
+		shape.size = Vector2(BW, BH)
+		col.shape = shape
+		add_child(col)
+		_apply()
+
+	func set_raised(r: bool) -> void:
+		raised = r
+
+	func _physics_process(delta: float) -> void:
+		var target: float = 1.0 if raised else 0.0
+		if absf(_k - target) > 0.0001:
+			_k = move_toward(_k, target, delta / 0.7)
+			_apply()
+			queue_redraw()
+
+	func _apply() -> void:
+		# 본체 중심 y · 수납 시 바닥 아래 완전 은닉(+6px 여유), 상승 시 바닥 위로 전부.
+		position.y = ground_y + BH * 0.5 + 6.0 - (BH + 6.0) * _k
+
+	func _draw() -> void:
+		# 바닥 위로 나온 부분만 그린다(수납분이 지면 아래 배경 위로 비치지 않게).
+		var top_local: float = -BH * 0.5
+		var cut: float = ground_y - position.y   # 지면의 로컬 y
+		var vis_h: float = minf(BH, maxf(0.0, cut - top_local))
+		if vis_h <= 1.0:
+			return
+		draw_rect(Rect2(Vector2(-BW * 0.5, top_local), Vector2(BW, vis_h)), Color(0.16, 0.14, 0.22))
+		draw_rect(Rect2(Vector2(-BW * 0.5, top_local), Vector2(BW, vis_h)), Color(0.72, 0.42, 1.0, 0.5), false, 2.0)
+		draw_rect(Rect2(Vector2(-BW * 0.5 - 4.0, top_local - 6.0), Vector2(BW + 8.0, 6.0)), Color(0.45, 0.32, 0.6))
+
 class _RivalSweep extends Node2D:
 	const SLOTS: Array = [350.0, 950.0, 1450.0, 2050.0]
 	const W: float = 2400.0
 	const H: float = 1300.0
 	const GROUND: float = 1220.0
 	const BAND_SPLIT: float = 1100.0   # 하층/상층 밴드 경계
+	var host: Node = null              # Stage · 첫 격벽 상승 시 VEIL 힌트 1회용
 	var phase: String = "rest"
 	var t: float = 0.0
 	var wall_x: float = -100.0
 	var from_left: bool = true
 	var low_band: bool = true          # 이번 사이클이 하층 스윕인가(사이클마다 교대)
 	var active: Array = [0, 2]
-	var rise_k: float = 0.0
 	var cycle: int = 0
+	var bulkheads: Array = []
 	func _ready() -> void:
 		z_index = 3
+		# 승강 격벽 4기 · 슬롯마다 실물 배치(수납 상태로 시작).
+		for x in SLOTS:
+			var b := _SweepBulkhead.new()
+			b.ground_y = GROUND
+			b.position = Vector2(float(x), GROUND)
+			add_child(b)
+			bulkheads.append(b)
 	func _physics_process(delta: float) -> void:
 		t += delta
 		match phase:
@@ -5824,10 +5968,15 @@ class _RivalSweep extends Node2D:
 					cycle += 1
 					low_band = cycle % 2 == 1
 					active = [cycle % 4, (cycle + 2) % 4]
-					rise_k = 0.0
+					for i in bulkheads.size():
+						(bulkheads[i] as _SweepBulkhead).set_raised(low_band and (i in active))
 					SfxPlayer.play("drop_platform_descend", -4.0)
+					# 첫 하층 사이클에 격벽의 쓰임을 한 번만 말로(실물 상호작용 3종 고지).
+					if low_band and host != null and is_instance_valid(host) \
+							and not bool(host.get("_p2_bulkhead_spoken")):
+						host.set("_p2_bulkhead_spoken", true)
+						host.call("_show_veil_subtitle", "격벽 뒤는 소거를 피합니다. 밟고 올라서도, 탄막이로 써도 됩니다.", 3.4)
 			"rise":
-				rise_k = minf(1.0, t / 0.7)
 				if t > 0.9:
 					phase = "warn"
 					t = 0.0
@@ -5871,15 +6020,10 @@ class _RivalSweep extends Node2D:
 		if p.has_method("take_hit"):
 			p.take_hit(1)
 	func _draw() -> void:
-		# 격벽 슬롯 바닥 소켓(상시) + 올라온 격벽 기둥(하층 스윕 사이클에만 상승).
+		# 격벽 슬롯 바닥 소켓(상시) · 격벽 본체는 _SweepBulkhead(실물)가 자체 렌더.
 		for i in SLOTS.size():
 			var x: float = float(SLOTS[i])
 			draw_rect(Rect2(Vector2(x - 34.0, GROUND - 4.0), Vector2(68.0, 6.0)), Color(0.35, 0.30, 0.45, 0.7), true)
-			if i in active and low_band:
-				var h: float = 190.0 * rise_k
-				draw_rect(Rect2(Vector2(x - 26.0, GROUND - h), Vector2(52.0, h)), Color(0.16, 0.14, 0.22), true)
-				draw_rect(Rect2(Vector2(x - 26.0, GROUND - h), Vector2(52.0, h)), Color(0.72, 0.42, 1.0, 0.5), false, 2.0)
-				draw_rect(Rect2(Vector2(x - 30.0, GROUND - h - 6.0), Vector2(60.0, 6.0)), Color(0.45, 0.32, 0.6), true)
 		# 경고 · 진입 방향 가장자리 광 + 이번 밴드 표시(어느 층을 훑는지 미리 보인다).
 		if phase == "warn":
 			var wx: float = 40.0 if from_left else W - 120.0
@@ -6768,6 +6912,15 @@ func _build_train_hazard() -> void:
 	add_child(th)
 	var niche_xs: Array = _map_data.get("cover_niches", [])
 	th.setup(cfg, GROUND_Y, STAGE_LENGTH, niche_xs, float(_map_data.get("niche_half", 90.0)))
+
+# 수위 변화(WaterLevel) · MapData "water_level" 키. 하수도 시그니처(map_identity_rework §5).
+func _build_water_level() -> void:
+	var cfg: Dictionary = _map_data.get("water_level", {})
+	if cfg.is_empty():
+		return
+	var wl := WaterLevel.new()
+	add_child(wl)
+	wl.setup(cfg, _world_size.x, _world_size.y)
 
 # 방 체인 전환(map_identity_rework §2) · RouteMap/Briefing 없이 짧은 문 전환으로 다음 방 로드.
 # XP·HP·성장은 GameState 소유라 유지되고, 스테이지 타이머는 record_route_choice 기준이라 체인
