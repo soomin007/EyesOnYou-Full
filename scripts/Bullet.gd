@@ -144,6 +144,10 @@ func _on_body_entered(body: Node) -> void:
 			body.take_damage(damage, dir)
 		if not pierce:
 			queue_free()
+		else:
+			# A안 곱 차단(2026-08-18): 관통마다 다음 대상 피해 절반(최소 1). "줄 세우면
+			# 이득" 정체성은 유지하되 관통×다발이 무비용 광역이 되는 것을 끊는다.
+			damage = maxi(1, ceili(damage * 0.5))
 	elif body.is_in_group("platform"):
 		# 원웨이 발판도 탄을 막는다(관통 포함). 경위: 데모 초기 "코앞 사격이 발판에 막힌다"로
 		# 전면 통과(c46b8ce) → 유도 T3로 "지형 무시"로 읽혀 차단(2026-08-16) → 관통 스킬로

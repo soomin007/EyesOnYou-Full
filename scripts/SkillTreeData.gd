@@ -27,7 +27,7 @@ const LINES: Array = [
 		"tiers": [
 			{"name": "사격 강화",   "desc": "사격 데미지 +1",                  "active": false},
 			{"name": "속사",       "desc": "연사 속도 +40%, 사격 후 잠깐 이동 가속", "active": false},
-			{"name": "관통",       "desc": "총알 1체 추가 관통",               "active": false},
+			{"name": "관통",       "desc": "총알이 적을 뚫고 나감 (뚫을 때마다 피해 감소)", "active": false},
 		],
 	},
 	{
@@ -52,7 +52,7 @@ const LINES: Array = [
 		"tiers": [
 			{"name": "공중 활강",   "desc": "낙하 중 점프 키를 누르고 있으면 천천히 떨어진다", "active": false},
 			{"name": "삼단 점프",   "desc": "공중 점프 1회 추가 (최대 3단)",     "active": false},
-			{"name": "유도 사격",   "desc": "공중에서 쏜 사격이 적을 강하게 유도 (데미지 +1)", "active": false},
+			{"name": "유도 사격",   "desc": "공중에서 쏘면 가운데 한 발이 적을 따라감 (그 한 발 데미지 +1)", "active": false},
 		],
 	},
 	{

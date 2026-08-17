@@ -453,8 +453,11 @@ func _spawn_bullet(idx: int, total: int) -> void:
 	# glide T3 — *공중에 떠 있는 동안* 사격이 적을 강하게 유도 + 데미지(2026-08-15 사용자:
 	# 활강 중 한정 → 공중 전체로 확장. 홀드 활강과 조건이 얽혀 발동 창이 너무 좁아지는 것 방지).
 	# '관통'은 사격강화 T3 전담, 활강 T3는 '유도(homing)'가 정체성(중복 제거, 2026-06-15).
+	# A안 곱 차단(2026-08-18 봇 실측 후 사용자 결정): 유도는 **중앙탄 1발에만**. 오연사 전 발
+	# 유도(조준 비용 전면 면제)가 벤치에서 max=base의 절반 + 피탄 0을 만든 주범. 중앙 1발이면
+	# "한 놈은 확실히"라는 정체성만 남고 오연사×유도 곱이 끊긴다. idx*2==total-1 = 부채꼴 각 0.
 	var gl_tier: int = GameState.get_skill_tier("glide")
-	if gl_tier >= 3 and not is_on_floor():
+	if gl_tier >= 3 and not is_on_floor() and idx * 2 == total - 1:
 		b.damage += 1
 		b.tracking = true
 		b.tracking_blend = 0.12      # 약한 추적(0.03)보다 강하게 — "완전 유도" 체감
