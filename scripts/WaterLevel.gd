@@ -25,6 +25,7 @@ var dmg: int = 1
 var dmg_interval: float = 1.6
 var world_w: float = 2200.0
 var world_h: float = 720.0
+var ground_y: float = 100000.0   # 지면 y · 수면이 이 아래면 렌더 생략(배수 상태 바닥 관통 방지)
 
 var surface_y: float = 800.0
 var _state: int = S.LOW
@@ -33,7 +34,8 @@ var _sub_t: float = -1.0        # 잠수 경과(-1 = 물 밖) · 유예 0.9s 후
 var _wave_t: float = 0.0
 var _player_pos: Vector2 = Vector2.ZERO   # 잠수 표시(게이지·거품)용 · _check_player가 갱신
 
-func setup(cfg: Dictionary, w: float, h: float) -> void:
+func setup(cfg: Dictionary, w: float, h: float, g_y: float = 100000.0) -> void:
+	ground_y = g_y
 	low_y = float(cfg.get("low_y", low_y))
 	high_y = float(cfg.get("high_y", high_y))
 	rise_dur = float(cfg.get("rise", rise_dur))
@@ -103,10 +105,20 @@ func _check_player(delta: float) -> void:
 				p.call("take_hit", dmg)
 			SfxPlayer.play_at("spike_hit", (p as Node2D).global_position, -4.0)
 	else:
-		_sub_t = -1.0
+		# 수면 위로 나가도 잠수 게이지는 서서히만 회복 · 한 프레임 이탈(점프 연타)로 유예가
+		# 리셋되어 침수 강행이 무피해가 되던 결함(적대 검증 2026-08-17) 차단. 링도 남아
+		# "아직 젖어 있음"이 보인다.
+		if _sub_t >= 0.0:
+			_sub_t -= delta * 1.4
+			if _sub_t <= 0.0:
+				_sub_t = -1.0
 
 func _draw() -> void:
 	if surface_y >= world_h + 200.0:
+		return
+	# 배수 상태 · 수면이 지면 아래면 그리지 않는다(바닥 속에 밝은 수면 라인이 떠 보이던
+	# z순서 결함, 적대 검증 2026-08-17).
+	if surface_y >= ground_y - 2.0:
 		return
 	var bob: float = sin(_wave_t * 1.3) * 3.0   # 완만한 수면 물결(점멸 아님)
 	var top: float = surface_y + bob

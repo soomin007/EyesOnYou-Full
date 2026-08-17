@@ -7288,7 +7288,7 @@ func _build_water_level() -> void:
 		return
 	var wl := WaterLevel.new()
 	add_child(wl)
-	wl.setup(cfg, _world_size.x, _world_size.y)
+	wl.setup(cfg, _world_size.x, _world_size.y, GROUND_Y)
 
 # 탐조등(Searchlight) · MapData "searchlights" 키. 감시탑 시그니처 · 경보 = 경비 증원
 # (2026-08-17 사용자 확정 ⓑ · 즉시 피해 아님). 증원은 인간 경비만(막1 계약).
