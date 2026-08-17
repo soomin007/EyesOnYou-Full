@@ -26,6 +26,10 @@ var _t: float = 0.0
 var _exposure: float = 0.0
 var _alert_t: float = 0.0
 var _cd: float = 0.0
+# 차폐 팬 · 각도 샘플마다 레이캐스트로 벽/발판에 잘린 실제 도달 거리(사용자 2026-08-17
+# "가려진 곳 뒤편으로는 안 보이게" · 판정은 원래 LoS였고 그림만 통짜 원뿔이던 불일치 해소).
+const FAN_RAYS: int = 36
+var _fan_r: PackedFloat32Array = PackedFloat32Array()
 
 func setup(cfg: Dictionary) -> void:
 	position = Vector2(float(cfg.get("x", 0.0)), float(cfg.get("y", 0.0)))
@@ -68,22 +72,39 @@ func _physics_process(delta: float) -> void:
 				emit_signal("alerted", (p as Node2D).global_position)
 	else:
 		_exposure = maxf(0.0, _exposure - delta * 2.0)
+	_update_fan()
 	queue_redraw()
+
+# 각도 샘플별 도달 거리 갱신 · 빛이 실제로 닿는 곳까지만 그려진다(물리 차폐).
+func _update_fan() -> void:
+	var world := get_world_2d()
+	if world == null:
+		return
+	var space := world.direct_space_state
+	var ang: float = _current_angle()
+	_fan_r.resize(FAN_RAYS + 1)
+	for i in FAN_RAYS + 1:
+		var a: float = lerpf(ang - HALF_ANGLE, ang + HALF_ANGLE, float(i) / float(FAN_RAYS))
+		var to: Vector2 = global_position + Vector2.from_angle(a) * length
+		var hit: Dictionary = space.intersect_ray(PhysicsRayQueryParameters2D.create(global_position, to, 1))
+		_fan_r[i] = length if hit.is_empty() else (Vector2(hit.get("position", to)) - global_position).length()
 
 func _draw() -> void:
 	var ang: float = _current_angle()
 	var alerted_now: bool = _alert_t > 0.0
-	# 원뿔 · 광원에서 밝고 멀어질수록 사라지는 3정점 그라디언트. 노출 누적 시 살짝 밝아짐(예고).
 	var base_a: float = 0.14 + 0.10 * clampf(_exposure / EXPOSE_NEED, 0.0, 1.0)
 	var col := Color(0.95, 0.38, 0.30) if alerted_now else Color(0.95, 0.90, 0.68)
-	var e1: Vector2 = Vector2.from_angle(ang - HALF_ANGLE) * length
-	var e2: Vector2 = Vector2.from_angle(ang + HALF_ANGLE) * length
-	draw_polygon(PackedVector2Array([Vector2.ZERO, e1, e2]),
-		PackedColorArray([Color(col.r, col.g, col.b, base_a + 0.10),
-			Color(col.r, col.g, col.b, 0.0), Color(col.r, col.g, col.b, 0.0)]))
-	# 중심선 · 조준의 심.
-	draw_line(Vector2.ZERO, Vector2.from_angle(ang) * length * 0.92,
-		Color(col.r, col.g, col.b, base_a * 0.5), 2.0)
+	# 차폐 팬 · 레이별 도달 지점까지만 채운다. 알파는 거리 감쇠(멀수록 옅게) ·
+	# 가까운 벽에 맞으면 밝은 채로 뚝 끊겨 "빛이 벽에 막혔다"가 그림으로 읽힌다.
+	if _fan_r.size() == FAN_RAYS + 1:
+		var pts := PackedVector2Array([Vector2.ZERO])
+		var cols := PackedColorArray([Color(col.r, col.g, col.b, base_a + 0.10)])
+		for i in FAN_RAYS + 1:
+			var a: float = lerpf(ang - HALF_ANGLE, ang + HALF_ANGLE, float(i) / float(FAN_RAYS))
+			var r: float = _fan_r[i]
+			pts.append(Vector2.from_angle(a) * r)
+			cols.append(Color(col.r, col.g, col.b, base_a * (1.0 - r / length)))
+		draw_polygon(pts, cols)
 	# 하우징 · 마운트 + 렌즈(경보 시 붉게 유지 · 점멸 없음).
 	draw_rect(Rect2(Vector2(-10.0, -10.0), Vector2(20.0, 20.0)), Color(0.10, 0.11, 0.15))
 	draw_circle(Vector2.ZERO, 6.0, Color(col.r, col.g, col.b, 0.9))

@@ -31,6 +31,7 @@ var _state: int = S.LOW
 var _t: float = 0.0
 var _sub_t: float = -1.0        # 잠수 경과(-1 = 물 밖) · 유예 0.9s 후 dmg_interval마다 틱
 var _wave_t: float = 0.0
+var _player_pos: Vector2 = Vector2.ZERO   # 잠수 표시(게이지·거품)용 · _check_player가 갱신
 
 func setup(cfg: Dictionary, w: float, h: float) -> void:
 	low_y = float(cfg.get("low_y", low_y))
@@ -86,6 +87,7 @@ func _check_player(delta: float) -> void:
 	if bool(p.get("clear_protect")):
 		_sub_t = -1.0
 		return
+	_player_pos = (p as Node2D).global_position
 	# 완전 잠수 판정 · 발 기준점이 수면보다 24px 아래(머리까지 잠김)일 때만.
 	if (p as Node2D).global_position.y > surface_y + 24.0:
 		if _sub_t < 0.0:
@@ -122,3 +124,20 @@ func _draw() -> void:
 		for i in n:
 			var fx: float = 120.0 + float(i) * 240.0 + fmod(_wave_t * 60.0, 240.0)
 			draw_circle(Vector2(fx, top - 6.0), 2.5, Color(0.75, 0.92, 0.85, 0.5))
+	# 잠수 표시 · "언제 피해를 입는지 안 보인다"(사용자 2026-08-17) · 머리 위 카운트다운 링
+	# (다음 틱까지 차오름 · 가까울수록 붉게) + 몸에서 오르는 거품. 물 밖이면 즉시 사라짐.
+	if _sub_t >= 0.0:
+		var interval_pt: float = 0.9 if _sub_t < 0.9 else dmg_interval
+		var elapsed: float = _sub_t if _sub_t < 0.9 else fmod(_sub_t - 0.9, dmg_interval)
+		var frac: float = clampf(elapsed / maxf(0.2, interval_pt), 0.0, 1.0)
+		var ring_pos: Vector2 = _player_pos + Vector2(0.0, -74.0)
+		var ring_col := Color(0.55, 0.90, 0.80).lerp(Color(0.95, 0.35, 0.30), frac)
+		draw_arc(ring_pos, 13.0, 0.0, TAU, 24, Color(0.0, 0.0, 0.0, 0.45), 5.0, true)
+		draw_arc(ring_pos, 13.0, -PI * 0.5, -PI * 0.5 + TAU * frac, 24,
+			Color(ring_col.r, ring_col.g, ring_col.b, 0.9), 3.5, true)
+		# 거품 · 잠수 경과에 따라 위로 흐른다(연속 이동).
+		for i in 3:
+			var ph: float = _sub_t * 1.6 + float(i) * 0.37
+			var by: float = _player_pos.y - 20.0 - fmod(ph, 1.0) * 52.0
+			var bx: float = _player_pos.x + sin(ph * 5.1 + float(i) * 2.1) * 8.0
+			draw_circle(Vector2(bx, by), 2.2, Color(0.80, 0.95, 0.90, 0.55 * (1.0 - fmod(ph, 1.0))))

@@ -827,6 +827,8 @@ func _build_world() -> void:
 	_build_water_level()
 	_build_searchlights()
 	_build_wind()
+	_build_arc_zones()
+	_build_debris_zones()
 	_build_mid_gate()
 	_build_route_lines()
 	_build_fake_watchers()
@@ -3381,7 +3383,7 @@ func _ambience_sewers() -> void:
 			v.offset_left = -180.0
 		vignette.add_child(v)
 
-# ─── 지하 인입로 방1 · 유입 수로(HORIZONTAL) 시그니처 배경 ───────────
+# ─── 옛 배수로 방1 · 유입 수로(HORIZONTAL) 시그니처 배경 ───────────
 # 수평 모티프만(수직 스트라이프 금지 규칙): 대구경 배관 2줄 + 벽의 물때 자국(과거 수위의
 # 디제시스 힌트 = 만수위 예고) + 천장 그레이팅 슬릿. 안개·비네트는 하수도 공통 톤 재사용.
 func _ambience_sewer_inflow() -> void:
@@ -3423,7 +3425,7 @@ func _ambience_sewer_inflow() -> void:
 		gx += 480.0
 	_add_lore_label(Vector2(300.0, 150.0), "구 배수 간선 · 펌프 가동 중", Color(0.55, 0.75, 0.70, 0.5), 14)
 
-# ─── 지하 인입로 방2 · 침수 정션(VERTICAL_DOWN) 시그니처 배경 ───────────
+# ─── 옛 배수로 방2 · 침수 정션(VERTICAL_DOWN) 시그니처 배경 ───────────
 # 기존 하수도 톤 + 만수위 자국 링(하강 중 "여기부터 잠긴다"가 벽에 보임) + 하단 펌프 실루엣.
 func _ambience_sewer_junction() -> void:
 	_ambience_sewers()
@@ -7340,6 +7342,22 @@ func _build_wind() -> void:
 	var wg := WindGust.new()
 	add_child(wg)
 	wg.setup(cfg, _world_size.x, _world_size.y)
+
+# 감전 아크(ElectricArc) · MapData "arc_zones" 키. 변전소 시그니처(확산 4호).
+func _build_arc_zones() -> void:
+	for entry in _map_data.get("arc_zones", []):
+		var d: Dictionary = entry
+		var arc := ElectricArc.new()
+		add_child(arc)
+		arc.setup(float(d.get("x1", 0.0)), float(d.get("x2", 100.0)), GROUND_Y,
+			float(d.get("phase", 0.0)), int(d.get("dmg", 1)))
+
+# 낙하 잔해(FallingDebris) · MapData "debris_zones" 키. 철거구역 시그니처(확산 5호).
+func _build_debris_zones() -> void:
+	for entry in _map_data.get("debris_zones", []):
+		var fd := FallingDebris.new()
+		add_child(fd)
+		fd.setup(entry, GROUND_Y)
 
 # 방 체인 전환(map_identity_rework §2) · RouteMap/Briefing 없이 짧은 문 전환으로 다음 방 로드.
 # XP·HP·성장은 GameState 소유라 유지되고, 스테이지 타이머는 record_route_choice 기준이라 체인

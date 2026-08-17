@@ -57,7 +57,7 @@ const ALL_ROUTES: Array = [
 	},
 	{
 		"id": "route_sewers",
-		"name": "지하 인입로",
+		"name": "옛 배수로",
 		"description": "시설이 들어서기 전부터 있던 옛 배수로. 펌프가 살아 있어 물이 주기적으로 차오른다.",
 		"risk": 2,
 		"reward": 3,
@@ -306,7 +306,7 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_substation",
 		"name": "변전소",
-		"description": "시설 전력을 받는 옥외 변전 설비. 변압기 위로 저격선이 깔리고 드론이 점한다.",
+		"description": "시설 전력을 받는 옥외 변전 설비. 노출 전선이 주기적으로 방전하고, 변압기 위로 저격선이 깔린다.",
 		"risk": 3,
 		"reward": 3,
 		"hidden": false,
@@ -315,7 +315,7 @@ const ALL_ROUTES: Array = [
 		# act_identity.md §4: s3 도입(r2 기계 입문) / s4 전개 / s5 고조. s4~5 전개·고조 구간에 배치.
 		"min_stage": 4, "max_stage": 5,
 		"tags": ["원거리", "드론", "노출", "전투"],
-		"veil_comment": "변전소예요. 변압기 위 저격, 머리 위 드론. 엄폐 짧게 끊어 가요.",
+		"veil_comment": "변전소예요. 바닥 방전은 발판 위로 피해요. 변압기 위 저격, 머리 위 드론.",
 		"entry_comment": "변전 설비예요. 사선이 많아요. 변압기 뒤로 붙어요.",
 		"stage_color": Color(0.16, 0.15, 0.10),
 	},
@@ -337,15 +337,15 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_demolition_zone",
 		"name": "철거 구역",
-		"description": "절반쯤 헐린 외곽 건물군. 잔해가 통로를 메우고, 무너진 벽 사이로 길이 난다.",
+		"description": "절반쯤 헐린 외곽 건물군. 위에서 잔해가 떨어지고, 무너진 벽 사이로 길이 난다.",
 		"risk": 2,
 		"reward": 2,
 		"hidden": false,
 		"unique": false,
 		"min_stage": 1, "max_stage": 2,
 		"tags": ["근접전", "어두운_환경", "전투"],
-		"veil_comment": "철거 구역이에요. 잔해를 엄폐로 써요. 방패병 하나 있어요.",
-		"entry_comment": "무너진 건물이에요. 발 밑 조심하고, 잔해 뒤로 붙어요.",
+		"veil_comment": "철거 구역이에요. 위에서 잔해가 떨어져요. 바닥 그림자를 봐요.",
+		"entry_comment": "무너진 건물이에요. 머리 위 조심하고, 잔해 뒤로 붙어요.",
 		"stage_color": Color(0.14, 0.12, 0.11),
 	},
 	{
