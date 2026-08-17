@@ -825,6 +825,8 @@ func _build_world() -> void:
 	_build_sweep_beam()
 	_build_train_hazard()
 	_build_water_level()
+	_build_searchlights()
+	_build_wind()
 	_build_mid_gate()
 	_build_route_lines()
 	_build_fake_watchers()
@@ -7282,6 +7284,62 @@ func _build_water_level() -> void:
 	var wl := WaterLevel.new()
 	add_child(wl)
 	wl.setup(cfg, _world_size.x, _world_size.y)
+
+# 탐조등(Searchlight) · MapData "searchlights" 키. 감시탑 시그니처 · 경보 = 경비 증원
+# (2026-08-17 사용자 확정 ⓑ · 즉시 피해 아님). 증원은 인간 경비만(막1 계약).
+var _searchlight_reinforced: int = 0
+var _searchlight_line_shown: bool = false
+
+func _build_searchlights() -> void:
+	for entry in _map_data.get("searchlights", []):
+		var sl := Searchlight.new()
+		add_child(sl)
+		sl.setup(entry)
+		sl.alerted.connect(_on_searchlight_alert)
+
+func _on_searchlight_alert(ppos: Vector2) -> void:
+	SfxPlayer.play("siren_flash", -8.0)
+	if not _searchlight_line_shown:
+		_searchlight_line_shown = true
+		_show_veil_subtitle("탐조등에 걸렸어요. 경비가 이쪽으로 옵니다.", 3.2)
+	if _searchlight_reinforced >= 2:
+		return
+	_searchlight_reinforced += 1
+	# 증원 지점 · 플레이어보다 살짝 위의 넓은 발판(내려오며 압박 = 등반 저지 문법).
+	var best := Vector2.ZERO
+	var best_score: float = 1e12
+	for entry in _map_data.get("platforms", []):
+		var d: Dictionary = entry
+		var p: Vector2 = d.get("pos", Vector2.ZERO)
+		if float(d.get("w", 0.0)) < 200.0:
+			continue
+		var score: float = absf(p.y - (ppos.y - 140.0)) + absf(p.x - ppos.x) * 0.35
+		if score < best_score:
+			best_score = score
+			best = p
+	if best == Vector2.ZERO:
+		return
+	var spawn_pos := Vector2(best.x, best.y - 30.0)
+	var tel := _WaveSpawnTelegraph.new()
+	tel.lifetime = 0.7
+	tel.position = spawn_pos
+	add_child(tel)
+	get_tree().create_timer(0.7, false).timeout.connect(_searchlight_do_spawn.bind(spawn_pos))
+
+func _searchlight_do_spawn(pos: Vector2) -> void:
+	if goal_reached or not is_inside_tree():
+		return
+	_spawn_enemy(0, pos)
+	_enemies_remaining += 1
+
+# 돌풍(WindGust) · MapData "wind" 키. 옥상 시그니처 · 표류 보정형(2026-08-17 사용자 확정).
+func _build_wind() -> void:
+	var cfg: Dictionary = _map_data.get("wind", {})
+	if cfg.is_empty():
+		return
+	var wg := WindGust.new()
+	add_child(wg)
+	wg.setup(cfg, _world_size.x, _world_size.y)
 
 # 방 체인 전환(map_identity_rework §2) · RouteMap/Briefing 없이 짧은 문 전환으로 다음 방 로드.
 # XP·HP·성장은 GameState 소유라 유지되고, 스테이지 타이머는 record_route_choice 기준이라 체인

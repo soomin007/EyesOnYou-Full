@@ -83,6 +83,8 @@ var clear_protect: bool = false
 # 외부 넉백(열차 등) · _handle_input이 지속 시간 동안 입력 대신 이 속도를 쓴다.
 var _knockback_v: Vector2 = Vector2.ZERO
 var _knockback_t: float = 0.0
+# 바람 속도 오프셋(px/s) · WindGust(옥상 돌풍)가 매 프레임 세팅·해제. _handle_input에서 적용.
+var wind_x: float = 0.0
 
 # 외부 충격(열차 피격 등)이 부르는 넉백. y는 즉시 1회 적용(점프 물리에 맡김), x는 dur 동안 유지.
 func apply_knockback(v: Vector2, dur: float = 0.25) -> void:
@@ -303,6 +305,10 @@ func _handle_input(delta: float) -> void:
 		# fire_boost T2 — 사격 직후 0.5s 동안 이동 속도 ×1.4 ("사격 시 잠깐 가속" desc 구현).
 		var move_mult: float = _SPRINT_MULT if sprint_t > 0.0 else 1.0
 		velocity.x = dir * SPEED * move_mult
+	# 바람(옥상 돌풍 등) · WindGust가 매 프레임 세팅하는 속도 오프셋. 공중에서 크게,
+	# 지상에선 살짝만 밀린다. 넉백 중엔 임펄스가 진실이라 제외.
+	if wind_x != 0.0 and _knockback_t <= 0.0:
+		velocity.x += wind_x * (1.0 if not is_on_floor() else 0.25)
 
 	# 점프 입력은 버퍼에 기억해 두고 매 프레임 소비를 시도(jump buffer). 착지 직전 입력도
 	# 착지 순간 발동하고, coyote 윈도우 안이면 가장자리 이탈 직후에도 지상 점프가 나간다.
