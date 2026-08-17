@@ -1155,6 +1155,54 @@ func _show_boss_alert(message: String, color: Color, duration: float) -> void:
 	tw.chain().tween_property(panel, "modulate:a", 0.0, 0.5)
 	tw.chain().tween_callback(msg_layer.queue_free)
 
+# 세로 그라디언트 사각형(Polygon2D 정점 색 보간) · 배경·바닥·발판 심도용 공용 헬퍼.
+# 플랫 단색 + 하드 밴드가 "투박하다"의 구조적 원인이라 전 맵 공유 레이어에 도입(2026-08-17).
+func _add_vgrad(pos: Vector2, size: Vector2, c_top: Color, c_bot: Color, z: int) -> void:
+	var p := Polygon2D.new()
+	p.polygon = PackedVector2Array([pos, pos + Vector2(size.x, 0.0), pos + size, pos + Vector2(0.0, size.y)])
+	p.vertex_colors = PackedColorArray([c_top, c_top, c_bot, c_bot])
+	p.z_index = z
+	add_child(p)
+
+# 램프 아래 빛 원뿔(사다리꼴 그라디언트) · 실내 조명이 공간을 실제로 비추는 느낌.
+func _add_light_cone(x: float, top_y: float, top_w: float, bot_w: float, h: float, col: Color, z: int = -11) -> void:
+	var p := Polygon2D.new()
+	p.polygon = PackedVector2Array([
+		Vector2(x - top_w * 0.5, top_y), Vector2(x + top_w * 0.5, top_y),
+		Vector2(x + bot_w * 0.5, top_y + h), Vector2(x - bot_w * 0.5, top_y + h)])
+	p.vertex_colors = PackedColorArray([col, col, Color(col.r, col.g, col.b, 0.0), Color(col.r, col.g, col.b, 0.0)])
+	p.z_index = z
+	add_child(p)
+
+# 부유 먼지 모트 · 느린 드리프트(연속 이동 · 점멸 없음). 공기감/공간감의 값싼 층.
+class _DustMotes extends Node2D:
+	var area: Rect2 = Rect2(0, 0, 2000, 600)
+	var count: int = 18
+	var _pts: Array = []
+	var _t: float = 0.0
+	func _ready() -> void:
+		z_index = -9
+		var rng := RandomNumberGenerator.new()
+		rng.seed = GameState.current_stage * 733 + GameState.current_segment * 31 + 3
+		for i in count:
+			_pts.append({
+				"x": rng.randf_range(area.position.x, area.end.x),
+				"y": rng.randf_range(area.position.y, area.end.y),
+				"ph": rng.randf_range(0.0, TAU),
+				"sp": rng.randf_range(5.0, 13.0),
+				"sz": rng.randf_range(1.2, 2.4),
+				"a": rng.randf_range(0.07, 0.16),
+			})
+	func _process(delta: float) -> void:
+		_t += delta
+		queue_redraw()
+	func _draw() -> void:
+		for e in _pts:
+			var d: Dictionary = e
+			var yy: float = wrapf(float(d["y"]) - _t * float(d["sp"]), area.position.y, area.end.y)
+			var xx: float = float(d["x"]) + sin(_t * 0.22 + float(d["ph"])) * 26.0
+			draw_circle(Vector2(xx, yy), float(d["sz"]), Color(0.80, 0.86, 0.95, float(d["a"])))
+
 func _build_background() -> void:
 	# 세계 크기에 맞춰 배경 확장
 	var bg_height: float = _world_size.y + 600.0
@@ -1166,19 +1214,18 @@ func _build_background() -> void:
 	bg.z_index = -20
 	add_child(bg)
 
-	# 상단 비네팅 — 진한 부분에서 점진 페이드. 두 겹으로 깊이감.
-	var top_dark := ColorRect.new()
-	top_dark.color = Color(0, 0, 0, 0.65)
-	top_dark.position = Vector2(-200, -300)
-	top_dark.size = Vector2(bg_w, 220.0)
-	top_dark.z_index = -19
-	add_child(top_dark)
-	var top_fade := ColorRect.new()
-	top_fade.color = Color(0, 0, 0, 0.30)
-	top_fade.position = Vector2(-200, -80)
-	top_fade.size = Vector2(bg_w, 200.0)
-	top_fade.z_index = -19
-	add_child(top_fade)
+	# 상단 비네팅 · 하드 밴드 2겹 → 매끈한 그라디언트(2026-08-17 폴리시).
+	_add_vgrad(Vector2(-200, -300), Vector2(bg_w, 430.0), Color(0, 0, 0, 0.72), Color(0, 0, 0, 0.0), -19)
+	# 지면 공기층 · 지평 근처가 옅게 밝아지는 층(바닥과 배경이 만나는 자리의 깊이감).
+	var sc: Color = _stage_color()
+	var air := Color(minf(1.0, sc.r * 1.7 + 0.03), minf(1.0, sc.g * 1.7 + 0.04), minf(1.0, sc.b * 1.7 + 0.05))
+	_add_vgrad(Vector2(-200, GROUND_Y - 170.0), Vector2(bg_w, 170.0),
+		Color(air.r, air.g, air.b, 0.0), Color(air.r, air.g, air.b, 0.16), -19)
+	# 부유 먼지 모트 · 실내/실외 공통 공기감(플레이 영역 전체에 옅게).
+	var motes := _DustMotes.new()
+	motes.area = Rect2(-100.0, -150.0, STAGE_LENGTH + 200.0, GROUND_Y + 130.0)
+	motes.count = clampi(int(STAGE_LENGTH / 160.0), 12, 30)
+	add_child(motes)
 
 	# 별/티끌 — 외곽 루트(외곽 진입로 / 외벽 옥상 / 외곽 순찰로)에서만. 실내 맵엔 어색.
 	var outdoor_routes: Array = ["route_back_alley", "route_rooftops", "route_perimeter"]
@@ -1350,6 +1397,8 @@ func _build_indoor_backdrop(env: String) -> void:
 		lamp.size = Vector2(110.0, 5.0)
 		lamp.z_index = -12
 		add_child(lamp)
+		# 빛 원뿔 · 형광등이 공간을 실제로 비추는 층(2026-08-17 폴리시).
+		_add_light_cone(x + gap * 0.5, -73.0, 110.0, 250.0, 320.0, Color(accent.r, accent.g, accent.b, 0.06), -12)
 		x += gap
 
 # ─── 실내 맵 시그니처 소품 ────────────────────────────────────
@@ -2173,9 +2222,10 @@ func _build_ground() -> void:
 	floor_top.position = Vector2(-200, GROUND_Y)
 	floor_top.size = Vector2(fw, 4.0)
 	add_child(floor_top)
-	# 지평선 발광 라인 (위)
+	# 지평선 발광 라인 (위) · env 액센트 색조(맵 성격이 지평선 색에도 실리게, 2026-08-17).
+	var acc: Color = _env_palette(_indoor_env())["accent"]
 	var line := ColorRect.new()
-	line.color = Color(0.55, 0.62, 0.78, 0.55)
+	line.color = Color(acc.r, acc.g, acc.b, 0.5)
 	line.position = Vector2(-200, GROUND_Y - 1.0)
 	line.size = Vector2(fw, 1.4)
 	add_child(line)
@@ -2200,6 +2250,8 @@ func _build_ground() -> void:
 		dot.size = Vector2(grng.randf_range(8.0, 18.0), 2.0)
 		add_child(dot)
 		gx += gap
+	# 깊이 그라디언트 · 표면에서 아래로 갈수록 어둡게(스트라이프·노이즈 위에 얹어 플랫 탈피).
+	_add_vgrad(Vector2(-200, GROUND_Y + 6.0), Vector2(fw, 250.0), Color(0, 0, 0, 0.0), Color(0, 0, 0, 0.55), 0)
 
 var _map_data: Dictionary = {}
 
@@ -3192,7 +3244,7 @@ func _ambience_sewer_inflow() -> void:
 		mark.size = Vector2(w + 400.0, 4.0)
 		mark.z_index = -7
 		add_child(mark)
-	# 천장 그레이팅 슬릿 · 가로 대시 열(위에서 새는 빛).
+	# 천장 그레이팅 슬릿 · 가로 대시 열(위에서 새는 빛) + 아래로 새는 빛 기둥.
 	var gx: float = 300.0
 	while gx < w:
 		var slit := ColorRect.new()
@@ -3201,6 +3253,7 @@ func _ambience_sewer_inflow() -> void:
 		slit.size = Vector2(90.0, 5.0)
 		slit.z_index = -9
 		add_child(slit)
+		_add_light_cone(gx + 45.0, 101.0, 90.0, 170.0, 300.0, Color(0.55, 0.80, 0.72, 0.05), -9)
 		gx += 480.0
 	_add_lore_label(Vector2(300.0, 150.0), "구 배수 간선 · 펌프 가동 중", Color(0.55, 0.75, 0.70, 0.5), 14)
 
@@ -3297,6 +3350,7 @@ func _ambience_subway_platform() -> void:
 			tw.set_loops()
 			tw.tween_property(tube, "modulate:a", 0.15, rng.randf_range(0.05, 0.15))
 			tw.tween_property(tube, "modulate:a", 1.0, rng.randf_range(0.4, 1.2))
+		_add_light_cone(x, -174.0, 120.0, 280.0, 360.0, Color(0.85, 0.92, 1.0, 0.05), -10)
 		x += rng.randf_range(380.0, 620.0)
 	# 승강장 안전선 · 노란 점선 띠(수평 모티프). 스크린도어 기둥 쌍은 제거 ·
 	# 수직 스트라이프 반복 금지(known_issues, 사용자 2026-08-17 "그놈의 기둥") +
@@ -3429,6 +3483,7 @@ func _ambience_subway_transfer() -> void:
 			tw.set_loops()
 			tw.tween_property(tube, "modulate:a", 0.2, rng.randf_range(0.05, 0.15))
 			tw.tween_property(tube, "modulate:a", 1.0, rng.randf_range(0.4, 1.2))
+		_add_light_cone(x, -174.0, 120.0, 280.0, 360.0, Color(0.85, 0.92, 1.0, 0.05), -10)
 		x += rng.randf_range(420.0, 680.0)
 	# 벽면 계단 실루엣 · 지상으로 오르는 환승 계단(배경 로어).
 	for base_x in [500.0, float(int(w) - 800)]:
@@ -3956,14 +4011,28 @@ func _build_platform(x: float, y: float, w: float) -> void:
 
 	# 플랫폼 비주얼 — 3단 패널(밝은 상부 / 어두운 본체 / 더 어두운 그림자) + 외곽선
 	# + 상단 발광 라인 + 좌우 모서리 발광 캡으로 입체감.
+	# 2026-08-17 폴리시: 본체 그라디언트 + 하부 브래킷 + 아래 드롭 섀도 + env 색조 발광 ·
+	# 전 맵 공유라 한 번의 업그레이드가 모든 맵의 "만든 구조물" 질감이 된다.
 	var px: float = x - w * 0.5
 	var py: float = y - 12.0
-	# 본체 (16px, 어두운)
+	# 본체 (16px, 어두운) + 상단이 살짝 밝은 그라디언트 오버레이
 	_add_filled_rect(Vector2(px, py + 4.0), Vector2(w, 16.0), Color(0.14, 0.16, 0.20))
+	_add_vgrad(Vector2(px, py + 4.0), Vector2(w, 16.0), Color(1, 1, 1, 0.06), Color(0, 0, 0, 0.14), 0)
 	# 상단 패널 (4px, 밝은)
 	_add_filled_rect(Vector2(px, py), Vector2(w, 4.0), Color(0.42, 0.46, 0.54))
 	# 하단 패널 (4px, 가장 어두운 — 그림자)
 	_add_filled_rect(Vector2(px, py + 20.0), Vector2(w, 4.0), Color(0.06, 0.07, 0.09))
+	# 하부 브래킷 · 발판 양끝 밑의 짧은 사선 지지(허공 부유감 완화). 폭이 충분할 때만.
+	if w >= 100.0:
+		for bk in [px + w * 0.16, px + w * 0.84]:
+			var br := Polygon2D.new()
+			br.color = Color(0.10, 0.11, 0.15)
+			br.polygon = PackedVector2Array([
+				Vector2(float(bk) - 9.0, py + 24.0), Vector2(float(bk) + 9.0, py + 24.0),
+				Vector2(float(bk) + 3.0, py + 34.0), Vector2(float(bk) - 3.0, py + 34.0)])
+			add_child(br)
+	# 아래 드롭 섀도 · 발판이 공간에 떠 있음을 배경 위에 옅게.
+	_add_vgrad(Vector2(px + 3.0, py + 24.0), Vector2(w - 6.0, 14.0), Color(0, 0, 0, 0.22), Color(0, 0, 0, 0.0), 0)
 	# 본체 표면 마이크로 패널 라인 (입체감) — 너비가 충분할 때만
 	if w >= 120.0:
 		var seam_x: float = px + w * 0.5
@@ -3985,20 +4054,23 @@ func _build_platform(x: float, y: float, w: float) -> void:
 	outline.default_color = Color(0.04, 0.05, 0.07, 0.50)
 	outline.antialiased = true
 	add_child(outline)
-	# 상단 발광 라인 (착지면 인지)
+	# 상단 발광 라인 (착지면 인지) · env 액센트 색조(맵 성격이 발판 조명에도 실림, 2026-08-17).
+	var pacc: Color = _env_palette(_indoor_env())["accent"]
+	var glow_col: Color = pacc.lerp(Color(1, 1, 1), 0.30)
 	var glow := ColorRect.new()
-	glow.color = Color(0.65, 0.78, 0.95, 0.7)
+	glow.color = Color(glow_col.r, glow_col.g, glow_col.b, 0.7)
 	glow.position = Vector2(px + 2.0, py - 1.0)
 	glow.size = Vector2(w - 4.0, 1.6)
 	add_child(glow)
-	# 좌우 모서리 발광 캡
+	# 좌우 모서리 발광 캡 · 발광 라인과 같은 계열(살짝 더 밝게).
+	var cap_col: Color = pacc.lerp(Color(1, 1, 1), 0.45)
 	var cap_l := ColorRect.new()
-	cap_l.color = Color(0.55, 0.85, 1.0, 0.9)
+	cap_l.color = Color(cap_col.r, cap_col.g, cap_col.b, 0.9)
 	cap_l.position = Vector2(px - 2.0, py + 2.0)
 	cap_l.size = Vector2(3.0, 4.0)
 	add_child(cap_l)
 	var cap_r := ColorRect.new()
-	cap_r.color = Color(0.55, 0.85, 1.0, 0.9)
+	cap_r.color = Color(cap_col.r, cap_col.g, cap_col.b, 0.9)
 	cap_r.position = Vector2(px + w - 1.0, py + 2.0)
 	cap_r.size = Vector2(3.0, 4.0)
 	add_child(cap_r)
