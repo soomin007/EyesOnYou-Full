@@ -77,6 +77,7 @@ static func _layout_raw(route_id: String) -> Dictionary:
 		"route_core_defense":  return _core_defense()
 		"route_scanner_sweep": return _scanner_sweep()
 		"route_holdout":       return _holdout()
+		"route_bot_bench":     return _bot_bench()
 	return {}
 
 # ─── 1. 외곽 진입로 (HORIZONTAL, 짧음) ─────────────────────────
@@ -2123,6 +2124,38 @@ static func _scanner_sweep() -> Dictionary:
 # 손맛 차별: datacenter(자유 사냥 이동)·reactor(코어 방어)와 달리 "엄폐에 의존해 한 자리를 버티는" 농성.
 #   근접(patrol/bomber/shield)=엄폐 사이 갭으로 접근 / 원거리(발판 sniper)=엄폐 위 각으로 pop 타이밍 압박.
 # 클리어=웨이브 3 전멸(ENEMY_CLEAR). 램프: risk3(막2 고조).
+# ── 봇 계측 전용 벤치 맵 (게임 미노출 · RouteData 미등록이라 선택지에 안 뜬다) ──
+# 표준 조우(순찰 2+폭탄병 1)를 3웨이브 반복: 빌드별 처치 시간의 순수 비교가 목적.
+# 평지 단일 구성인 이유: 수직 지형은 봇의 등반 한계가 측정을 오염시킨다(datacenter 교훈).
+# 방패병 제외 이유: 상성 카운터(폭발물)를 요구하는 특수 케이스라 화력 비교엔 잡음.
+static func _bot_bench() -> Dictionary:
+	return {
+		"world_type":   "ARENA",
+		"world_size":   Vector2(1600.0, 760.0),
+		"player_start": Vector2(200.0, 620.0),
+		"goal_type":    "ENEMY_CLEAR",
+		"goal_pos":     Vector2.ZERO,
+		"camera_mode":  "FIXED",
+		"ground_y":     680.0,
+		"platforms":    [],
+		"waves": [
+			{"trigger": "immediate",  "banner": "WAVE 1", "enemies": {
+				"patrol": [Vector2(1000.0, 650.0), Vector2(1350.0, 650.0)],
+				"bomber": [Vector2(1200.0, 650.0)]}},
+			{"trigger": "prev_clear", "banner": "WAVE 2", "enemies": {
+				"patrol": [Vector2(1000.0, 650.0), Vector2(1350.0, 650.0)],
+				"bomber": [Vector2(1200.0, 650.0)]}},
+			{"trigger": "prev_clear", "banner": "WAVE 3", "enemies": {
+				"patrol": [Vector2(1000.0, 650.0), Vector2(1350.0, 650.0)],
+				"bomber": [Vector2(1200.0, 650.0)]}},
+		],
+		"enemies": {
+			"patrol": [Vector2(1000.0, 650.0), Vector2(1350.0, 650.0)],
+			"bomber": [Vector2(1200.0, 650.0)],
+		},
+		"rewards": {"xp_orbs": [], "hp_pickups": []},
+	}
+
 static func _holdout() -> Dictionary:
 	return {
 		"world_type":   "ARENA",
