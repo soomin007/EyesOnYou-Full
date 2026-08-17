@@ -820,15 +820,18 @@ static func _escape_extract() -> Dictionary:
 		"goal_pos":     Vector2(3680.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
 		"platforms": [
-			{"pos": Vector2(400, 520),  "w": 240.0},
-			{"pos": Vector2(800, 480),  "w": 240.0},
-			{"pos": Vector2(1200, 520), "w": 240.0},
-			{"pos": Vector2(1600, 480), "w": 240.0},
-			{"pos": Vector2(2000, 520), "w": 240.0},
-			{"pos": Vector2(2400, 480), "w": 240.0},
-			{"pos": Vector2(2800, 520), "w": 240.0},
-			{"pos": Vector2(3200, 480), "w": 240.0},
-			{"pos": Vector2(3500, 520), "w": 200.0},
+			# 클러스터-휴지 리듬 재배치(수칙 1·2, 2026-08-17): 기(진입 엄폐) → 재머 구간 →
+			# 휴지(1500~1800) → 승 클러스터 → 드론 구간 → 게이트 앞 최종 저지.
+			{"pos": Vector2(420, 510),  "w": 220.0},
+			{"pos": Vector2(760, 470),  "w": 200.0},
+			{"pos": Vector2(1150, 520), "w": 240.0},
+			{"pos": Vector2(1420, 470), "w": 160.0},
+			{"pos": Vector2(1950, 510), "w": 200.0},
+			{"pos": Vector2(2200, 460), "w": 140.0},
+			{"pos": Vector2(2450, 500), "w": 220.0},
+			{"pos": Vector2(2850, 470), "w": 240.0},
+			{"pos": Vector2(3150, 520), "w": 160.0},
+			{"pos": Vector2(3400, 470), "w": 180.0},
 		],
 		"enemies": {
 			"patrol": [Vector2(650, 600.0), Vector2(1150, 600.0), Vector2(2050, 600.0), Vector2(2650, 600.0), Vector2(3150, 600.0)],
@@ -840,8 +843,13 @@ static func _escape_extract() -> Dictionary:
 			# 부자연스럽다는 피드백(2026-08-14). 진입 밀집 구간의 마커를 지워 초반 압박 담당.
 			"jammer": [Vector2(1250, 600.0)],
 		},
+		# 서사 재작성(사용자 2026-08-17 "무의미하고 이해 안 가는 스토리 · 멘트도 늦다"):
+		# 반출 = 드라이브가 위치를 흘려 경비가 미리 아는 길. 초입에 이유를 말하고,
+		# 중반 라이벌 비트(드라이브 = 그의 탈출 티켓 캐논), 게이트 앞 마무리.
 		"route_lines": [
-			{"x": 1800.0, "who": "veil", "text": "경보가 우릴 앞질러 가요. 다음 구간은 미리 쏘면서 진입하죠.", "dur": 3.4},
+			{"x": 320.0,  "who": "veil",  "text": "드라이브가 신호를 계속 흘려요. 앞 구간 경비가 우리 위치를 미리 알고 기다립니다. 먼저 쏘면서 뚫어요.", "dur": 4.2},
+			{"x": 2150.0, "who": "rival", "text": "그 드라이브엔 제 표도 실려 있습니다. 내려놓고 가시죠, 요원.", "dur": 3.4},
+			{"x": 3150.0, "who": "veil",  "text": "봉쇄 게이트가 마지막이에요. 뚫으면 끝입니다.", "dur": 3.0},
 		],
 		"rewards": {"xp_orbs": [], "hp_pickups": [Vector2(2200, 460.0)]},
 		"spikes": [],
@@ -977,8 +985,11 @@ static func _escape_conceal() -> Dictionary:
 		"goal_pos":     Vector2(3680.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
 		"elite_chance": 0.0,
+		# 수색선 구간 제한(사용자 2026-08-17 "왜 맵 끝까지 쫓아오나 · 왜 있나 · 왜 늦나"):
+		# 갱도 본 구간(420~3380)만 훑는다 · 초입은 안전 도입, 출구 앞은 이완(기승전결 결).
+		# 존재 이유(라이벌 밀고)는 초입 라인이 즉시 말한다.
 		"sweep_beam": {
-			"x_start": -60.0, "x_end": 3860.0, "y_top": -120.0, "y_bot": 640.0,
+			"x_start": 420.0, "x_end": 3380.0, "y_top": -120.0, "y_bot": 640.0,
 			"speed": 380.0, "rest": 2.0, "telegraph": 0.7, "beam_half": 24.0,
 		},
 		"cover_niches": [460.0, 950.0, 1450.0, 1950.0, 2450.0, 2950.0, 3450.0],
@@ -989,8 +1000,8 @@ static func _escape_conceal() -> Dictionary:
 			"sniper": [], "drone": [], "bomber": [], "shield": [],
 		},
 		"route_lines": [
-			{"x": 1300.0, "who": "veil",  "text": "수색등이 우리 동선을 알고 움직여요. ...누가 흘리고 있어요.", "dur": 3.4},
-			{"x": 2700.0, "who": "rival", "text": "어디로 가시는 겁니까, 요원. 그건 제 것이기도 합니다.", "dur": 3.4},
+			{"x": 300.0,  "who": "veil",  "text": "수색등이 켜졌어요. 은닉인데, 우리 동선을 알고 움직입니다. ...누가 흘리고 있어요. 벽의 홈으로 피해요.", "dur": 4.4},
+			{"x": 2450.0, "who": "rival", "text": "어디로 가시는 겁니까, 요원. 그건 제 것이기도 합니다.", "dur": 3.4},
 		],
 		"rewards": {"xp_orbs": [], "hp_pickups": []},
 		"spikes": [],
@@ -1221,9 +1232,12 @@ static func _parking_lot() -> Dictionary:
 		"goal_pos":     Vector2(2880.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
 		"platforms": [
-			# 주차 차량 지붕(낮은 발판) — 지면 540에서 단순점프로 닿음.
+			# 주차 차량 지붕 + 2층 주차 데크(랜드마크 · 수칙 3·5). 데크는 셔터2(1750) 앞에서
+			# 끝나 관문 우회 불가.
 			{"pos": Vector2(520, 470),  "w": 180.0},
 			{"pos": Vector2(980, 470),  "w": 180.0},
+			{"pos": Vector2(1200, 350), "w": 220.0},   # 상부 데크(XP)
+			{"pos": Vector2(1460, 350), "w": 220.0},
 			{"pos": Vector2(1480, 470), "w": 200.0},
 			{"pos": Vector2(2000, 470), "w": 180.0},
 			{"pos": Vector2(2460, 470), "w": 180.0},
@@ -1240,7 +1254,7 @@ static func _parking_lot() -> Dictionary:
 			"shield": [Vector2(1480, 600.0)],
 		},
 		"rewards": {
-			"xp_orbs":    [Vector2(1460, 440.0), Vector2(1500, 440.0)],
+			"xp_orbs":    [Vector2(1330, 320.0), Vector2(1370, 320.0)],
 			"hp_pickups": [],
 		},
 		"spikes": [],
@@ -1268,13 +1282,15 @@ static func _substation() -> Dictionary:
 		"goal_pos":     Vector2(3480.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
 		"platforms": [
-			# 변압기 뱅크(중간 발판) — 드론 회피·저격 사선 차단 엄폐. 지면 540에서 단순점프.
-			{"pos": Vector2(620, 460),  "w": 200.0},
-			{"pos": Vector2(1080, 460), "w": 170.0},
+			# 변압기 뱅크 + 아크 상공 우회 2층(레벨 디자인 수칙 3·6 · 등간격 해체, 2026-08-17).
+			{"pos": Vector2(620, 460),  "w": 200.0},   # 기
+			{"pos": Vector2(1000, 450), "w": 150.0},
+			{"pos": Vector2(1300, 340), "w": 140.0},   # 아크1 상공 우회(리스크: 드론 사선)
 			{"pos": Vector2(1520, 460), "w": 200.0},
-			{"pos": Vector2(2040, 460), "w": 180.0},
+			{"pos": Vector2(2080, 440), "w": 160.0},
+			{"pos": Vector2(2280, 330), "w": 130.0},   # 아크2 상공(전 · 세트피스)
 			{"pos": Vector2(2520, 460), "w": 200.0},
-			{"pos": Vector2(3020, 470), "w": 200.0},
+			{"pos": Vector2(3020, 470), "w": 200.0},   # 결
 		],
 		"enemies": {
 			"patrol": [Vector2(900, 600.0), Vector2(2300, 600.0)],
@@ -1287,7 +1303,8 @@ static func _substation() -> Dictionary:
 			"shield": [],
 		},
 		"rewards": {
-			"xp_orbs":    [Vector2(2040, 430.0), Vector2(3020, 440.0)],
+			# 리스크-리워드 · 아크 상공 우회 발판 위(수칙 4).
+			"xp_orbs":    [Vector2(1300, 310.0), Vector2(2280, 300.0)],
 			"hp_pickups": [Vector2(1520, 430.0)],
 		},
 		"spikes": [],
@@ -1359,21 +1376,25 @@ static func _demolition_zone() -> Dictionary:
 		"goal_pos":     Vector2(3080.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
 		"platforms": [
-			{"pos": Vector2(560, 470),  "w": 200.0},
+			# 잔해 스텝 + 계단식 세트피스 + 휴지(1500~1800 빈 지면) · 수칙 1·3·5(2026-08-17).
+			{"pos": Vector2(560, 470),  "w": 200.0},   # 기
+			{"pos": Vector2(820, 530),  "w": 110.0},   # 잔해 저단차
 			{"pos": Vector2(1040, 450), "w": 180.0},
-			{"pos": Vector2(1560, 470), "w": 200.0},
-			{"pos": Vector2(2080, 450), "w": 180.0},
-			{"pos": Vector2(2600, 470), "w": 200.0},
+			{"pos": Vector2(1300, 520), "w": 100.0},
+			{"pos": Vector2(2080, 450), "w": 180.0},   # 휴지 후 승
+			{"pos": Vector2(2280, 380), "w": 120.0},   # 계단 정점(랜드마크 · 낙하 존2 안)
+			{"pos": Vector2(2520, 450), "w": 140.0},
+			{"pos": Vector2(2860, 500), "w": 160.0},   # 결
 		],
 		"enemies": {
 			"patrol": [Vector2(820, 600.0), Vector2(2300, 600.0)],
 			"sniper": [],
 			"drone":  [],
 			"bomber": [],
-			"shield": [Vector2(1560, 600.0)],
+			"shield": [Vector2(2080, 600.0)],
 		},
 		"rewards": {
-			"xp_orbs":    [Vector2(1040, 420.0), Vector2(2080, 420.0)],
+			"xp_orbs":    [Vector2(1040, 420.0), Vector2(2280, 350.0)],
 			"hp_pickups": [],
 		},
 		"spikes": [],
@@ -1485,10 +1506,13 @@ static func _warehouse() -> Dictionary:
 		"goal_pos":     Vector2(3280.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
 		"platforms": [
-			# 적재함(컨테이너) — 높이 변화로 엄폐 + 발판.
+			# 적재함 + 적재탑 2개(수칙 3·5) · 벨트와 결합: 순방향(700~1350) 탄력으로 탑 A,
+			# 역방향(1650~2350) 상공은 탑 B가 전투 배점.
 			{"pos": Vector2(560, 460),  "w": 220.0},
 			{"pos": Vector2(1080, 440), "w": 180.0},
-			{"pos": Vector2(1560, 470), "w": 200.0},
+			{"pos": Vector2(1180, 330), "w": 120.0},   # 적재탑 A(XP)
+			{"pos": Vector2(1500, 450), "w": 140.0},
+			{"pos": Vector2(1860, 330), "w": 110.0},   # 적재탑 B(역벨트 상공 배점)
 			{"pos": Vector2(2060, 440), "w": 180.0},
 			{"pos": Vector2(2560, 460), "w": 220.0},
 			{"pos": Vector2(1320, 560), "w": 120.0},
@@ -1502,7 +1526,7 @@ static func _warehouse() -> Dictionary:
 			"shield": [Vector2(1080, 600.0)],
 		},
 		"rewards": {
-			"xp_orbs":    [Vector2(1080, 410.0), Vector2(2060, 410.0)],
+			"xp_orbs":    [Vector2(1180, 300.0), Vector2(2060, 410.0)],
 			"hp_pickups": [Vector2(2560, 430.0)],
 		},
 		"spikes": [],
@@ -1685,11 +1709,13 @@ static func _condenser() -> Dictionary:
 		"goal_pos":     Vector2(3280.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
 		"platforms": [
+			# 상부 코일 포켓 + 저단차(수칙 3·4) · 낙수점(420~2760)과 간섭 없는 x 유지.
 			{"pos": Vector2(600, 460),  "w": 190.0},
-			{"pos": Vector2(1100, 440), "w": 180.0},
-			{"pos": Vector2(1560, 460), "w": 190.0},
-			{"pos": Vector2(2040, 440), "w": 180.0},
-			{"pos": Vector2(2520, 460), "w": 190.0},
+			{"pos": Vector2(1100, 420), "w": 160.0},
+			{"pos": Vector2(1560, 340), "w": 140.0},   # 응축 코일 상부(리스크-리워드 포켓)
+			{"pos": Vector2(2040, 460), "w": 200.0},
+			{"pos": Vector2(2520, 440), "w": 160.0},
+			{"pos": Vector2(2660, 530), "w": 100.0},   # 저단차 스텝
 			{"pos": Vector2(2980, 470), "w": 200.0},
 		],
 		# 시그니처 · 응축수 낙수(§8 확산 8호, 2026-08-17): 기존 바닥 증기 6기를 낙수로 교체 ·
@@ -1714,7 +1740,7 @@ static func _condenser() -> Dictionary:
 			"shield": [],
 		},
 		"rewards": {
-			"xp_orbs":    [Vector2(1100, 410.0), Vector2(2040, 410.0)],
+			"xp_orbs":    [Vector2(1100, 390.0), Vector2(1560, 310.0)],
 			"hp_pickups": [Vector2(2980, 440.0)],
 		},
 		"spikes": [],
@@ -1731,11 +1757,14 @@ static func _perimeter() -> Dictionary:
 		"goal_pos":     Vector2(3480.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
 		"platforms": [
+			# 경계등 곁 고공 포켓(원뿔 각 밖 = 수평은 안 걸림 · 기하 학습, 수칙 4·6) + 저단차.
 			{"pos": Vector2(560, 480),  "w": 200.0},
-			{"pos": Vector2(1100, 470), "w": 200.0},
+			{"pos": Vector2(1100, 470), "w": 200.0},   # 경계등1 은신처
+			{"pos": Vector2(1620, 360), "w": 110.0},   # 고공 포켓(XP)
 			{"pos": Vector2(1680, 480), "w": 200.0},
-			{"pos": Vector2(2240, 470), "w": 200.0},
-			{"pos": Vector2(2800, 480), "w": 200.0},
+			{"pos": Vector2(2300, 440), "w": 160.0},
+			{"pos": Vector2(2560, 520), "w": 110.0},
+			{"pos": Vector2(2800, 480), "w": 200.0},   # 경계등2 은신처
 		],
 		"enemies": {
 			# 저밀도 — patrol 2 + 단독 저격 1(회피 가능). 통과 중심.
@@ -1746,7 +1775,7 @@ static func _perimeter() -> Dictionary:
 			"shield": [],
 		},
 		"rewards": {
-			"xp_orbs":    [Vector2(1100, 440.0), Vector2(2240, 440.0)],
+			"xp_orbs":    [Vector2(1620, 330.0), Vector2(2300, 410.0)],
 			"hp_pickups": [Vector2(2800, 450.0)],
 		},
 		"spikes": [],

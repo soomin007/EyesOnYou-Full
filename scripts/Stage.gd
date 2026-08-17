@@ -2483,18 +2483,38 @@ func _build_hurdles() -> void:
 		col.shape = shape
 		col.position = Vector2(hx, GROUND_Y - hh * 0.5)
 		body.add_child(col)
-		# 잔해 비주얼 — 어두운 각진 더미 + 상단 하이라이트.
-		var vis := Polygon2D.new()
-		vis.color = Color(0.14, 0.13, 0.13)
-		vis.polygon = PackedVector2Array([
+		# 잔해 비주얼 · "배경 그림 같아 안 보인다"(사용자 2026-08-17 붕괴 갱도) 반영:
+		# 몸체를 밝히고 상단 주의 띠 + 어두운 외곽선으로 "밟고 넘는 실물"임을 명확히
+		# (known_issues 솔리드 가시성 규칙과 동형 · 전 맵 공용이라 일괄 적용).
+		var hpts := PackedVector2Array([
 			Vector2(hx - hw * 0.5, GROUND_Y), Vector2(hx - hw * 0.42, GROUND_Y - hh),
 			Vector2(hx + hw * 0.28, GROUND_Y - hh * 0.86), Vector2(hx + hw * 0.5, GROUND_Y)])
+		var vis := Polygon2D.new()
+		vis.color = Color(0.26, 0.24, 0.22)
+		vis.polygon = hpts
 		vis.z_index = -1
 		add_child(vis)
+		# 앞면 음영 · 우측이 살짝 어두운 이면(입체감).
+		var shade := Polygon2D.new()
+		shade.color = Color(0.16, 0.15, 0.14)
+		shade.polygon = PackedVector2Array([
+			Vector2(hx + hw * 0.02, GROUND_Y), Vector2(hx + hw * 0.28, GROUND_Y - hh * 0.86),
+			Vector2(hx + hw * 0.5, GROUND_Y)])
+		shade.z_index = -1
+		add_child(shade)
+		# 외곽선 · 어두운 윤곽으로 배경과 분리.
+		var outline := Line2D.new()
+		outline.points = hpts
+		outline.closed = true
+		outline.width = 2.0
+		outline.default_color = Color(0.05, 0.05, 0.06, 0.9)
+		outline.z_index = -1
+		add_child(outline)
+		# 상단 주의 띠 · 착지면 인지(발판 상단 발광과 같은 문법, 앰버).
 		var edge := ColorRect.new()
-		edge.color = Color(0.35, 0.22, 0.18, 0.6)
-		edge.position = Vector2(hx - hw * 0.5, GROUND_Y - hh)
-		edge.size = Vector2(hw, 3.0)
+		edge.color = Color(0.86, 0.63, 0.25, 0.85)
+		edge.position = Vector2(hx - hw * 0.42, GROUND_Y - hh)
+		edge.size = Vector2(hw * 0.68, 3.0)
 		edge.z_index = -1
 		add_child(edge)
 
@@ -2673,6 +2693,10 @@ func _build_mid_gate() -> void:
 			_open_mid_gate())
 
 # clear 모드 경비 수집 — 적 스폰이 _build_world 이후라 첫 tick에서 1회 수집한다.
+# 소프트락 방지(사용자 2026-08-17 검문소 보고 "벽 건너편 적을 잡을 수 없어 못 넘어감"):
+# ⓐ 게이트 너머(오른쪽) 적은 수집 제외 · 닫힌 벽 뒤는 총알이 안 닿는다.
+# ⓑ 수집 결과가 0이면 즉시 개방 · 지킬 경비가 없는 관문은 잠글 명분이 없다(데이터 안전판).
+# ⓒ 수집된 경비가 어떤 이유로든 게이트 너머로 넘어가면 재검에서 제외(주기 재검은 _tick).
 func _mid_gate_lazy_init() -> void:
 	_mid_gate_inited = true
 	if _mid_gate_mode != "clear":
@@ -2686,10 +2710,12 @@ func _mid_gate_lazy_init() -> void:
 		if (e as Node2D).get("harmless"):
 			continue
 		var ex: float = (e as Node2D).global_position.x
-		if ex >= float(zone[0]) and ex <= float(zone[1]):
+		if ex >= float(zone[0]) and ex <= minf(float(zone[1]), _mid_gate_x - 40.0):
 			_mid_gate_guards.append(e)
 			(e as Node).connect("killed", func(_p: Vector2) -> void:
 				_on_mid_gate_guard_down())
+	if _mid_gate_guards.is_empty():
+		_open_mid_gate()
 
 func _on_mid_gate_guard_down() -> void:
 	if _mid_gate_opened:
@@ -2697,7 +2723,8 @@ func _on_mid_gate_guard_down() -> void:
 	var alive: int = 0
 	for e in _mid_gate_guards:
 		if e is Node2D and is_instance_valid(e) and not (e as Node2D).is_queued_for_deletion() \
-				and not bool((e as Node2D).get("dead")):
+				and not bool((e as Node2D).get("dead")) \
+				and (e as Node2D).global_position.x < _mid_gate_x - 20.0:
 			alive += 1
 	if alive <= 0:
 		_open_mid_gate()
@@ -2751,6 +2778,10 @@ func _tick_mid_gate(_delta: float) -> void:
 	if _mid_gate_mode == "beam" and _sweep_beam_node != null and is_instance_valid(_sweep_beam_node):
 		var bx: float = float(_sweep_beam_node.get("_beam_x"))
 		_set_mid_gate_pass(bx > _mid_gate_x + 40.0 and bx < _mid_gate_x + 940.0)
+	# clear 모드 주기 재검 · 경비가 죽는 순간 외에도(게이트 너머로 배회 등) 개방 조건을 놓치지
+	# 않게 매 tick 재확인(경비 ≤5라 비용 무시 가능 · 소프트락 안전판 ⓒ).
+	if _mid_gate_mode == "clear" and _mid_gate_inited and not _mid_gate_opened:
+		_on_mid_gate_guard_down()
 
 # 차폐 니치 — 빔의 세이프존(비솔리드, 자유 이동). 통로 뒷벽의 오목한 차폐 벽감 + 발밑 사각 마킹.
 # 세이프 판정은 SweepBeam이 x밴드로 하고, 여기선 "여기 서면 스캔 사각"을 읽히게 하는 시각만.
@@ -5446,7 +5477,7 @@ func _elite_chance_here() -> float:
 	return base
 
 # 반환: 생성된 적 노드 — 호출자가 후처리(14-1 제어 노드 HP 오버라이드 등)에 쓸 수 있다(대부분 무시).
-func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1, disguise_kind: int = -1, feign: bool = false) -> CharacterBody2D:
+func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1, disguise_kind: int = -1, feign: bool = false, no_reward: bool = false) -> CharacterBody2D:
 	var e := CharacterBody2D.new()
 	e.set_script(load("res://scripts/Enemy.gd"))
 	e.collision_layer = 4
@@ -5523,18 +5554,21 @@ func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1, disguise_kind: in
 		e.set_meta("avoid_only", true)
 	if wave_idx >= 0:
 		e.set_meta("wave_idx", wave_idx)
-	e.killed.connect(_on_enemy_killed.bind(wave_idx, shiny, elite))
+	e.killed.connect(_on_enemy_killed.bind(wave_idx, shiny, elite, no_reward))
 	return e
 
-func _on_enemy_killed(at_position: Vector2, wave_idx: int = -1, shiny: bool = false, elite: bool = false) -> void:
-	GameState.register_kill(elite, shiny)
-	_refresh_hud()   # 킬 점수 실시간 반영(우상단 SCORE)
-	_spawn_orb(at_position + Vector2(0, -20.0))
-	# 엘리트 — 오브 1개 추가(총 가치 2, 위험 증가에 보상 동행 §2).
-	if elite:
-		_spawn_orb(at_position + Vector2(14.0, -26.0))
-	if shiny:
-		_reward_shiny_kill(at_position + Vector2(0, -20.0))
+func _on_enemy_killed(at_position: Vector2, wave_idx: int = -1, shiny: bool = false, elite: bool = false, no_reward: bool = false) -> void:
+	# 경보 진압 경비(no_reward) · 점수도 XP도 없음. "들키면 파밍 이득"을 원천 차단
+	# (사용자 2026-08-17 "오히려 좋아 느낌, 위압감이 없다").
+	if not no_reward:
+		GameState.register_kill(elite, shiny)
+		_refresh_hud()   # 킬 점수 실시간 반영(우상단 SCORE)
+		_spawn_orb(at_position + Vector2(0, -20.0))
+		# 엘리트 · 오브 1개 추가(총 가치 2, 위험 증가에 보상 동행 §2).
+		if elite:
+			_spawn_orb(at_position + Vector2(14.0, -26.0))
+		if shiny:
+			_reward_shiny_kill(at_position + Vector2(0, -20.0))
 	# 웨이브 모드: 처치된 적의 웨이브 카운트 감소 + 다음 웨이브 트리거 검사
 	if wave_idx >= 0 and wave_idx < _wave_alive_count.size():
 		_wave_alive_count[wave_idx] -= 1
@@ -7196,13 +7230,19 @@ func _build_goal_position() -> void:
 	goal.add_child(col)
 	# 골 비주얼 폴리시(2026-08-17) · 플랫 노란 사각 2장 → 그라디언트 문 + 위로 잦아드는
 	# 빛기둥 + 바닥 착지 글로우. "문/출구" 가독(외곽선·라벨)은 유지.
+	# 침몰 보정(사용자 2026-08-17 "표식이 표면에 잠김"): 문 하단(+100)이 지면 아래로 가는
+	# 맵(goal y540/지면600 · 지하철 y380/지면420 등)에서 문이 바닥에 박혀 보였다.
+	# 비주얼만 지면 위로 올린다(콜리전은 그대로 = 도달 판정 관대함 유지).
+	var vis := Node2D.new()
+	vis.position.y = -maxf(0.0, (pos.y + 100.0) - GROUND_Y)
+	goal.add_child(vis)
 	var door := Polygon2D.new()
 	door.polygon = PackedVector2Array([
 		Vector2(-30.0, -100.0), Vector2(30.0, -100.0), Vector2(30.0, 100.0), Vector2(-30.0, 100.0)])
 	door.vertex_colors = PackedColorArray([
 		Color(0.95, 0.85, 0.3, 0.16), Color(0.95, 0.85, 0.3, 0.16),
 		Color(1.0, 0.92, 0.5, 0.55), Color(1.0, 0.92, 0.5, 0.55)])
-	goal.add_child(door)
+	vis.add_child(door)
 	# 빛기둥 · 바닥에서 위로 잦아드는 세로 그라디언트(넓은 겹 + 좁은 코어 겹).
 	for entry in [[180.0, 0.14, 600.0], [80.0, 0.20, 460.0]]:
 		var e: Array = entry
@@ -7214,20 +7254,20 @@ func _build_goal_position() -> void:
 		beam.vertex_colors = PackedColorArray([
 			Color(0.95, 0.85, 0.3, 0.0), Color(0.95, 0.85, 0.3, 0.0),
 			Color(0.95, 0.85, 0.3, float(e[1])), Color(0.95, 0.85, 0.3, float(e[1]))])
-		goal.add_child(beam)
+		vis.add_child(beam)
 	# 바닥 착지 글로우 · 문 아래 얇고 밝은 띠 + 옆으로 번지는 빛.
 	var base_core := ColorRect.new()
 	base_core.color = Color(1.0, 0.94, 0.6, 0.85)
 	base_core.position = Vector2(-34.0, 97.0)
 	base_core.size = Vector2(68.0, 3.0)
-	goal.add_child(base_core)
+	vis.add_child(base_core)
 	var base_spread := Polygon2D.new()
 	base_spread.polygon = PackedVector2Array([
 		Vector2(-90.0, 96.0), Vector2(90.0, 96.0), Vector2(90.0, 100.0), Vector2(-90.0, 100.0)])
 	base_spread.vertex_colors = PackedColorArray([
 		Color(1.0, 0.9, 0.5, 0.0), Color(1.0, 0.9, 0.5, 0.0),
 		Color(1.0, 0.9, 0.5, 0.35), Color(1.0, 0.9, 0.5, 0.35)])
-	goal.add_child(base_spread)
+	vis.add_child(base_spread)
 	# 박스 외곽선 — "배경 장식"이 아니라 *문/출구*로 읽히게(피드백: 노란 네모가 끝인지 모름).
 	var border := Line2D.new()
 	border.points = PackedVector2Array([
@@ -7236,7 +7276,7 @@ func _build_goal_position() -> void:
 	border.closed = true
 	border.width = 2.0
 	border.default_color = Color(1.0, 0.9, 0.45, 0.85)
-	goal.add_child(border)
+	vis.add_child(border)
 	# "출구" 라벨 + 점멸 — 글자로 명시(시선 유도).
 	var exit_lbl := Label.new()
 	exit_lbl.text = "▼ 출구"
@@ -7248,7 +7288,7 @@ func _build_goal_position() -> void:
 	exit_lbl.position = Vector2(-60.0, -150.0)
 	exit_lbl.size = Vector2(120.0, 26.0)
 	exit_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	goal.add_child(exit_lbl)
+	vis.add_child(exit_lbl)
 	var pulse := exit_lbl.create_tween()
 	pulse.set_loops()
 	pulse.tween_property(exit_lbl, "modulate:a", 0.55, 0.8)
@@ -7265,6 +7305,27 @@ func _on_goal_reached(body: Node) -> void:
 		GameState.add_xp(challenge_xp_on_clear, false)
 		_show_veil_subtitle("혼자 해냈네요, 요원.", 2.5)
 	goal_reached = true
+	# 연습장 · 출구 도달 = 세계 정지(설정 조작 중 수위·열차 등 해저드에 죽는 것 방지,
+	# 사용자 2026-08-17). 패널(PROCESS_MODE_ALWAYS)은 계속 조작 가능 · F1 여닫기나 패널의
+	# 맵/스테이지 변경(reload가 paused 해제)으로 재개.
+	if GameState.playground_active:
+		get_tree().paused = true
+		var fl := CanvasLayer.new()
+		fl.layer = 32
+		fl.process_mode = Node.PROCESS_MODE_ALWAYS
+		add_child(fl)
+		var lbl := Label.new()
+		lbl.text = "연습장 · 출구 도달 · 세계 정지 (F1 패널로 계속)"
+		lbl.add_theme_font_size_override("font_size", 18)
+		lbl.add_theme_color_override("font_color", Color(1.0, 0.92, 0.5))
+		lbl.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+		lbl.add_theme_constant_override("outline_size", 4)
+		lbl.set_anchors_preset(Control.PRESET_CENTER_TOP)
+		lbl.position = Vector2(-220.0, 120.0)
+		lbl.size = Vector2(440.0, 30.0)
+		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		fl.add_child(lbl)
+		return
 	# 방 체인 · 마지막 방이 아니면 스테이지 클리어가 아니라 다음 방으로 문 전환.
 	if int(_map_data.get("segment_count", 1)) > int(_map_data.get("segment_index", 0)) + 1:
 		_begin_segment_transition()
@@ -7307,7 +7368,8 @@ func _on_searchlight_alert(ppos: Vector2) -> void:
 	if not _searchlight_line_shown:
 		_searchlight_line_shown = true
 		# "감시등" = 감시탑 탐조등·순찰로 경계등의 상위 일상어(맵 공용 콜아웃).
-		_show_veil_subtitle("감시등에 걸렸어요. 경비가 이쪽으로 옵니다.", 3.2)
+		# 위압감 재작업(사용자 2026-08-17 "파밍용 졸개라 오히려 좋아") · 진압 경비 = 무보상 고지.
+		_show_veil_subtitle("감시등에 걸렸어요. 진압 경비가 붙었어요. 잡아도 남는 게 없으니, 빛을 피해요.", 3.8)
 	if _searchlight_reinforced >= 2:
 		return
 	_searchlight_reinforced += 1
@@ -7335,7 +7397,11 @@ func _on_searchlight_alert(ppos: Vector2) -> void:
 func _searchlight_do_spawn(pos: Vector2) -> void:
 	if goal_reached or not is_inside_tree():
 		return
-	_spawn_enemy(0, pos)
+	# 진압 경비 = 추격 방패병 + 무보상(점수·XP 0) · 정면 사격이 안 통하는 게 쫓아오고,
+	# 잡아도 얻는 게 없어 "들키면 순손해"를 몸으로 학습(사용자 2026-08-17 위압감 재작업).
+	# 막1 "인간 경비만" 계약 준수(방패병 = 인간 팔레트).
+	var e := _spawn_enemy(4, pos, -1, -1, false, true)
+	e.set("hunt", true)
 	_enemies_remaining += 1
 
 # 돌풍(WindGust) · MapData "wind" 키. 옥상 시그니처 · 표류 보정형(2026-08-17 사용자 확정).
