@@ -19,7 +19,10 @@ const MAPS: Array = [
 	{"rid": "route_demolition_zone", "tags": ["근접전", "어두운_환경", "전투"], "risk": 2, "reward": 2, "stage": 1},
 	# 표준 조우 벤치(MapData._bot_bench · 게임 미노출): 평지 3웨이브, 빌드 화력의 순수 비교.
 	{"rid": "route_bot_bench",      "tags": ["전투"], "risk": 2, "reward": 2, "stage": 3},
-	# datacenter는 스위트에서 제외(2026-08-19): 수직 지형이라 봇이 상층 드론을 못 잡고
+	# 막5 벤치(stage 12) — 막 진행 적 강화(HP·사격 빈도) + 실전형 조우(저격·드론 혼성) 검증.
+	# 실런의 만렙 빌드가 실제로 만나는 조우는 이쪽(만렙이 stage 3에 있는 조합은 실런에 없다).
+	{"rid": "route_bot_bench_late", "tags": ["전투", "원거리"], "risk": 2, "reward": 2, "stage": 12},
+	# datacenter는 스위트에서 제외(2026-08-18): 수직 지형이라 봇이 상층 드론을 못 잡고
 	# 90s 타임아웃까지 대치(데드락). 전멸형 대표는 벤치가 맡는다 · 참고치 가치 낮음.
 ]
 const TIMEOUT_GAME_S: float = 90.0
@@ -92,8 +95,8 @@ func _run_one(build: Dictionary, m: Dictionary) -> void:
 	var dmg: int = dmg_total
 	# 처치 = GameState 카운터 기준(웨이브 맵에서 초기 대비 계산은 음수가 나온다 · 1차 스위트 교훈).
 	var kills: int = GameState.kills_total - kills0
-	print("[BOT] build=%s map=%s time=%.1f%s dmg=%d kills=%d/%d shots=%d" % [
-		str(build.get("name")), str(m.get("rid")), game_time,
+	print("[BOT] build=%s map=%s s%d time=%.1f%s dmg=%d kills=%d/%d shots=%d" % [
+		str(build.get("name")), str(m.get("rid")), int(m.get("stage")), game_time,
 		("(TIMEOUT)" if timed_out else ""), dmg, kills, enemies0, shots])
 	bot.stop()
 	bot.queue_free()

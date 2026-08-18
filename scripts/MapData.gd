@@ -78,6 +78,7 @@ static func _layout_raw(route_id: String) -> Dictionary:
 		"route_scanner_sweep": return _scanner_sweep()
 		"route_holdout":       return _holdout()
 		"route_bot_bench":     return _bot_bench()
+		"route_bot_bench_late": return _bot_bench_late()
 	return {}
 
 # ─── 1. 외곽 진입로 (HORIZONTAL, 짧음) ─────────────────────────
@@ -2131,6 +2132,9 @@ static func _scanner_sweep() -> Dictionary:
 static func _bot_bench() -> Dictionary:
 	return {
 		"world_type":   "ARENA",
+		# 엘리트 롤 잠금 — 후반 스테이지 계측(막5 벤치)에서 확률 승격이 분산을 오염시키지 않게.
+		# 막 진행 강화(HP·사격 빈도)는 결정적이라 그대로 측정된다.
+		"elite_chance": 0.0,
 		"world_size":   Vector2(1600.0, 760.0),
 		"player_start": Vector2(200.0, 620.0),
 		"goal_type":    "ENEMY_CLEAR",
@@ -2152,6 +2156,41 @@ static func _bot_bench() -> Dictionary:
 		"enemies": {
 			"patrol": [Vector2(1000.0, 650.0), Vector2(1350.0, 650.0)],
 			"bomber": [Vector2(1200.0, 650.0)],
+		},
+		"rewards": {"xp_orbs": [], "hp_pickups": []},
+	}
+
+# 막5 벤치(봇 계측 전용 · 게임 미노출) — 후반 표준 조우의 실전형 구성. 순찰만으론 만렙 빌드가
+# 첫 공격 사이클 전에 전멸시켜 피탄이 안 잡힌다(2026-08-18 실측) — 실제 막5 조우처럼 원거리
+# 위협(저격 협공)을 섞어야 "만렙이 공짜로 이기는가"가 측정된다. 방패병(정면 교착)과 드론
+# (공중 · 유도 없는 빌드는 못 잡아 90s 타임아웃 실측)은 봇이 해소 못 해 데드락 — 제외
+# (datacenter 교훈과 동형: 봇이 못 푸는 조우를 스위트에 넣지 않는다).
+static func _bot_bench_late() -> Dictionary:
+	return {
+		"world_type":   "ARENA",
+		"elite_chance": 0.0,
+		"world_size":   Vector2(1600.0, 760.0),
+		"player_start": Vector2(200.0, 620.0),
+		"goal_type":    "ENEMY_CLEAR",
+		"goal_pos":     Vector2.ZERO,
+		"camera_mode":  "FIXED",
+		"ground_y":     680.0,
+		"platforms":    [],
+		"waves": [
+			{"trigger": "immediate",  "banner": "WAVE 1", "enemies": {
+				"patrol": [Vector2(1000.0, 650.0), Vector2(1350.0, 650.0)],
+				"sniper": [Vector2(1480.0, 650.0)]}},
+			{"trigger": "prev_clear", "banner": "WAVE 2", "enemies": {
+				"patrol": [Vector2(1000.0, 650.0), Vector2(1350.0, 650.0)],
+				"sniper": [Vector2(1480.0, 650.0)],
+				"bomber": [Vector2(1200.0, 650.0)]}},
+			{"trigger": "prev_clear", "banner": "WAVE 3", "enemies": {
+				"patrol": [Vector2(1000.0, 650.0), Vector2(1350.0, 650.0)],
+				"sniper": [Vector2(1480.0, 650.0), Vector2(120.0, 650.0)]}},
+		],
+		"enemies": {
+			"patrol": [Vector2(1000.0, 650.0), Vector2(1350.0, 650.0)],
+			"sniper": [Vector2(1480.0, 650.0)],
 		},
 		"rewards": {"xp_orbs": [], "hp_pickups": []},
 	}

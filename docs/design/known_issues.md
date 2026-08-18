@@ -26,6 +26,12 @@
   예: 문서 규약 위반 = 전 문서 소스(_*_doc_lines·오버레이) / route id 하드코딩 = 옛 id 전체 grep /
   1회성 플래그 스코프 = 유사 플래그 전수. 자동 메모리 same-type-error-sweep와 동일 규칙.
 
+- **봇 계측 스위트에 봇이 못 푸는 조우를 넣지 말 것 — 90s 타임아웃 데드락으로 스위트가 오염된다
+  (2026-08-18 두 번 실측).** 봇의 구조적 한계 2종: ① 공중 위협(드론) · 유도 없는 빌드는 상공의
+  드론을 못 맞혀 영구 대치(datacenter 제외 사유 + 막5 벤치 W3 드론에서 재발, base/mid TIMEOUT)
+  ② 정면 교착(방패병) · 봇은 우회 기동이 없어 ENEMY_CLEAR에서 못 뚫음. → ENEMY_CLEAR 벤치
+  구성은 지상·정면 격파 가능 타입(순찰·폭탄병·저격)만. 원거리 압박이 필요하면 저격 협공 배치로.
+
 - **GDScript: untyped Array/Dictionary 인덱싱 시 명시 타입 선언.** `var x := arr[i]` 대신 `var x: Dictionary = arr[i]`.
   `Array[T]`에 untyped Array(사전 리터럴 값, `Dictionary.get` 결과) 직접 대입 금지(런타임 에러).
 

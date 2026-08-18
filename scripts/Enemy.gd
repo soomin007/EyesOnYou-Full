@@ -388,6 +388,18 @@ func _ready() -> void:
 			field.owner_ref = self
 			field.z_index = -2   # 캐릭터 아트 뒤
 			add_child(field)
+	# 막 진행 강화(라이벌 침식, 2026-08-18 사용자 "적을 강화해") — 막4/5 일반 유닛 내구 상향.
+	# 엘리트 램프와 같은 경계(막4+) = "막3까지는 데모 느낌" 제약 준수. 폭탄병 1 유지(원거리 1샷
+	# 정답 보존, 엘리트와 동형) · 재머 제외(라이벌의 "손"은 별개 문법). 엘리트는 아래 오버라이드가
+	# 절대값으로 덮어 계급 우위 유지(막5 일반 patrol 4 < 엘리트 6).
+	var act_now: int = GameState.act_for_stage(GameState.current_stage)
+	if act_now >= 3:
+		match enemy_type:
+			EnemyType.PATROL, EnemyType.SHIELD:
+				hp += 1 if act_now == 3 else 2
+			EnemyType.SNIPER, EnemyType.DRONE:
+				if act_now >= 4:
+					hp += 1
 	# §4 거짓 렌더 — 위장 렌더: 참 종류의 hp/행동은 위에서 정해졌고, 시각만 위장 종류로 교체 + 지직거림 tell.
 	if disguise_as >= 0 and disguise_as != enemy_type:
 		_disguised = true
@@ -499,15 +511,27 @@ func _telegraph_time() -> float:
 	return PATROL_TELEGRAPH * (0.6 if GameState.is_high_risk() else 1.0)
 
 func _patrol_fire_interval() -> float:
-	# Sniper와 동일한 0.7 보정 — Risk 3에서 사격이 더 잦음.
-	return PATROL_FIRE_INTERVAL * (0.7 if GameState.is_high_risk() else 1.0)
+	return PATROL_FIRE_INTERVAL * _pressure_interval_mul()
 
 func _sniper_interval() -> float:
 	var interval: float = ELITE_SNIPER_INTERVAL if elite else SNIPER_FIRE_INTERVAL
-	var base: float = interval * (0.7 if GameState.is_high_risk() else 1.0)
+	var base: float = interval * _pressure_interval_mul()
 	if _is_nest_sniper():
 		base *= NEST_SNIPER_INTERVAL_MUL
 	return base
+
+# 사격 빈도 압박 배수 — risk3(0.7)과 막 진행(막4 0.85 / 막5 0.75)을 곱하지 않고 min으로 결합
+# (기준 2 곱연산 차단은 적 쪽도 동일 · ELITE_SNIPER_INTERVAL "회피 가능선" 주석의 0.7 하한 보존).
+# 예고(텔레그래프) 시간은 안 건드린다 — 빈도만 조이고 공정성은 유지(elite_enemies_plan §0.2와 동형).
+func _pressure_interval_mul() -> float:
+	var risk_mul: float = 0.7 if GameState.is_high_risk() else 1.0
+	var act_now: int = GameState.act_for_stage(GameState.current_stage)
+	var act_mul: float = 1.0
+	if act_now >= 4:
+		act_mul = 0.75
+	elif act_now == 3:
+		act_mul = 0.85
+	return minf(risk_mul, act_mul)
 
 # 측면 단독 둥지(회피 전용) 저격수 식별 — Stage가 spawn 직후 avoid_only 메타를 붙인다.
 func _is_nest_sniper() -> bool:
@@ -524,7 +548,7 @@ func _eff_sniper_aim_time() -> float:
 
 func _drone_bomb_interval() -> float:
 	var interval: float = ELITE_DRONE_BOMB_INTERVAL if elite else DRONE_BOMB_INTERVAL
-	return interval * (0.7 if GameState.is_high_risk() else 1.0)
+	return interval * _pressure_interval_mul()
 
 # ─── 엘리트 유효치(elite_enemies_plan.md §2) — 텔레그래프 "시간"은 어디에도 안 건드림(§0.2) ───
 func _eff_patrol_speed() -> float:
