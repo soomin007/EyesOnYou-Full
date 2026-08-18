@@ -34,12 +34,18 @@ var niches: Array = []           # 세이프 벽감 x 중심들(cover_niches와 
 var niche_half: float = 90.0
 var triggers: Array = []         # 조우 보장 위치 트리거 x들(오름차순) · 지나면 즉시 예고 시작
 
+# 통과 후 최소 간격 — 위치 트리거가 연달아 걸려도 열차가 "거의 계속 지나다니는" 느낌이
+# 안 나게 숨을 강제한다(사용자 2026-08-18). 조우 보장(트리거 수)은 그대로 · 리듬만 벌린다.
+const MIN_GAP: float = 6.5
+
 var _trigger_idx: int = 0
 var _state: int = S.IDLE
 var _t: float = 0.0
+var _gap_t: float = 0.0          # 직전 통과 후 남은 최소 간격
 var _dir: int = 1                # 통과 방향 · 매회 교대
 var _train_x: float = 0.0
-var _hit_done: bool = false      # 통과당 피해 1회
+var _hit_done: bool = false      # 통과당 플레이어 피해 1회
+var _hit_enemies: Dictionary = {}  # 통과당 개체별 피해 1회(instance_id)
 var _lights: Array = []          # 신호등 램프 노드들
 
 func setup(cfg: Dictionary, g_y: float, stage_len: float, niche_xs: Array, n_half: float) -> void:
@@ -84,6 +90,7 @@ func _physics_process(delta: float) -> void:
 	if not is_inside_tree():
 		return
 	_t -= delta
+	_gap_t = maxf(_gap_t - delta, 0.0)
 	match _state:
 		S.IDLE:
 			# 위치 트리거 · 통과 중 지나쳤어도 IDLE 복귀 시 조건이 남아 있어 이어서 발동(누락 없음).
@@ -92,7 +99,8 @@ func _physics_process(delta: float) -> void:
 				if p is Node2D and (p as Node2D).global_position.x >= float(triggers[_trigger_idx]):
 					_trigger_idx += 1
 					_t = 0.0
-			if _t <= 0.0:
+			# 최소 간격(_gap_t)이 남았으면 예고를 미룬다 — 트리거 연쇄여도 숨은 보장.
+			if _t <= 0.0 and _gap_t <= 0.0:
 				_state = S.TELEGRAPH
 				_t = telegraph
 				_set_lights_red(true)
@@ -101,15 +109,18 @@ func _physics_process(delta: float) -> void:
 			if _t <= 0.0:
 				_state = S.PASS
 				_hit_done = false
+				_hit_enemies.clear()
 				_train_x = x_min if _dir > 0 else x_max
 				SfxPlayer.play("boss_missile_launch")
 		S.PASS:
 			_train_x += speed * float(_dir) * delta
 			_check_player_hit()
+			_check_enemy_hits()
 			queue_redraw()
 			if (_dir > 0 and _train_x > x_max) or (_dir < 0 and _train_x < x_min):
 				_state = S.IDLE
 				_t = interval
+				_gap_t = MIN_GAP
 				_dir = -_dir
 				_set_lights_red(false)
 				queue_redraw()
@@ -137,6 +148,34 @@ func _check_player_hit() -> void:
 		p.call("apply_knockback", Vector2(KNOCKBACK_X * float(_dir), KNOCKBACK_Y), 0.28)
 	if p.has_method("take_hit"):
 		p.call("take_hit", dmg)
+
+# 열차는 누구 편도 아니다(사용자 2026-08-18 "왜 적은 안 치이지") — 선로 대역의 적도 대뎀.
+# 환경 내성 캐논(물·감전 = 시설 유닛 설계 내성)과 구분: 열차는 물리 충돌이라 예외 없음.
+# 전술 부가: 경보 끌고 선로에 세우면 열차가 대신 정리한다.
+func _check_enemy_hits() -> void:
+	for e in get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(e) or not (e is Node2D):
+			continue
+		var en: Node2D = e as Node2D
+		if bool(en.get("dead")) or bool(en.get("harmless")):
+			continue
+		if _hit_enemies.has(en.get_instance_id()):
+			continue
+		var pos: Vector2 = en.global_position
+		if pos.y < ground_y - TRAIN_H:
+			continue   # 단차·공중은 세이프(플레이어와 동일 규칙)
+		var in_niche: bool = false
+		for nx in niches:
+			if absf(pos.x - float(nx)) <= niche_half:
+				in_niche = true
+				break
+		if in_niche:
+			continue
+		if absf(pos.x - _train_x) > TRAIN_W * 0.5:
+			continue
+		_hit_enemies[en.get_instance_id()] = true
+		if en.has_method("take_damage"):
+			en.call("take_damage", dmg, _dir)
 
 func _draw() -> void:
 	if _state != S.PASS:

@@ -382,9 +382,11 @@ static func _subway_platform() -> Dictionary:
 
 # 방2 · 선로. 시그니처 = 무인 화물 열차(TrainHazard): 신호등 적색 전환(2.2s 예고) 후 고속 통과,
 # 대뎀 2 + 넉백(즉사 아님, 사용자 확정). 대피 = 벽의 홈(cover_niches) / 승강장 조각 단차 / 타이밍 점프.
-# 2026-08-17 재설계(사용자 "4~5회라더니 2회"): 주기식은 실주기 11.3s(interval 6.5 + 예고 2.2 +
-# 통과 2.6)라 주파 19s(4600÷240)에 최대 2회 · 과대평가였다. 조우 횟수는 **위치 트리거 4개**로
-# 보장(플레이 속도 무관, known_issues "체류 시간" 규칙). interval은 정지 시 배경 리듬용 폴백.
+# 2026-08-17 재설계(사용자 "4~5회라더니 2회"): 조우 횟수는 위치 트리거로 보장(플레이 속도 무관,
+# known_issues "체류 시간" 규칙). interval은 정지 시 배경 리듬용 폴백.
+# 2026-08-18 재조정(사용자 "거의 계속 지나다니는 느낌"): 트리거 4→3 + TrainHazard MIN_GAP 6.5s.
+# 정직 실주기 = 예고 2.2 + 통과 ~2.2 + 간격 6.5 ≈ 11s/회 · 주파 19s(4600÷240)에 보장 3회가 상한.
+# 열차는 적도 친다(2026-08-18 "왜 적은 안 치이지") — 선로 경비를 열차에 밀어 넣는 전술 성립.
 # 무릎 높이 화물차 잔해 솔리드는 제거(총알만 먹음 · 방1과 동형 정리).
 static func _subway_tracks() -> Dictionary:
 	return {
@@ -398,7 +400,7 @@ static func _subway_tracks() -> Dictionary:
 		"ambience":     "subway_tracks",
 		"indoor_env":   "subway",
 		"train_hazard": {"interval": 9.0, "telegraph": 2.2, "speed": 2400.0, "dmg": 2,
-			"triggers": [520.0, 1680.0, 2840.0, 4000.0],
+			"triggers": [520.0, 2100.0, 3700.0],
 			"lights": [500.0, 1500.0, 2500.0, 3500.0, 4300.0]},
 		"cover_niches": [650.0, 1500.0, 2200.0, 3150.0, 4050.0],
 		"niche_half":   90.0,
@@ -414,6 +416,7 @@ static func _subway_tracks() -> Dictionary:
 		},
 		"route_lines": [
 			{"x": 260.0, "who": "veil", "text": "선로가 아직 살아 있어요. 신호가 붉어지면 열차가 옵니다. 벽에 파인 홈이나 높은 발판으로 피하세요.", "dur": 4.0},
+			{"x": 1400.0, "who": "veil", "text": "열차는 누구 편도 아니에요. 선로에 서 있는 건 경비라도 쓸어 가요.", "dur": 3.2},
 		],
 		"rewards": {
 			# 위험 보상 · 벽감 사이 선로 위(열차 리스크를 지나야 먹는다).
@@ -492,6 +495,7 @@ static func _cooling_intake() -> Dictionary:
 		"goal_pos":     Vector2(2680.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
 		"ambience":     "cooling_intake",
+		"indoor_env":   "water",   # 냉각 플랜트 = 실내(배관·물 계열) — 야경 스카이라인 오출력 수정(사용자 2026-08-18)
 		"platforms": [
 			{"pos": Vector2(700, 470),  "w": 180.0},
 			{"pos": Vector2(1350, 460), "w": 180.0},
@@ -530,6 +534,7 @@ static func _cooling_core() -> Dictionary:
 		"goal_pos":     Vector2(4480.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
 		"ambience":     "cooling_core",
+		"indoor_env":   "water",
 		"platforms": [
 			# 파이프 발판 — 증기 분출구를 넘거나 드론을 피하는 위치.
 			{"pos": Vector2(620, 460),  "w": 180.0},
@@ -586,7 +591,9 @@ static func _cooling_exhaust() -> Dictionary:
 		"goal_pos":     Vector2(3080.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
 		"ambience":     "cooling_exhaust",
-		"mid_gate": {"x": 2840.0, "mode": "lever", "lever": Vector2(2560.0, 408.0)},
+		"indoor_env":   "water",
+		# 레버 y = 발판 top(440) - 22(레버 받침 바닥 오프셋) — 공중 부양 금지(사용자 2026-08-18).
+		"mid_gate": {"x": 2840.0, "mode": "lever", "lever": Vector2(2560.0, 418.0)},
 		"platforms": [
 			{"pos": Vector2(620, 460),  "w": 180.0},
 			{"pos": Vector2(1150, 440), "w": 180.0},
@@ -1536,7 +1543,8 @@ static func _pump_station() -> Dictionary:
 		"goal_type":    "POSITION",
 		"goal_pos":     Vector2(6060.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
-		"mid_gate": {"x": 3210.0, "mode": "lever", "lever": Vector2(3060.0, 298.0)},
+		# 레버 y = 발판 top(330) - 22 — 공중 부양 금지(냉각 레버와 동형 수정 2026-08-18).
+		"mid_gate": {"x": 3210.0, "mode": "lever", "lever": Vector2(3060.0, 308.0)},
 		"platforms": [
 			# 전반 — 펌프/파이프 발판(기존 유지).
 			{"pos": Vector2(540, 460),  "w": 190.0},
