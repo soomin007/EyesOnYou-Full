@@ -19,8 +19,8 @@ const MAPS: Array = [
 	{"rid": "route_demolition_zone", "tags": ["근접전", "어두운_환경", "전투"], "risk": 2, "reward": 2, "stage": 1},
 	# 표준 조우 벤치(MapData._bot_bench · 게임 미노출): 평지 3웨이브, 빌드 화력의 순수 비교.
 	{"rid": "route_bot_bench",      "tags": ["전투"], "risk": 2, "reward": 2, "stage": 3},
-	# 전멸형(웨이브) · 수직 지형이라 봇 등반 한계로 참고치만(드론·상층 저격 상대 불가).
-	{"rid": "route_datacenter",     "tags": ["전투", "드론", "원거리"], "risk": 3, "reward": 3, "stage": 6},
+	# datacenter는 스위트에서 제외(2026-08-19): 수직 지형이라 봇이 상층 드론을 못 잡고
+	# 90s 타임아웃까지 대치(데드락). 전멸형 대표는 벤치가 맡는다 · 참고치 가치 낮음.
 ]
 const TIMEOUT_GAME_S: float = 90.0
 const HP_POOL: int = 30   # 사망 중단 없이 받은 피해를 지표로 잰다
