@@ -837,6 +837,31 @@ func _build_world() -> void:
 	_build_mid_gate()
 	_build_route_lines()
 	_build_fake_watchers()
+	_play_arrival_beat()
+
+# 도착 비트(방 체인 페이오프) — MapData "arrival_beat" 구동. 표준 기법만 사용(화이트 인 +
+# BGM 덕킹 + 등 뒤 굉음 · 자막은 route_lines가 맡는다). 2026-08-18 붕괴 회랑 "감동 없음"
+# 피드백 대응 · 확산 배치의 다른 절정 방에도 재사용 가능.
+func _play_arrival_beat() -> void:
+	if str(_map_data.get("arrival_beat", "")) != "surface_breakout":
+		return
+	var layer := CanvasLayer.new()
+	layer.layer = 30
+	add_child(layer)
+	var white := ColorRect.new()
+	white.color = Color(1.0, 1.0, 1.0, 1.0)
+	white.set_anchors_preset(Control.PRESET_FULL_RECT)
+	layer.add_child(white)
+	# 정적 — 어둠에서 빛으로 나오는 1.2초 동안 소리를 낮춘다.
+	BgmPlayer.set_ducked(true)
+	var tw := white.create_tween()
+	tw.tween_property(white, "color:a", 0.0, 1.2).set_ease(Tween.EASE_OUT)
+	tw.tween_callback(func() -> void:
+		# 등 뒤에서 무너지는 굉음 한 번 — 두고 온 것의 크기를 소리로만.
+		SfxPlayer.play("bomb_explode")
+		BgmPlayer.set_ducked(false)
+		if is_instance_valid(layer):
+			layer.queue_free())
 
 var locked_door_triggered: bool = false
 

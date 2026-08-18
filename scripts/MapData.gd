@@ -976,53 +976,52 @@ static func _escape_destroy() -> Dictionary:
 # 방1 · 격리 구획 승강 샤프트(VERTICAL_UP). 아래에서 붕괴가 차오른다(chase axis y_up).
 # 점프 등급은 watchtower 문법(S=Δ95 / D=Δ130, Δ160+ 금지). 붕괴 속도 60 < 등반 체감 ~100:
 # 계속 오르면 벌어지고, 실수(낙하·봉크)만 따라붙는다. catchup 140(수평 340은 등반에 과함).
+# 2026-08-18 재작업(사용자 "범프 노가다만 시키고 재미·감동 없음"): ① 등반 34% 압축(2795→1855px)
+# + 악구화(지그재그 학습 → 큰 도약 → 쉼터 → 좁은 발판 속주 → 마무리 · 동일 리듬 25연타 해체)
+# ② 붕괴 압박 상향(60→82 · catchup 190 · 간격 560 = "멈추면 잡힌다"가 체감되는 추격전)
+# ③ 페이오프는 방3 arrival_beat(지상 돌파 비트).
 static func _escape_destroy_shaft() -> Dictionary:
 	return {
 		"world_type":   "VERTICAL_UP",
-		"world_size":   Vector2(1280.0, 3200.0),
-		"player_start": Vector2(640.0, 3050.0),
+		"world_size":   Vector2(1280.0, 2200.0),
+		"player_start": Vector2(640.0, 2050.0),
 		"goal_type":    "POSITION",
 		"goal_pos":     Vector2(640.0, 195.0),
 		"camera_mode":  "VERTICAL",
 		"elite_chance": 0.0,
 		"ambience":     "collapse_shaft",
-		"chase_hazard": {"start_x": 3350.0, "speed": 60.0, "max_gap": 800.0, "axis": "y_up", "catchup": 140.0},
+		"chase_hazard": {"start_x": 2350.0, "speed": 82.0, "max_gap": 560.0, "axis": "y_up", "catchup": 190.0},
 		"platforms": [
-			# 지그재그 등반 · S(Δ95)/D(Δ130) 교대. 폭은 넉넉하게(강제 전진 중 착지 실패 = 사실상 죽음).
-			{"pos": Vector2(560, 2955), "w": 240.0},  # Δ95 S
-			{"pos": Vector2(400, 2825), "w": 220.0},  # Δ130 D
-			{"pos": Vector2(560, 2730), "w": 220.0},  # Δ95 S
-			{"pos": Vector2(760, 2600), "w": 220.0},  # Δ130 D
-			{"pos": Vector2(900, 2505), "w": 240.0},  # Δ95 S
-			{"pos": Vector2(760, 2375), "w": 320.0},  # Δ130 D · 쉼터(XP)
-			{"pos": Vector2(560, 2280), "w": 220.0},  # Δ95 S
-			{"pos": Vector2(400, 2150), "w": 220.0},  # Δ130 D
-			{"pos": Vector2(560, 2055), "w": 220.0},  # Δ95 S
-			{"pos": Vector2(760, 1925), "w": 220.0},  # Δ130 D
-			{"pos": Vector2(900, 1830), "w": 240.0},  # Δ95 S
-			{"pos": Vector2(760, 1700), "w": 320.0},  # Δ130 D · 쉼터(HP)
-			{"pos": Vector2(560, 1605), "w": 220.0},  # Δ95 S
-			{"pos": Vector2(400, 1475), "w": 220.0},  # Δ130 D
-			{"pos": Vector2(560, 1380), "w": 220.0},  # Δ95 S
-			{"pos": Vector2(760, 1250), "w": 220.0},  # Δ130 D
-			{"pos": Vector2(900, 1155), "w": 240.0},  # Δ95 S
-			{"pos": Vector2(760, 1025), "w": 320.0},  # Δ130 D · 쉼터(XP)
-			{"pos": Vector2(560, 930),  "w": 220.0},  # Δ95 S
-			{"pos": Vector2(400, 800),  "w": 220.0},  # Δ130 D
-			{"pos": Vector2(560, 705),  "w": 220.0},  # Δ95 S
-			{"pos": Vector2(760, 575),  "w": 220.0},  # Δ130 D
-			{"pos": Vector2(900, 480),  "w": 240.0},  # Δ95 S
-			{"pos": Vector2(760, 350),  "w": 220.0},  # Δ130 D
-			{"pos": Vector2(640, 255),  "w": 460.0},  # Δ95 S · 상단 출구 데크
+			# 1악구 · 지그재그 학습(S Δ95 / D Δ130 · 폭 넉넉)
+			{"pos": Vector2(560, 1955), "w": 240.0},
+			{"pos": Vector2(400, 1825), "w": 220.0},
+			{"pos": Vector2(560, 1730), "w": 220.0},
+			{"pos": Vector2(760, 1600), "w": 220.0},
+			# 2악구 · 큰 도약(Δ150~160 더블 2연 · 좌우로 크게 — 리듬 전환)
+			{"pos": Vector2(420, 1450), "w": 180.0},
+			{"pos": Vector2(700, 1290), "w": 160.0},
+			# 쉼터(XP) — 숨 고르는 포켓, 붕괴가 등 뒤까지 차오르는 소리를 듣는 자리
+			{"pos": Vector2(560, 1180), "w": 340.0},
+			# 3악구 · 좁은 발판 속주(S Δ95 3연 · 폭 140 — 빠른 손)
+			{"pos": Vector2(380, 1085), "w": 140.0},
+			{"pos": Vector2(560, 990),  "w": 140.0},
+			{"pos": Vector2(740, 895),  "w": 140.0},
+			# 4악구 · 큰 도약 재현(Δ150~160)
+			{"pos": Vector2(900, 745),  "w": 200.0},
+			{"pos": Vector2(640, 585),  "w": 220.0},
+			# 마무리 지그재그 → 출구 데크
+			{"pos": Vector2(440, 490),  "w": 200.0},
+			{"pos": Vector2(600, 360),  "w": 220.0},
+			{"pos": Vector2(640, 255),  "w": 460.0},
 		],
 		"enemies": {"patrol": [], "sniper": [], "drone": [], "bomber": [], "shield": []},
 		"route_lines": [
-			{"y": 2450.0, "who": "rival", "text": "타는 냄새가 여기까지 옵니다. 제가... 타는 냄새가.", "dur": 3.2, "glitch": true},
-			{"y": 1100.0, "who": "veil",  "text": "반쯤 올라왔어요. 이 페이스면 됩니다.", "dur": 3.0},
+			{"y": 1650.0, "who": "rival", "text": "타는 냄새가 여기까지 옵니다. 제가... 타는 냄새가.", "dur": 3.2, "glitch": true},
+			{"y": 900.0,  "who": "veil",  "text": "반쯤 올라왔어요. 이 페이스면 됩니다.", "dur": 3.0},
 		],
 		"rewards": {
-			"xp_orbs":    [Vector2(740, 2345.0), Vector2(780, 2345.0), Vector2(740, 995.0), Vector2(780, 995.0)],
-			"hp_pickups": [Vector2(760, 1670.0)],
+			"xp_orbs":    [Vector2(540, 1150.0), Vector2(580, 1150.0)],
+			"hp_pickups": [Vector2(900, 715.0)],
 		},
 		"spikes": [],
 	}
@@ -1059,6 +1058,7 @@ static func _escape_destroy_mezz() -> Dictionary:
 
 # 방3 · 지상 터널 → 도시 야경(기존 탈출 배경 자산 재사용). 붕괴는 아래에 두고 왔다 · 추격 없음.
 # 터널 출구(_TUNNEL_END_X=1600) 밖은 BGM 감쇠·야경과 함께 이완 구간, VEIL 마무리 멘트.
+# arrival_beat = 지상 돌파 비트(2026-08-18 페이오프): 화이트 인 + 정적 → 등 뒤 굉음.
 static func _escape_destroy_surface() -> Dictionary:
 	return {
 		"world_type":   "HORIZONTAL",
@@ -1068,6 +1068,7 @@ static func _escape_destroy_surface() -> Dictionary:
 		"goal_pos":     Vector2(2480.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
 		"elite_chance": 0.0,
+		"arrival_beat": "surface_breakout",
 		"platforms": [],
 		"hurdles": [
 			{"x": 600.0,  "w": 46.0, "h": 80.0},
@@ -1078,6 +1079,7 @@ static func _escape_destroy_surface() -> Dictionary:
 			"sniper": [], "drone": [], "bomber": [], "shield": [],
 		},
 		"route_lines": [
+			{"x": 260.0,  "who": "veil", "text": "...나왔어요. 하늘 보여요. 무너지는 소리는 이제 등 뒤예요.", "dur": 3.4},
 			{"x": 1750.0, "who": "veil", "text": "...신호가 끊겼어요. 저것도, 시설도. 앞만 봐요.", "dur": 3.2},
 		],
 		"rewards": {"xp_orbs": [], "hp_pickups": []},

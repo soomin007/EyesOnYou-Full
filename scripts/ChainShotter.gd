@@ -41,6 +41,7 @@ func _capture(rid: String, stage_idx: int, seg: int, px: float) -> void:
 	if route.is_empty():
 		print("SHOT SKIP (no route): ", rid)
 		return
+	GameState.disposal_choice = "destroy"   # 탈출 4종 캡처용(일반 맵엔 무해)
 	GameState.record_route_choice(route, "")
 	GameState.current_segment = seg   # record_route_choice 뒤에 — 체인 방 선택
 	var stage: Node = (load(STAGE_SCENE) as PackedScene).instantiate()
