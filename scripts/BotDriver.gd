@@ -32,6 +32,7 @@ var _tgt_t: float = 0.0
 var _nav_id: int = 0                # 사냥 목적지 교착 가드(공중 적 밑 대치 등)
 var _nav_t: float = 0.0
 var _ignore: Dictionary = {}        # instance_id → 무시 해제 시각(_clock)
+var _giveup: Dictionary = {}        # instance_id → 포기 횟수 · 2회면 영구 무시(사람도 두 번 막히면 버린다)
 var _clock: float = 0.0
 var _hop_t: float = 0.0             # 교전 중 점프 사격 리듬
 var _hop_period: float = 1.2        # air_shot_ratio에서 유도(작을수록 자주 뛴다)
@@ -48,6 +49,13 @@ var _use_grenade: bool = false
 var _kills_seen: int = 0
 var _pull_pulse: int = 0            # 레버 당기기(공격 키 just_pressed 펄스)
 var _pull_t: float = 0.0
+# 사용자 기법 이식(2026-08-18 직접 설명): 방패병 크로스 · 대공 점프샷.
+var _cross_t: float = -1.0          # ≥0이면 방패병 뛰어넘기 진행 중
+var _cross_dir: float = 0.0
+var _cross_id: int = 0
+var _aa_id: int = 0                 # 대공 표적(드론) 교착 추적
+var _aa_t: float = 0.0
+var _cross_count: Dictionary = {}   # 방패병당 크로스 시도 횟수(2회 제한 · 초과 시 포기 경로)
 
 func setup(stage: Node) -> void:
 	_stage = stage
@@ -99,7 +107,20 @@ func _physics_process(delta: float) -> void:
 	# 가장 가까운 적을 목적지로(사용자의 "다 잡고 지나간다" 습관). 없으면 골 방향.
 	var nav: Node2D = null
 	var nav_dx: float = 1e9
-	if arena or hunt:
+	# 표적 고정(대공과 동형 · 2026-08-19) — 적 무리가 겹쳐 다니면 "최근접"이 프레임마다
+	# 스왑되어 교착 타이머가 리셋 → 포기가 안 온다. 기존 목적지가 유효하면 유지.
+	if _nav_id != 0 and (arena or hunt):
+		var heldn: Node2D = instance_from_id(_nav_id) as Node2D
+		if heldn != null and is_instance_valid(heldn) and not bool(heldn.get("dead")) \
+				and not bool(heldn.get("harmless")) \
+				and not (_ignore.has(_nav_id) and _clock < float(_ignore[_nav_id])):
+			var reln: Vector2 = heldn.global_position - _player.global_position
+			var etn: Variant = heldn.get("enemy_type")
+			if (etn == null or int(etn) != 2) \
+					and (arena or (absf(reln.x) <= hunt_range and absf(reln.y) <= hunt_dy)):
+				nav = heldn
+				nav_dx = absf(reln.x)
+	if nav == null and (arena or hunt):
 		for e0 in get_tree().get_nodes_in_group("enemy"):
 			if not is_instance_valid(e0) or not (e0 is Node2D):
 				continue
@@ -126,7 +147,7 @@ func _physics_process(delta: float) -> void:
 		if nav.get_instance_id() == _nav_id:
 			_nav_t += delta
 			if _nav_t > 7.0:
-				_ignore[nav.get_instance_id()] = _clock + 12.0
+				_mark_giveup(nav.get_instance_id())
 				_nav_t = 0.0
 				nav = null
 		else:
@@ -150,12 +171,13 @@ func _physics_process(delta: float) -> void:
 		if absf(rel.x) < best:
 			best = absf(rel.x)
 			target = e
-	# 같은 표적 6s 교착 = 포기(방패병 정면 등 · 사람도 지나친다). 10s 뒤 재고려.
+	# 같은 표적 6s 교착 = 포기(방패병 정면 등 · 사람도 지나친다). 10s 뒤 재고려 ·
+	# 2회 포기면 영구(hunt 성향이 못 잡는 적에게 무한 회귀하던 TIMEOUT 차단).
 	if target != null:
 		if target.get_instance_id() == _tgt_id:
 			_tgt_t += delta
 			if _tgt_t > 6.0:
-				_ignore[target.get_instance_id()] = _clock + 10.0
+				_mark_giveup(target.get_instance_id())
 				_tgt_t = 0.0
 				target = null
 		else:
@@ -172,13 +194,92 @@ func _physics_process(delta: float) -> void:
 			if lp is Vector2 and absf(_player.global_position.x - float(mg.get("x", 0.0))) < 1100.0:
 				lever_pos = lp
 	var lever_dx: float = (lever_pos.x - _player.global_position.x) if lever_pos != Vector2.INF else 1e9
-	# 이동 · 표적이 사거리 안이면 멈춰 쏘고, 아니면 목적지(레버 > 사냥 적 > 골) 방향 전진.
+	# 방패병 크로스(사용자 기법: "뛰어넘어 등을 갈긴다" — 방패는 정면만 막는다).
+	# 정면 교착 1.2s면 그쪽으로 점프해 넘어가고, 반대편 착지 후 표적 창을 새로 연다(등 노출).
+	if _cross_t >= 0.0:
+		_cross_t += delta
+		var ct: Node2D = instance_from_id(_cross_id) as Node2D
+		if ct == null or not is_instance_valid(ct) or bool(ct.get("dead")) or _cross_t > 1.6:
+			_cross_t = -1.0
+		else:
+			var cdx: float = ct.global_position.x - _player.global_position.x
+			if signf(cdx) == -_cross_dir and absf(cdx) > 60.0:
+				_cross_t = -1.0   # 반대편 착지 완료 — 이제 등이 이쪽
+	elif target != null and _tgt_t > 1.2 and best < 300.0:
+		var et_t: Variant = target.get("enemy_type")
+		# 크로스는 방패당 2회까지 — 그래도 못 잡으면 기존 6s 스톨 → 포기 경로로(영구 씨름 방지).
+		if et_t != null and int(et_t) == 4 and int(_cross_count.get(target.get_instance_id(), 0)) < 2:
+			_cross_dir = signf(target.global_position.x - _player.global_position.x)
+			if _cross_dir == 0.0:
+				_cross_dir = 1.0
+			_cross_id = target.get_instance_id()
+			_cross_count[_cross_id] = int(_cross_count.get(_cross_id, 0)) + 1
+			_cross_t = 0.0
+			_tgt_t = 0.0
+			if _jump_pulse == 0:
+				Input.action_press("jump")
+				_jump_pulse = 2
+	# 대공 표적(사용자 기법: "옆에 비껴 서서 점프샷") — 지상 사냥감(nav)이 다 떨어졌을 때만.
+	# 지상 적보다 우선하면 봇이 드론과 씨름하느라 전진·사냥이 전부 멈춘다(2026-08-18 실측).
+	var aa: Node2D = null
+	# 표적 고정 — 드론 무리가 겹쳐 다니면 "최근접"이 프레임마다 스왑되어 교착 타이머가
+	# 계속 리셋 → 포기가 영원히 안 오는 무한 교착(2026-08-19 실측). 죽거나 포기할 때까지 유지.
+	if _aa_id != 0 and (arena or hunt) and target == null and _cross_t < 0.0 and lever_pos == Vector2.INF:
+		var held: Node2D = instance_from_id(_aa_id) as Node2D
+		if held != null and is_instance_valid(held) and not bool(held.get("dead")) \
+				and not (_ignore.has(_aa_id) and _clock < float(_ignore[_aa_id])):
+			var relh: Vector2 = held.global_position - _player.global_position
+			if relh.y < -60.0 and absf(relh.x) < 460.0:
+				aa = held
+	if aa == null and (arena or hunt) and target == null and nav == null and _cross_t < 0.0 and lever_pos == Vector2.INF:
+		var aa_best: float = 360.0
+		for e3 in get_tree().get_nodes_in_group("enemy"):
+			if not is_instance_valid(e3) or not (e3 is Node2D):
+				continue
+			if bool((e3 as Node2D).get("dead")) or bool((e3 as Node2D).get("harmless")):
+				continue
+			var et3: Variant = (e3 as Node2D).get("enemy_type")
+			if et3 == null or int(et3) != 2:
+				continue
+			if _ignore.has(e3.get_instance_id()) and _clock < float(_ignore[e3.get_instance_id()]):
+				continue
+			var rel3: Vector2 = (e3 as Node2D).global_position - _player.global_position
+			if rel3.y > -80.0:
+				continue
+			if absf(rel3.x) < aa_best:
+				aa_best = absf(rel3.x)
+				aa = e3
+	# 대공 교착 — 같은 드론 5s 무진전이면 포기(2회면 영구 · 킬 시 _kills_seen 리셋이 풀어준다).
+	if aa != null:
+		if aa.get_instance_id() == _aa_id:
+			_aa_t += delta
+			if _aa_t > 5.0:
+				_mark_giveup(aa.get_instance_id())
+				_aa_t = 0.0
+				aa = null
+		else:
+			_aa_id = aa.get_instance_id()
+			_aa_t = 0.0
+	var aa_dx: float = (aa.global_position.x - _player.global_position.x) if aa != null else 1e9
+	var aa_fire: bool = false
+	# 이동 · 우선순위: 크로스 기동 > 레버 > 교전 정지 > 대공 자리잡기 > 사냥 목적지 > 골.
 	var move_dir: float = goal_dir
-	if lever_pos != Vector2.INF and target == null:
+	if _cross_t >= 0.0:
+		move_dir = _cross_dir
+	elif lever_pos != Vector2.INF and target == null:
 		# 레버 감지 Area가 40px 폭(반폭 20) — 정지 문턱이 넓으면 감지 밖에 서서 헛사격한다.
 		move_dir = signf(lever_dx) if absf(lever_dx) > 14.0 else 0.0
 	elif target != null and best < engage_range * 0.75:
 		move_dir = 0.0
+	elif aa != null:
+		# 수평탄이라 바로 밑에선 못 맞힌다 — 옆 80~190px 밴드에 서서 정점 사격.
+		if absf(aa_dx) < 70.0:
+			move_dir = -signf(aa_dx) if signf(aa_dx) != 0.0 else 1.0
+		elif absf(aa_dx) > 190.0:
+			move_dir = signf(aa_dx)
+		else:
+			move_dir = 0.0
+			aa_fire = true
 	elif nav != null and nav_dx < 90.0:
 		# 목적지 바로 아래 도착 · dx 부호 진동으로 좌우 떨림 방지(서서 싸운다).
 		move_dir = 0.0
@@ -192,7 +293,7 @@ func _physics_process(delta: float) -> void:
 		Input.action_release("move_right")
 		Input.action_release("move_left")
 		# 표적을 향해 몸 돌리기(사격 방향 = facing).
-		var face: Node2D = target if target != null else nav
+		var face: Node2D = target if target != null else (aa if aa != null else nav)
 		var tdir: float = 0.0
 		if face != null:
 			tdir = signf(face.global_position.x - _player.global_position.x)
@@ -225,7 +326,11 @@ func _physics_process(delta: float) -> void:
 			blind_fire = false
 	else:
 		_blind_t = 0.0
-	if target != null or blind_fire:
+	if _cross_t >= 0.0:
+		# 크로스 기동 중엔 사격 중지(정면 방패에 낭비 방지 · 착지 후 등을 노린다).
+		Input.action_release("attack")
+		_react_t = 0.0
+	elif target != null or blind_fire or aa_fire:
 		_react_t += delta
 		if _react_t >= reaction_s:
 			Input.action_press("attack")
@@ -251,6 +356,9 @@ func _physics_process(delta: float) -> void:
 	var climb_up: float = 0.0
 	if lever_pos != Vector2.INF and target == null and absf(lever_dx) < 220.0:
 		climb_up = _player.global_position.y - lever_pos.y
+	elif aa_fire:
+		# 대공 점프샷 — 더블점프 정점(~190)이 드론 고도(-220) 언저리의 조준 밴드에 든다.
+		climb_up = _player.global_position.y - aa.global_position.y
 	elif nav != null and nav_dx < 220.0:
 		climb_up = _player.global_position.y - nav.global_position.y
 	# 사람의 등반 = 점프 직후 더블점프(합산 ~190px). 단발 점프 반복으로는 높은 발판(Δ>104)에
@@ -338,6 +446,11 @@ func _physics_process(delta: float) -> void:
 				_stuck_t = 0.45   # 다음 펄스(이단 점프) 예약
 	else:
 		_stuck_t = 0.0
+
+# 포기 등록 — 1회차는 10~12s 무시 후 재고려, 2회차부터 영구 무시(못 잡는 적 무한 회귀 차단).
+func _mark_giveup(id: int) -> void:
+	_giveup[id] = int(_giveup.get(id, 0)) + 1
+	_ignore[id] = _clock + (999999.0 if int(_giveup[id]) >= 2 else 11.0)
 
 func stop() -> void:
 	_release_all()

@@ -2,19 +2,20 @@ extends Node
 
 # 방 체인 스크린샷 하니스(2026-08-18, room_chain_expansion 검증용) — rid+stage+segment 단위로
 # Stage를 띄워 분위기 컷을 저장한다. 배경 신설 검증([[new-map-always-full-background]])에
-# 배치마다 재사용. 실행(창모드): godot --path . --resolution 1280x720 res://scenes/chain_shotter.tscn
+# 배치마다 재사용. 실행(창모드 · 반드시 무음으로 — 사용자 작업 중 소리 노출 방지):
+#   godot --path . --audio-driver Dummy --resolution 1280x720 res://scenes/chain_shotter.tscn
 # TARGETS만 바꿔 쓰면 된다. x를 주면 플레이어를 그 x로 옮겨 방 중반 배경을 담는다.
 
 const STAGE_SCENE: String = "res://scenes/stage.tscn"
 const OUT_DIR: String = "res://poster_out/chain_shots"
 
 const TARGETS: Array = [
-	{"rid": "route_warehouse", "stage": 3, "seg": 0, "x": 900.0},
-	{"rid": "route_warehouse", "stage": 3, "seg": 1, "x": 1700.0},
-	{"rid": "route_warehouse", "stage": 3, "seg": 2, "x": 2200.0},
-	{"rid": "route_cooling",   "stage": 4, "seg": 0, "x": 1000.0},
-	{"rid": "route_cooling",   "stage": 4, "seg": 1, "x": 1500.0},
-	{"rid": "route_cooling",   "stage": 4, "seg": 2, "x": 2300.0},
+	{"rid": "route_substation",       "stage": 4, "seg": 0, "x": 1100.0},
+	{"rid": "route_substation",       "stage": 4, "seg": 2, "x": 1800.0},
+	{"rid": "route_control_corridor", "stage": 6, "seg": 0, "x": 1000.0},
+	{"rid": "route_control_corridor", "stage": 6, "seg": 2, "x": 1700.0},
+	{"rid": "route_server_hall",      "stage": 6, "seg": 0, "x": 1000.0},
+	{"rid": "route_server_hall",      "stage": 6, "seg": 2, "x": 620.0},
 ]
 
 func _ready() -> void:
@@ -33,7 +34,7 @@ func _run() -> void:
 func _capture(rid: String, stage_idx: int, seg: int, px: float, extra_wait: int = 0) -> void:
 	GameState.start_main_game()
 	GameState.current_stage = stage_idx
-	GameState.seen_enemies = ["patrol", "sniper", "drone", "bomber", "shield"]
+	GameState.seen_enemies = ["patrol", "sniper", "drone", "bomber", "shield", "jammer", "elite"]
 	var route: Dictionary = {}
 	for r in RouteData.ALL_ROUTES:
 		if str((r as Dictionary).get("id", "")) == rid:

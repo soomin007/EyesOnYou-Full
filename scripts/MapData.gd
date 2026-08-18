@@ -1288,7 +1288,47 @@ static func _hidden() -> Dictionary:
 # ─── 12. 서버 복도 (HORIZONTAL, 막3 전투 — 핵심부 직전) ────────────────
 # A2 신규 맵. datacenter(ARENA 웨이브)와 달리 긴 통과형 복도 — 드론·저격을 랙(발판)으로
 # 엄폐하며 빠져나간다. (5막: 막3=핵심부. 시야붕괴 onset은 이제 막5 is_late_act — 여기선 재머+거짓렌더 담당.)
+# 서버 홀 · 방 체인 3방(2026-08-18 배치 2): 코어 접근 동선 그대로
+# 랙 열람실(가볍게) → 서버 홀 본실(원형 계승 · 재머+위장 함정+로어) → 코어 스위치룸
+# (재밍 어둠 속 혼성 전투 절정 · 관문 없음 = 재머 파괴가 사실상의 문). 목표 합산 90~120s.
+# 재머는 방당 1기(화면당 1기 유지 · §4.1 남발 금지의 정신).
 static func _server_hall() -> Dictionary:
+	return {"segments": [_server_stacks(), _server_main(), _server_switchroom()]}
+
+# 방1 · 랙 열람실. 랙 위 발판 리듬 학습 + 가벼운 경비.
+static func _server_stacks() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(2400.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(2280.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"ambience":     "server_stacks",
+		"indoor_env":   "interior",
+		"platforms": [
+			{"pos": Vector2(650, 470),  "w": 200.0},
+			{"pos": Vector2(1250, 470), "w": 200.0},
+			{"pos": Vector2(1850, 470), "w": 200.0},
+		],
+		"enemies": {
+			"patrol": [Vector2(950, 600.0), Vector2(1650, 600.0)],
+			"sniper": [Vector2(1850, 438.0)],
+			"drone":  [], "bomber": [], "shield": [],
+		},
+		"rewards": {
+			"xp_orbs":    [Vector2(1250, 440.0)],
+			"hp_pickups": [],
+		},
+		"spikes": [],
+		"no_spike_fallback": true,
+		"route_lines": [
+			{"x": 340.0, "who": "veil", "text": "서버 구역이에요. 랙 위가 유리해요. 위에서 보고, 위에서 쏘세요.", "dur": 3.4},
+		],
+	}
+
+# 방2 · 서버 홀 본실(원형 계승). 재머 + 위장 함정 + 드론·저격 — 본 손맛.
+static func _server_main() -> Dictionary:
 	return {
 		"world_type":   "HORIZONTAL",
 		"world_size":   Vector2(4800.0, 720.0),
@@ -1296,6 +1336,8 @@ static func _server_hall() -> Dictionary:
 		"goal_type":    "POSITION",
 		"goal_pos":     Vector2(4680.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
+		"ambience":     "server_main",
+		"indoor_env":   "interior",
 		"platforms": [
 			# 서버 랙 열. 랙 위(발판)로 드론·저격을 피하거나 유리고지 확보. 지면(540)에서 단순점프로 닿음.
 			{"pos": Vector2(600, 470),  "w": 220.0},
@@ -1337,6 +1379,42 @@ static func _server_hall() -> Dictionary:
 			"hp_pickups": [Vector2(4050, 440)],
 		},
 		"spikes": [],
+	}
+
+# 방3 · 코어 스위치룸. 재머의 어둠 안에서 혼성 조우(방패·드론) — 마커 없이 싸우는 절정.
+# 재머를 부수면 시야가 돌아온다(재머 파괴 = 사실상의 문). mid_gate 없음.
+static func _server_switchroom() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(2600.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(2480.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"ambience":     "server_switchroom",
+		"indoor_env":   "interior",
+		"platforms": [
+			{"pos": Vector2(700, 470),  "w": 200.0},
+			{"pos": Vector2(1350, 460), "w": 180.0},
+			{"pos": Vector2(2000, 470), "w": 180.0},
+		],
+		"enemies": {
+			"patrol": [Vector2(1000, 600.0), Vector2(1900, 600.0)],
+			"sniper": [],
+			"drone":  [Vector2(1500, 240.0)],
+			"bomber": [],
+			"shield": [Vector2(1500, 600.0)],
+			"jammer": [Vector2(1350, 600.0)],
+		},
+		"rewards": {
+			"xp_orbs":    [Vector2(1350, 430.0), Vector2(2000, 440.0)],
+			"hp_pickups": [Vector2(700, 440.0)],
+		},
+		"spikes": [],
+		"no_spike_fallback": true,
+		"route_lines": [
+			{"x": 320.0, "who": "veil", "text": "이 안쪽, 제 표시가 다 지워져요. 방해 장치부터 부수세요. 그때까진 요원 눈이 전부예요.", "dur": 4.0},
+		],
 	}
 
 # ─── 14. 지하 주차장 (HORIZONTAL, 막1) — 차량/기둥 엄폐, 방패병 도입 ──
@@ -1392,7 +1470,50 @@ static func _parking_lot() -> Dictionary:
 # ─── 15. 변전소 (HORIZONTAL, 막2) — 옥외 변전 설비. 저격 노출 + 드론 압박 ──
 # server_hall 계열(드론+저격 통과형)의 막2 변형. 변압기 뱅크 위에 저격 거치, 머리 위 드론.
 # 엄폐(변압기 발판)로 사선 끊으며 빠지는 노출 전투 맵.
+# 변전소 · 방 체인 3방(2026-08-18 배치 2 · 막2~3 미확산 우선): 전력 흐름 그대로
+# 인입 개폐소(아크 학습) → 변압기 마당(원형 계승 · 본 손맛) → 배전 제어실(아크 밀집 +
+# 차단기 레버 관문 = 절정). 목표 합산 90~120s.
 static func _substation() -> Dictionary:
+	return {"segments": [_substation_switchyard(), _substation_yard(), _substation_control()]}
+
+# 방1 · 인입 개폐소. 아크 2기 엇갈림 — "불꽃 튀면 비켜선다"를 배우는 곳.
+static func _substation_switchyard() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(2600.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(2480.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"ambience":     "substation_switchyard",
+		"indoor_env":   "electrical",
+		"platforms": [
+			{"pos": Vector2(700, 460),  "w": 200.0},
+			{"pos": Vector2(1350, 450), "w": 180.0},
+			{"pos": Vector2(2000, 460), "w": 200.0},
+		],
+		"arc_zones": [
+			{"x1": 950.0,  "x2": 1150.0, "phase": 0.0},
+			{"x1": 1650.0, "x2": 1850.0, "phase": 0.5},
+		],
+		"enemies": {
+			"patrol": [Vector2(880, 600.0), Vector2(1750, 600.0)],
+			"sniper": [Vector2(2000, 428.0)],
+			"drone":  [], "bomber": [], "shield": [],
+		},
+		"rewards": {
+			"xp_orbs":    [Vector2(1350, 420.0)],
+			"hp_pickups": [],
+		},
+		"spikes": [],
+		"no_spike_fallback": true,
+		"route_lines": [
+			{"x": 320.0, "who": "veil", "text": "바닥 전선이 살아 있어요. 불꽃이 튀면 곧 방전됩니다. 발판 위로 피하세요.", "dur": 3.8},
+		],
+	}
+
+# 방2 · 변압기 마당(원형 계승). 아크 + 저격 + 드론 — 이 맵의 본 손맛.
+static func _substation_yard() -> Dictionary:
 	return {
 		"world_type":   "HORIZONTAL",
 		"world_size":   Vector2(3600.0, 720.0),
@@ -1400,6 +1521,8 @@ static func _substation() -> Dictionary:
 		"goal_type":    "POSITION",
 		"goal_pos":     Vector2(3480.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
+		"ambience":     "substation_yard",
+		"indoor_env":   "electrical",
 		"platforms": [
 			# 변압기 뱅크 + 아크 상공 우회 2층(레벨 디자인 수칙 3·6 · 등간격 해체, 2026-08-17).
 			{"pos": Vector2(620, 460),  "w": 200.0},   # 기
@@ -1435,8 +1558,48 @@ static func _substation() -> Dictionary:
 			{"x1": 2160.0, "x2": 2400.0, "phase": 0.5},
 		],
 		"route_lines": [
-			{"x": 320.0, "who": "veil", "text": "바닥 전선이 살아 있어요. 불꽃이 튀면 곧 방전됩니다. 발판 위로 피하세요.", "dur": 3.8},
 			{"x": 1150.0, "who": "veil", "text": "경비 유닛은 절연 몸체예요. 방전 위를 태연히 걷더라도, 요원은 따라 하지 마세요.", "dur": 3.8},
+		],
+	}
+
+# 방3 · 배전 제어실. 아크 3구간 밀집을 뚫고 차단기 레버를 내려야 격벽이 열린다(절정).
+# 레버 y = 발판 top(440) - 22 · 상공 드론 초기 배치 금지(레버 소프트락 규칙).
+static func _substation_control() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(2800.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(2680.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"ambience":     "substation_control",
+		"indoor_env":   "electrical",
+		"mid_gate": {"x": 2440.0, "mode": "lever", "lever": Vector2(2140.0, 418.0)},
+		"platforms": [
+			{"pos": Vector2(620, 460),  "w": 180.0},
+			{"pos": Vector2(1150, 450), "w": 170.0},
+			{"pos": Vector2(1700, 460), "w": 170.0},
+			{"pos": Vector2(2140, 440), "w": 150.0},   # 차단기 레버 자리(Δ160 · 더블점프 직행)
+		],
+		"arc_zones": [
+			{"x1": 480.0,  "x2": 700.0,  "phase": 0.0},
+			{"x1": 1320.0, "x2": 1560.0, "phase": 0.4},
+			{"x1": 1880.0, "x2": 2080.0, "phase": 0.8},
+		],
+		"enemies": {
+			"patrol": [Vector2(950, 600.0), Vector2(1800, 600.0)],
+			"sniper": [Vector2(1700, 428.0)],
+			"drone":  [Vector2(900, 240.0)],
+			"bomber": [], "shield": [],
+		},
+		"rewards": {
+			"xp_orbs":    [Vector2(1150, 420.0), Vector2(2140, 388.0)],
+			"hp_pickups": [Vector2(620, 430.0)],
+		},
+		"spikes": [],
+		"no_spike_fallback": true,
+		"route_lines": [
+			{"x": 1500.0, "who": "veil", "text": "배전 격벽이 닫혀 있어요. 위 발판의 차단기를 내리면 열립니다.", "dur": 3.4},
 		],
 	}
 
@@ -1822,7 +1985,49 @@ static func _checkpoint() -> Dictionary:
 # ─── 22. 통제실 복도 (HORIZONTAL, 막3 전투 s6) — 드론+저격 통과형(server_hall 계열) ──
 # 막3 전투 풀(s6)의 4번째 선택지. datacenter/server_hall과 같은 적, 핵심부 접근 복도.
 # (??? 진실 분기가 항상 보이도록 RouteData에서 hidden을 s6 guaranteed로 둠.)
+# 통제 회랑 · 방 체인 3방(2026-08-18 배치 2): 통제실 접근 검증 동선 그대로
+# 모니터 전실(시선 거짓 학습) → 통제 회랑 본실(원형 계승 · 위장+시선 거짓) →
+# 검증 게이트(clear 존 = "누가 진짜인지 가려내며 정리"의 절정). 목표 합산 90~120s.
 static func _control_corridor() -> Dictionary:
+	return {"segments": [_control_anteroom(), _control_main(), _control_checkgate()]}
+
+# 방1 · 모니터 전실. 시선 거짓 1기 — "저 경비는 이상하다"를 처음 배우는 곳.
+static func _control_anteroom() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(2400.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(2280.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"ambience":     "control_anteroom",
+		"indoor_env":   "interior",
+		"platforms": [
+			{"pos": Vector2(700, 470),  "w": 200.0},
+			{"pos": Vector2(1350, 460), "w": 180.0},
+			{"pos": Vector2(1900, 470), "w": 180.0},
+		],
+		"enemies": {
+			"patrol": [Vector2(1600, 600.0)],
+			"sniper": [Vector2(1900, 438.0)],
+			"drone":  [], "bomber": [], "shield": [],
+		},
+		"feigns": [
+			{"pos": Vector2(900, 600.0)},
+		],
+		"rewards": {
+			"xp_orbs":    [Vector2(1350, 430.0)],
+			"hp_pickups": [],
+		},
+		"spikes": [],
+		"no_spike_fallback": true,
+		"route_lines": [
+			{"x": 340.0, "who": "veil", "text": "붉게 지직거리는 경비가 보이면 조심하세요. 겉과 속이 달라요.", "dur": 3.4},
+		],
+	}
+
+# 방2 · 통제 회랑 본실(원형 계승). 위장 방패병 + 시선 거짓 + 드론·저격 — 본 손맛.
+static func _control_main() -> Dictionary:
 	return {
 		"world_type":   "HORIZONTAL",
 		"world_size":   Vector2(4400.0, 720.0),
@@ -1830,6 +2035,8 @@ static func _control_corridor() -> Dictionary:
 		"goal_type":    "POSITION",
 		"goal_pos":     Vector2(4280.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
+		"ambience":     "control_main",
+		"indoor_env":   "interior",
 		"platforms": [
 			{"pos": Vector2(620, 470),  "w": 210.0},
 			{"pos": Vector2(1080, 470), "w": 200.0},
@@ -1868,6 +2075,45 @@ static func _control_corridor() -> Dictionary:
 			"hp_pickups": [Vector2(1080, 440.0)],
 		},
 		"spikes": [],
+	}
+
+# 방3 · 검증 게이트. 게이트 앞 검증 구역을 정리해야 개방(clear 존). 위장 방패병은 존 *앞*에
+# (존 가드에 방패·위장 금지 = 정면 교착 소프트락 규칙) — "가려내며 전진"의 절정.
+static func _control_checkgate() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(2800.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(2680.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"ambience":     "control_checkgate",
+		"indoor_env":   "interior",
+		"mid_gate": {"x": 2560.0, "mode": "clear", "zone": [2000.0, 2500.0]},
+		"platforms": [
+			{"pos": Vector2(700, 470),  "w": 200.0},
+			{"pos": Vector2(1400, 460), "w": 180.0},
+			{"pos": Vector2(2240, 460), "w": 180.0},   # 검증 구역 상단(저격 배점)
+		],
+		"enemies": {
+			"patrol": [Vector2(1000, 600.0), Vector2(2100, 600.0), Vector2(2400, 600.0)],
+			"sniper": [Vector2(2240, 438.0)],
+			"drone":  [],
+			"bomber": [Vector2(2300, 600.0)],
+			"shield": [],
+		},
+		"deceits": [
+			{"pos": Vector2(1550, 600.0), "true": "shield", "as": "patrol"},
+		],
+		"rewards": {
+			"xp_orbs":    [Vector2(1400, 430.0)],
+			"hp_pickups": [Vector2(700, 440.0)],
+		},
+		"spikes": [],
+		"no_spike_fallback": true,
+		"route_lines": [
+			{"x": 1250.0, "who": "veil", "text": "게이트 앞이 검증 구역이에요. 거기 선 경비를 정리해야 문이 열립니다.", "dur": 3.4},
+		],
 	}
 
 # ─── 24. 핵심 회수 (ARENA, 막5 s13) — 14-1 라이벌 보스전 ──

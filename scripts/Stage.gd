@@ -1880,6 +1880,197 @@ func _ambience_server_hall() -> void:
 		x += rw + rng.randf_range(60.0, 140.0)
 	_add_lore_label(Vector2(360.0, -30.0), "서버 랙 · 코어 접근", Color(0.4, 0.85, 1.0, 0.5), 15)
 
+# 인입 개폐소(변전소 체인 방1) — 현수 인입 케이블(수평 드리움) + 애자 스택 + 위험 표지.
+func _ambience_substation_switchyard() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 373 + GameState.current_segment * 11 + 3
+	# 상단 인입 케이블 — 얕게 드리우는 세그먼트 라인 2줄(수평 모티프).
+	for cy in [-40.0, 30.0]:
+		var cx: float = -200.0
+		while cx < STAGE_LENGTH + 200.0:
+			var seg := ColorRect.new()
+			seg.color = Color(0.55, 0.45, 0.30, 0.35)
+			seg.position = Vector2(cx, cy + sin(cx * 0.004) * 14.0)
+			seg.size = Vector2(90.0, 3.0)
+			seg.z_index = -9
+			add_child(seg)
+			cx += 96.0
+	# 애자 스택(가로줄 쌓임 원반) — 불규칙 간격 소수.
+	var ax: float = 380.0
+	while ax < STAGE_LENGTH - 240.0:
+		var stack_h: int = rng.randi_range(4, 6)
+		var base_y: float = rng.randf_range(-20.0, 60.0)
+		for s in stack_h:
+			var disc := ColorRect.new()
+			disc.color = Color(0.62, 0.55, 0.42, 0.55)
+			disc.position = Vector2(ax - 12.0, base_y + float(s) * 12.0)
+			disc.size = Vector2(24.0, 6.0)
+			disc.z_index = -9
+			add_child(disc)
+		ax += rng.randf_range(520.0, 900.0)
+	# 바닥 위험 표지 밴드(앰버) — 아크 구간 예감.
+	var band := ColorRect.new()
+	band.color = Color(0.92, 0.72, 0.25, 0.10)
+	band.position = Vector2(-200.0, GROUND_Y - 26.0)
+	band.size = Vector2(STAGE_LENGTH + 400.0, 26.0)
+	band.z_index = -8
+	add_child(band)
+	_add_lore_label(Vector2(360.0, -30.0), "인입 개폐소 · 활선 주의", Color(0.95, 0.78, 0.35, 0.5), 15)
+
+# 배전 제어실(변전소 체인 방3) — 배전반 캐비닛 열 + 표시등 점멸 + 케이블 트레이.
+func _ambience_substation_control() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 379 + GameState.current_segment * 11 + 7
+	var x: float = 300.0
+	while x < STAGE_LENGTH - 200.0:
+		var cw: float = rng.randf_range(90.0, 140.0)
+		var ch: float = rng.randf_range(200.0, 280.0)
+		var cab := ColorRect.new()
+		cab.color = Color(0.15, 0.14, 0.12)
+		cab.position = Vector2(x, GROUND_Y - ch)
+		cab.size = Vector2(cw, ch)
+		cab.z_index = -12
+		add_child(cab)
+		for r in 3:
+			if rng.randf() < 0.7:
+				var led := ColorRect.new()
+				var warm: bool = rng.randf() < 0.5
+				led.color = Color(0.95, 0.62, 0.2, 0.9) if warm else Color(0.4, 0.9, 0.5, 0.9)
+				led.position = Vector2(x + rng.randf_range(8.0, cw - 12.0), GROUND_Y - ch + 16.0 + float(r) * 26.0)
+				led.size = Vector2(5.0, 5.0)
+				led.z_index = -11
+				add_child(led)
+				var tw := led.create_tween()
+				tw.set_loops()
+				tw.tween_property(led, "modulate:a", 0.25, rng.randf_range(0.6, 1.4))
+				tw.tween_property(led, "modulate:a", 1.0, rng.randf_range(0.6, 1.4))
+		x += cw + rng.randf_range(80.0, 220.0)
+	# 케이블 트레이(수평) — 캐비닛 상부를 잇는다.
+	var tray := ColorRect.new()
+	tray.color = Color(0.30, 0.27, 0.22, 0.5)
+	tray.position = Vector2(-200.0, 10.0)
+	tray.size = Vector2(STAGE_LENGTH + 400.0, 10.0)
+	tray.z_index = -9
+	add_child(tray)
+	_add_lore_label(Vector2(360.0, -30.0), "배전 제어실 · 차단기", Color(0.95, 0.78, 0.35, 0.5), 15)
+
+# 모니터 전실(통제 회랑 체인 방1) — 소형 모니터 뱅크(대부분 꺼짐 · 한둘만 푸르게).
+func _ambience_control_anteroom() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 383 + GameState.current_segment * 11 + 5
+	var x: float = 340.0
+	while x < STAGE_LENGTH - 240.0:
+		var cols: int = rng.randi_range(2, 3)
+		var rows: int = rng.randi_range(2, 3)
+		var by: float = GROUND_Y - rng.randf_range(220.0, 300.0)
+		for c in cols:
+			for r in rows:
+				var mon := ColorRect.new()
+				var lit: bool = rng.randf() < 0.18
+				mon.color = Color(0.30, 0.55, 0.75, 0.5) if lit else Color(0.10, 0.12, 0.15)
+				mon.position = Vector2(x + float(c) * 44.0, by + float(r) * 32.0)
+				mon.size = Vector2(38.0, 26.0)
+				mon.z_index = -11
+				add_child(mon)
+		x += float(cols) * 44.0 + rng.randf_range(240.0, 520.0)
+	_add_lore_label(Vector2(360.0, -30.0), "모니터 전실 · 무인 감시", Color(0.55, 0.75, 0.95, 0.5), 15)
+
+# 검증 게이트(통제 회랑 체인 방3) — ㄷ자 검증 아치 + 바닥 검증선(청색).
+func _ambience_control_checkgate() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 389 + GameState.current_segment * 11 + 9
+	for gx in [900.0, 2100.0]:
+		var gw: float = 180.0
+		var gh: float = 300.0
+		for side in [0.0, gw - 16.0]:
+			var post := ColorRect.new()
+			post.color = Color(0.16, 0.18, 0.22)
+			post.position = Vector2(gx + side, GROUND_Y - gh)
+			post.size = Vector2(16.0, gh)
+			post.z_index = -12
+			add_child(post)
+		var beam := ColorRect.new()
+		beam.color = Color(0.16, 0.18, 0.22)
+		beam.position = Vector2(gx, GROUND_Y - gh - 14.0)
+		beam.size = Vector2(gw, 14.0)
+		beam.z_index = -12
+		add_child(beam)
+		# 아치 하단 검증선 — 옅은 청색 스캔 밴드.
+		var line := ColorRect.new()
+		line.color = Color(0.45, 0.75, 1.0, 0.16)
+		line.position = Vector2(gx + 16.0, GROUND_Y - 60.0)
+		line.size = Vector2(gw - 32.0, 60.0)
+		line.z_index = -10
+		add_child(line)
+	# 바닥 유도선(수평 청색 밴드).
+	var guide := ColorRect.new()
+	guide.color = Color(0.45, 0.75, 1.0, 0.10)
+	guide.position = Vector2(-200.0, GROUND_Y - 14.0)
+	guide.size = Vector2(STAGE_LENGTH + 400.0, 8.0)
+	guide.z_index = -9
+	add_child(guide)
+	_add_lore_label(Vector2(360.0, -30.0), "검증 게이트 · 통행 대조", Color(0.55, 0.75, 0.95, 0.5), 15)
+
+# 랙 열람실(서버 홀 체인 방1) — 낮은 랙 + 열람 콘솔 데스크(서버 홀보다 밝고 성김).
+func _ambience_server_stacks() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 397 + GameState.current_segment * 11 + 3
+	var x: float = 300.0
+	while x < STAGE_LENGTH - 200.0:
+		var rh: float = rng.randf_range(120.0, 180.0)
+		var rw: float = rng.randf_range(70.0, 100.0)
+		var rack := ColorRect.new()
+		rack.color = Color(0.11, 0.14, 0.17)
+		rack.position = Vector2(x, GROUND_Y - rh)
+		rack.size = Vector2(rw, rh)
+		rack.z_index = -12
+		add_child(rack)
+		if rng.randf() < 0.6:
+			var led := ColorRect.new()
+			led.color = Color(0.4, 0.9, 1.0, 0.7)
+			led.position = Vector2(x + rng.randf_range(6.0, rw - 10.0), GROUND_Y - rh + 10.0)
+			led.size = Vector2(4.0, 3.0)
+			led.z_index = -10
+			add_child(led)
+		# 사이사이 열람 콘솔 데스크.
+		if rng.randf() < 0.4:
+			var desk := ColorRect.new()
+			desk.color = Color(0.20, 0.22, 0.26, 0.8)
+			desk.position = Vector2(x + rw + 30.0, GROUND_Y - 44.0)
+			desk.size = Vector2(70.0, 44.0)
+			desk.z_index = -11
+			add_child(desk)
+		x += rw + rng.randf_range(140.0, 320.0)
+	_add_lore_label(Vector2(360.0, -30.0), "랙 열람실 · 접근 기록", Color(0.4, 0.85, 1.0, 0.5), 15)
+
+# 코어 스위치룸(서버 홀 체인 방3) — 대형 스위치 캐비닛 + 케이블 다발 + 붉은 비상등 워시.
+func _ambience_server_switchroom() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 401 + GameState.current_segment * 11 + 7
+	var x: float = 360.0
+	while x < STAGE_LENGTH - 260.0:
+		var cw: float = rng.randf_range(130.0, 190.0)
+		var ch: float = rng.randf_range(260.0, 340.0)
+		var cab := ColorRect.new()
+		cab.color = Color(0.10, 0.11, 0.14)
+		cab.position = Vector2(x, GROUND_Y - ch)
+		cab.size = Vector2(cw, ch)
+		cab.z_index = -12
+		add_child(cab)
+		# 케이블 다발 — 캐비닛에서 바닥으로 흐르는 대각 라인 2~3.
+		for c in rng.randi_range(2, 3):
+			var cable := ColorRect.new()
+			cable.color = Color(0.24, 0.22, 0.20, 0.6)
+			cable.position = Vector2(x + cw - 8.0 + float(c) * 7.0, GROUND_Y - 90.0 - float(c) * 24.0)
+			cable.size = Vector2(4.0, 90.0 + float(c) * 24.0)
+			cable.rotation = 0.12 + float(c) * 0.05
+			cable.z_index = -11
+			add_child(cable)
+		x += cw + rng.randf_range(180.0, 380.0)
+	# (붉은 전면 워시는 폐지 — 재밍 어둠과 겹치면 화면 전체가 진빨강으로 오염, 2026-08-19 실측.
+	#  비상 톤은 라벨·케이블 어휘로 충분.)
+	_add_lore_label(Vector2(360.0, -30.0), "코어 스위치룸 · 무전 차폐", Color(0.95, 0.5, 0.45, 0.5), 15)
+
 # 통제실 복도 — 벽면 모니터 뱅크(점멸) + 표지.
 func _ambience_control_room() -> void:
 	var w: float = STAGE_LENGTH
@@ -3243,6 +3434,42 @@ func _build_route_ambience() -> void:
 	# 루트별 시각 분위기 — 콜리전 없는 ColorRect/Polygon overlay만 사용.
 	# 방 체인 세그먼트는 layout의 "ambience" 키가 라우트 매핑보다 우선(방마다 배경이 다르다).
 	match str(_map_data.get("ambience", "")):
+		"substation_switchyard":
+			_ambience_substation_switchyard()
+			_apply_act_rival_tint()
+			return
+		"substation_yard":
+			_ambience_electrical("고압 위험 · 변전 구역")
+			_apply_act_rival_tint()
+			return
+		"substation_control":
+			_ambience_substation_control()
+			_apply_act_rival_tint()
+			return
+		"control_anteroom":
+			_ambience_control_anteroom()
+			_apply_act_rival_tint()
+			return
+		"control_main":
+			_ambience_control_room()
+			_apply_act_rival_tint()
+			return
+		"control_checkgate":
+			_ambience_control_checkgate()
+			_apply_act_rival_tint()
+			return
+		"server_stacks":
+			_ambience_server_stacks()
+			_apply_act_rival_tint()
+			return
+		"server_main":
+			_ambience_server_hall()
+			_apply_act_rival_tint()
+			return
+		"server_switchroom":
+			_ambience_server_switchroom()
+			_apply_act_rival_tint()
+			return
 		"warehouse_dock":
 			_ambience_warehouse_dock()
 			_apply_act_rival_tint()
@@ -5730,6 +5957,7 @@ func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1, disguise_kind: in
 	e.collision_layer = 4
 	e.collision_mask = 1
 	e.set("enemy_type", kind)
+	GameState.stage_enemies_spawned += 1   # 맵별 상세 로그(전멸 플레이 확인용 분모)
 	var col := CollisionShape2D.new()
 	var shape := RectangleShape2D.new()
 	# kind: 0=patrol, 1=sniper, 2=drone, 3=bomber, 4=shield
@@ -7809,6 +8037,7 @@ func _begin_segment_transition() -> void:
 	# 중간 방에서 레벨업 오브를 먹었을 수 있다 · 오버레이 정리 전 전환 금지(빈 화면 freeze 함정).
 	while pending_levelup:
 		await get_tree().process_frame
+	GameState.note_segment_split()   # 방별 타이머(상세 런 로그)
 	GameState.current_segment += 1
 	# 봇 계측(BotRunner) 중엔 씬 전환이 러너 씬을 파괴한다 · 러너가 다음 방을 직접 띄운다.
 	if GameState.bot_headless:

@@ -351,7 +351,19 @@ var last_clear_challenge: bool = false  # 직전 클리어가 도전 루트(완�
 # --- 런 정산 통계(2026-08-15 사용자 제안) — 엔딩 정산 화면 + 페이싱 진단용 ---
 var kills_total: int = 0        # 런 누적 처치
 var run_play_secs: float = 0.0  # 런 누적 플레이 시간(스테이지 소요 합, 브리핑·맵선택 제외)
-var stage_time_log: Array = []  # "표시번호|route|초" 문자열 — 맵별 소요 기록(설계 진단)
+# 맵별 상세 기록(설계 진단): "번호|route|총초|seg:방별초|kill:처치/스폰|hit:피격|xp:획득".
+# seg 항은 체인 맵만. 스폰 수는 스폰 이벤트 기준(사망 재시도 시 재스폰 포함 · 무사망이면 정확).
+var stage_time_log: Array = []
+var _seg_start_msec: int = 0
+var _stage_seg_times: Array = []
+var stage_enemies_spawned: int = 0
+var _stage_kills_base: int = 0
+var _stage_xp_gained: int = 0
+
+# 방 체인 전환에서 Stage가 호출 — 방별 스플릿 기록.
+func note_segment_split() -> void:
+	_stage_seg_times.append(float(Time.get_ticks_msec() - _seg_start_msec) / 1000.0)
+	_seg_start_msec = Time.get_ticks_msec()
 
 # 처치 = 정산 카운트 + 실시간 점수(2026-08-15: 종전엔 점수가 클리어 시점에만 올라
 # "실시간으로 안 오른다" 지적). 기본 10, 엘리트 +20, 황금 +40. 클리어 가산(100×스테이지)과 병행.
@@ -556,6 +568,12 @@ func record_route_choice(route: Dictionary, recommended_id: String) -> void:
 	_stage_hits_base = hits_taken
 	_stage_deaths_base = death_count
 	_stage_start_msec = Time.get_ticks_msec()
+	# 상세 런 로그(2026-08-18 사용자 "방별 타이머 등 자세하게") — 방별 스플릿·처치/스폰·XP.
+	_seg_start_msec = _stage_start_msec
+	_stage_seg_times = []
+	stage_enemies_spawned = 0
+	_stage_kills_base = kills_total
+	_stage_xp_gained = 0
 
 # 피격 1회 등록 — Player.take_hit이 invuln을 통과한 실제 타격마다 호출.
 # (스토리 모드 체력 무제한이어도 타격 자체는 카운트 → 모드 무관 실력 신호.)
@@ -567,9 +585,19 @@ func _finalize_stage_metrics() -> void:
 	var hits: int = max(0, hits_taken - _stage_hits_base)
 	var deaths: int = max(0, death_count - _stage_deaths_base)
 	last_stage_secs = float(Time.get_ticks_msec() - _stage_start_msec) / 1000.0
-	# 런 정산 — 스테이지 소요 누적 + 맵별 기록(페이싱 진단: "맵 하나가 몇 분짜리인가"의 실측).
+	# 런 정산 — 스테이지 소요 누적 + 맵별 상세 기록(페이싱·전멸 플레이 진단).
 	run_play_secs += last_stage_secs
-	stage_time_log.append("%d|%s|%.1f" % [current_stage + 1, current_route_id, last_stage_secs])
+	var segs_txt: String = ""
+	if _stage_seg_times.size() > 0:
+		# 마지막 방 스플릿 마감 후 "seg:a+b+c" 항 구성(체인 맵만).
+		_stage_seg_times.append(float(Time.get_ticks_msec() - _seg_start_msec) / 1000.0)
+		var parts: Array = []
+		for s in _stage_seg_times:
+			parts.append("%.1f" % float(s))
+		segs_txt = "|seg:" + "+".join(parts)
+	stage_time_log.append("%d|%s|%.1f%s|kill:%d/%d|hit:%d|xp:%d" % [
+		current_stage + 1, current_route_id, last_stage_secs, segs_txt,
+		kills_total - _stage_kills_base, stage_enemies_spawned, hits, _stage_xp_gained])
 	recent_stage_hits.append(hits)
 	recent_stage_deaths.append(deaths)
 	if recent_stage_hits.size() > 2:
@@ -685,6 +713,7 @@ func add_xp(amount: int, apply_risk_bonus: bool = true) -> bool:
 	if apply_risk_bonus and current_route_risk >= 3:
 		gain = int(round(float(amount) * 1.5))
 	player_xp += gain
+	_stage_xp_gained += gain   # 맵별 상세 로그(XP 경제 캘리브레이션 실측)
 	var need: int = xp_to_next()
 	if player_xp >= need:
 		player_xp -= need

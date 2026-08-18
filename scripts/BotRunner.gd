@@ -18,6 +18,9 @@ const MAPS: Array = [
 	{"rid": "route_warehouse",      "tags": ["근접전", "전투"], "risk": 2, "reward": 3, "stage": 3},
 	# 방 체인 확산 1호(2026-08-18) — 창고와 함께 체인 목표 밴드(막2~3 90~120s) 검증 대상.
 	{"rid": "route_cooling",        "tags": ["전투", "드론", "함정"], "risk": 2, "reward": 3, "stage": 4},
+	# 배치 2(2026-08-18) — 막2~3 미확산 우선 체인화 3맵.
+	{"rid": "route_control_corridor", "tags": ["전투"], "risk": 3, "reward": 3, "stage": 6},
+	{"rid": "route_server_hall",      "tags": ["전투"], "risk": 3, "reward": 3, "stage": 6},
 	{"rid": "route_demolition_zone", "tags": ["근접전", "어두운_환경", "전투"], "risk": 2, "reward": 2, "stage": 1},
 	# 표준 조우 벤치(MapData._bot_bench · 게임 미노출): 평지 3웨이브, 빌드 화력의 순수 비교.
 	{"rid": "route_bot_bench",      "tags": ["전투"], "risk": 2, "reward": 2, "stage": 3},
@@ -27,9 +30,12 @@ const MAPS: Array = [
 	# datacenter는 스위트에서 제외(2026-08-18): 수직 지형이라 봇이 상층 드론을 못 잡고
 	# 90s 타임아웃까지 대치(데드락). 전멸형 대표는 벤치가 맡는다 · 참고치 가치 낮음.
 ]
-const TIMEOUT_GAME_S: float = 90.0
+# 방당 타임아웃 — 단일방 시절 90이었으나 체인 방 확대 + 봇의 전멸 성향(대공·크로스 시도
+# 포함)으로 base의 정직한 완주가 90을 넘기 시작(창고 방2 실측 97s). 120은 실패 판정이
+# 아니라 측정 상한: 넘으면 그 방 설계나 봇 기법에 구조 문제가 있다는 신호.
+const TIMEOUT_GAME_S: float = 120.0
 const HP_POOL: int = 30   # 사망 중단 없이 받은 피해를 지표로 잰다
-const ONLY_MAP: String = ""   # ""이면 전체 · 특정 맵만 진단할 때 rid 지정
+const ONLY_MAP: String = ""   # ""이면 전체 · 진단 시 rid 지정(콤마로 여러 개)
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -50,7 +56,7 @@ func _ready() -> void:
 	await get_tree().process_frame
 	for b in BUILDS:
 		for m in MAPS:
-			if ONLY_MAP != "" and str(m.get("rid")) != ONLY_MAP:
+			if ONLY_MAP != "" and not (str(m.get("rid")) in ONLY_MAP.split(",")):
 				continue
 			await _run_one(b, m)
 	Engine.time_scale = 1.0
@@ -60,14 +66,17 @@ func _ready() -> void:
 
 func _run_one(build: Dictionary, m: Dictionary) -> void:
 	GameState.reset()
-	for eid in ["patrol", "shield", "sniper", "drone", "bomber", "elite"]:
+	for eid in ["patrol", "shield", "sniper", "drone", "bomber", "elite", "jammer"]:
 		GameState.mark_enemy_seen(eid)
 	GameState.playground_active = true   # 골 도달 = 세계 정지(계측 종료 신호) + 습관 기록 제외
 	GameState.bot_headless = true        # 방 체인 씬 전환 생략 · 러너가 방을 직접 띄운다
 	GameState.skills = (build.get("skills", {}) as Dictionary).duplicate()
 	GameState.skills["dash"] = 1
 	GameState.skills["double_jump"] = 1
-	GameState.player_level = 30          # 레벨업 오버레이(일시정지) 방지 · 문턱이 높아 미발동
+	# 레벨업 오버레이(일시정지) 차단 — pause 중엔 골 Area 판정이 없어 가짜 TIMEOUT이 난다
+	# (2026-08-18 배치 2에서 실측: 체인·밀도 증가로 XP가 level 30 문턱을 넘기 시작).
+	# level 99 + 폴링마다 XP 0 리셋의 이중 방어.
+	GameState.player_level = 99
 	GameState.player_max_hp = HP_POOL
 	GameState.player_hp = HP_POOL
 	var rid: String = str(m.get("rid"))
@@ -82,6 +91,7 @@ func _run_one(build: Dictionary, m: Dictionary) -> void:
 	var enemies_total: int = 0
 	var shots_total: int = 0
 	var dmg_total: int = 0
+	var seg_times: Array = []   # 방별 소요(진단: 어느 방이 시간을 먹는가)
 	var timed_out: bool = false
 	# 게임 시간 = 폴링 대기(게임초 단위)의 누적. "실측 × 현재 time_scale" 방식은 슬로모/연출이
 	# scale을 바꾸는 순간 전체 구간이 왜곡된다(2026-08-18 변전소 가짜 TIMEOUT의 원인).
@@ -108,6 +118,7 @@ func _run_one(build: Dictionary, m: Dictionary) -> void:
 			# 게임 내 슬로모/연출·Player._exit_tree 안전망이 scale을 내려도 계측 속도 유지.
 			# 게임 시간 계산은 위 누적 방식이라 scale과 무관하게 정확하다.
 			Engine.time_scale = 3.0
+			GameState.player_xp = 0   # 레벨업 문턱 차단(위 주석 · 이중 방어의 두 번째)
 			# 사망 불가 리필 · 받은 피해는 누적 계측(1차 스위트가 창고에서 봇 사망 → Death 씬이
 			# 러너를 교체해 중단된 사고 방지, 2026-08-18).
 			if GameState.player_hp < HP_POOL:
@@ -123,6 +134,7 @@ func _run_one(build: Dictionary, m: Dictionary) -> void:
 			elif seg_time > TIMEOUT_GAME_S:
 				done = true
 				timed_out = true
+		seg_times.append("%.1f" % seg_time)
 		var p: Node = get_tree().get_first_node_in_group("player")
 		if p != null:
 			shots_total += int(p.get("shots_fired"))   # Player는 방마다 새로 = 방별 발포 합산
@@ -136,9 +148,10 @@ func _run_one(build: Dictionary, m: Dictionary) -> void:
 			break
 	# 처치 = GameState 카운터 기준(웨이브 맵에서 초기 대비 계산은 음수가 나온다 · 1차 스위트 교훈).
 	var kills: int = GameState.kills_total - kills0
-	print("[BOT] build=%s map=%s s%d time=%.1f%s dmg=%d kills=%d/%d shots=%d segs=%d" % [
+	print("[BOT] build=%s map=%s s%d time=%.1f%s dmg=%d kills=%d/%d shots=%d segt=%s" % [
 		str(build.get("name")), rid, int(m.get("stage")), game_time,
-		("(TIMEOUT)" if timed_out else ""), dmg_total, kills, enemies_total, shots_total, seg_total])
+		("(TIMEOUT)" if timed_out else ""), dmg_total, kills, enemies_total, shots_total,
+		"+".join(seg_times)])
 	GameState.playground_active = false
 
 func _alive_enemies() -> int:
