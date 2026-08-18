@@ -1632,7 +1632,8 @@ static func _warehouse_dock() -> Dictionary:
 			{"pos": Vector2(2350, 450), "w": 180.0},
 		],
 		"enemies": {
-			"patrol": [Vector2(820, 600.0), Vector2(1560, 600.0), Vector2(2250, 600.0)],
+			# 밀도 보강(사용자 2026-08-18 "별거 없이 쉽게 지나왔어") — 하역 단마다 경비.
+			"patrol": [Vector2(820, 600.0), Vector2(1560, 600.0), Vector2(2250, 600.0), Vector2(2620, 600.0)],
 			"sniper": [], "drone":  [], "shield": [],
 			"bomber": [Vector2(1250, 600.0), Vector2(2450, 600.0)],
 		},
@@ -1681,11 +1682,13 @@ static func _warehouse_racks() -> Dictionary:
 			{"pos": Vector2(4180, 450), "w": 160.0},
 		],
 		"enemies": {
-			"patrol": [Vector2(860, 600.0), Vector2(2400, 600.0), Vector2(3150, 600.0), Vector2(4050, 600.0)],
+			# 밀도 보강(사용자 2026-08-18) — 역벨트 구간(1650~2350·3600~4300)에 저항 집중.
+			"patrol": [Vector2(860, 600.0), Vector2(1700, 600.0), Vector2(2400, 600.0),
+				Vector2(3150, 600.0), Vector2(4050, 600.0), Vector2(2900, 600.0)],
 			"sniper": [Vector2(3300, 310.0)],
 			"drone":  [],
-			"bomber": [Vector2(1800, 600.0), Vector2(3650, 600.0)],
-			"shield": [Vector2(1080, 600.0)],
+			"bomber": [Vector2(1800, 600.0), Vector2(2560, 600.0), Vector2(3650, 600.0)],
+			"shield": [Vector2(1080, 600.0), Vector2(3760, 600.0)],
 		},
 		"rewards": {
 			"xp_orbs":    [Vector2(1180, 300.0), Vector2(2060, 410.0), Vector2(3300, 300.0)],
@@ -1725,10 +1728,11 @@ static func _warehouse_shipping() -> Dictionary:
 			{"pos": Vector2(2640, 460), "w": 180.0},   # 검수 구역 상단(저격 배점)
 		],
 		"enemies": {
-			"patrol": [Vector2(900, 600.0), Vector2(1700, 600.0), Vector2(2450, 600.0)],
+			# 밀도 보강(사용자 2026-08-18) — 검수 존 가드 3→5(관문 저항 체감).
+			"patrol": [Vector2(900, 600.0), Vector2(1700, 600.0), Vector2(2450, 600.0), Vector2(2600, 600.0)],
 			"sniper": [Vector2(2640, 440.0)],
 			"drone":  [],
-			"bomber": [Vector2(2800, 600.0)],
+			"bomber": [Vector2(2350, 600.0), Vector2(2800, 600.0)],
 			# 방패병은 검수 존(2300~) 밖 — 존 가드에 넣으면 정면 교착 시 관문이 소프트락
 			# (봇 실측 90s TIMEOUT · 수류탄 없는 플레이어도 동형 위험).
 			"shield": [Vector2(1420, 600.0)],

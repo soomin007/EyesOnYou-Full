@@ -245,7 +245,7 @@ func _fire_drone_intro() -> void:
 func _drone_intro_line() -> String:
 	match GameState.veil_register_band():
 		"cold":
-			return "상공에 부유 유닛. 드론입니다. 머리 위가 사선입니다. 이제 위도 보십시오."
+			return "상공에 부유 유닛. 드론입니다. 폭탄이 위에서 떨어집니다. 이제 위도 보십시오."
 		"warm":
 			return "저거 봐요, 드론이에요. 머리 위를 봐요. ...이제 기계도 우릴 봐요."
 		_:
@@ -1714,7 +1714,8 @@ func _ambience_warehouse(label: String) -> void:
 				var bw: float = rng.randf_range(30.0, 60.0)
 				var bh: float = rng.randf_range(24.0, 40.0)
 				var crate := ColorRect.new()
-				crate.color = Color(0.35, 0.28, 0.18, 0.9)
+				# 어둡게 가라앉힌 톤 — 밟을 수 있는 발판으로 오독되지 않게(사용자 2026-08-18).
+				crate.color = Color(0.24, 0.19, 0.13, 0.7)
 				crate.position = Vector2(x + rng.randf_range(4.0, rw - bw), sy - bh)
 				crate.size = Vector2(bw, bh)
 				crate.z_index = -10
@@ -8246,9 +8247,9 @@ func _tick_avoid_warning() -> void:
 		if player.global_position.distance_to(en.global_position) < 430.0:
 			_avoid_warned = true
 			if GameState.veil_degraded:
-				_show_veil_subtitle("저 위 저격수... 잘 안 보여요. 사선만 피하든지, 글라이드로 덮쳐요.", 3.6)
+				_show_veil_subtitle("저 위 저격수... 잘 안 보여요. 조준선만 피하든지, 글라이드로 덮쳐요.", 3.6)
 			else:
-				_show_veil_subtitle("저 저격수, 정면으론 안 닿아요. 사선 피해 가거나 글라이드로 위에서 덮쳐요.", 3.6)
+				_show_veil_subtitle("저 저격수, 정면으론 안 닿아요. 조준선 피해 가거나 글라이드로 위에서 덮쳐요.", 3.6)
 			return
 
 # ─── 도전 방(블랙아웃 런) — world_layout §3.2 ───

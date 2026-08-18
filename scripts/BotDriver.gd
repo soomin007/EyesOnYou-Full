@@ -301,7 +301,17 @@ func _physics_process(delta: float) -> void:
 				_dodge_cd = 0.5
 				break
 	# 대시 ② 이동 리듬(프로필 dash_pm) — 전진 중 주기 대시(사람의 이동 습관).
-	if move_dir != 0.0 and _dash_pulse == 0:
+	# 목표(사냥 적·레버)가 가까우면 억제 — 사람의 대시는 긴 전진 구간에서 몰아 쓰는 것이고,
+	# 기계적 주기 대시는 관성 오버슈트로 정밀 접근을 망친다(2026-08-18 src=user 첫 계측에서
+	# dash_pm 29.9가 그대로 이식되자 검수 존 왕복 TIMEOUT 실측).
+	var dash_ok: bool = true
+	if nav != null and nav_dx < 420.0:
+		dash_ok = false
+	if lever_pos != Vector2.INF and absf(lever_dx) < 420.0:
+		dash_ok = false
+	if target != null:
+		dash_ok = false
+	if move_dir != 0.0 and dash_ok and _dash_pulse == 0:
 		_dash_travel_t += delta
 		if _dash_travel_t > _dash_period:
 			Input.action_press("dash")

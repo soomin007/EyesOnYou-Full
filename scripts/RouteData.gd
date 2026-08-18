@@ -316,7 +316,7 @@ const ALL_ROUTES: Array = [
 		"min_stage": 4, "max_stage": 5,
 		"tags": ["원거리", "드론", "노출", "전투"],
 		"veil_comment": "변전소예요. 바닥 방전은 발판 위로 피해요. 변압기 위 저격, 머리 위 드론.",
-		"entry_comment": "변전 설비예요. 사선이 많아요. 변압기 뒤로 붙어요.",
+		"entry_comment": "변전 설비예요. 여러 각에서 쏴요. 변압기 뒤로 붙어요.",
 		"stage_color": Color(0.16, 0.15, 0.10),
 	},
 	{
@@ -351,14 +351,14 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_pump_station",
 		"name": "배수 펌프장",
-		"description": "외곽 빗물을 퍼올리던 펌프장. 파이프 위로 사선이 깔린다.",
+		"description": "외곽 빗물을 퍼올리던 펌프장. 파이프 위에서 조준선이 내려온다.",
 		"risk": 2,
 		"reward": 2,
 		"hidden": false,
 		"unique": false,
 		"min_stage": 1, "max_stage": 2,
 		"tags": ["원거리", "노출", "전투"],
-		"veil_comment": "펌프장이에요. 파이프 위 저격이 사선을 잡아요. 엄폐 끊어 가요.",
+		"veil_comment": "펌프장이에요. 파이프 위에서 저격이 내려다봐요. 엄폐 끊어 가요.",
 		"entry_comment": "펌프 설비예요. 위에서 노려요. 한 번에 붙어요.",
 		"stage_color": Color(0.10, 0.14, 0.16),
 	},
@@ -374,7 +374,7 @@ const ALL_ROUTES: Array = [
 		"min_stage": 10, "max_stage": 12,
 		"tags": ["원거리", "드론", "노출", "전투"],
 		"veil_comment": "중계소예요. 저격이랑 드론이 동시에 와요. 엄폐 짧게, 빠르게.",
-		"entry_comment": "통신 중계기예요. 위아래로 사선이에요. 멈추지 말아요.",
+		"entry_comment": "통신 중계기예요. 위에서도 아래에서도 쏴요. 멈추지 말아요.",
 		"stage_color": Color(0.12, 0.16, 0.18),
 	},
 	{
@@ -417,7 +417,7 @@ const ALL_ROUTES: Array = [
 		"min_stage": 6, "max_stage": 7,
 		"tags": ["전투", "드론", "원거리"],
 		"veil_comment": "통제실 복도예요. 드론·저격 동시에. 핵심부가 코앞이에요.",
-		"entry_comment": "통제실 직전이에요. 사선 많아요. 엄폐 쓰면서 빠져요.",
+		"entry_comment": "통제실 직전이에요. 사방에서 쏴요. 엄폐 쓰면서 빠져요.",
 		"stage_color": Color(0.15, 0.17, 0.21),
 	},
 	{
