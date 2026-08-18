@@ -1339,6 +1339,10 @@ const PLAYSTYLE_DEFAULTS: Dictionary = {
 	"stages": 0,             # 누적 표본 수(0 = 미계측 → 기본값 사용)
 }
 
+# BotRunner 전용 · 방 체인 전환의 씬 교체(SceneRouter.go)가 러너 씬을 파괴하므로,
+# 켜져 있으면 Stage가 씬 전환을 생략하고 러너가 다음 방을 직접 띄운다. 게임 플레이 무관.
+var bot_headless: bool = false
+
 var _playstyle: Dictionary = {}
 var _ps_loaded: bool = false
 var _ps_active: bool = false

@@ -1731,6 +1731,98 @@ func _ambience_warehouse(label: String) -> void:
 		lx += 700.0
 	_add_lore_label(Vector2(360.0, -30.0), label, Color(0.90, 0.70, 0.45, 0.5), 15)
 
+# 하역 도크(창고 체인 방1) — 트럭 베이 셔터(가로 슬랫 · 수직 스트라이프 금지 규칙 준수) +
+# 베이 번호 표지 + 바닥 안전선 + 낮은 팔레트 더미.
+func _ambience_warehouse_dock() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 353 + GameState.current_segment * 17 + 5
+	var bay_xs: Array = [420.0, 1080.0, 1740.0]
+	for i in bay_xs.size():
+		var bx: float = float(bay_xs[i]) + rng.randf_range(-40.0, 40.0)
+		var sw: float = rng.randf_range(240.0, 300.0)
+		var sh: float = rng.randf_range(240.0, 290.0)
+		var door := ColorRect.new()
+		door.color = Color(0.17, 0.15, 0.12)
+		door.position = Vector2(bx, GROUND_Y - sh)
+		door.size = Vector2(sw, sh)
+		door.z_index = -12
+		add_child(door)
+		# 셔터 슬랫(가로줄)
+		var slats: int = int(sh / 34.0)
+		for s in slats:
+			var slat := ColorRect.new()
+			slat.color = Color(0.23, 0.20, 0.15)
+			slat.position = Vector2(bx, GROUND_Y - sh + 8.0 + float(s) * 34.0)
+			slat.size = Vector2(sw, 5.0)
+			slat.z_index = -11
+			add_child(slat)
+		# 베이 번호 표지
+		_add_lore_label(Vector2(bx + sw * 0.5 - 20.0, GROUND_Y - sh - 34.0),
+			"BAY %d" % (i + 1), Color(0.90, 0.70, 0.45, 0.55), 13)
+		# 바닥 안전선(셔터 앞)
+		var line := ColorRect.new()
+		line.color = Color(0.92, 0.78, 0.30, 0.28)
+		line.position = Vector2(bx - 20.0, GROUND_Y - 8.0)
+		line.size = Vector2(sw + 40.0, 5.0)
+		line.z_index = -10
+		add_child(line)
+	# 팔레트 더미(낮음 · 배경 전용)
+	var px: float = 300.0
+	while px < STAGE_LENGTH - 200.0:
+		if rng.randf() < 0.55:
+			var pw: float = rng.randf_range(70.0, 120.0)
+			var pal := ColorRect.new()
+			pal.color = Color(0.30, 0.24, 0.16, 0.85)
+			pal.position = Vector2(px, GROUND_Y - 26.0)
+			pal.size = Vector2(pw, 26.0)
+			pal.z_index = -10
+			add_child(pal)
+		px += rng.randf_range(260.0, 520.0)
+	_add_lore_label(Vector2(360.0, -30.0), "하역 도크 · 반입 관리", Color(0.90, 0.70, 0.45, 0.5), 15)
+
+# 출하 구역(창고 체인 방3) — 롤러 라인(수평 도트 열) + 출하 상자 스택 + 행선 표지.
+func _ambience_warehouse_shipping() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 359 + GameState.current_segment * 19 + 11
+	# 롤러 라인 — 벽면 하단을 따라 흐르는 수평 라인 + 롤러 도트
+	var ry: float = GROUND_Y - 120.0
+	var rail := ColorRect.new()
+	rail.color = Color(0.22, 0.19, 0.14)
+	rail.position = Vector2(200.0, ry)
+	rail.size = Vector2(STAGE_LENGTH - 500.0, 6.0)
+	rail.z_index = -12
+	add_child(rail)
+	var dx: float = 240.0
+	while dx < STAGE_LENGTH - 340.0:
+		var roller := ColorRect.new()
+		roller.color = Color(0.30, 0.26, 0.19)
+		roller.position = Vector2(dx, ry - 5.0)
+		roller.size = Vector2(9.0, 5.0)
+		roller.z_index = -11
+		add_child(roller)
+		dx += rng.randf_range(46.0, 70.0)
+	# 출하 상자 스택(라벨 띠)
+	var sx: float = 360.0
+	while sx < STAGE_LENGTH - 260.0:
+		if rng.randf() < 0.6:
+			var stack_h: int = rng.randi_range(1, 3)
+			var bw: float = rng.randf_range(56.0, 92.0)
+			for lvl in stack_h:
+				var box := ColorRect.new()
+				box.color = Color(0.34, 0.27, 0.17, 0.9)
+				box.position = Vector2(sx + rng.randf_range(-8.0, 8.0), GROUND_Y - 34.0 * float(lvl + 1))
+				box.size = Vector2(bw, 32.0)
+				box.z_index = -10
+				add_child(box)
+				var band := ColorRect.new()
+				band.color = Color(0.90, 0.70, 0.45, 0.5)
+				band.position = Vector2(box.position.x, box.position.y + 13.0)
+				band.size = Vector2(bw, 4.0)
+				band.z_index = -9
+				add_child(band)
+		sx += rng.randf_range(300.0, 560.0)
+	_add_lore_label(Vector2(360.0, -30.0), "출하 구역 · 검수 대기", Color(0.90, 0.70, 0.45, 0.5), 15)
+
 # 서버 복도 — 서버 랙 실루엣 + LED 점멸 + 표지.
 func _ambience_server_hall() -> void:
 	var w: float = STAGE_LENGTH
@@ -2707,7 +2799,7 @@ func _mid_gate_lazy_init() -> void:
 	if zone.size() < 2:
 		return
 	for e in get_tree().get_nodes_in_group("enemy"):
-		if not (e is Node2D) or not is_instance_valid(e):
+		if not is_instance_valid(e) or not (e is Node2D):
 			continue
 		if (e as Node2D).get("harmless"):
 			continue
@@ -2724,7 +2816,8 @@ func _on_mid_gate_guard_down() -> void:
 		return
 	var alive: int = 0
 	for e in _mid_gate_guards:
-		if e is Node2D and is_instance_valid(e) and not (e as Node2D).is_queued_for_deletion() \
+		# freed 참조에 is를 먼저 대면 "previously freed instance" 에러 · 유효성 검사가 항상 앞.
+		if is_instance_valid(e) and e is Node2D and not (e as Node2D).is_queued_for_deletion() \
 				and not bool((e as Node2D).get("dead")) \
 				and (e as Node2D).global_position.x < _mid_gate_x - 20.0:
 			alive += 1
@@ -3124,6 +3217,30 @@ func _build_route_ambience() -> void:
 	# 루트별 시각 분위기 — 콜리전 없는 ColorRect/Polygon overlay만 사용.
 	# 방 체인 세그먼트는 layout의 "ambience" 키가 라우트 매핑보다 우선(방마다 배경이 다르다).
 	match str(_map_data.get("ambience", "")):
+		"warehouse_dock":
+			_ambience_warehouse_dock()
+			_apply_act_rival_tint()
+			return
+		"warehouse_racks":
+			_ambience_warehouse("물류 창고 · 보관 랙")
+			_apply_act_rival_tint()
+			return
+		"warehouse_shipping":
+			_ambience_warehouse_shipping()
+			_apply_act_rival_tint()
+			return
+		"cooling_intake":
+			_ambience_cooling_intake()
+			_apply_act_rival_tint()
+			return
+		"cooling_core":
+			_ambience_cooling()
+			_apply_act_rival_tint()
+			return
+		"cooling_exhaust":
+			_ambience_cooling_exhaust()
+			_apply_act_rival_tint()
+			return
 		"collapse_shaft":
 			_ambience_collapse_shaft()
 			_escape_tone_destroy()
@@ -3711,16 +3828,46 @@ func _ambience_subway_transfer() -> void:
 	_add_lore_label(Vector2(1120.0, GROUND_Y - 260.0), "개찰 구역 · 통행 기록 없음", Color(0.65, 0.72, 0.85, 0.45), 13)
 
 func _ambience_cooling() -> void:
-	# 냉각 시설 — 수직 파이프 라인, 차가운 푸른 톤
-	var x: float = 240.0
-	while x < STAGE_LENGTH:
-		var pipe := ColorRect.new()
-		pipe.color = Color(0.30, 0.55, 0.70, 0.20)
-		pipe.position = Vector2(x - 6.0, -200.0)
-		pipe.size = Vector2(12.0, 850.0)
-		pipe.z_index = -9
-		add_child(pipe)
-		x += 220.0
+	# 냉각 시설(열교환 홀) — 차가운 푸른 톤. 2026-08-18 재작업: 등간격 수직 파이프 폐지
+	# (수직 스트라이프 습관 금지 규칙, 규칙 등재 전 코드였음) → 상단 수평 헤더 배관에서
+	# 불규칙 클러스터로 내려오는 낙관(落管) + 게이지 박스.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 347 + GameState.current_segment * 13 + 9
+	# 수평 헤더 배관(상단 2줄)
+	for hy in [-60.0, 40.0]:
+		var header := ColorRect.new()
+		header.color = Color(0.30, 0.55, 0.70, 0.22)
+		header.position = Vector2(-200.0, hy)
+		header.size = Vector2(STAGE_LENGTH + 400.0, 14.0)
+		header.z_index = -9
+		add_child(header)
+	# 낙관 클러스터 — 2~3개씩 묶여 불규칙 간격으로
+	var x: float = 260.0
+	while x < STAGE_LENGTH - 200.0:
+		var cluster: int = rng.randi_range(2, 3)
+		for c in cluster:
+			var px: float = x + float(c) * rng.randf_range(26.0, 44.0)
+			var pipe := ColorRect.new()
+			pipe.color = Color(0.30, 0.55, 0.70, rng.randf_range(0.14, 0.24))
+			pipe.position = Vector2(px, 54.0)
+			pipe.size = Vector2(rng.randf_range(8.0, 14.0), GROUND_Y - 54.0 + 40.0)
+			pipe.z_index = -9
+			add_child(pipe)
+		# 클러스터 밑 게이지 박스
+		if rng.randf() < 0.6:
+			var gauge := ColorRect.new()
+			gauge.color = Color(0.16, 0.24, 0.30)
+			gauge.position = Vector2(x + 8.0, GROUND_Y - rng.randf_range(150.0, 220.0))
+			gauge.size = Vector2(34.0, 26.0)
+			gauge.z_index = -8
+			add_child(gauge)
+			var needle := ColorRect.new()
+			needle.color = Color(0.45, 0.85, 1.0, 0.8)
+			needle.position = gauge.position + Vector2(6.0, 10.0)
+			needle.size = Vector2(rng.randf_range(8.0, 20.0), 4.0)
+			needle.z_index = -7
+			add_child(needle)
+		x += rng.randf_range(340.0, 640.0)
 	# 차가운 푸른 안개 (바닥)
 	var fog := ColorRect.new()
 	fog.color = Color(0.40, 0.65, 0.85, 0.08)
@@ -3728,6 +3875,78 @@ func _ambience_cooling() -> void:
 	fog.size = Vector2(STAGE_LENGTH + 400.0, 100.0)
 	fog.z_index = -3
 	add_child(fog)
+
+# 흡기 회랑(냉각 체인 방1) — 벽면 가로 루버 그릴 + 상단 흡기 덕트. 옅은 안개.
+func _ambience_cooling_intake() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 349 + GameState.current_segment * 13 + 3
+	var gx: float = 320.0
+	while gx < STAGE_LENGTH - 240.0:
+		var gw: float = rng.randf_range(200.0, 280.0)
+		var gh: float = rng.randf_range(120.0, 170.0)
+		var gy: float = GROUND_Y - rng.randf_range(240.0, 330.0)
+		var frame := ColorRect.new()
+		frame.color = Color(0.14, 0.20, 0.25)
+		frame.position = Vector2(gx, gy)
+		frame.size = Vector2(gw, gh)
+		frame.z_index = -12
+		add_child(frame)
+		var louvers: int = int(gh / 22.0)
+		for l in louvers:
+			var lv := ColorRect.new()
+			lv.color = Color(0.30, 0.55, 0.70, 0.30)
+			lv.position = Vector2(gx + 6.0, gy + 6.0 + float(l) * 22.0)
+			lv.size = Vector2(gw - 12.0, 6.0)
+			lv.z_index = -11
+			add_child(lv)
+		gx += gw + rng.randf_range(280.0, 520.0)
+	# 상단 흡기 덕트(수평)
+	var duct := ColorRect.new()
+	duct.color = Color(0.30, 0.55, 0.70, 0.18)
+	duct.position = Vector2(-200.0, -20.0)
+	duct.size = Vector2(STAGE_LENGTH + 400.0, 22.0)
+	duct.z_index = -9
+	add_child(duct)
+	var fog := ColorRect.new()
+	fog.color = Color(0.40, 0.65, 0.85, 0.05)
+	fog.position = Vector2(-200, GROUND_Y - 70.0)
+	fog.size = Vector2(STAGE_LENGTH + 400.0, 90.0)
+	fog.z_index = -3
+	add_child(fog)
+	_add_lore_label(Vector2(360.0, -30.0), "흡기 라인 · 필터 구역", Color(0.45, 0.85, 1.0, 0.5), 15)
+
+# 배기 스택(냉각 체인 방3) — 위로 모이는 배기 덕트 깔때기 + 따뜻한 하이라이트(열기) +
+# 짙은 안개. 증기 최밀 구간의 시각 근거.
+func _ambience_cooling_exhaust() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 351 + GameState.current_segment * 13 + 7
+	var sx: float = 420.0
+	while sx < STAGE_LENGTH - 240.0:
+		var base_w: float = rng.randf_range(150.0, 210.0)
+		# 깔때기 — 아래 넓고 위로 좁아지는 3단
+		for t in 3:
+			var tw2: float = base_w * (1.0 - float(t) * 0.28)
+			var seg := ColorRect.new()
+			seg.color = Color(0.22, 0.34, 0.42, 0.8 - float(t) * 0.18)
+			seg.position = Vector2(sx + (base_w - tw2) * 0.5, 80.0 - float(t) * 90.0)
+			seg.size = Vector2(tw2, 84.0)
+			seg.z_index = -11
+			add_child(seg)
+		# 열기 하이라이트(덕트 하단 · 유일한 따뜻한 색)
+		var heat := ColorRect.new()
+		heat.color = Color(0.95, 0.60, 0.35, 0.10)
+		heat.position = Vector2(sx + base_w * 0.2, 158.0)
+		heat.size = Vector2(base_w * 0.6, 26.0)
+		heat.z_index = -10
+		add_child(heat)
+		sx += base_w + rng.randf_range(380.0, 660.0)
+	var fog := ColorRect.new()
+	fog.color = Color(0.40, 0.65, 0.85, 0.12)
+	fog.position = Vector2(-200, GROUND_Y - 110.0)
+	fog.size = Vector2(STAGE_LENGTH + 400.0, 130.0)
+	fog.z_index = -3
+	add_child(fog)
+	_add_lore_label(Vector2(360.0, -30.0), "배기 스택 · 밸브 제어", Color(0.45, 0.85, 1.0, 0.5), 15)
 
 func _ambience_watchtower() -> void:
 	# 감시탑 — 붉은 스캔라인 (노출 = 위험 신호)
@@ -7564,6 +7783,9 @@ func _begin_segment_transition() -> void:
 	while pending_levelup:
 		await get_tree().process_frame
 	GameState.current_segment += 1
+	# 봇 계측(BotRunner) 중엔 씬 전환이 러너 씬을 파괴한다 · 러너가 다음 방을 직접 띄운다.
+	if GameState.bot_headless:
+		return
 	SceneRouter.go(get_tree(), SceneRouter.STAGE)
 
 func _setup_arena_clear_tracking() -> void:
@@ -7577,7 +7799,7 @@ func _setup_arena_clear_tracking() -> void:
 func _profile_alive_enemies() -> int:
 	var n: int = 0
 	for e in get_tree().get_nodes_in_group("enemy"):
-		if e is Node2D and is_instance_valid(e) and not bool((e as Node2D).get("dead")) \
+		if is_instance_valid(e) and e is Node2D and not bool((e as Node2D).get("dead")) \
 				and not bool((e as Node2D).get("harmless")):
 			n += 1
 	return n
@@ -8016,7 +8238,7 @@ func _tick_avoid_warning() -> void:
 	if _avoid_warned or player == null or not is_instance_valid(player):
 		return
 	for e in get_tree().get_nodes_in_group("enemy"):
-		if not (e is Node2D) or not is_instance_valid(e):
+		if not is_instance_valid(e) or not (e is Node2D):
 			continue
 		var en: Node2D = e as Node2D
 		if not en.has_meta("avoid_only") or bool(en.get("dead")):

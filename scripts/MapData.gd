@@ -39,6 +39,11 @@ static func get_layout(route_id: String) -> Dictionary:
 	out["segment_count"] = segs.size()
 	return out
 
+# 라우트의 방 수(체인 아니면 1) — BotRunner가 방별 주파 루프를 돌 때 사용.
+static func segment_count(route_id: String) -> int:
+	var segs: Array = _layout_raw(route_id).get("segments", [])
+	return maxi(1, segs.size())
+
 static func _layout_raw(route_id: String) -> Dictionary:
 	match route_id:
 		"route_back_alley": return _back_alley()
@@ -470,14 +475,61 @@ static func _subway_transfer() -> Dictionary:
 # 식히는 냉각 플랜트. 시그니처 해저드 = **증기 분출구(SteamVent)**: 바닥에서 주기적으로 수직 증기가
 # 뿜어져 타이밍 보고 지나간다. 드론이 주력(상성=글라이드) → 떠서 증기 넘고 드론 잡는 글라이드 학습 맵.
 # 글라이드 게이트는 새 레이아웃이라 *진짜로* 고립(삼단점프=글라이드 T2로만 닿는 알코브).
+# 냉각 시설 · 방 체인 3방(2026-08-18 방 체인 전면 확산 1호): 공기 흐름 그대로
+# 흡기 → 열교환 → 배기. 시그니처(증기 분출구)는 방마다 밀도·역할이 다르다:
+# 방1 = 증기 학습(낮은 밀도) / 방2 = 증기+드론 본 손맛(원 냉각 계승, 글라이드 게이트 유지) /
+# 방3 = 증기 최밀 + 배기 밸브 레버 관문(펌프장 ⓐ 재사용). 목표 합산 90~120s.
 static func _cooling() -> Dictionary:
+	return {"segments": [_cooling_intake(), _cooling_core(), _cooling_exhaust()]}
+
+# 방1 · 흡기 회랑. 증기 3기 엇갈림 — "분출 주기를 보고 지나간다"를 배우는 곳.
+static func _cooling_intake() -> Dictionary:
 	return {
 		"world_type":   "HORIZONTAL",
-		"world_size":   Vector2(3400.0, 720.0),
+		"world_size":   Vector2(2800.0, 720.0),
 		"player_start": Vector2(140.0, 540.0),
 		"goal_type":    "POSITION",
-		"goal_pos":     Vector2(3280.0, 540.0),
+		"goal_pos":     Vector2(2680.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
+		"ambience":     "cooling_intake",
+		"platforms": [
+			{"pos": Vector2(700, 470),  "w": 180.0},
+			{"pos": Vector2(1350, 460), "w": 180.0},
+			{"pos": Vector2(1980, 470), "w": 180.0},
+		],
+		"steam_vents": [
+			{"x": 520,  "h": 260.0},
+			{"x": 1050, "h": 300.0},
+			{"x": 1600, "h": 260.0},
+			{"x": 2120, "h": 300.0},
+			{"x": 2460, "h": 260.0},
+		],
+		"enemies": {
+			"patrol": [Vector2(880, 540.0), Vector2(1500, 540.0), Vector2(2250, 540.0)],
+			"sniper": [], "drone": [], "bomber": [], "shield": [],
+		},
+		"rewards": {
+			"xp_orbs":    [Vector2(1350, 430.0), Vector2(1980, 440.0)],
+			"hp_pickups": [],
+		},
+		"spikes": [],
+		"no_spike_fallback": true,   # 증기 리듬이 시그니처 · 가시 소음 금지
+		"route_lines": [
+			{"x": 320.0, "who": "veil", "text": "흡기 라인이 살아 있어요. 바닥 분출구는 주기가 있으니, 김이 잦아들 때 지나가세요.", "dur": 4.0},
+		],
+	}
+
+# 방2 · 열교환 홀(원 냉각 계승). 증기 6기 + 머리 위 드론 — 이 맵의 본 손맛.
+# 글라이드 게이트(2120 알코브)도 그대로.
+static func _cooling_core() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(4600.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(4480.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"ambience":     "cooling_core",
 		"platforms": [
 			# 파이프 발판 — 증기 분출구를 넘거나 드론을 피하는 위치.
 			{"pos": Vector2(620, 460),  "w": 180.0},
@@ -489,7 +541,11 @@ static func _cooling() -> Dictionary:
 			{"pos": Vector2(2120, 420), "w": 160.0},  # 게이트 런치
 			{"pos": Vector2(2120, 180), "w": 120.0},  # 게이트 알코브 (XP 3)
 			{"pos": Vector2(2600, 440), "w": 180.0},
-			{"pos": Vector2(2980, 470), "w": 200.0},  # 골 직전
+			{"pos": Vector2(2980, 470), "w": 200.0},
+			# 후반 연장(2026-08-18 방 체인 증량) — 열교환 2열째.
+			{"pos": Vector2(3400, 460), "w": 180.0},
+			{"pos": Vector2(3850, 440), "w": 180.0},
+			{"pos": Vector2(4250, 460), "w": 180.0},  # 골 직전
 		],
 		# 증기 분출구 — 바닥(GROUND_Y)에서 위로 h만큼 주기 분출. phase 생략 시 Stage가 x로 분산(엇갈림).
 		"steam_vents": [
@@ -499,21 +555,73 @@ static func _cooling() -> Dictionary:
 			{"x": 1760, "h": 280.0},
 			{"x": 2360, "h": 300.0},
 			{"x": 2820, "h": 260.0},
+			{"x": 3250, "h": 300.0},
+			{"x": 3700, "h": 260.0},
+			{"x": 4100, "h": 300.0},
 		],
 		"enemies": {
-			"patrol": [Vector2(820, 540.0), Vector2(2500, 540.0)],
+			"patrol": [Vector2(820, 540.0), Vector2(2500, 540.0), Vector2(3550, 540.0)],
 			"sniper": [],
 			# 드론 — 머리 위 호버(상성=글라이드). 통로 위를 점한다.
-			"drone":  [Vector2(1180, 250.0), Vector2(1900, 240.0), Vector2(2700, 260.0)],
+			"drone":  [Vector2(1180, 250.0), Vector2(1900, 240.0), Vector2(2700, 260.0), Vector2(3850, 250.0)],
 			"bomber": [], "shield": [],
 		},
 		"rewards": {
-			"xp_orbs":    [Vector2(1160, 410.0), Vector2(1200, 410.0), Vector2(2580, 410.0)],
+			"xp_orbs":    [Vector2(1160, 410.0), Vector2(1200, 410.0), Vector2(2580, 410.0), Vector2(3850, 410.0)],
 			# 글라이드 게이트 알코브(2120,180) — 흡인 반경 축소(직접 도달 필요). XP 3.
 			"gate_orbs":  [Vector2(2095, 158.0), Vector2(2120, 158.0), Vector2(2145, 158.0)],
 			"hp_pickups": [Vector2(2980, 440.0)],
 		},
 		"spikes": [],
+	}
+
+# 방3 · 배기 스택. 증기 최밀 구간을 뚫고 배기 밸브 레버(상단 배관)를 당겨야 격벽이 열린다
+# (mid_gate lever = 펌프장 ⓐ 재사용 · 배관 수직 동선). 체인의 절정.
+static func _cooling_exhaust() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(3200.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(3080.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"ambience":     "cooling_exhaust",
+		"mid_gate": {"x": 2840.0, "mode": "lever", "lever": Vector2(2560.0, 408.0)},
+		"platforms": [
+			{"pos": Vector2(620, 460),  "w": 180.0},
+			{"pos": Vector2(1150, 440), "w": 180.0},
+			{"pos": Vector2(1800, 460), "w": 160.0},
+			{"pos": Vector2(2360, 450), "w": 150.0},
+			# 배기 밸브 레버 자리 — 지면에서 더블점프 직행 가능 높이(Δ160 · 190 한계 안).
+			# y 380(Δ220)이었을 땐 밑에서 수직 점프로 물리적으로 못 올라 관문 소프트락(봇 실측 3빌드 전부).
+			{"pos": Vector2(2560, 440), "w": 140.0},
+		],
+		"steam_vents": [
+			{"x": 420,  "h": 280.0},
+			{"x": 820,  "h": 320.0},
+			{"x": 1300, "h": 280.0},
+			{"x": 1660, "h": 300.0},
+			{"x": 2060, "h": 260.0},
+			{"x": 2700, "h": 300.0},
+			{"x": 2960, "h": 260.0},
+		],
+		"enemies": {
+			"patrol": [Vector2(950, 540.0), Vector2(1750, 540.0)],
+			"sniper": [],
+			# 드론은 레버(2560) 상공 초기 점유 금지 — 호버 고도가 레버 발판과 겹쳐 당기기
+			# 소프트락 위험(봇 실측 · 유도 없는 실플레이어도 동형).
+			"drone":  [Vector2(1150, 250.0), Vector2(1860, 240.0)],
+			"bomber": [], "shield": [],
+		},
+		"rewards": {
+			"xp_orbs":    [Vector2(1150, 410.0), Vector2(2560, 350.0)],
+			"hp_pickups": [Vector2(620, 430.0)],
+		},
+		"spikes": [],
+		"no_spike_fallback": true,
+		"route_lines": [
+			{"x": 1350.0, "who": "veil", "text": "배기 격벽이 닫혀 있어요. 위쪽 배관의 밸브 레버를 당기면 열립니다.", "dur": 3.5},
+		],
 	}
 
 # ─── 6. 감시탑 (VERTICAL_UP, 외부/내부 분기 + 비밀 통로) ───────
@@ -1499,17 +1607,64 @@ static func _relay_station() -> Dictionary:
 	}
 
 # ─── 20. 물류 창고 (HORIZONTAL, 막2) — 적재함 엄폐 + 혼합 근접(방패/폭격) ──
+# 물류 창고 · 방 체인 3방(2026-08-18 방 체인 전면 확산 1호 · room_chain_expansion.md):
+# 물류 동선 그대로 하역 → 보관 → 출하. 시그니처(컨베이어)는 방마다 쓰임이 다르다:
+# 방1 = 벨트 학습(순방향 1개) / 방2 = 순·역 벨트 전투(원 창고 계승) / 방3 = 역벨트 위
+# 출하 검수 관문(국소 전멸). 목표 합산 90~120s(막2~3 밴드).
 static func _warehouse() -> Dictionary:
+	return {"segments": [_warehouse_dock(), _warehouse_racks(), _warehouse_shipping()]}
+
+# 방1 · 하역 도크. 트럭 베이 셔터 아래 벨트가 시작되는 곳 — 순방향 벨트로 "타면 빠르다"를
+# 몸으로 배우고 가볍게 싸운다(온보딩 · 수칙 2 저단차).
+static func _warehouse_dock() -> Dictionary:
 	return {
 		"world_type":   "HORIZONTAL",
-		"world_size":   Vector2(3400.0, 720.0),
+		"world_size":   Vector2(3000.0, 720.0),
 		"player_start": Vector2(140.0, 540.0),
 		"goal_type":    "POSITION",
-		"goal_pos":     Vector2(3280.0, 540.0),
+		"goal_pos":     Vector2(2880.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
+		"ambience":     "warehouse_dock",
 		"platforms": [
-			# 적재함 + 적재탑 2개(수칙 3·5) · 벨트와 결합: 순방향(700~1350) 탄력으로 탑 A,
-			# 역방향(1650~2350) 상공은 탑 B가 전투 배점.
+			{"pos": Vector2(620, 470),  "w": 200.0},   # 하역 단
+			{"pos": Vector2(1240, 450), "w": 180.0},
+			{"pos": Vector2(1780, 470), "w": 180.0},
+			{"pos": Vector2(2350, 450), "w": 180.0},
+		],
+		"enemies": {
+			"patrol": [Vector2(820, 600.0), Vector2(1560, 600.0), Vector2(2250, 600.0)],
+			"sniper": [], "drone":  [], "shield": [],
+			"bomber": [Vector2(1250, 600.0), Vector2(2450, 600.0)],
+		},
+		"rewards": {
+			"xp_orbs":    [Vector2(1240, 420.0), Vector2(2350, 420.0)],
+			"hp_pickups": [],
+		},
+		"spikes": [],
+		"no_spike_fallback": true,   # 벨트 리듬이 시그니처 · 가시 소음 금지(지하철 동형)
+		"conveyors": [
+			{"x1": 460.0,  "x2": 1180.0, "dir": 1, "speed": 120.0},
+			{"x1": 1750.0, "x2": 2450.0, "dir": 1, "speed": 120.0},
+		],
+		"route_lines": [
+			{"x": 300.0, "who": "veil", "text": "컨베이어가 아직 돌아요. 벨트 방향을 타면 빠르고, 거스르면 느립니다. 발밑 화살표를 보세요.", "dur": 4.0},
+		],
+	}
+
+# 방2 · 보관 랙(원 창고 계승). 순·역 벨트 2개 + 적재탑 — 역벨트를 거스르며 폭격기·방패병을
+# 상대하는 이 맵의 본 손맛.
+static func _warehouse_racks() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(4600.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(4480.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"ambience":     "warehouse_racks",
+		"platforms": [
+			# 적재함 + 적재탑 3개(수칙 3·5) · 벨트와 결합: 순방향(700~1350) 탄력으로 탑 A,
+			# 역방향(1650~2350) 상공은 탑 B가 전투 배점, 후반 순방향(2600~3350) 위 탑 C(저격).
 			{"pos": Vector2(560, 460),  "w": 220.0},
 			{"pos": Vector2(1080, 440), "w": 180.0},
 			{"pos": Vector2(1180, 330), "w": 120.0},   # 적재탑 A(XP)
@@ -1519,27 +1674,77 @@ static func _warehouse() -> Dictionary:
 			{"pos": Vector2(2560, 460), "w": 220.0},
 			{"pos": Vector2(1320, 560), "w": 120.0},
 			{"pos": Vector2(2300, 560), "w": 120.0},
+			{"pos": Vector2(2980, 450), "w": 180.0},
+			{"pos": Vector2(3300, 330), "w": 120.0},   # 적재탑 C(저격 배점)
+			{"pos": Vector2(3250, 560), "w": 120.0},
+			{"pos": Vector2(3760, 460), "w": 200.0},
+			{"pos": Vector2(4180, 450), "w": 160.0},
 		],
 		"enemies": {
-			"patrol": [Vector2(860, 600.0), Vector2(2400, 600.0)],
-			"sniper": [],
+			"patrol": [Vector2(860, 600.0), Vector2(2400, 600.0), Vector2(3150, 600.0), Vector2(4050, 600.0)],
+			"sniper": [Vector2(3300, 310.0)],
 			"drone":  [],
-			"bomber": [Vector2(1800, 600.0)],
+			"bomber": [Vector2(1800, 600.0), Vector2(3650, 600.0)],
 			"shield": [Vector2(1080, 600.0)],
 		},
 		"rewards": {
-			"xp_orbs":    [Vector2(1180, 300.0), Vector2(2060, 410.0)],
-			"hp_pickups": [Vector2(2560, 430.0)],
+			"xp_orbs":    [Vector2(1180, 300.0), Vector2(2060, 410.0), Vector2(3300, 300.0)],
+			"hp_pickups": [Vector2(2560, 430.0), Vector2(4180, 420.0)],
 		},
 		"spikes": [],
 		# 시그니처 · 컨베이어 바닥(§8 확산 6호, 2026-08-17): 지면 구간이 흐른다.
-		# 벨트 A = 순방향(타면 빠름) / 벨트 B = 역방향(거스르며 폭격기·방패병 상대 = 이 맵 손맛).
+		# 벨트 A = 순방향(타면 빠름) / 벨트 B = 역방향(거스르며 폭격기·방패병 상대 = 이 맵 손맛) /
+		# 벨트 C = 순방향(탑 C 저격 아래 질주) / 벨트 D = 역방향(막판 저항).
 		"conveyors": [
 			{"x1": 700.0,  "x2": 1350.0, "dir": 1,  "speed": 120.0},
 			{"x1": 1650.0, "x2": 2350.0, "dir": -1, "speed": 140.0},
+			{"x1": 2600.0, "x2": 3350.0, "dir": 1,  "speed": 130.0},
+			{"x1": 3600.0, "x2": 4300.0, "dir": -1, "speed": 140.0},
 		],
 		"route_lines": [
-			{"x": 300.0, "who": "veil", "text": "컨베이어가 아직 돌아요. 벨트 방향을 타면 빠르고, 거스르면 느립니다. 발밑 화살표를 보세요.", "dur": 4.0},
+			{"x": 1550.0, "who": "veil", "text": "여기부터는 벨트가 거꾸로 흘러요. 버티고 서서 쏠 자리를 먼저 잡으세요.", "dur": 3.5},
+		],
+	}
+
+# 방3 · 출하 게이트. 역벨트가 출구까지 이어지고, 게이트 앞 검수 구역을 정리해야 문이 열린다
+# (mid_gate clear = 관문 문법 §6 · 검문소 ⓑ 재사용). 체인의 절정.
+static func _warehouse_shipping() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(3200.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(3080.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"ambience":     "warehouse_shipping",
+		"mid_gate": {"x": 2950.0, "mode": "clear", "zone": [2300.0, 2900.0]},
+		"platforms": [
+			{"pos": Vector2(700, 460),  "w": 200.0},
+			{"pos": Vector2(1300, 440), "w": 160.0},
+			{"pos": Vector2(1900, 450), "w": 170.0},
+			{"pos": Vector2(2640, 460), "w": 180.0},   # 검수 구역 상단(저격 배점)
+		],
+		"enemies": {
+			"patrol": [Vector2(900, 600.0), Vector2(1700, 600.0), Vector2(2450, 600.0)],
+			"sniper": [Vector2(2640, 440.0)],
+			"drone":  [],
+			"bomber": [Vector2(2800, 600.0)],
+			# 방패병은 검수 존(2300~) 밖 — 존 가드에 넣으면 정면 교착 시 관문이 소프트락
+			# (봇 실측 90s TIMEOUT · 수류탄 없는 플레이어도 동형 위험).
+			"shield": [Vector2(1420, 600.0)],
+		},
+		"rewards": {
+			"xp_orbs":    [Vector2(1300, 410.0), Vector2(1900, 420.0)],
+			"hp_pickups": [Vector2(700, 430.0)],
+		},
+		"spikes": [],
+		"no_spike_fallback": true,
+		"conveyors": [
+			{"x1": 600.0,  "x2": 1500.0, "dir": -1, "speed": 140.0},
+			{"x1": 1800.0, "x2": 2500.0, "dir": -1, "speed": 130.0},
+		],
+		"route_lines": [
+			{"x": 1250.0, "who": "veil", "text": "출하 게이트 앞에 검수 인원이 몰려 있어요. 정리해야 문이 열립니다.", "dur": 3.5},
 		],
 	}
 

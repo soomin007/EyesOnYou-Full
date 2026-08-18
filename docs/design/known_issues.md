@@ -32,6 +32,14 @@
   ② 정면 교착(방패병) · 봇은 우회 기동이 없어 ENEMY_CLEAR에서 못 뚫음. → ENEMY_CLEAR 벤치
   구성은 지상·정면 격파 가능 타입(순찰·폭탄병·저격)만. 원거리 압박이 필요하면 저격 협공 배치로.
 
+- **GDScript: freed 참조에 `is`를 유효성 검사보다 먼저 대지 말 것 — "Left operand of 'is' is a
+  previously freed instance" 런타임 에러로 그 함수가 통째로 중단된다(bool(null) 함정과 동형).**
+  `if e is Node2D and is_instance_valid(e)` / `if not (e is Node2D) or not is_instance_valid(e)` 둘 다
+  freed에서 `is`가 먼저 평가되어 죽는다. → **항상 `is_instance_valid(e)`가 앞**:
+  `if is_instance_valid(e) and e is Node2D`. 특히 위험한 곳: 노드 참조를 배열에 저장해 두고 나중에
+  순회(2026-08-18 `_mid_gate_guards` 실제 발생 · 봇이 매 프레임 크래시해 가짜 TIMEOUT) ·
+  그룹 순회는 대체로 안전하지만 같은 순서 습관으로 통일. 전 스크립트 스윕 완료(2026-08-18).
+
 - **GDScript: untyped Array/Dictionary 인덱싱 시 명시 타입 선언.** `var x := arr[i]` 대신 `var x: Dictionary = arr[i]`.
   `Array[T]`에 untyped Array(사전 리터럴 값, `Dictionary.get` 결과) 직접 대입 금지(런타임 에러).
 

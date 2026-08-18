@@ -488,7 +488,7 @@ func _show_muzzle_flash() -> void:
 func _nearest_enemy_dist() -> float:
 	var best: float = -1.0
 	for e in get_tree().get_nodes_in_group("enemy"):
-		if e is Node2D and is_instance_valid(e) and not bool((e as Node2D).get("dead")):
+		if is_instance_valid(e) and e is Node2D and not bool((e as Node2D).get("dead")):
 			var d: float = ((e as Node2D).global_position - global_position).length()
 			if best < 0.0 or d < best:
 				best = d

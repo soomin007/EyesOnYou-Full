@@ -35,7 +35,8 @@ var _ignore: Dictionary = {}        # instance_id → 무시 해제 시각(_cloc
 var _clock: float = 0.0
 var _hop_t: float = 0.0             # 교전 중 점프 사격 리듬
 var _hop_period: float = 1.2        # air_shot_ratio에서 유도(작을수록 자주 뛴다)
-var _climb_t: float = 0.0           # 머리 위 사냥 목적지 등반 점프 리듬
+var _climb_t: float = 0.0           # 머리 위 목적지 등반 리듬
+var _climb_seq: int = 0             # 0 대기 → 1 점프 직후(더블점프 예약) → 2 휴지
 var _dash_travel_t: float = 0.0     # 이동 대시 리듬
 var _dash_period: float = 15.0      # dash_pm에서 유도
 var _dodge_cd: float = 0.0          # 회피 대시 재시도 쿨
@@ -45,6 +46,8 @@ var _gren_hold: float = -1.0        # ≥0이면 수류탄 차징 중(홀드 시
 var _gren_cd: float = 0.0
 var _use_grenade: bool = false
 var _kills_seen: int = 0
+var _pull_pulse: int = 0            # 레버 당기기(공격 키 just_pressed 펄스)
+var _pull_t: float = 0.0
 
 func setup(stage: Node) -> void:
 	_stage = stage
@@ -83,6 +86,10 @@ func _physics_process(delta: float) -> void:
 		_dash_pulse -= 1
 		if _dash_pulse == 0:
 			Input.action_release("dash")
+	if _pull_pulse > 0:
+		_pull_pulse -= 1
+		if _pull_pulse == 0:
+			Input.action_release("attack")
 	var arena: bool = str(_stage.get("_goal_type")) == "ENEMY_CLEAR"
 	var goal: Vector2 = _stage.get("_goal_pos")
 	var goal_dir: float = signf(goal.x - _player.global_position.x)
@@ -94,11 +101,16 @@ func _physics_process(delta: float) -> void:
 	var nav_dx: float = 1e9
 	if arena or hunt:
 		for e0 in get_tree().get_nodes_in_group("enemy"):
-			if not (e0 is Node2D) or not is_instance_valid(e0):
+			if not is_instance_valid(e0) or not (e0 is Node2D):
 				continue
 			if bool((e0 as Node2D).get("dead")) or bool((e0 as Node2D).get("harmless")):
 				continue
 			if _ignore.has(e0.get_instance_id()) and _clock < float(_ignore[e0.get_instance_id()]):
+				continue
+			# 드론(공중 추적 유닛)은 사냥 목적지에서 제외 — 따라오는 적이라 찾아갈 필요가 없고,
+			# 밑에서 등반 점프만 반복하며 시간·피해를 낭비한다(2026-08-18 냉각 TIMEOUT 실측).
+			var et0: Variant = (e0 as Node2D).get("enemy_type")
+			if et0 != null and int(et0) == 2:
 				continue
 			var rel0: Vector2 = (e0 as Node2D).global_position - _player.global_position
 			if not arena and (absf(rel0.x) > hunt_range or absf(rel0.y) > hunt_dy):
@@ -124,7 +136,7 @@ func _physics_process(delta: float) -> void:
 	var target: Node2D = null
 	var best: float = engage_range
 	for e in get_tree().get_nodes_in_group("enemy"):
-		if not (e is Node2D) or not is_instance_valid(e):
+		if not is_instance_valid(e) or not (e is Node2D):
 			continue
 		if bool((e as Node2D).get("dead")) or bool((e as Node2D).get("harmless")):
 			continue
@@ -149,9 +161,23 @@ func _physics_process(delta: float) -> void:
 		else:
 			_tgt_id = target.get_instance_id()
 			_tgt_t = 0.0
-	# 이동 · 표적이 사거리 안이면 멈춰 쏘고, 아니면 목적지(사냥 적 or 골) 방향 전진.
+	# 중간 관문(레버 모드) — 격벽이 닫혔고 근처까지 왔으면 레버가 목적지(사람의 우회 동선).
+	# 교전 중엔 전투 우선 · 레버 근처 허공 갈기기는 끈다(공격 키 홀드가 당기기 입력을 막는다).
+	var lever_pos: Vector2 = Vector2.INF
+	if str(_stage.get("_mid_gate_mode")) == "lever" and not bool(_stage.get("_mid_gate_opened")):
+		var md: Variant = _stage.get("_map_data")
+		if md is Dictionary:
+			var mg: Dictionary = (md as Dictionary).get("mid_gate", {})
+			var lp: Variant = mg.get("lever")
+			if lp is Vector2 and absf(_player.global_position.x - float(mg.get("x", 0.0))) < 1100.0:
+				lever_pos = lp
+	var lever_dx: float = (lever_pos.x - _player.global_position.x) if lever_pos != Vector2.INF else 1e9
+	# 이동 · 표적이 사거리 안이면 멈춰 쏘고, 아니면 목적지(레버 > 사냥 적 > 골) 방향 전진.
 	var move_dir: float = goal_dir
-	if target != null and best < engage_range * 0.75:
+	if lever_pos != Vector2.INF and target == null:
+		# 레버 감지 Area가 40px 폭(반폭 20) — 정지 문턱이 넓으면 감지 밖에 서서 헛사격한다.
+		move_dir = signf(lever_dx) if absf(lever_dx) > 14.0 else 0.0
+	elif target != null and best < engage_range * 0.75:
 		move_dir = 0.0
 	elif nav != null and nav_dx < 90.0:
 		# 목적지 바로 아래 도착 · dx 부호 진동으로 좌우 떨림 방지(서서 싸운다).
@@ -180,10 +206,13 @@ func _physics_process(delta: float) -> void:
 	# 같은 높이 표적이 없어도 근처에 적이 남았으면(공중 드론 등) "유도 믿고 갈기기" —
 	# 유도 없는 빌드는 빗나간다(= 측정하려는 조준 비용 면제 그 자체). 단 8s 무진전이면
 	# 억제(사람도 안 맞는 갈기기는 관둔다 · 데드락 가드).
+	# 레버 "바로 앞"에서만 허공 갈기기 금지(공격 홀드가 당기기 입력을 막는다) — 접근 중엔 허용
+	# (유도 빌드가 레버 상공 드론을 지울 수 있어야 한다 · 2026-08-18 냉각 max TIMEOUT 실측).
+	var at_lever: bool = lever_pos != Vector2.INF and absf(lever_dx) < 120.0
 	var blind_fire: bool = false
-	if (arena or hunt) and target == null and _clock >= _blind_cd:
+	if (arena or hunt) and target == null and _clock >= _blind_cd and not at_lever:
 		for e2 in get_tree().get_nodes_in_group("enemy"):
-			if e2 is Node2D and is_instance_valid(e2) and not bool((e2 as Node2D).get("dead")) \
+			if is_instance_valid(e2) and e2 is Node2D and not bool((e2 as Node2D).get("dead")) \
 					and not bool((e2 as Node2D).get("harmless")) \
 					and absf((e2 as Node2D).global_position.x - _player.global_position.x) < 620.0:
 				blind_fire = true
@@ -202,7 +231,8 @@ func _physics_process(delta: float) -> void:
 			Input.action_press("attack")
 	else:
 		_react_t = 0.0
-		Input.action_release("attack")
+		if _pull_pulse == 0:   # 레버 당기기 펄스 중엔 해제하지 않는다(당기기 입력 보호)
+			Input.action_release("attack")
 	# 점프 사격 리듬(프로필 air_shot_ratio) — 유도 빌드(glide T3)는 풀 리듬("뛰면서 갈기기"),
 	# 그 외는 1/3 빈도(유도 없이 지상 표적 상대로 뛰면 수평탄이 넘어가 손해 · 사람도 덜 뛴다).
 	# 허공 갈기기 중엔 항상 풀 리듬(점프 궤적에서 같은 높이 필터가 공중 적을 잡아 준다).
@@ -217,22 +247,49 @@ func _physics_process(delta: float) -> void:
 			_hop_t = 0.0
 	else:
 		_hop_t = 0.0
-	# 머리 위 사냥 목적지(발판 위 저격수 등) — 밑에서 등반 점프 리듬(이단 점프는 공중 재입력).
-	if nav != null and nav_dx < 220.0:
-		var above: float = _player.global_position.y - nav.global_position.y
-		if above > 120.0:
-			_climb_t += delta
-			if _climb_t > 0.7 and _jump_pulse == 0:
-				Input.action_press("jump")
-				_jump_pulse = 2
-				_climb_t = 0.0
-		else:
+	# 머리 위 목적지(발판 위 저격수·레버) — 밑에서 등반 점프 리듬(이단 점프는 공중 재입력).
+	var climb_up: float = 0.0
+	if lever_pos != Vector2.INF and target == null and absf(lever_dx) < 220.0:
+		climb_up = _player.global_position.y - lever_pos.y
+	elif nav != null and nav_dx < 220.0:
+		climb_up = _player.global_position.y - nav.global_position.y
+	# 사람의 등반 = 점프 직후 더블점프(합산 ~190px). 단발 점프 반복으로는 높은 발판(Δ>104)에
+	# 못 올라 레버·저격 둥지 접근이 실패한다(2026-08-18 냉각 레버 TIMEOUT 실측).
+	# 시퀀스 진행 중엔 climb_up 게이트를 무시 — 1단 상승 중 높이 차가 좁혀지며 게이트가 꺼져
+	# 더블점프 입력이 영영 안 나가는 자가 리셋이 있었다(y 진동 무한 반복의 원인).
+	if climb_up > 100.0 or _climb_seq != 0:
+		_climb_t += delta
+		if _climb_seq == 0 and climb_up > 100.0 and _climb_t > 0.4 and _jump_pulse == 0:
+			Input.action_press("jump")
+			_jump_pulse = 2
+			_climb_seq = 1
 			_climb_t = 0.0
+		elif _climb_seq == 1 and _climb_t > 0.3 and _jump_pulse == 0:
+			Input.action_press("jump")   # 공중 재입력 = 더블점프
+			_jump_pulse = 2
+			_climb_seq = 2
+			_climb_t = 0.0
+		elif _climb_seq == 2 and _climb_t > 0.9:
+			_climb_seq = 0
+			_climb_t = 0.0
+	else:
+		_climb_seq = 0
+		_climb_t = 0.0
+	# 레버 앞 도착 — 당기기(공격 키 = 상호작용 · just_pressed 필요라 펄스로 누른다). 0.6s 재시도.
+	if at_lever and target == null and not blind_fire \
+			and absf(lever_dx) < 46.0 and absf(_player.global_position.y - lever_pos.y) < 96.0:
+		_pull_t += delta
+		if _pull_t > 0.6 and _pull_pulse == 0:
+			Input.action_press("attack")
+			_pull_pulse = 2
+			_pull_t = 0.0
+	else:
+		_pull_t = 0.6   # 도착 즉시 첫 시도가 나가게
 	# 대시 ① 회피 — 날아오는 적탄이 가까우면 대시(무적 프레임 · 사람의 "보고 피하기").
 	_dodge_cd = maxf(_dodge_cd - delta, 0.0)
 	if _dodge_cd <= 0.0 and _dash_pulse == 0:
 		for b in get_tree().get_nodes_in_group("enemy_bullet"):
-			if not (b is Node2D) or not is_instance_valid(b):
+			if not is_instance_valid(b) or not (b is Node2D):
 				continue
 			var bv: Variant = b.get("velocity")
 			if not (bv is Vector2):
