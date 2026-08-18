@@ -32,6 +32,15 @@ const ONLY_MAP: String = ""   # ""이면 전체 · 특정 맵만 진단할 때 r
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	Engine.time_scale = 3.0
+	# 봇이 쓰는 플레이 습관 프로필을 결과 해석용으로 남긴다(src=default는 실플레이 표본 0 =
+	# 사용자 스타일 근사 기본값 · user는 실측 누적치). 프로필이 바뀌면 계측 이력 비교에 주의.
+	var prof: Dictionary = GameState.get_playstyle()
+	print("[BOT] profile src=%s dash_pm=%.1f jump_pm=%.1f air=%.2f dist=%.0f hunt=%.2f gren_pm=%.1f dmg_pm=%.1f stages=%d" % [
+		("user" if int(prof.get("stages", 0)) > 0 else "default"),
+		float(prof.get("dash_pm", 0.0)), float(prof.get("jump_pm", 0.0)),
+		float(prof.get("air_shot_ratio", 0.0)), float(prof.get("avg_fire_dist", 0.0)),
+		float(prof.get("hunt_ratio", 0.0)), float(prof.get("grenade_pm", 0.0)),
+		float(prof.get("dmg_pm", 0.0)), int(prof.get("stages", 0))])
 	await get_tree().process_frame
 	for b in BUILDS:
 		for m in MAPS:
@@ -46,7 +55,7 @@ func _run_one(build: Dictionary, m: Dictionary) -> void:
 	GameState.reset()
 	for eid in ["patrol", "shield", "sniper", "drone", "bomber", "elite"]:
 		GameState.mark_enemy_seen(eid)
-	GameState.playground_active = true   # 골 도달 = 세계 정지(계측 종료 신호로 활용)
+	GameState.playground_active = true   # 골 도달 = 세계 정지(계측 종료 신호) + 습관 기록 제외
 	GameState.skills = (build.get("skills", {}) as Dictionary).duplicate()
 	GameState.skills["dash"] = 1
 	GameState.skills["double_jump"] = 1

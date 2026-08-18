@@ -52,6 +52,8 @@ const CD_BAR_WIDTH_SHORT: float = 44.0
 
 func _ready() -> void:
 	add_to_group("stage")
+	# 플레이 습관 프로필 수집 시작(실플레이만 · 연습장/스토리/봇은 내부 게이트로 제외).
+	GameState.profile_stage_begin()
 	# 안전망: 이전 scene에서 paused=true 상태가 carry되어 새 stage가 freeze되는 패턴 차단
 	# (LevelUpOverlay/도전방 fail 등에서 paused 해제 누락 시 빈 화면).
 	get_tree().paused = false
@@ -7388,6 +7390,7 @@ func _on_goal_reached(body: Node) -> void:
 		GameState.add_xp(challenge_xp_on_clear, false)
 		_show_veil_subtitle("혼자 해냈네요, 요원.", 2.5)
 	goal_reached = true
+	GameState.profile_stage_end(_profile_alive_enemies())
 	# 연습장 · 출구 도달 = 세계 정지(설정 조작 중 수위·열차 등 해저드에 죽는 것 방지,
 	# 사용자 2026-08-17). 패널(PROCESS_MODE_ALWAYS)은 계속 조작 가능 · F1 여닫기나 패널의
 	# 맵/스테이지 변경(reload가 paused 해제)으로 재개.
@@ -7570,10 +7573,20 @@ func _setup_arena_clear_tracking() -> void:
 		# 적 없는 ARENA (이상 케이스) — 즉시 클리어
 		call_deferred("_on_arena_cleared")
 
+# 플레이 습관 프로필 · 클리어 시점 생존 적 수(전멸 성향 hunt_ratio 분모).
+func _profile_alive_enemies() -> int:
+	var n: int = 0
+	for e in get_tree().get_nodes_in_group("enemy"):
+		if e is Node2D and is_instance_valid(e) and not bool((e as Node2D).get("dead")) \
+				and not bool((e as Node2D).get("harmless")):
+			n += 1
+	return n
+
 func _on_arena_cleared() -> void:
 	if goal_reached:
 		return
 	goal_reached = true
+	GameState.profile_stage_end(_profile_alive_enemies())
 	# 방어 맵 — 코어를 "확보" 상태로 굳혀 잔여 드레인/경보 정지.
 	if _defense_core != null and is_instance_valid(_defense_core):
 		_defense_core.set_secured()

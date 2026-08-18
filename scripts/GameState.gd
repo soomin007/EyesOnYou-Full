@@ -721,6 +721,7 @@ func damage_player(amount: int) -> void:
 	# 스토리 모드는 체력 무제한 — 피격 자체를 무시. (Player.take_hit의 invuln 등은 그대로 동작)
 	if story_mode:
 		return
+	profile_note_damage(amount)   # 플레이 습관 프로필(실플레이만 · _ps_active 게이트)
 	player_hp = max(0, player_hp - amount)
 
 func heal_player(amount: int) -> void:
@@ -1318,3 +1319,130 @@ func open_feedback() -> void:
 		JavaScriptBridge.eval("window.open('%s', '_blank')" % FEEDBACK_URL, true)
 	else:
 		OS.shell_open(FEEDBACK_URL)
+
+# ─── 플레이 습관 프로필 (2026-08-18 사용자 "봇을 좀 더 나같이") ─────────────────────
+# 실플레이(스토리·연습장·봇 제외)에서 습관 지표를 스테이지 단위로 수집해 user://playstyle.cfg에
+# 이동 평균(EMA)으로 누적한다. BotDriver가 이 프로필을 읽어 봇의 습관(사냥 성향·대시·점프 사격·
+# 교전 거리)을 실측값에 맞춘다 — "사람 같은"이 아니라 "이 사용자 같은" 계측이 목적.
+# 표본 0이면 기본값(사용자의 알려진 스타일: 풀런 5:26·처치 133 = 전멸 성향 근사)이 쓰인다.
+
+const PLAYSTYLE_PATH: String = "user://playstyle.cfg"
+const PLAYSTYLE_EMA: float = 0.25   # 스테이지마다 새 표본 25% 반영(런 몇 번이면 수렴)
+const PLAYSTYLE_DEFAULTS: Dictionary = {
+	"dash_pm": 4.0,          # 분당 대시
+	"jump_pm": 22.0,         # 분당 점프
+	"air_shot_ratio": 0.5,   # 공중 발사 비율(유도 빌드 "뛰면서 갈기기" 습관)
+	"avg_fire_dist": 420.0,  # 발사 시점 최근접 적 평균 거리(교전 거리)
+	"hunt_ratio": 0.9,       # 처치/조우 비율(전멸 성향 · 골 직행이면 낮다)
+	"grenade_pm": 1.0,       # 분당 수류탄
+	"dmg_pm": 1.5,           # 분당 피격(봇 검증 대조용 · 봇 조작엔 직접 안 씀)
+	"stages": 0,             # 누적 표본 수(0 = 미계측 → 기본값 사용)
+}
+
+var _playstyle: Dictionary = {}
+var _ps_loaded: bool = false
+var _ps_active: bool = false
+var _ps_time: float = 0.0
+var _ps_dash: int = 0
+var _ps_jump: int = 0
+var _ps_shots: int = 0
+var _ps_air_shots: int = 0
+var _ps_fire_dist_sum: float = 0.0
+var _ps_fire_dist_n: int = 0
+var _ps_grenades: int = 0
+var _ps_dmg: int = 0
+var _ps_kills0: int = 0
+
+func _process(delta: float) -> void:
+	# 일시정지(레벨업 오버레이 등) 중엔 _process가 멈추므로 활동 시간만 쌓인다.
+	if _ps_active:
+		_ps_time += delta
+
+func get_playstyle() -> Dictionary:
+	if not _ps_loaded:
+		_ps_loaded = true
+		_playstyle = PLAYSTYLE_DEFAULTS.duplicate()
+		var cf := ConfigFile.new()
+		if cf.load(PLAYSTYLE_PATH) == OK:
+			for k in PLAYSTYLE_DEFAULTS:
+				_playstyle[k] = cf.get_value("playstyle", k, PLAYSTYLE_DEFAULTS[k])
+	return _playstyle
+
+func _save_playstyle() -> void:
+	var cf := ConfigFile.new()
+	for k in _playstyle:
+		cf.set_value("playstyle", k, _playstyle[k])
+	cf.save(PLAYSTYLE_PATH)
+
+# Stage._ready에서 호출 — 실플레이만 수집(봇 스위트는 playground_active=true라 자동 제외).
+func profile_stage_begin() -> void:
+	_ps_active = false
+	if playground_active or story_mode:
+		return
+	_ps_active = true
+	_ps_time = 0.0
+	_ps_dash = 0
+	_ps_jump = 0
+	_ps_shots = 0
+	_ps_air_shots = 0
+	_ps_fire_dist_sum = 0.0
+	_ps_fire_dist_n = 0
+	_ps_grenades = 0
+	_ps_dmg = 0
+	_ps_kills0 = kills_total
+
+# 골 도달에서만 호출(사망·이탈 스테이지는 표본에서 버린다 — begin이 버퍼를 다시 초기화).
+func profile_stage_end(alive_enemies: int) -> void:
+	if not _ps_active:
+		return
+	_ps_active = false
+	if _ps_time < 6.0:
+		return   # 연출 방·초단기 방은 습관 표본으로 무의미
+	var minutes: float = _ps_time / 60.0
+	var sample: Dictionary = {
+		"dash_pm": _ps_dash / minutes,
+		"jump_pm": _ps_jump / minutes,
+		"grenade_pm": _ps_grenades / minutes,
+		"dmg_pm": _ps_dmg / minutes,
+	}
+	if _ps_shots >= 5:
+		sample["air_shot_ratio"] = float(_ps_air_shots) / float(_ps_shots)
+	if _ps_fire_dist_n >= 5:
+		sample["avg_fire_dist"] = _ps_fire_dist_sum / float(_ps_fire_dist_n)
+	var kills_here: int = kills_total - _ps_kills0
+	var encountered: int = kills_here + alive_enemies
+	if encountered >= 2:
+		sample["hunt_ratio"] = float(kills_here) / float(encountered)
+	var p: Dictionary = get_playstyle()
+	var first: bool = int(p.get("stages", 0)) == 0
+	for k in sample:
+		# 첫 표본은 그대로 대입(기본값 오염 방지), 이후 EMA.
+		p[k] = sample[k] if first else lerpf(float(p[k]), float(sample[k]), PLAYSTYLE_EMA)
+	p["stages"] = int(p.get("stages", 0)) + 1
+	_save_playstyle()
+
+func profile_note_dash() -> void:
+	if _ps_active:
+		_ps_dash += 1
+
+func profile_note_jump() -> void:
+	if _ps_active:
+		_ps_jump += 1
+
+func profile_note_shot(airborne: bool, fire_dist: float) -> void:
+	if not _ps_active:
+		return
+	_ps_shots += 1
+	if airborne:
+		_ps_air_shots += 1
+	if fire_dist >= 0.0:
+		_ps_fire_dist_sum += fire_dist
+		_ps_fire_dist_n += 1
+
+func profile_note_grenade() -> void:
+	if _ps_active:
+		_ps_grenades += 1
+
+func profile_note_damage(amount: int) -> void:
+	if _ps_active:
+		_ps_dmg += amount

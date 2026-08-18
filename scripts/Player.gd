@@ -389,6 +389,7 @@ func _try_jump() -> bool:
 		jumps_used = 1
 		_coyote_t = 0.0
 		SfxPlayer.play("player_jump")
+		GameState.profile_note_jump()
 		return true
 	elif jumps_used < max_jumps:
 		# 공중 점프는 "설정"이라, 첫 점프로 더 빠르게 상승 중(t<~0.03s)에 누르면 속도가 *깎여* 높이를
@@ -398,6 +399,7 @@ func _try_jump() -> bool:
 		jumps_used += 1
 		# 사용자: 더블점프 전용 사운드는 어색해서 일반 점프 사운드 재사용.
 		SfxPlayer.play("player_jump")
+		GameState.profile_note_jump()
 		return true
 	return false
 
@@ -422,6 +424,7 @@ func _try_attack() -> void:
 	var cd_mult: float = 0.70 if fb_tier >= 2 else 1.0
 	attack_cd = ATTACK_COOLDOWN * cd_mult
 	shots_fired += 1   # 이스터에그(평화주의) 판정용 — 이 스테이지에서 발포했는가
+	GameState.profile_note_shot(not is_on_floor(), _nearest_enemy_dist())
 	if fb_tier >= 2:
 		sprint_t = _SPRINT_DURATION
 	_show_muzzle_flash()
@@ -481,12 +484,23 @@ func _show_muzzle_flash() -> void:
 	muzzle_flash.modulate.a = 1.0
 	muzzle_flash.visible = true
 
+# 발사 시점 최근접 생존 적 거리(플레이 습관 프로필 · 교전 거리 표본). 적이 없으면 -1(표본 제외).
+func _nearest_enemy_dist() -> float:
+	var best: float = -1.0
+	for e in get_tree().get_nodes_in_group("enemy"):
+		if e is Node2D and is_instance_valid(e) and not bool((e as Node2D).get("dead")):
+			var d: float = ((e as Node2D).global_position - global_position).length()
+			if best < 0.0 or d < best:
+				best = d
+	return best
+
 func _try_dash() -> void:
 	if not GameState.has_skill("dash"):
 		return
 	if dash_cd > 0.0:
 		return
 	SfxPlayer.play("player_dash")
+	GameState.profile_note_dash()
 	# dash_boost: T1=쿨다운 -20%, T2=거리 +30%(_handle_input의 dash_timer 분기에서 적용),
 	#            T3=대시 후 0.3s 무적 추가.
 	var db_tier: int = GameState.get_skill_tier("dash_boost")
@@ -524,6 +538,7 @@ func _throw_grenade() -> void:
 	if skill_cd <= 0.0:
 		skill_cd = get_skill_cd_max()
 	SfxPlayer.play("skill_active_use")
+	GameState.profile_note_grenade()
 	var g := Grenade.new()
 	g.velocity = _grenade_launch_velocity()
 	g.radius = EXPLOSION_RADIUS * (1.3 if GameState.get_skill_tier("explosive") >= 2 else 1.0)

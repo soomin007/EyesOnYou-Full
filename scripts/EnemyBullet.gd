@@ -15,6 +15,7 @@ var damage: int = 1
 var lifetime: float = BASE_LIFETIME
 
 func _ready() -> void:
+	add_to_group("enemy_bullet")   # BotDriver 회피 감지용(사람의 "날아오는 탄 보고 피하기" 근사)
 	collision_layer = 0
 	collision_mask = 1 | 2  # 벽/플랫폼 + 플레이어
 	body_entered.connect(_on_body_entered)
