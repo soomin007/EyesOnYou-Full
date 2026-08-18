@@ -57,6 +57,19 @@ func _ready() -> void:
 	]
 	# 맵별 소요 실측 — 페이싱 진단용 콘솔 기록(웹 콘솔에서도 회수 가능).
 	print("[RUN] 총 %s · 맵별 소요: %s" % [GameState.run_time_text(), " / ".join(GameState.stage_time_log)])
+	# 파일로도 누적(2026-08-18) — 세션 밖 도구(봇 캘리브레이션·페이싱 밴드 검증)가 읽는다.
+	# 데스크톱 한정 유효(웹 user://는 브라우저 저장소).
+	var run_line: String = "[RUN] %s | ending=%s | total=%s | hits=%d kills=%d score=%d deaths=%d | maps: %s\n" % [
+		Time.get_datetime_string_from_system(), ending_id, GameState.run_time_text(),
+		GameState.hits_taken, GameState.kills_total, GameState.score, GameState.death_count,
+		" / ".join(GameState.stage_time_log)]
+	var fa: FileAccess = FileAccess.open("user://run_history.log", FileAccess.READ_WRITE)
+	if fa == null:
+		fa = FileAccess.open("user://run_history.log", FileAccess.WRITE)
+	if fa != null:
+		fa.seek_end(0)
+		fa.store_string(run_line)
+		fa.close()
 	# ??? 방 방문(hidden_visit_count > 0) 또는 ARCTURUS 아카이브 읽음(visited_arcturus) 시
 	# 라이브 lore 라인을 보여주고, 미방문 시엔 짧고 호기심 hint 라인.
 	var explored_lore: bool = GameState.hidden_visit_count > 0 or GameState.visited_arcturus

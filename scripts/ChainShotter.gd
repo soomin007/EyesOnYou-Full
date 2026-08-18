@@ -24,12 +24,13 @@ func _ready() -> void:
 func _run() -> void:
 	for entry in TARGETS:
 		var d: Dictionary = entry
-		await _capture(str(d["rid"]), int(d["stage"]), int(d["seg"]), float(d.get("x", -1.0)))
+		await _capture(str(d["rid"]), int(d["stage"]), int(d["seg"]), float(d.get("x", -1.0)),
+			int(d.get("wait", 0)))
 	print("CHAIN SHOTS DONE")
 	await get_tree().create_timer(0.2).timeout
 	get_tree().quit()
 
-func _capture(rid: String, stage_idx: int, seg: int, px: float) -> void:
+func _capture(rid: String, stage_idx: int, seg: int, px: float, extra_wait: int = 0) -> void:
 	GameState.start_main_game()
 	GameState.current_stage = stage_idx
 	GameState.seen_enemies = ["patrol", "sniper", "drone", "bomber", "shield"]
@@ -52,6 +53,8 @@ func _capture(rid: String, stage_idx: int, seg: int, px: float) -> void:
 		if player != null:
 			(player as Node2D).global_position.x = px
 		await _wait(24)   # 카메라 정착
+	if extra_wait > 0:
+		await _wait(extra_wait)   # 시간형 연출(추격·낙하물) 진행 대기
 	await RenderingServer.frame_post_draw
 	await get_tree().process_frame
 	var tex: Texture2D = get_viewport().get_texture()

@@ -37,6 +37,11 @@ var _stop_active: bool = false
 var _halted: bool = false
 var _edge: float = -300.0         # 선두(치명) edge의 월드 좌표(axis에 따라 x 또는 y)
 var _dmg_cd: float = 0.0
+# y_up 시각 · 낙하 잔해(시각 전용, 피해 없음) — "위에서 떨어져 아래에 쌓인다"를 만든다
+# (2026-08-18 사용자 "가시가 올라오는 이상한 느낌" · 톱니 경계 폐지의 짝).
+var _debris: Array = []           # {x, y, vy, w, h}
+var _debris_t: float = 0.0
+var _puffs: Array = []            # {x, t} · 착탄 분진
 
 func setup(start: float, spd: float, gap: float = 700.0, stop: float = INF, ax: String = "x", catchup_spd: float = 340.0) -> void:
 	axis = ax
@@ -88,7 +93,40 @@ func _physics_process(delta: float) -> void:
 		if _stop_active:
 			_edge = maxf(_edge, stop_edge)
 		position.y = _edge
+		_tick_debris(delta)
 	queue_redraw()
+
+# 낙하 잔해 갱신(y_up 전용 · 시각만, 판정 없음). 더미 표면(edge)에 닿으면 분진 퍼프.
+func _tick_debris(delta: float) -> void:
+	_debris_t -= delta
+	if _debris_t <= 0.0:
+		_debris_t = randf_range(0.45, 1.0)
+		_debris.append({
+			"x": randf_range(80.0, 1200.0),
+			"y": _edge - randf_range(560.0, 860.0),
+			"vy": randf_range(260.0, 420.0),
+			"w": randf_range(10.0, 30.0),
+			"h": randf_range(8.0, 22.0),
+		})
+	var keep: Array = []
+	for d0 in _debris:
+		var d: Dictionary = d0
+		d["vy"] = float(d["vy"]) + 760.0 * delta
+		d["y"] = float(d["y"]) + float(d["vy"]) * delta
+		if float(d["y"]) >= _edge - 4.0:
+			_puffs.append({"x": float(d["x"]), "t": 0.0})
+			if randf() < 0.3:
+				SfxPlayer.play_at("bullet_impact_wall", Vector2(float(d["x"]), _edge))
+		else:
+			keep.append(d)
+	_debris = keep
+	var keep_p: Array = []
+	for q0 in _puffs:
+		var q: Dictionary = q0
+		q["t"] = float(q["t"]) + delta
+		if float(q["t"]) < 0.5:
+			keep_p.append(q)
+	_puffs = keep_p
 
 func _hit(p: Node) -> void:
 	if p.has_method("take_hit"):
@@ -113,18 +151,34 @@ func _draw() -> void:
 		draw_rect(Rect2(Vector2(0.0, V_TOP), Vector2(DUST_W, V_BOT - V_TOP)), Color(0.36, 0.30, 0.26, 0.16))
 		draw_rect(Rect2(Vector2(DUST_W, V_TOP), Vector2(DUST_W * 0.7, V_BOT - V_TOP)), Color(0.36, 0.30, 0.26, 0.07))
 	else:
-		# 삼켜진 어두운 영역(선두 아래 전부) · 소각 여파라 상단 경계에 잔불 기운 한 줄.
+		# 삼켜진 어두운 영역(선두 아래 전부).
 		draw_rect(Rect2(Vector2(H_LEFT, 0.0), Vector2(H_RIGHT - H_LEFT, 4600.0)), Color(0.05, 0.04, 0.05, 0.97))
-		draw_rect(Rect2(Vector2(H_LEFT, 0.0), Vector2(H_RIGHT - H_LEFT, 10.0)), Color(0.55, 0.24, 0.12, 0.5))
-		var jag_v: PackedVector2Array = PackedVector2Array()
+		# 선두 = 쌓인 잔해 더미 실루엣(2026-08-18 재작업 · 등간격 톱니는 "올라오는 가시"로
+		# 읽혔다). 결정적 해시로 덩어리 폭·높이 변주 — 매 프레임 동일(지글거림 방지).
 		var x: float = H_LEFT
-		var j: int = 0
+		var k: int = 0
 		while x < H_RIGHT:
-			var jy: float = -18.0 if (j % 2 == 0) else 5.0
-			jag_v.append(Vector2(x, jy))
-			x += 34.0
-			j += 1
-		draw_polyline(jag_v, Color(0.34, 0.29, 0.26, 0.9), 3.0, true)
+			var hsh: float = fposmod(sin(float(k) * 12.9898) * 43758.5453, 1.0)
+			var cw: float = 44.0 + hsh * 72.0
+			var ch: float = 14.0 + fposmod(hsh * 7.31, 1.0) * 44.0
+			var tone: float = 0.12 + fposmod(hsh * 3.17, 1.0) * 0.08
+			draw_rect(Rect2(Vector2(x, -ch), Vector2(cw, ch + 10.0)), Color(tone + 0.04, tone, tone * 0.9, 1.0))
+			draw_rect(Rect2(Vector2(x, -ch), Vector2(cw, 2.5)), Color(0.38, 0.32, 0.28, 0.75))
+			# 더미 틈의 잔불(소각 여파) — 드문 주황 점.
+			if fposmod(hsh * 11.7, 1.0) < 0.22:
+				draw_rect(Rect2(Vector2(x + cw * 0.4, -ch * 0.4), Vector2(5.0, 4.0)), Color(0.85, 0.38, 0.14, 0.7))
+			x += cw + 6.0 + fposmod(hsh * 5.3, 1.0) * 24.0
+			k += 1
+		# 낙하 잔해(월드 좌표 → 로컬 y = y - _edge) · 위에서 떨어져 더미에 박힌다.
+		for d0 in _debris:
+			var d: Dictionary = d0
+			draw_rect(Rect2(Vector2(float(d["x"]), float(d["y"]) - _edge - float(d["h"])),
+				Vector2(float(d["w"]), float(d["h"]))), Color(0.22, 0.19, 0.17, 0.95))
+		# 착탄 분진 퍼프 — 확장하며 사라지는 원.
+		for q0 in _puffs:
+			var q: Dictionary = q0
+			var qt: float = float(q["t"]) / 0.5
+			draw_circle(Vector2(float(q["x"]), -6.0), 10.0 + 26.0 * qt, Color(0.36, 0.30, 0.26, 0.30 * (1.0 - qt)))
 		# 위쪽 먼지 경고대 · "아래가 무너지며 차오른다"
 		draw_rect(Rect2(Vector2(H_LEFT, -DUST_W), Vector2(H_RIGHT - H_LEFT, DUST_W)), Color(0.36, 0.30, 0.26, 0.16))
 		draw_rect(Rect2(Vector2(H_LEFT, -DUST_W - DUST_W * 0.7), Vector2(H_RIGHT - H_LEFT, DUST_W * 0.7)), Color(0.36, 0.30, 0.26, 0.07))

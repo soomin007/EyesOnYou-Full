@@ -7560,40 +7560,41 @@ func _build_goal_position() -> void:
 	goal.add_child(col)
 	# 골 비주얼 폴리시(2026-08-17) · 플랫 노란 사각 2장 → 그라디언트 문 + 위로 잦아드는
 	# 빛기둥 + 바닥 착지 글로우. "문/출구" 가독(외곽선·라벨)은 유지.
-	# 침몰 보정(사용자 2026-08-17 "표식이 표면에 잠김"): 문 하단(+100)이 지면 아래로 가는
-	# 맵(goal y540/지면600 · 지하철 y380/지면420 등)에서 문이 바닥에 박혀 보였다.
-	# 비주얼만 지면 위로 올린다(콜리전은 그대로 = 도달 판정 관대함 유지).
+	# 그림 = 판정의 부분집합(사용자 2026-08-18 "그림이랑 판정 위치 같게 · 그림을 줄여라"):
+	# 예전엔 지면 박힘을 비주얼 *이동*으로 보정해 그림과 판정이 어긋났다. 이제 이동 없이
+	# 문 하단을 지면에 클램프해 *축소*하고, 빛기둥·글로우 폭도 판정 폭(60)에 맞춘다.
 	var vis := Node2D.new()
-	vis.position.y = -maxf(0.0, (pos.y + 100.0) - GROUND_Y)
 	goal.add_child(vis)
+	# 그림 하단(로컬) — 판정 하단(+100)이 지면 아래로 박히는 만큼 줄인다(최소 높이 보장).
+	var vbot: float = clampf(100.0 - maxf(0.0, (pos.y + 100.0) - GROUND_Y), 30.0, 100.0)
 	var door := Polygon2D.new()
 	door.polygon = PackedVector2Array([
-		Vector2(-30.0, -100.0), Vector2(30.0, -100.0), Vector2(30.0, 100.0), Vector2(-30.0, 100.0)])
+		Vector2(-30.0, -100.0), Vector2(30.0, -100.0), Vector2(30.0, vbot), Vector2(-30.0, vbot)])
 	door.vertex_colors = PackedColorArray([
 		Color(0.95, 0.85, 0.3, 0.16), Color(0.95, 0.85, 0.3, 0.16),
 		Color(1.0, 0.92, 0.5, 0.55), Color(1.0, 0.92, 0.5, 0.55)])
 	vis.add_child(door)
-	# 빛기둥 · 바닥에서 위로 잦아드는 세로 그라디언트(넓은 겹 + 좁은 코어 겹).
-	for entry in [[180.0, 0.14, 600.0], [80.0, 0.20, 460.0]]:
+	# 빛기둥 · 바닥에서 위로 잦아드는 세로 그라디언트(판정 폭 언저리 겹 + 좁은 코어 겹).
+	for entry in [[100.0, 0.14, 600.0], [52.0, 0.20, 460.0]]:
 		var e: Array = entry
 		var bw: float = float(e[0])
 		var beam := Polygon2D.new()
 		beam.polygon = PackedVector2Array([
-			Vector2(-bw * 0.5, 100.0 - float(e[2])), Vector2(bw * 0.5, 100.0 - float(e[2])),
-			Vector2(bw * 0.5, 100.0), Vector2(-bw * 0.5, 100.0)])
+			Vector2(-bw * 0.5, vbot - float(e[2])), Vector2(bw * 0.5, vbot - float(e[2])),
+			Vector2(bw * 0.5, vbot), Vector2(-bw * 0.5, vbot)])
 		beam.vertex_colors = PackedColorArray([
 			Color(0.95, 0.85, 0.3, 0.0), Color(0.95, 0.85, 0.3, 0.0),
 			Color(0.95, 0.85, 0.3, float(e[1])), Color(0.95, 0.85, 0.3, float(e[1]))])
 		vis.add_child(beam)
-	# 바닥 착지 글로우 · 문 아래 얇고 밝은 띠 + 옆으로 번지는 빛.
+	# 바닥 착지 글로우 · 문 아래 얇고 밝은 띠 + 옆으로 번지는 빛(판정 폭 언저리).
 	var base_core := ColorRect.new()
 	base_core.color = Color(1.0, 0.94, 0.6, 0.85)
-	base_core.position = Vector2(-34.0, 97.0)
-	base_core.size = Vector2(68.0, 3.0)
+	base_core.position = Vector2(-30.0, vbot - 3.0)
+	base_core.size = Vector2(60.0, 3.0)
 	vis.add_child(base_core)
 	var base_spread := Polygon2D.new()
 	base_spread.polygon = PackedVector2Array([
-		Vector2(-90.0, 96.0), Vector2(90.0, 96.0), Vector2(90.0, 100.0), Vector2(-90.0, 100.0)])
+		Vector2(-48.0, vbot - 4.0), Vector2(48.0, vbot - 4.0), Vector2(48.0, vbot), Vector2(-48.0, vbot)])
 	base_spread.vertex_colors = PackedColorArray([
 		Color(1.0, 0.9, 0.5, 0.0), Color(1.0, 0.9, 0.5, 0.0),
 		Color(1.0, 0.9, 0.5, 0.35), Color(1.0, 0.9, 0.5, 0.35)])
@@ -7601,7 +7602,7 @@ func _build_goal_position() -> void:
 	# 박스 외곽선 — "배경 장식"이 아니라 *문/출구*로 읽히게(피드백: 노란 네모가 끝인지 모름).
 	var border := Line2D.new()
 	border.points = PackedVector2Array([
-		Vector2(-30.0, -100.0), Vector2(30.0, -100.0), Vector2(30.0, 100.0), Vector2(-30.0, 100.0),
+		Vector2(-30.0, -100.0), Vector2(30.0, -100.0), Vector2(30.0, vbot), Vector2(-30.0, vbot),
 	])
 	border.closed = true
 	border.width = 2.0
