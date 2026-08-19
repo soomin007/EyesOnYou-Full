@@ -485,9 +485,14 @@ func _exit_to_title() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	# 다회차 건너뛰기 — 실런 이탈 차단(_live 조기 return)보다 먼저 본다. 이탈이 아니라
 	# 같은 씬 안에서 처리 선택으로 건너뛰는 것이라 오조작 위험이 없다.
-	if _skip_allowed and not _skipped and event.is_action_pressed("ui_skip"):
-		_do_skip()
-		return
+	# ui_skip 액션을 쓰지 않는다 — ui_skip에 든 Space·패드 A가 점프 키와 겹쳐, 습관성
+	# 점프 입력 한 번에 연출 전체가 날아간다(2026-08-19 검토에서 발견). 라벨과 같은 Enter만.
+	if _skip_allowed and not _skipped and event is InputEventKey:
+		var sk := event as InputEventKey
+		if sk.pressed and not sk.echo \
+				and (sk.physical_keycode == KEY_ENTER or sk.physical_keycode == KEY_KP_ENTER):
+			_do_skip()
+			return
 	# ESC/P 타이틀 복귀는 연습장 프로토 전용 — 실런에선 짧은 클라이맥스 구간이라 오조작 이탈 차단.
 	if _live:
 		return
