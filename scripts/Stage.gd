@@ -1735,17 +1735,23 @@ func _ambience_warehouse(label: String) -> void:
 			sh.size = Vector2(rw + 8.0, 6.0)
 			sh.z_index = -11
 			add_child(sh)
-			if rng.randf() < 0.7:
-				var bw: float = rng.randf_range(30.0, 60.0)
+			# 선반은 대체로 차 있다 — 빈 선반에 상자 하나가 놓이면 그 상자가 주목받는다.
+			# 채워진 랙은 창고의 질감이 되고, 개별 상자는 눈에서 사라진다(2026-08-19).
+			var crates: int = 2 if rng.randf() < 0.55 else 1
+			for ci in crates:
+				if rng.randf() > 0.92:
+					continue
+				var bw: float = rng.randf_range(30.0, 58.0)
 				var bh: float = rng.randf_range(24.0, 40.0)
 				var crate := ColorRect.new()
 				# 어둡게 가라앉힌 톤 — 밟을 수 있는 발판으로 오독되지 않게(사용자 2026-08-18).
 				crate.color = Color(0.24, 0.19, 0.13, 0.7)
-				crate.position = Vector2(x + rng.randf_range(4.0, rw - bw), sy - bh)
+				var slot_w: float = (rw - 8.0) / float(crates)
+				crate.position = Vector2(x + 4.0 + slot_w * float(ci) + rng.randf_range(0.0, maxf(slot_w - bw, 0.0)), sy - bh)
 				crate.size = Vector2(bw, bh)
 				crate.z_index = -10
 				add_child(crate)
-		x += rw + rng.randf_range(120.0, 240.0)
+		x += rw + rng.randf_range(90.0, 190.0)
 	var lx: float = 400.0
 	while lx < w:
 		var lamp := ColorRect.new()
@@ -1792,18 +1798,27 @@ func _ambience_warehouse_dock() -> void:
 		line.size = Vector2(sw + 40.0, 5.0)
 		line.z_index = -10
 		add_child(line)
-	# 팔레트 더미(낮음 · 배경 전용)
-	var px: float = 300.0
-	while px < STAGE_LENGTH - 200.0:
-		if rng.randf() < 0.55:
-			var pw: float = rng.randf_range(70.0, 120.0)
+	# 팔레트 더미(낮음 · 배경 전용) — 출하 상자와 같은 기준으로 촘촘하게·어둡게(2026-08-19).
+	# 단품이 띄엄띄엄 놓이면 "밟거나 부술 수 있는 것"으로 읽힌다.
+	var px: float = 240.0
+	while px < STAGE_LENGTH - 160.0:
+		if rng.randf() < 0.8:
+			var pw: float = rng.randf_range(70.0, 130.0)
 			var pal := ColorRect.new()
-			pal.color = Color(0.30, 0.24, 0.16, 0.85)
-			pal.position = Vector2(px, GROUND_Y - 26.0)
+			pal.color = Color(0.22, 0.18, 0.12, 0.85)
+			pal.position = Vector2(px + rng.randf_range(-18.0, 18.0), GROUND_Y - 26.0)
 			pal.size = Vector2(pw, 26.0)
 			pal.z_index = -10
 			add_child(pal)
-		px += rng.randf_range(260.0, 520.0)
+			# 2단 적재 · 더미의 높이 변주(같은 높이 반복은 벽처럼 읽힌다).
+			if rng.randf() < 0.45:
+				var pal2 := ColorRect.new()
+				pal2.color = Color(0.19, 0.16, 0.11, 0.85)
+				pal2.position = Vector2(pal.position.x + rng.randf_range(6.0, 20.0), GROUND_Y - 50.0)
+				pal2.size = Vector2(pw * 0.7, 24.0)
+				pal2.z_index = -11
+				add_child(pal2)
+		px += rng.randf_range(140.0, 280.0)
 	_add_lore_label(Vector2(360.0, -30.0), "하역 도크 · 반입 관리", Color(0.90, 0.70, 0.45, 0.5), 15)
 
 # 출하 구역(창고 체인 방3) — 롤러 라인(수평 도트 열) + 출하 상자 스택 + 행선 표지.
@@ -1827,26 +1842,41 @@ func _ambience_warehouse_shipping() -> void:
 		roller.z_index = -11
 		add_child(roller)
 		dx += rng.randf_range(46.0, 70.0)
-	# 출하 상자 스택(라벨 띠)
-	var sx: float = 360.0
-	while sx < STAGE_LENGTH - 260.0:
-		if rng.randf() < 0.6:
+	# 출하 상자 · 배경 질감(2026-08-19 사용자 "박스가 배경보다 상호작용 물체처럼 느껴진다").
+	# 원인 2가지를 함께 고친다. ⓐ 라벨 띠가 앰버(0.90,0.70,0.45) = DestructibleCover 트림과
+	# 같은 계열이라 "부술 수 있는 것" 신호로 읽혔다 → 채도를 죽인 회갈색 띠로.
+	# ⓑ 드문드문 놓인 단품은 오브젝트로, 빽빽하게 겹친 더미는 배경으로 읽힌다 — 사용자
+	# 가설("더 늘려야 배경 느낌이 나려나") 채택: 간격 절반 이하 + 뒷줄 추가 + 서로 겹치게.
+	var sx: float = 260.0
+	while sx < STAGE_LENGTH - 200.0:
+		# 뒷줄 · 더 어둡고 작게(공기 원근) · 앞줄과 어긋나게 놓아 한 덩어리로 보이게.
+		if rng.randf() < 0.75:
+			var back_h: int = rng.randi_range(1, 4)
+			var back_w: float = rng.randf_range(44.0, 70.0)
+			for bl in back_h:
+				var bbox := ColorRect.new()
+				bbox.color = Color(0.19, 0.16, 0.11, 0.85)
+				bbox.position = Vector2(sx + rng.randf_range(-30.0, 30.0), GROUND_Y - 30.0 * float(bl + 1))
+				bbox.size = Vector2(back_w, 28.0)
+				bbox.z_index = -12
+				add_child(bbox)
+		if rng.randf() < 0.85:
 			var stack_h: int = rng.randi_range(1, 3)
 			var bw: float = rng.randf_range(56.0, 92.0)
 			for lvl in stack_h:
 				var box := ColorRect.new()
-				box.color = Color(0.34, 0.27, 0.17, 0.9)
-				box.position = Vector2(sx + rng.randf_range(-8.0, 8.0), GROUND_Y - 34.0 * float(lvl + 1))
+				box.color = Color(0.26, 0.21, 0.14, 0.88)
+				box.position = Vector2(sx + rng.randf_range(-22.0, 22.0), GROUND_Y - 34.0 * float(lvl + 1))
 				box.size = Vector2(bw, 32.0)
 				box.z_index = -10
 				add_child(box)
 				var band := ColorRect.new()
-				band.color = Color(0.90, 0.70, 0.45, 0.5)
+				band.color = Color(0.38, 0.34, 0.28, 0.45)
 				band.position = Vector2(box.position.x, box.position.y + 13.0)
 				band.size = Vector2(bw, 4.0)
 				band.z_index = -9
 				add_child(band)
-		sx += rng.randf_range(300.0, 560.0)
+		sx += rng.randf_range(120.0, 240.0)
 	_add_lore_label(Vector2(360.0, -30.0), "출하 구역 · 검수 대기", Color(0.90, 0.70, 0.45, 0.5), 15)
 
 # 서버 복도 — 서버 랙 실루엣 + LED 점멸 + 표지.
@@ -2951,6 +2981,11 @@ var _mid_gate_inited: bool = false
 var _mid_gate_opened: bool = false
 var _mid_gate_pass_open: bool = false   # beam 모드 현재 개방창 상태
 var _mid_gate_hint_shown: bool = false
+# clear 모드 구역 시각 — "어디까지가 검증 구역인지"를 화면에 그린다(사용자 2026-08-19:
+# 존 밖 방패병을 안 잡았는데 문이 열려 버그로 읽힘). 데이터상 존재하는 판정 경계는
+# 화면에 없으면 없는 것과 같다([[repeated-report-recheck-onscreen]] 동형).
+var _mid_gate_zone_visual: Node2D = null
+var _mid_gate_zone_label: Label = null
 var _sweep_beam_node: SweepBeam = null
 
 func _build_mid_gate() -> void:
@@ -3002,6 +3037,66 @@ func _build_mid_gate() -> void:
 		lever.hint_color = Color(0.95, 0.75, 0.35)
 		lever.pulled.connect(func(_id: String) -> void:
 			_open_mid_gate())
+	elif _mid_gate_mode == "clear":
+		_build_mid_gate_zone(g.get("zone", []))
+
+# 검증 구역 바닥 표시 — "여기 선 경비만 문을 잠근다"를 눈으로 읽히게 한다.
+# 구역 밖 적(위장 방패병 등)을 남겨 두고 문이 열리면 판정이 고장난 것처럼 보인다
+# (사용자 2026-08-19 통제 회랑 보고). 수직 기둥 금지 규칙에 따라 바닥 페인트 + 낮은
+# 모서리 마크만 쓰고, 솔리드로 오독되지 않게 지면에 눕힌 도료로만 그린다.
+func _build_mid_gate_zone(zone: Array) -> void:
+	if zone.size() < 2:
+		return
+	var z0: float = float(zone[0])
+	var z1: float = minf(float(zone[1]), _mid_gate_x - 40.0)
+	if z1 <= z0:
+		return
+	_mid_gate_zone_visual = Node2D.new()
+	_mid_gate_zone_visual.z_index = -6
+	add_child(_mid_gate_zone_visual)
+	# 바닥 도료 · 지면에 붙여 낮게만 깔고, 위로는 알파를 급히 떨어뜨린다. 높이 있는 워시는
+	# 윗변이 직선으로 보여 발판·유리벽처럼 읽힌다(첫 시안 스크린샷에서 확인).
+	var bands: Array = [
+		{"h": 7.0, "y": 7.0, "a": 0.34},
+		{"h": 9.0, "y": 16.0, "a": 0.13},
+		{"h": 14.0, "y": 30.0, "a": 0.05},
+	]
+	for b0 in bands:
+		var b: Dictionary = b0
+		var band := ColorRect.new()
+		band.color = Color(0.92, 0.70, 0.26, float(b["a"]))
+		band.position = Vector2(z0, GROUND_Y - float(b["y"]))
+		band.size = Vector2(z1 - z0, float(b["h"]))
+		_mid_gate_zone_visual.add_child(band)
+	# 양 끝 경계 · 바닥에 칠한 굵은 모서리 마크(높이 34, 무릎 아래 · 비솔리드).
+	for ex in [z0, z1]:
+		var mark := ColorRect.new()
+		mark.color = Color(0.95, 0.74, 0.30, 0.55)
+		mark.position = Vector2(float(ex) - 5.0, GROUND_Y - 34.0)
+		mark.size = Vector2(10.0, 34.0)
+		_mid_gate_zone_visual.add_child(mark)
+	# 남은 경비 수 · 구역 위 표기. 숫자가 줄면 문이 언제 열릴지 예측 가능해진다.
+	_mid_gate_zone_label = Label.new()
+	_mid_gate_zone_label.add_theme_font_size_override("font_size", 15)
+	_mid_gate_zone_label.add_theme_color_override("font_color", Color(0.95, 0.78, 0.38, 0.9))
+	_mid_gate_zone_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
+	_mid_gate_zone_label.add_theme_constant_override("outline_size", 4)
+	# 캐릭터·발판 위로 띄운다(부모 z -6 기준 상대값) — 교전 중에 가려지면 셈이 안 읽힌다.
+	_mid_gate_zone_label.z_index = 14
+	_mid_gate_zone_label.position = Vector2((z0 + z1) * 0.5 - 110.0, GROUND_Y - 258.0)
+	_mid_gate_zone_label.size = Vector2(220.0, 26.0)
+	_mid_gate_zone_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_mid_gate_zone_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_mid_gate_zone_label.text = "검증 구역"
+	_mid_gate_zone_visual.add_child(_mid_gate_zone_label)
+
+func _set_mid_gate_zone_count(alive: int) -> void:
+	if _mid_gate_zone_label == null or not is_instance_valid(_mid_gate_zone_label):
+		return
+	if alive > 0:
+		_mid_gate_zone_label.text = "검증 구역 · 남은 경비 %d" % alive
+	else:
+		_mid_gate_zone_label.text = "검증 구역 · 정리 완료"
 
 # clear 모드 경비 수집 — 적 스폰이 _build_world 이후라 첫 tick에서 1회 수집한다.
 # 소프트락 방지(사용자 2026-08-17 검문소 보고 "벽 건너편 적을 잡을 수 없어 못 넘어감"):
@@ -3027,6 +3122,8 @@ func _mid_gate_lazy_init() -> void:
 				_on_mid_gate_guard_down())
 	if _mid_gate_guards.is_empty():
 		_open_mid_gate()
+	else:
+		_set_mid_gate_zone_count(_mid_gate_guards.size())
 
 func _on_mid_gate_guard_down() -> void:
 	if _mid_gate_opened:
@@ -3038,6 +3135,7 @@ func _on_mid_gate_guard_down() -> void:
 				and not bool((e as Node2D).get("dead")) \
 				and (e as Node2D).global_position.x < _mid_gate_x - 20.0:
 			alive += 1
+	_set_mid_gate_zone_count(alive)
 	if alive <= 0:
 		_open_mid_gate()
 
@@ -3055,6 +3153,11 @@ func _open_mid_gate() -> void:
 		var tw := _mid_gate_visual.create_tween()
 		tw.tween_property(_mid_gate_visual, "position:y",
 			_mid_gate_visual.position.y - 440.0, 0.9).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	# 구역 표시는 역할이 끝나면 물러난다 — 남아 있으면 아직 할 일이 있는 것처럼 읽힌다.
+	if _mid_gate_zone_visual != null and is_instance_valid(_mid_gate_zone_visual):
+		_set_mid_gate_zone_count(0)
+		var zt := _mid_gate_zone_visual.create_tween()
+		zt.tween_property(_mid_gate_zone_visual, "modulate:a", 0.0, 1.1).set_delay(0.5)
 
 # beam 모드 개방창 토글 — 빔이 게이트를 지나 앞서가는 동안만 열림.
 func _set_mid_gate_pass(open_now: bool) -> void:
@@ -3084,7 +3187,7 @@ func _tick_mid_gate(_delta: float) -> void:
 			"lever":
 				_show_veil_subtitle("게이트가 잠겨 있어요. 근처 동력 레버를 찾으세요.", 3.2)
 			"clear":
-				_show_veil_subtitle("잠긴 게이트입니다. 이 구역 경비를 정리해야 열려요.", 3.2)
+				_show_veil_subtitle("잠긴 게이트입니다. 바닥에 노란 선으로 칠해 둔 구역, 그 안의 경비만 정리하면 열려요.", 3.6)
 			"beam":
 				_show_veil_subtitle("게이트는 스캔 빔이 지나갈 때만 열려요. 빔을 뒤따라 통과하세요.", 3.6)
 	if _mid_gate_mode == "beam" and _sweep_beam_node != null and is_instance_valid(_sweep_beam_node):
@@ -5448,10 +5551,27 @@ func _spawn_from_enemies_dict(enemies: Dictionary, wave_idx: int) -> void:
 			var extra: int = target - positions.size()
 			for i in extra:
 				var base_p: Vector2 = positions[i % positions.size()]
-				_spawn_enemy(kind_int, base_p + Vector2(randf_range(-120.0, 120.0), 0.0), wave_idx)
+				var jit: Vector2 = base_p + Vector2(randf_range(-120.0, 120.0), 0.0)
+				_spawn_enemy(kind_int, _keep_in_gate_zone(base_p, jit), wave_idx)
 		else:
 			for i in target:
 				_spawn_enemy(kind_int, positions[i], wave_idx)
+
+# risk 배율 추가 스폰(±120 흔들기)이 검증 구역 경계를 넘으면, 구역 안 배치를 복제한
+# 적인데도 문 조건에서 빠진다 — 플레이어 눈엔 "게이트 앞에 살아 있는데 세지 않는 적"이라
+# 판정이 고장난 것처럼 읽힌다. 원 위치가 구역 안이면 흔들린 위치도 구역 안에 묶는다.
+func _keep_in_gate_zone(base_p: Vector2, jittered: Vector2) -> Vector2:
+	var g: Dictionary = _map_data.get("mid_gate", {})
+	if g.is_empty() or str(g.get("mode", "")) != "clear":
+		return jittered
+	var zone: Array = g.get("zone", [])
+	if zone.size() < 2:
+		return jittered
+	var z0: float = float(zone[0])
+	var z1: float = minf(float(zone[1]), float(g.get("x", 0.0)) - 40.0)
+	if base_p.x < z0 or base_p.x > z1:
+		return jittered
+	return Vector2(clampf(jittered.x, z0 + 20.0, z1 - 20.0), jittered.y)
 
 # ─── ARENA 웨이브 시스템 ───
 # datacenter (world_layout §2.8) 처럼 단계 spawn이 필요한 ARENA 전용.
@@ -6029,12 +6149,19 @@ func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1, disguise_kind: in
 		e.set_meta("avoid_only", true)
 	if wave_idx >= 0:
 		e.set_meta("wave_idx", wave_idx)
-	e.killed.connect(_on_enemy_killed.bind(wave_idx, shiny, elite, no_reward))
+	# no_reward는 스폰 시점 값이라 bind로 굳으면 안 된다 — 환경 처치(열차)는 죽는 순간에
+	# 정해지므로 그 시점의 적 상태를 읽어 합친다.
+	e.killed.connect(func(at_pos: Vector2) -> void:
+		var suppressed: bool = no_reward
+		if is_instance_valid(e) and e.get("env_killed") == true:
+			suppressed = true
+		_on_enemy_killed(at_pos, wave_idx, shiny, elite, suppressed))
 	return e
 
 func _on_enemy_killed(at_position: Vector2, wave_idx: int = -1, shiny: bool = false, elite: bool = false, no_reward: bool = false) -> void:
-	# 경보 진압 경비(no_reward) · 점수도 XP도 없음. "들키면 파밍 이득"을 원천 차단
-	# (사용자 2026-08-17 "오히려 좋아 느낌, 위압감이 없다").
+	# 무보상 경로 2종 · 점수도 XP도 없음. ⓐ 경보 진압 경비 — "들키면 파밍 이득"을 원천 차단
+	# (사용자 2026-08-17 "오히려 좋아 느낌, 위압감이 없다") ⓑ 환경 처치(열차 등) — 해저드에
+	# 밀어 넣어 얻는 것은 안전이지 경험치가 아니다(사용자 2026-08-19).
 	if not no_reward:
 		GameState.register_kill(elite, shiny)
 		_refresh_hud()   # 킬 점수 실시간 반영(우상단 SCORE)

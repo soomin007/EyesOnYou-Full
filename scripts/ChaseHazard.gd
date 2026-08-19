@@ -42,6 +42,15 @@ var _dmg_cd: float = 0.0
 var _debris: Array = []           # {x, y, vy, w, h}
 var _debris_t: float = 0.0
 var _puffs: Array = []            # {x, t} · 착탄 분진
+# y_up 맥동 — 붕괴는 일정한 속도로 올라오지 않는다. 위층이 버티다 한 번에 내려앉는다
+# (사용자 2026-08-19: "등속으로 쭉 올라오니 무너진 게 차오르는 느낌이 전혀 안 난다").
+# 버팀(거의 정지) → 붕락(굉음·흔들림과 함께 훅) 반복 · 한 주기 평균 속도는 speed 그대로라
+# 밸런스(등반 여유·max_gap)는 건드리지 않고 체감만 바꾼다.
+const SURGE_DWELL: float = 1.5    # 버티는 구간(초)
+const SURGE_RISE: float = 0.75    # 내려앉는 구간(초)
+const SURGE_DWELL_MUL: float = 0.3
+var _surge_t: float = SURGE_DWELL
+var _surging: bool = false
 
 func setup(start: float, spd: float, gap: float = 700.0, stop: float = INF, ax: String = "x", catchup_spd: float = 340.0) -> void:
 	axis = ax
@@ -80,7 +89,7 @@ func _physics_process(delta: float) -> void:
 		position.x = _edge
 	else:
 		# y_up · edge가 위로(y 감소) 전진. 선두 아래(py > edge)가 삼켜진 영역.
-		_edge -= speed * delta
+		_edge -= speed * _surge_factor(delta) * delta
 		if p != null and p is Node2D:
 			var py: float = (p as Node2D).global_position.y
 			if _edge - py > max_gap:
@@ -96,18 +105,43 @@ func _physics_process(delta: float) -> void:
 		_tick_debris(delta)
 	queue_redraw()
 
+# 맥동 배수 · 버팀 구간과 붕락 구간을 오가며, 한 주기 평균이 1.0이 되게 붕락 배수를 역산한다.
+func _surge_factor(delta: float) -> float:
+	_surge_t -= delta
+	if _surge_t <= 0.0:
+		_surging = not _surging
+		_surge_t = SURGE_RISE if _surging else SURGE_DWELL
+		if _surging:
+			_on_surge_start()
+	if not _surging:
+		return SURGE_DWELL_MUL
+	return (SURGE_DWELL + SURGE_RISE - SURGE_DWELL * SURGE_DWELL_MUL) / SURGE_RISE
+
+# 붕락 시작 · 굉음 + 화면 흔들림 + 잔해 한 무더기. "위에서 무너져 내려 쌓였다"는 인과를
+# 소리와 진동으로 먼저 알리고, 그 결과로 표면이 올라온다.
+func _on_surge_start() -> void:
+	SfxPlayer.play("bomb_explode", -9.0)
+	var st: Node = get_tree().get_first_node_in_group("stage")
+	if st != null and st.has_method("_camera_shake"):
+		st.call("_camera_shake", 5.0, 0.3)
+	for i in 5:
+		_spawn_debris()
+
+func _spawn_debris() -> void:
+	_debris.append({
+		"x": randf_range(80.0, 1200.0),
+		"y": _edge - randf_range(560.0, 860.0),
+		"vy": randf_range(260.0, 420.0),
+		"w": randf_range(10.0, 30.0),
+		"h": randf_range(8.0, 22.0),
+	})
+
 # 낙하 잔해 갱신(y_up 전용 · 시각만, 판정 없음). 더미 표면(edge)에 닿으면 분진 퍼프.
 func _tick_debris(delta: float) -> void:
 	_debris_t -= delta
 	if _debris_t <= 0.0:
 		_debris_t = randf_range(0.45, 1.0)
-		_debris.append({
-			"x": randf_range(80.0, 1200.0),
-			"y": _edge - randf_range(560.0, 860.0),
-			"vy": randf_range(260.0, 420.0),
-			"w": randf_range(10.0, 30.0),
-			"h": randf_range(8.0, 22.0),
-		})
+		_spawn_debris()
 	var keep: Array = []
 	for d0 in _debris:
 		var d: Dictionary = d0

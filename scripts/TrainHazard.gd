@@ -175,7 +175,12 @@ func _check_enemy_hits() -> void:
 			continue
 		_hit_enemies[en.get_instance_id()] = true
 		if en.has_method("take_damage"):
+			# 환경 처치 표식 — 이 타격으로 죽으면 XP·점수 없음. 살아남으면 즉시 해제해서
+			# 나중에 플레이어가 마무리한 몫까지 삼키지 않게 한다.
+			en.set("env_killed", true)
 			en.call("take_damage", dmg, _dir)
+			if is_instance_valid(en) and not bool(en.get("dead")):
+				en.set("env_killed", false)
 
 func _draw() -> void:
 	if _state != S.PASS:

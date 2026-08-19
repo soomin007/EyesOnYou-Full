@@ -54,6 +54,12 @@ var _readout_idx: int = 0
 var _conf_lines: Array = []
 var _conf_idx: int = 0
 var _conf_label: Label = null
+# 다회차 스킵(2026-08-19 사용자 "거기까지 걸어가는 거 여러 번 보려니 답답하다").
+# 첫 완주 전에는 못 건너뛴다 — 이 구간이 처음 보는 사람에겐 클라이맥스이기 때문.
+# 건너뛰어도 처리 선택(disposal_choice)은 반드시 통과한다: 엔딩 분기가 여기서 갈린다.
+var _skip_allowed: bool = false
+var _skipped: bool = false
+var _skip_label: Label = null
 
 func _ready() -> void:
 	# 진입 안전판 — 직전 화면(연습장 등)의 paused 누수 차단(SceneRouter.go와 동일 규약).
@@ -88,6 +94,17 @@ func _ready() -> void:
 	_hint_label.position = Vector2(-40, -90)
 	_hint_label.modulate.a = 0.0
 	add_child(_hint_label)
+	_skip_allowed = _live and GameState.playthrough_count >= 1
+	if _skip_allowed:
+		_skip_label = Label.new()
+		_skip_label.text = "Enter  건너뛰기"
+		_skip_label.add_theme_font_size_override("font_size", 14)
+		_skip_label.add_theme_color_override("font_color", Color(0.62, 0.68, 0.76, 0.75))
+		_skip_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+		_skip_label.add_theme_constant_override("outline_size", 4)
+		_skip_label.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+		_skip_label.position = Vector2(-150, -46)
+		add_child(_skip_label)
 
 func _process(delta: float) -> void:
 	_elapsed += delta
@@ -274,7 +291,7 @@ func _begin_recovery_beat() -> void:
 	get_tree().create_timer(0.8, false).timeout.connect(_advance_readout)
 
 func _advance_readout() -> void:
-	if not is_inside_tree():
+	if _skipped or not is_inside_tree():
 		return
 	if _readout_idx >= _readout_lines.size():
 		get_tree().create_timer(1.0, false).timeout.connect(_begin_confession)
@@ -300,7 +317,7 @@ func _advance_readout() -> void:
 	get_tree().create_timer(float(d.get("delay", 0.6)) + 0.45, false).timeout.connect(_advance_readout)
 
 func _begin_confession() -> void:
-	if not is_inside_tree():
+	if _skipped or not is_inside_tree():
 		return
 	_conf_lines = VeilDialogue.get_recovery_confession(GameState.truth_seen)
 	_conf_idx = 0
@@ -319,7 +336,7 @@ func _begin_confession() -> void:
 	_advance_confession()
 
 func _advance_confession() -> void:
-	if not is_inside_tree():
+	if _skipped or not is_inside_tree():
 		return
 	if _conf_idx >= _conf_lines.size():
 		get_tree().create_timer(0.7, false).timeout.connect(_show_live_choice)
@@ -345,6 +362,32 @@ func _advance_confession() -> void:
 	tw.tween_interval(dur)
 	tw.tween_property(_conf_label, "modulate:a", 0.0, 0.4)
 	get_tree().create_timer(dur + 1.0, false).timeout.connect(_advance_confession)
+
+# 건너뛰기 — 걷기·목격·리드아웃·고백을 접고 처리 선택으로 직행한다. 진행 중이던 타이머
+# 체인은 취소 핸들이 없으므로(설계상 입력 불요 체인) _skipped 가드로 무력화한다.
+func _do_skip() -> void:
+	if _skipped:
+		return
+	_skipped = true
+	_phase = "done"
+	_fade_alpha = 0.0
+	_speed = 0.0
+	player_z = WITNESS_Z
+	for st0 in _light_states:
+		var st: Dictionary = st0
+		st["on"] = true
+		st["t"] = 2.0
+	_lights_on = _light_states.size()
+	for n in [_skip_label, _hint_label, _readout_box, _conf_label]:
+		if n != null and is_instance_valid(n):
+			(n as Node).queue_free()
+	_skip_label = null
+	_hint_label = null
+	_readout_box = null
+	_conf_label = null
+	if _view != null and is_instance_valid(_view):
+		_view.queue_redraw()
+	_show_live_choice()
 
 func _show_live_choice() -> void:
 	if not is_inside_tree():
@@ -440,6 +483,11 @@ func _exit_to_title() -> void:
 	SceneRouter.go(get_tree(), SceneRouter.TITLE)
 
 func _unhandled_input(event: InputEvent) -> void:
+	# 다회차 건너뛰기 — 실런 이탈 차단(_live 조기 return)보다 먼저 본다. 이탈이 아니라
+	# 같은 씬 안에서 처리 선택으로 건너뛰는 것이라 오조작 위험이 없다.
+	if _skip_allowed and not _skipped and event.is_action_pressed("ui_skip"):
+		_do_skip()
+		return
 	# ESC/P 타이틀 복귀는 연습장 프로토 전용 — 실런에선 짧은 클라이맥스 구간이라 오조작 이탈 차단.
 	if _live:
 		return

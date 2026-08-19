@@ -21,6 +21,10 @@ enum BomberState { ROAMING, STALKING, ARMING }
 # 엘리트(라이벌의 군대, elite_enemies_plan.md) — Stage._spawn_enemy가 add_child 전에 켠다.
 # HP·템포 강화 + 바이올렛 고정 계급장(_EliteCrest). 텔레그래프 시간은 불변(§0.2 인지 계약).
 @export var elite: bool = false
+# 환경 처치 표식 — 열차 같은 해저드가 치명타를 넣는 순간에만 켠다(치명이 아니면 즉시 해제).
+# 켜진 채 죽으면 XP·점수가 나오지 않는다: 해저드에 밀어 넣는 전술의 대가는 "그 적의 보상 포기"
+# (경보 진압 경비 무보상과 동형 · 2026-08-19 사용자 "열차가 다 치우고 경험치 방울만 남는다").
+var env_killed: bool = false
 
 const GRAVITY: float = 1400.0
 const TOUCH_DAMAGE: int = 1

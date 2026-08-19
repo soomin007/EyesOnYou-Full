@@ -671,7 +671,7 @@ static func _stage_in_range(route: Dictionary, stage_index: int) -> bool:
 # 맵을 고르고, 사유는 짧은 대사(REC_REASON)로 돌려준다. 표시 측(RouteMap)은 ★ 옆엔
 # "베일 추천"만 두고 이 사유 대사를 VEIL 멘트로 보여준다 — 라벨로 수식을 설명하지 않음.
 #   - first(첫 스테이지) / struggling(고전) → 안전 (가장 낮은 risk, 동점이면 reward 큰 쪽).
-#   - skilled(능숙)                          → 보상 (가장 높은 reward, 동점이면 더 도전적 위험).
+#   - skilled(능숙)                          → 보상 (가장 높은 reward, 동점이면 저위험).
 #   - steady(무난)                           → 순가치(reward-risk) 최대, 동점이면 저위험.
 # hidden / challenge 루트는 항상 제외.
 # 사유 대사는 한 대사 안에서 종결어미가 단조롭지 않게(특히 "~게요" 연발 회피) 변형을 섞음.
@@ -735,9 +735,12 @@ static func choose_veil_recommendation_with_reason(pool: Array) -> Dictionary:
 				best_score = s
 				best = c
 	elif mode == "skilled":
-		# 보상·도전 — 보상 높은 쪽 우선, 동점이면 위험 큰 쪽.
+		# 보상·도전 — 보상 높은 쪽 우선, 동점이면 저위험.
+		# 2026-08-19 수정(사용자 "1/2가 있는데 왜 2/2를 추천하지"): 동점 시 고위험 우대가
+		# 보상이 같은데 위험만 높은 카드를 뽑아 추천이 명백히 손해로 보였다. 능숙 모드의
+		# 차이는 "보상을 위해 고위험을 감수한다"(3/3 > 1/2)이지 "같은 값이면 더 위험하게"가 아니다.
 		for c in candidates:
-			var s: float = float(c.get("reward", 0)) * 2.0 + float(c.get("risk", 0)) * 0.1
+			var s: float = float(c.get("reward", 0)) * 2.0 - float(c.get("risk", 0)) * 0.1
 			if s > best_score:
 				best_score = s
 				best = c
@@ -748,7 +751,30 @@ static func choose_veil_recommendation_with_reason(pool: Array) -> Dictionary:
 			if s > best_score:
 				best_score = s
 				best = c
+	best = _undominate(best, candidates)
 	return {"id": best.get("id", ""), "reason": _pick_rec_reason(mode)}
+
+# 열세 카드 방지 가드(전 모드 공통) — 어떤 가중치를 쓰든, 보상이 같거나 높으면서 위험이
+# 더 낮은 카드가 후보에 있으면 추천을 그쪽으로 옮긴다. 플레이어 눈에 "두 축 다 손해인데
+# 추천"은 조언자의 신뢰를 즉시 깎는다(2026-08-19 사용자 지적). 가중치 조정으로 같은 함정이
+# 재발하지 않게 선택 뒤에 한 번 더 거른다.
+static func _undominate(best: Dictionary, candidates: Array) -> Dictionary:
+	var b_risk: int = int(best.get("risk", 0))
+	var b_reward: int = int(best.get("reward", 0))
+	var out: Dictionary = best
+	for c in candidates:
+		var route: Dictionary = c
+		var risk: int = int(route.get("risk", 0))
+		var reward: int = int(route.get("reward", 0))
+		if reward >= b_reward and risk < b_risk:
+			out = route
+			b_risk = risk
+			b_reward = reward
+		elif reward > b_reward and risk <= b_risk:
+			out = route
+			b_risk = risk
+			b_reward = reward
+	return out
 
 static func _pick_rec_reason(mode: String) -> String:
 	var arr: Array = REC_REASON.get(mode, [])
