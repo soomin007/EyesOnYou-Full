@@ -73,7 +73,7 @@
   "id": "route_sewers",
   "name": "하수도",
   "risk": 2,                       # 1~3 (●로 표시)
-  "reward": 3,                     # 1~3 (●로 표시)
+  "reward_type": "xp",             # 보상 종류: xp/record/recon/"" (2026-08-19 개편 · 클리어 XP는 risk가 담당)
   "hidden": false,                 # true면 위험도/보상 ?로 표기
   "tags": ["근접전", "어두운_환경", "함정", "전투"],
   "veil_comment": "근접전 위주에 함정이 있어요. 발 밑 조심해요.",
@@ -89,7 +89,7 @@
 (2026-08-14 기준 **36종**, 데모 12맵 + 본편 확장 + 처리별 탈출 4종 + 회수/보스 맵),
 설계 문서로는 [`design/growth_system.md`](design/growth_system.md) §3 ·
 [`design/world_layout.md`](design/world_layout.md) §2를 본다(Dead Cells식, 스테이지마다 후보 추첨).
-아래는 그 risk/reward가 *게임플레이에 미치는 효과*(SPEC 고유)만 정리한다.
+아래는 그 risk/reward_type이 *게임플레이에 미치는 효과*(SPEC 고유)만 정리한다.
 
 ### Risk/Reward 게임플레이 효과 (게임에 실제 반영)
 | Risk | 효과 |
@@ -104,11 +104,11 @@
 | 2 | 클리어 시 +2 XP |
 | 3 | 클리어 시 +3 XP |
 
-루트 선택 화면에서 risk≥3 / reward≥3 시 사전 경고 텍스트 표시.
+루트 선택 화면에서 risk≥3 경고 + reward_type별 효과 설명 패널 표시.
 
 ### 선택 추적 (GameState에 기록)
 - `current_route_id` — 현재 진행 중인 루트
-- `current_route_tags` / `current_route_risk` / `current_route_reward` — Stage가 빌드 시 참조
+- `current_route_tags` / `current_route_risk` / `current_route_reward_type` — Stage가 빌드 시 참조
 - VEIL 조언을 따랐는지 (`followed_veil_last_choice`) → 어투 `trust_score`(클리어 시 +2) + 엔딩 수용률(`rec_count`/`followed_count`) 집계
 - 전투/근접전·도전 태그 선택 시 `aggression_score` 누적 (엔딩 도덕축)
 
@@ -171,7 +171,7 @@
 - 적 처치 시 경험치 오브 드롭 (1 XP)
 - 오브 자동 흡수 (플레이어 근처 220px)
 - 8 XP(`XP_PER_LEVEL`)마다 레벨업 → `LevelUpOverlay`에서 스킬 3중 1 선택
-- **클리어 시 보너스 XP**: 루트의 reward 값만큼 누적. 보너스로 레벨업 시 다음 scene 가기 전에 LevelUpOverlay 띄움 (Stage._on_clear_levelup_picked)
+- **클리어 시 보너스 XP**: risk 값만큼 + reward_type "xp"면 +2. "record"=기록 1칸 회복(가득 시 +2 XP) · "recon"=다음 구간 VEIL 마킹 강화(반경 2.5배+재밍 관통). 레벨업 시 LevelUpOverlay (Stage._on_clear_levelup_picked)
 
 ### VEIL 시야 마킹 (시야=신뢰 파일럿, `scripts/VeilSight.gd` + `Stage._setup_veil_sight`)
 "VEIL이 요원 대신 본다"를 *플레이로 실연*하는 HUD 시스템. 레이더가 아니라 "누군가 너를 위해 짚어준다"로 읽히게 하는 게 핵심.
@@ -524,7 +524,7 @@ var followed_veil_last_choice: bool = false
 var current_route_id: String = ""
 var current_route_tags: Array = []
 var current_route_risk: int = 1
-var current_route_reward: int = 1
+var current_route_reward_type: String = ""
 
 # 스킬 / HP / XP
 var skills: Dictionary = {}      # 라인 id → 보유 티어(0~3). STARTING_SKILLS = {"dash": 1, "double_jump": 1}
@@ -553,10 +553,10 @@ var playground_active: bool = false
 
 ### 핵심 헬퍼
 - `record_route_choice(route, recommended_id)` — 수용률(rec/followed)·aggression 집계, current_route_* 갱신 (어투 trust는 `on_stage_clear`에서 적립)
-- `is_high_risk()` / `is_high_reward()` — risk/reward ≥ 3
+- `is_high_risk()` — risk ≥ 3 (is_high_reward는 보상 축 개편으로 폐지)
 - `enemy_count_multiplier()` → 0.7 / 1.0 / 1.4
 - `mark_enemy_seen(id) -> bool` — 도감 첫 조우 판정 + save
-- `on_stage_clear() -> bool` — stage++, score, **reward만큼 보너스 XP**, leveled_up 반환
+- `on_stage_clear() -> bool` — stage++, score, **risk만큼 보너스 XP + 종류 효과**, leveled_up 반환
 - `add_xp(amount) -> bool` — leveled_up 반환
 
 ### 영속화 (2026-08-14 코드 대조, `GameState.gd` `save_settings`/`_store_run_state` 기준)
@@ -653,7 +653,7 @@ P0 MVP (이동/사망/루트/레벨업/두 점수 축), P1 VEIL 4상황 발화 +
   (새 맵을 만들면 배경도 한 세트로 만든다).
 - **결말 D 정적**: 10초 정적은 의도된 연출. 스킵 불가.
 - **VEIL 대사 emdash 금지**: `—`(emdash)로 망설임을 표현하면 너무 AI 같은 인상을 준다. 콤마/마침표 또는 자연스러운 어순으로 풀 것. UI 구분자(`[ SPACE — 계속 ]`)나 코드 주석은 무관.
-- **add_xp 다중 레벨업**: 현재 한 호출당 한 레벨만 처리. reward max 3 + 잔여 XP 4 = 7로 한 레벨 이상 못 오르므로 안전. reward를 5+로 올리면 while 루프 처리 필요.
+- **add_xp 다중 레벨업**: 현재 한 호출당 한 레벨만 처리. risk max 3 + 부가 2 = 5라 안전. 지급을 5+로 올리면 while 루프 처리 필요.
 - **연습장 모드 진입 흐름**: Settings의 디버그 탭 → "연습장으로 진입" → `playground_active=true` + 기본 설정 → STAGE 씬 전환. Stage._ready가 플래그 보고 `PlaygroundOverlay` 부착. 종료 버튼은 `playground_active=false` + `reset()` + Title.
 
 ---

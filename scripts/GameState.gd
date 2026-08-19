@@ -92,6 +92,13 @@ var trap_warn_count: int = 0
 var veilsight_intro_shown: bool = false
 # 런 첫 마커 "VEIL" 서명 태그(인지 강화 ①, 2026-08-14) — 런당 1회. 비영속, reset에서 초기화.
 var veilsight_tag_shown: bool = false
+# 정찰 보상(reward_type "recon") — 클리어 시 next를 켜고, 다음 record_route_choice에서
+# active로 승격(그 스테이지 전체 유효 · 사망 재시도 포함). run.cfg 저장으로 이어하기 생존.
+var veilsight_recon_next: bool = false
+var veilsight_recon_active: bool = false
+var recon_note_pending: bool = false      # 발동 스테이지 진입 1회 안내 자막(맵당 1회, 재시도 제외)
+# 클리어 화면 보상 안내 한 줄("기록 1칸 회복" 등) — on_stage_clear가 채우고 Stage가 소비.
+var last_clear_reward_note: String = ""
 
 # 막3 핵심부(lab) 보스 처치 후 데이터 회수 연출 → "처리 선택"(DisposalChoiceOverlay)에서 고른 값.
 # 엔딩 9개의 처리 축(반출/파기/은닉/잔류). 런 단위 — reset()/start_main_game()에서 해제, run.cfg 영속.
@@ -140,7 +147,9 @@ var current_route_id: String = ""
 var current_segment: int = 0
 var current_route_tags: Array = []
 var current_route_risk: int = 1   # 1~3, 적 수 배율 + 행동 강화에 사용
-var current_route_reward: int = 1  # 1~3, 클리어 시 보너스 XP에 사용
+# 보상 축 개편(2026-08-19): 클리어 XP = risk. reward_type은 부가 효과 종류
+# ("xp" 경험치 +2 / "record" 기록 1칸 / "recon" 다음 구간 마킹 강화 / "" 없음).
+var current_route_reward_type: String = ""
 var current_route_challenge: bool = false  # 도전 맵 여부 — 고비 판정용
 var current_route_hidden: bool = false     # 히든 맵 여부 — 고비 판정용
 
@@ -407,7 +416,11 @@ func reset() -> void:
 	current_segment = 0
 	current_route_tags = []
 	current_route_risk = 1
-	current_route_reward = 1
+	current_route_reward_type = ""
+	veilsight_recon_next = false
+	veilsight_recon_active = false
+	recon_note_pending = false
+	last_clear_reward_note = ""
 	current_route_challenge = false
 	current_route_hidden = false
 	player_max_hp = 3
@@ -472,7 +485,11 @@ func start_main_game() -> void:
 	current_segment = 0
 	current_route_tags = []
 	current_route_risk = 1
-	current_route_reward = 1
+	current_route_reward_type = ""
+	veilsight_recon_next = false
+	veilsight_recon_active = false
+	recon_note_pending = false
+	last_clear_reward_note = ""
 	current_route_challenge = false
 	current_route_hidden = false
 	player_max_hp = 3
@@ -532,7 +549,11 @@ func record_route_choice(route: Dictionary, recommended_id: String) -> void:
 	current_segment = 0
 	current_route_tags = route.get("tags", [])
 	current_route_risk = int(route.get("risk", 1))
-	current_route_reward = int(route.get("reward", 1))
+	current_route_reward_type = str(route.get("reward_type", ""))
+	# 정찰 보상 발동 — 직전 클리어가 recon이면 이번 스테이지 내내 마킹 강화.
+	veilsight_recon_active = veilsight_recon_next
+	veilsight_recon_next = false
+	recon_note_pending = veilsight_recon_active
 	current_route_challenge = bool(route.get("challenge", false))
 	current_route_hidden = bool(route.get("hidden", false))
 	# 덮어쓰기 한도 — 막 경계에서 최대치까지 충전(잔존 구간 문법). 이 함수는 스테이지 진입
@@ -690,9 +711,6 @@ func veil_trust_gauge_dots() -> String:
 func is_high_risk() -> bool:
 	return current_route_risk >= 3
 
-func is_high_reward() -> bool:
-	return current_route_reward >= 3
-
 func enemy_count_multiplier() -> float:
 	# 부스 환경에서 너무 빡세지 않게 살짝만 ↑.
 	# 1=0.8 (기존 0.7), 2=1.1 (기존 1.0), 3=1.5 (기존 1.4)
@@ -795,9 +813,30 @@ func on_stage_clear() -> bool:
 	current_stage += 1
 	score += 100 * current_stage
 	var leveled: bool = false
-	if current_route_reward > 0:
-		if add_xp(current_route_reward, false):
+	last_clear_reward_note = ""
+	# 클리어 경험치 = 위험도(보상 축 개편 2026-08-19). 위험할수록 항상 더 번다 —
+	# "보상 같은데 위험만 높은" 열세 카드가 구조적으로 사라진다.
+	if current_route_risk > 0:
+		if add_xp(current_route_risk, false):
 			leveled = true
+	# 보상 종류별 부가 효과. 수치 총량은 종전 reward 1~3 체계와 같은 체급(경험치 축 최대
+	# risk3+2 = 5 vs 종전 3+무사망2). XP 경제 조임은 확산 완료 후 일괄 캘리브레이션.
+	match current_route_reward_type:
+		"xp":
+			if add_xp(2, false):
+				leveled = true
+		"record":
+			# 기록 1칸 회복(라이벌 잠금 상한 준수). 가득이면 경험치로 환산 — 카드가 약속한
+			# 보상이 조용히 증발하지 않게(정직 산수 규칙).
+			if not story_mode and overwrite_left < overwrite_max():
+				overwrite_left = clampi(overwrite_left + 1, 0, overwrite_max())
+				last_clear_reward_note = "기록 1칸 회복"
+			else:
+				if add_xp(2, false):
+					leveled = true
+		"recon":
+			veilsight_recon_next = true
+			last_clear_reward_note = "정찰 데이터 확보 · 다음 구간 표시 강화"
 	# D축 단일 기록 — 이 스테이지를 사망 없이 통과(재시도 포함 전체 창 기준, 덮어쓰기 한도의 당근 짝).
 	last_clear_flawless = deaths_this_stage == 0 and not story_mode and not playground_active
 	if last_clear_flawless:
@@ -954,7 +993,9 @@ func _store_run_state(cf: ConfigFile, section: String) -> void:
 	cf.set_value(section, "current_route_id", current_route_id)
 	cf.set_value(section, "current_route_tags", current_route_tags)
 	cf.set_value(section, "current_route_risk", current_route_risk)
-	cf.set_value(section, "current_route_reward", current_route_reward)
+	cf.set_value(section, "current_route_reward_type", current_route_reward_type)
+	cf.set_value(section, "veilsight_recon_next", veilsight_recon_next)
+	cf.set_value(section, "veilsight_recon_active", veilsight_recon_active)
 	cf.set_value(section, "current_route_challenge", current_route_challenge)
 	cf.set_value(section, "current_route_hidden", current_route_hidden)
 	cf.set_value(section, "player_max_hp", player_max_hp)
@@ -1026,7 +1067,9 @@ func _restore_run_state(cf: ConfigFile, section: String) -> void:
 	for t in cf.get_value(section, "current_route_tags", []):
 		current_route_tags.append(str(t))
 	current_route_risk = int(cf.get_value(section, "current_route_risk", 1))
-	current_route_reward = int(cf.get_value(section, "current_route_reward", 1))
+	current_route_reward_type = str(cf.get_value(section, "current_route_reward_type", ""))
+	veilsight_recon_next = bool(cf.get_value(section, "veilsight_recon_next", false))
+	veilsight_recon_active = bool(cf.get_value(section, "veilsight_recon_active", false))
 	current_route_challenge = bool(cf.get_value(section, "current_route_challenge", false))
 	current_route_hidden = bool(cf.get_value(section, "current_route_hidden", false))
 	player_max_hp = int(cf.get_value(section, "player_max_hp", 3))

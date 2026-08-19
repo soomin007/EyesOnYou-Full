@@ -414,7 +414,7 @@ func _on_playground_pressed() -> void:
 	GameState.current_segment = 0
 	GameState.current_route_tags = ["전투", "드론", "원거리"]
 	GameState.current_route_risk = 3
-	GameState.current_route_reward = 3
+	GameState.current_route_reward_type = "xp"
 	GameState.player_hp = GameState.player_max_hp
 	GameState.player_xp = 0
 	GameState.player_level = 1

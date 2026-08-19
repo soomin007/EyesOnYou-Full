@@ -418,7 +418,8 @@
 ## 7. VEIL 추천 사유
 
 - 화자: VEIL
-- 맥락: 루트맵에서 추천(★) 맵 호버 시, 실력 tier(first/struggling/skilled/steady)별 랜덤 1개.
+- 맥락: 루트맵에서 추천(★) 맵 호버 시, 분기(first/struggling/record/skilled/steady)별 랜덤 1개.
+  record = 기록(덮어쓰기) 소모 상태에서 record 보상 루트를 권할 때(보상 축 개편 2026-08-19).
 - 코드: `RouteData.gd` `REC_REASON` (`choose_veil_recommendation_with_reason()`)
 
 | 키 | KO | EN |
@@ -429,9 +430,12 @@
 | struggling ① | 방금 고전했죠. 이 중엔 이쪽이 나아요. | |
 | struggling ② | 좀 힘들었을 거예요. 부담이 적은 쪽을 골랐어요. | |
 | struggling ③ | 이번엔 덜 험한 길을 골랐어요. | |
-| skilled ① | 잘 버티고 있어요. 위험해도 크게 버는 길이에요. | |
-| skilled ② | 솜씨가 좋네요. 욕심내 봐도 괜찮아요. | |
-| skilled ③ | 이 정도면 거친 길도 문제없죠. 보상이 커요. | |
+| record ① | 기록이 비었죠. 이 길에서 한 칸 되찾을 수 있어요. | |
+| record ② | 다음 실수에 대비해 두죠. 기록을 채울 수 있는 쪽입니다. | |
+| record ③ | 이쪽을 지나면 기록 한 칸이 복구돼요. | |
+| skilled ① | 잘 버티고 있죠. 험한 길일수록 배우는 것도 많습니다. | |
+| skilled ② | 솜씨가 좋네요. 거친 쪽이 남는 장사예요. | |
+| skilled ③ | 욕심내 볼 만해요. 위험한 만큼 돌아오는 게 큽니다. | |
 | steady ① | 이쪽이 좋아 보여요. | |
 | steady ② | 여기가 적당해요. | |
 | steady ③ | 이 길을 권해요. | |
@@ -447,7 +451,7 @@
 | 앵커 | KO | EN |
 |---|---|---|
 | `_ready()` 헤더 | STAGE %d / %d   루트 선택 | |
-| `_ready()` 범례 | ● 위험도 · 보상(경험치)   ·   ? 미상 | |
+| `_ready()` 범례 | ● 위험도(높을수록 클리어 경험치 큼) · 보상 종류 · ? 미상 | |
 | `_refresh_hint()` 키보드 | [ ←/→ : 선택 이동   ENTER : 결정 ] | |
 | `_refresh_hint()` 패드 | [ D-Pad/스틱 : 선택 이동   A : 결정 ] | |
 | `_setup_trust_gauge()` | VEIL 신뢰  (게이지)   (추천을 따르면 차오르고, 무시하면 내려가요. 결말에 반영돼요) | |
@@ -457,8 +461,11 @@
 | `_update_veil_comment()` 화자 접두 | VEIL | |
 | `_build_skill_rec_panel()` | 권장 스킬 | |
 | `_update_skill_rec_panel()` | %s에 강해요 | |
-| `_update_risk_reward_panel()` 고위험 | [고위험] 적 수와 반응 속도가 강해요. | |
-| `_update_risk_reward_panel()` 고보상 | [고보상] 클리어 보너스 경험치가 큽니다. | |
+| `_update_risk_reward_panel()` 고위험 | [고위험] 적이 강한 만큼 클리어 경험치도 큽니다. | |
+| `_update_risk_reward_panel()` 보상·경험치 | [보상 · 경험치] 클리어 경험치가 추가로 붙어요. | |
+| `_update_risk_reward_panel()` 보상·기록 | [보상 · 기록] 지나면 기록 1칸을 되찾습니다. 가득하면 경험치로 받아요. | |
+| `_update_risk_reward_panel()` 보상·정찰 | [보상 · 정찰] 다음 구간에서 표시가 더 멀리, 방해 너머까지 닿습니다. | |
+| 카드 보상 라벨(`REWARD_TYPE_LABELS`) | 경험치 / 기록 / 정찰 / - | |
 
 #### 카드 본문 조립 문자열
 - 코드: `RouteMap.gd` `_format_button_text()`
@@ -544,7 +551,7 @@
 |---|---|
 | VeilDialogue.gd (오프닝 8 · 문턱 12 · 본편 브리핑 72 · 스토리 브리핑 15) | 107 |
 | Briefing.gd (재진입 SYS/VEIL) | 2 |
-| RouteData.gd (맵 필드 148 · STORY_OVERRIDES 3 · REC_REASON 12) | 163 |
+| RouteData.gd (맵 필드 148 · STORY_OVERRIDES 3 · REC_REASON 15) | 166 |
 | RouteMap.gd (고정 문구·표시명) | 25 |
 | MapData.gd (route_lines) | 9 |
 | 합계 | 306 |

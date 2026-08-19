@@ -92,6 +92,13 @@ func _ready() -> void:
 		add_child(PlaygroundOverlay.new())
 	# 시야 역전 onset 멘트/연출은 이번 _ready에서 1회 소비 — 이후(재시도·다음 맵)엔 일반 degraded 처리.
 	GameState.veil_reversal_pending = false
+	# 정찰 보상 발동 안내(1회) — 강화가 조용히 켜지면 보상이 안 보인다. 효과는 VeilSight가 처리.
+	if GameState.recon_note_pending and GameState.current_segment == 0:
+		GameState.recon_note_pending = false
+		if GameState.veilsight_recon_active:
+			get_tree().create_timer(1.2, false).timeout.connect(func() -> void:
+				if is_inside_tree():
+					_show_veil_subtitle("정찰 데이터를 반영했어요. 이번 구간은 표시가 더 멀리, 방해 너머까지 닿습니다.", 3.6))
 
 # 맵 → BGM 트랙 매핑.
 # BPM 점진 증가 (Glass→Cold Gear→Cold Wire→Chrome Grit) 순서를 stage 진행과 매칭.
@@ -5282,8 +5289,6 @@ func _refresh_hud() -> void:
 	var marks: Array = []
 	if GameState.is_high_risk():
 		marks.append("[고위험]")
-	if GameState.is_high_reward():
-		marks.append("[고보상]")
 	var marker: String = ("  " + " ".join(marks)) if marks.size() > 0 else ""
 	# 표시용 총계 — 막1~3 동안 막4/5 확장을 숨긴다(노드맵 반전 공개와 동일 소스).
 	stage_label.text = "STAGE %d/%d%s" % [GameState.current_stage + 1, GameState.displayed_total_stages(), marker]
@@ -8336,6 +8341,9 @@ func _begin_clear_sequence() -> void:
 			_show_clear_toast(player.global_position + Vector2(0.0, -64.0), "도전 완수 · 보상 가산")
 		elif GameState.last_clear_flawless:
 			_show_clear_toast(player.global_position + Vector2(0.0, -64.0), "단일 기록 · 점수 보너스")
+		elif GameState.last_clear_reward_note != "":
+			# 종류 보상(기록·정찰)은 지급 순간이 안 보이면 없는 것과 같다 — 위 두 장이 없을 때 표시.
+			_show_clear_toast(player.global_position + Vector2(0.0, -64.0), GameState.last_clear_reward_note)
 	# 보스(route_lab) 또는 최종 스테이지 클리어 후엔 위협 없는 마무리라 스킬 선택이 무의미 —
 	# 카드를 건너뛰고 보스 처치 대사/엔딩(서사 비트)이 보상을 대신한다(사용자 피드백 "1+3").
 	var skip_card: bool = GameState.current_route_id == "route_lab" or GameState.current_route_id == "route_core_recovery" or GameState.is_final_stage_done()

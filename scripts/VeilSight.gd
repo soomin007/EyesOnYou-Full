@@ -19,6 +19,10 @@ signal veil_calls_threat(text: String)
 var player: Node2D = null
 
 const DETECT_RADIUS: float = 1400.0           # 이 안의 위협을 VEIL이 본다 (≈ 화면 한 칸)
+const RECON_RADIUS_MUL: float = 2.5           # 정찰 보상 탐지 반경 배수
+# 정찰 보상 활성(이 스테이지 한정) — _ready에서 GameState 캡처. 시각 마커에만 적용,
+# 음성 위협 콜은 근접 밴드 규칙(240px) 유지.
+var _recon: bool = false
 const CALM: Color = Color(0.42, 0.86, 1.0)    # 평시 — VEIL 시안 (자막 색과 통일감)
 const WARN: Color = Color(1.0, 0.55, 0.22)    # 공격 임박 — 경고 주황
 const RIVAL: Color = Color(0.80, 0.34, 0.98)  # 재머 마커 — 라이벌 바이올렛(안티-VEIL, rival_veil_concept §5)
@@ -57,6 +61,9 @@ func _ready() -> void:
 	_fit_to_viewport()
 	get_viewport().size_changed.connect(_fit_to_viewport)
 	_build_vignette()
+	# 정찰 보상(reward_type "recon") — 이 스테이지 한정 마킹 강화: 탐지 반경 2.5배 +
+	# 재밍·붕괴 블라인드 관통. GameState 플래그를 _ready에서 캡처(degraded와 동형 패턴).
+	_recon = GameState.veilsight_recon_active
 	# 이전 맵에서 이미 시야가 붕괴했다면 이 맵도 처음부터 어두운 상태로(전환 애니 없이 즉시).
 	if GameState.veil_degraded:
 		_degrade_t = _t
@@ -313,7 +320,7 @@ func _draw() -> void:
 		if not is_instance_valid(en) or bool(en.get("dead")):
 			continue
 		var wpos: Vector2 = en.global_position
-		if ppos.distance_to(wpos) > DETECT_RADIUS:
+		if ppos.distance_to(wpos) > DETECT_RADIUS * (RECON_RADIUS_MUL if _recon else 1.0):
 			continue
 		var id: int = en.get_instance_id()
 		alive[id] = true
@@ -323,10 +330,10 @@ func _draw() -> void:
 			continue   # 재머 = VEIL 맹점(§1). 마커 없음 — 밝은 본체+필드 링으로 직접 보인다
 		if en.has_meta("no_marker"):
 			continue   # 14-1 P3 무표시 위협(§7.2) — 거짓 VEIL이 신호를 가림. 스프라이트로만 보인다
-		if _enemy_in_jam(en, jammers):
-			continue   # 재밍 구역 안 적은 VEIL이 못 봄 — 마커 없음(플레이어가 밖에 있어도)
+		if _enemy_in_jam(en, jammers) and not _recon:
+			continue   # 재밍 구역 안 적은 VEIL이 못 봄 — 마커 없음. 정찰 보상은 관통(사전 좌표 확보 서사)
 		# degradation 중 일부 위협은 VEIL이 영영 못 본다 = 요원이 직접 봐야 함 (역전의 실물)
-		if degraded and (id % 100) < BLIND_PCT:
+		if degraded and (id % 100) < BLIND_PCT and not _recon:
 			continue
 		var danger: bool = en.has_method("veil_is_telegraphing") and en.veil_is_telegraphing()
 		var col: Color = WARN if danger else CALM

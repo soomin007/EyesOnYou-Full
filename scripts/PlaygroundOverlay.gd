@@ -290,7 +290,7 @@ func _route_act_section(header: String, routes: Array) -> VBoxContainer:
 		b.clip_text = true
 		# 툴팁 — id·위험/보상·태그(+라이벌 요소). 이름만으론 안 보이는 정보.
 		var rival: String = _route_rival_info(rid)
-		var tip: String = "%s\nrisk %d · reward %d" % [rid, int(route.get("risk", 1)), int(route.get("reward", 1))]
+		var tip: String = "%s\nrisk %d · %s" % [rid, int(route.get("risk", 1)), RouteData.reward_type_label(str(route.get("reward_type", "")))]
 		if rival != "":
 			tip += "\n라이벌: " + rival
 			b.add_theme_color_override("font_color", Color(0.82, 0.60, 1.0))   # 라이벌 맵 = 바이올렛 강조
@@ -344,14 +344,15 @@ func _build_risk_reward_row() -> HBoxContainer:
 	var gap := Label.new()
 	gap.text = "  "
 	hb.add_child(gap)
-	for n in [1, 2, 3]:
+	# 보상 축 개편(2026-08-19): 양 1~3 대신 종류 토글.
+	for t in ["xp", "record", "recon"]:
 		var b2 := Button.new()
-		b2.text = "보%d" % n
-		b2.custom_minimum_size = Vector2(44, 28)
+		b2.text = RouteData.reward_type_label(t)
+		b2.custom_minimum_size = Vector2(52, 28)
 		b2.add_theme_font_size_override("font_size", 13)
-		if GameState.current_route_reward == n:
+		if GameState.current_route_reward_type == t:
 			b2.disabled = true
-		b2.pressed.connect(_on_reward_pressed.bind(n))
+		b2.pressed.connect(_on_reward_type_pressed.bind(t))
 		hb.add_child(b2)
 	return hb
 
@@ -474,7 +475,7 @@ func _on_route_pressed(rid: String) -> void:
 		if route.get("id", "") == rid:
 			GameState.current_route_tags = route.get("tags", [])
 			GameState.current_route_risk = int(route.get("risk", GameState.current_route_risk))
-			GameState.current_route_reward = int(route.get("reward", GameState.current_route_reward))
+			GameState.current_route_reward_type = str(route.get("reward_type", GameState.current_route_reward_type))
 			GameState.current_stage = int(route.get("min_stage", GameState.current_stage))
 			break
 	_reload()
@@ -483,8 +484,8 @@ func _on_risk_pressed(n: int) -> void:
 	GameState.current_route_risk = n
 	_reload()
 
-func _on_reward_pressed(n: int) -> void:
-	GameState.current_route_reward = n
+func _on_reward_type_pressed(t: String) -> void:
+	GameState.current_route_reward_type = t
 	_reload()
 
 # 스킬 티어 직접 지정 — 0이면 해제. hp는 add_skill의 max_hp 즉시효과를 재현.
@@ -527,7 +528,7 @@ func _on_ending_escape(rid: String, disposal: String) -> void:
 		if str(route.get("id", "")) == rid:
 			GameState.current_route_tags = route.get("tags", [])
 			GameState.current_route_risk = int(route.get("risk", GameState.current_route_risk))
-			GameState.current_route_reward = int(route.get("reward", GameState.current_route_reward))
+			GameState.current_route_reward_type = str(route.get("reward_type", GameState.current_route_reward_type))
 			break
 	_reload()
 
@@ -537,7 +538,7 @@ func _on_ch14_phase(phase: int) -> void:
 	GameState.current_segment = 0
 	GameState.current_stage = 13
 	GameState.current_route_risk = 3
-	GameState.current_route_reward = 3
+	GameState.current_route_reward_type = "xp"
 	GameState.current_route_tags = ["전투"]
 	GameState.rival_phase_reached = phase
 	_reload()

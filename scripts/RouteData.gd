@@ -31,7 +31,7 @@ const ALL_ROUTES: Array = [
 		"name": "외곽 진입로",
 		"description": "SILO-7 외벽을 따라 난 정비 통로. 경비망 사각이라 침투 시작점으로 쓴다.",
 		"risk": 1,
-		"reward": 1,
+		"reward_type": "recon",
 		"hidden": false,
 		"unique": false,
 		"min_stage": 0, "max_stage": 1,
@@ -46,7 +46,7 @@ const ALL_ROUTES: Array = [
 		"name": "외벽 옥상",
 		"description": "외벽 옥상의 통신·환기 설비 구역. 트인 만큼 노출되고, 돌풍이 주기적으로 분다.",
 		"risk": 2,
-		"reward": 2,
+		"reward_type": "xp",
 		"hidden": false,
 		"unique": false,
 		"min_stage": 0, "max_stage": 1,
@@ -60,7 +60,7 @@ const ALL_ROUTES: Array = [
 		"name": "옛 배수로",
 		"description": "시설이 들어서기 전부터 있던 옛 배수로. 펌프가 살아 있어 물이 주기적으로 차오른다.",
 		"risk": 2,
-		"reward": 3,
+		"reward_type": "xp",
 		"hidden": false,
 		"unique": false,
 		# 지상(rooftops) 직후 깊은 지하로 가는 게 어색해 stage 2 이후로 한정. 5막: 막1(0-2) 안에 유지.
@@ -75,7 +75,7 @@ const ALL_ROUTES: Array = [
 		"name": "폐쇄 지하철",
 		"description": "SILO-7이 덮어쓴 폐역. 도시의 흔적이 통로에 그대로 남아 있다.",
 		"risk": 2,
-		"reward": 2,
+		"reward_type": "xp",
 		"hidden": false,
 		"unique": false,
 		# 막1(외곽) 진입 bridge — 외벽 단계 안에서만. 막2부터는 내부 맵.
@@ -90,7 +90,7 @@ const ALL_ROUTES: Array = [
 		"name": "냉각 시설",
 		"description": "서버를 식히는 냉각 플랜트. 바닥 증기 분출구가 주기로 터지고, 드론이 머리 위를 점한다.",
 		"risk": 2,
-		"reward": 3,
+		"reward_type": "xp",
 		"hidden": false,
 		"unique": false,
 		# 드론 첫 등장 — 막2(잠입) 전반.
@@ -106,7 +106,7 @@ const ALL_ROUTES: Array = [
 		"name": "감시탑",
 		"description": "내부를 굽어보는 관제 구역. 저격 감시선과 탐조등이 통로를 가로지른다.",
 		"risk": 3,
-		"reward": 3,
+		"reward_type": "recon",
 		"hidden": false,
 		"unique": false,
 		# 막1 고조(B-3 난이도 램프) — 막1 유일 risk3(저격 둥지 3). s2 전용으로 빼 오프닝 막 s1 스파이크 제거.
@@ -122,7 +122,7 @@ const ALL_ROUTES: Array = [
 		"name": "격리 병동",
 		"description": "오래 봉인된 격리 구역. 무엇을 가뒀는지 기록이 지워졌다.",
 		"risk": 2,
-		"reward": 3,
+		"reward_type": "recon",
 		"hidden": false,
 		"unique": false,
 		"min_stage": 3, "max_stage": 5,
@@ -138,7 +138,7 @@ const ALL_ROUTES: Array = [
 		"name": "데이터 센터",
 		"description": "핵심부 직전 서버 집적 구역. 회수할 데이터가 실제로 흐르는 곳.",
 		"risk": 3,
-		"reward": 3,
+		"reward_type": "xp",
 		"hidden": false,
 		"unique": false,
 		# 막3 진입 전투(핵심부 직전, 시야붕괴 실연). server_hall·control_corridor·??? 와 함께 막3 전투 풀(s6-7).
@@ -153,7 +153,7 @@ const ALL_ROUTES: Array = [
 		"name": "비상 탈출로",
 		"description": "핵심부를 우회하는 비상 갱도. 마지막에 빠져나가는 길.",
 		"risk": 1,
-		"reward": 2,
+		"reward_type": "",
 		"hidden": false,
 		"unique": false,
 		# 막5 종착(s15=내부14). 본편은 처리별 탈출 4종(아래)이 대체 — 이 원형은 **스토리 모드 전용**
@@ -174,7 +174,7 @@ const ALL_ROUTES: Array = [
 		"id": "route_escape_extract",
 		"name": "봉쇄 게이트",
 		"description": "드라이브가 신호를 뿜는다. 시설의 모든 유닛이 이 길목으로 몰린다.",
-		"risk": 3, "reward": 3,
+		"risk": 3, "reward_type": "",
 		"hidden": false, "unique": false,
 		"min_stage": 14, "max_stage": 14, "available_stages": [14],
 		"disposal": "extract",
@@ -187,7 +187,7 @@ const ALL_ROUTES: Array = [
 		"id": "route_escape_destroy",
 		"name": "붕괴 회랑",
 		"description": "드라이브는 시설 제어까지 물고 있었다. 소각이 시작되자 그 손부터 탔다. 버팀을 잃은 하부부터 내려앉는다.",
-		"risk": 3, "reward": 2,
+		"risk": 3, "reward_type": "",
 		"hidden": false, "unique": false,
 		"min_stage": 14, "max_stage": 14, "available_stages": [14],
 		"disposal": "destroy",
@@ -200,7 +200,7 @@ const ALL_ROUTES: Array = [
 		"id": "route_escape_conceal",
 		"name": "정비 갱도",
 		"description": "아무도 반출 사실을 모른다. 단 하나, 시설 안의 눈만 빼고.",
-		"risk": 2, "reward": 2,
+		"risk": 2, "reward_type": "",
 		"hidden": false, "unique": false,
 		"min_stage": 14, "max_stage": 14, "available_stages": [14],
 		"disposal": "conceal",
@@ -213,7 +213,7 @@ const ALL_ROUTES: Array = [
 		"id": "route_escape_leave",
 		"name": "무인 회랑",
 		"description": "아무것도 가지고 나가지 않는 길. 아무도 막지 않는다.",
-		"risk": 1, "reward": 2,
+		"risk": 1, "reward_type": "",
 		"hidden": false, "unique": false,
 		"min_stage": 14, "max_stage": 14, "available_stages": [14],
 		"disposal": "leave",
@@ -227,7 +227,7 @@ const ALL_ROUTES: Array = [
 		"name": "핵심부",
 		"description": "서버실이 있는 시설 심장부. 목표 데이터와 그것을 지키는 것이 모인 곳.",
 		"risk": 3,
-		"reward": 3,
+		"reward_type": "record",
 		"hidden": false,
 		"unique": false,
 		# 막3 SENTINEL 페이크 보스(s9=내부8) — 5막: 처치 후 §7 reveal → 막4로 계속(회수/처리선택은 막5로 이주).
@@ -244,7 +244,7 @@ const ALL_ROUTES: Array = [
 		"name": "블랙아웃 런",
 		"description": "교신·전력이 차단된 봉쇄 구역. 안에선 VEIL도 닿지 않는다.",
 		"risk": 3,
-		"reward": 3,
+		"reward_type": "xp",
 		"hidden": false,
 		"unique": true,
 		"challenge": true,
@@ -260,7 +260,7 @@ const ALL_ROUTES: Array = [
 		"name": "???",
 		"description": "도면에 없는 한 층. VEIL조차 모른다고 한다.",
 		"risk": 2,
-		"reward": 3,
+		"reward_type": "recon",
 		"hidden": true,
 		"unique": true,
 		# 막3 진입 전투 풀의 진실 분기 — 정적 아카이브(VEIL-1 reveal). 클리어 시 truth_seen,
@@ -278,7 +278,7 @@ const ALL_ROUTES: Array = [
 		"name": "서버 복도",
 		"description": "핵심부로 이어지는 서버 랙 복도. 데이터가 흐르는 만큼 경비도 두텁다.",
 		"risk": 3,
-		"reward": 3,
+		"reward_type": "record",
 		"hidden": false,
 		"unique": false,
 		# 막3 진입 전투(핵심부 직전). datacenter·control_corridor·??? 와 함께 막3 전투 풀(s6-7).
@@ -293,7 +293,7 @@ const ALL_ROUTES: Array = [
 		"name": "지하 주차장",
 		"description": "외곽과 시설을 잇는 지하 주차 구역. 차단 셔터가 주기적으로 통로를 막는다.",
 		"risk": 1,
-		"reward": 2,
+		"reward_type": "recon",
 		"hidden": false,
 		"unique": false,
 		# 막1 침투 변형 — s1~2(첫 맵 s0엔 안 둠: 방패병이 첫 맵엔 불합리, 사용자 보고 2026-06-25).
@@ -308,7 +308,7 @@ const ALL_ROUTES: Array = [
 		"name": "변전소",
 		"description": "시설 전력을 받는 옥외 변전 설비. 노출 전선이 주기적으로 방전하고, 변압기 위로 저격선이 깔린다.",
 		"risk": 3,
-		"reward": 3,
+		"reward_type": "xp",
 		"hidden": false,
 		"unique": false,
 		# 막2 고조(난이도 램프) — risk3(저격+드론 동시). 막2 첫 stage(s3) 제외해 문턱 직후 스파이크 제거.
@@ -324,7 +324,7 @@ const ALL_ROUTES: Array = [
 		"name": "실험 구역",
 		"description": "봉인된 실험 베이가 늘어선 구역. 무엇을 시험했는지 관측창마다 지워져 있다.",
 		"risk": 2,
-		"reward": 3,
+		"reward_type": "record",
 		"hidden": false,
 		"unique": false,
 		# 막2 잠입 혼합 전투 — 시설 내부 단계(s3~5) 풀.
@@ -339,7 +339,7 @@ const ALL_ROUTES: Array = [
 		"name": "철거 구역",
 		"description": "절반쯤 헐린 외곽 건물군. 위에서 잔해가 떨어지고, 무너진 벽 사이로 길이 난다.",
 		"risk": 2,
-		"reward": 2,
+		"reward_type": "xp",
 		"hidden": false,
 		"unique": false,
 		"min_stage": 1, "max_stage": 2,
@@ -353,7 +353,7 @@ const ALL_ROUTES: Array = [
 		"name": "배수 펌프장",
 		"description": "외곽 빗물을 퍼올리던 펌프장. 파이프 위에서 조준선이 내려온다.",
 		"risk": 2,
-		"reward": 2,
+		"reward_type": "xp",
 		"hidden": false,
 		"unique": false,
 		"min_stage": 1, "max_stage": 2,
@@ -367,7 +367,7 @@ const ALL_ROUTES: Array = [
 		"name": "통신 중계소",
 		"description": "시설 교신을 중계하는 안테나 구역. 중계기 위 저격과 머리 위 드론이 겹친다.",
 		"risk": 3,
-		"reward": 3,
+		"reward_type": "record",
 		"hidden": false,
 		"unique": false,
 		# 막4 램프 s10 전개~막5 s12(act_identity §6): 저격·드론·재머 복합 — s9 도입 금지.
@@ -382,7 +382,7 @@ const ALL_ROUTES: Array = [
 		"name": "물류 창고",
 		"description": "시설 보급을 쌓아둔 적재 창고. 컨베이어가 아직 돌아 바닥이 흐른다.",
 		"risk": 2,
-		"reward": 3,
+		"reward_type": "xp",
 		"hidden": false,
 		"unique": false,
 		"min_stage": 3, "max_stage": 5,
@@ -396,7 +396,7 @@ const ALL_ROUTES: Array = [
 		"name": "보안 검문소",
 		"description": "내부 구역을 나누는 보안 검문선. 검문 레이저를 건드리면 포탑이 깨어난다.",
 		"risk": 2,
-		"reward": 2,
+		"reward_type": "recon",
 		"hidden": false,
 		"unique": false,
 		"min_stage": 3, "max_stage": 5,
@@ -410,7 +410,7 @@ const ALL_ROUTES: Array = [
 		"name": "통제실 복도",
 		"description": "핵심부 통제실로 이어지는 복도. 데이터가 흐르는 만큼 감시도 두텁다.",
 		"risk": 3,
-		"reward": 3,
+		"reward_type": "recon",
 		"hidden": false,
 		"unique": false,
 		# 막3 전투 풀(s6-7) — datacenter/server_hall과 같은 통과형. ???(guaranteed)와 함께 선택.
@@ -425,7 +425,7 @@ const ALL_ROUTES: Array = [
 		"name": "응축기 구역",
 		"description": "냉각수를 응축하는 구역. 천장 배관에서 뜨거운 응축수가 방울져 떨어진다.",
 		"risk": 2,
-		"reward": 3,
+		"reward_type": "xp",
 		"hidden": false,
 		"unique": false,
 		"min_stage": 3, "max_stage": 5,
@@ -439,7 +439,7 @@ const ALL_ROUTES: Array = [
 		"name": "외곽 순찰로",
 		"description": "외벽을 따라 도는 순찰 동선. 경계등이 지면을 훑는다.",
 		"risk": 2,
-		"reward": 2,
+		"reward_type": "recon",
 		"hidden": false,
 		"unique": false,
 		"min_stage": 1, "max_stage": 2,
@@ -453,7 +453,7 @@ const ALL_ROUTES: Array = [
 		"name": "함정 통로",
 		"description": "보안 포탑이 빼곡한 좁은 통로. 적보다 함정이 길을 막는다.",
 		"risk": 2,
-		"reward": 3,
+		"reward_type": "xp",
 		"hidden": false,
 		"unique": false,
 		"min_stage": 3, "max_stage": 5,
@@ -467,7 +467,7 @@ const ALL_ROUTES: Array = [
 		"name": "화물 리프트",
 		"description": "시설 정비 화물구역. 스파이크 구덩이 위를 왕복하는 화물 리프트를 타이밍 맞춰 건넌다.",
 		"risk": 2,
-		"reward": 3,
+		"reward_type": "xp",
 		"hidden": false,
 		"unique": false,
 		# 막4 램프 s9-10 도입(act_identity §6): 전투 최소 타이밍 학습 — 막4의 순한 문.
@@ -482,7 +482,7 @@ const ALL_ROUTES: Array = [
 		"name": "차량 엄폐 통로",
 		"description": "버려진 정비 차량이 늘어선 사격 통로. 저격에 노출된 개활지라, 차량 뒤에 붙어 전진해야 한다.",
 		"risk": 3,
-		"reward": 3,
+		"reward_type": "xp",
 		"hidden": false,
 		"unique": false,
 		# 막4 램프 s10 전개~막5 s12(act_identity §6): 저격 레이스 — 재머 금지 맵(블라인드 unfair).
@@ -497,7 +497,7 @@ const ALL_ROUTES: Array = [
 		"name": "붕괴 갱도",
 		"description": "구조가 무너지기 시작한 정비 갱도. 뒤에서 붕괴가 쫓아온다. 멈추면 삼켜진다.",
 		"risk": 3,
-		"reward": 3,
+		"reward_type": "xp",
 		"hidden": false,
 		"unique": false,
 		# 막4 램프 s11 고조~막5 s12(act_identity §6): 추격 절정 — 막4 "추적"의 시그니처. 재머 금지.
@@ -512,7 +512,7 @@ const ALL_ROUTES: Array = [
 		"name": "반응로 제어실",
 		"description": "시설 중앙 반응로 제어실. 밀려드는 적으로부터 코어를 지켜야 한다. 자리를 비우면 코어가 무너진다.",
 		"risk": 3,
-		"reward": 3,
+		"reward_type": "record",
 		"hidden": false,
 		"unique": false,
 		# 막5 전투 s12 전용(act_identity §7): "코어 방어" 직후 s13 "코어 회수" — 서사 랠리.
@@ -527,7 +527,7 @@ const ALL_ROUTES: Array = [
 		"name": "감시 회랑",
 		"description": "보안 스캔 빔이 통로를 주기적으로 훑는 감시 회랑. 빔이 지날 때 차폐 사각에 숨지 않으면 노출된다.",
 		"risk": 3,
-		"reward": 3,
+		"reward_type": "recon",
 		"hidden": false,
 		"unique": false,
 		# 막4 램프 s9-11(act_identity §6): 리듬 스텔스 — risk3이나 적 2뿐(전투 스파이크 아님)이라 s9 허용.
@@ -542,7 +542,7 @@ const ALL_ROUTES: Array = [
 		"name": "저지선",
 		"description": "발각된 통제 구역. 부서지는 바리케이드 뒤에서 밀려오는 경비를 저지한다. 바리케이드는 영원하지 않다.",
 		"risk": 3,
-		"reward": 3,
+		"reward_type": "xp",
 		"hidden": false,
 		"unique": false,
 		# 막4 램프 s11 고조~막5 s12(act_identity §6): 발각 농성 + FINAL WAVE 재머.
@@ -557,7 +557,7 @@ const ALL_ROUTES: Array = [
 		"name": "핵심 회수",
 		"description": "시설 심장부. 목표 드라이브가 실제로 있는 곳. 회수하고 처리를 정한다.",
 		"risk": 3,
-		"reward": 3,
+		"reward_type": "xp",
 		"hidden": false,
 		"unique": false,
 		# 막5 회수 스테이지(s14=내부13) — 14-1 라이벌 보스전(P1 지휘→P2 빙의, MapData rival_boss).
@@ -667,14 +667,32 @@ static func _stage_in_range(route: Dictionary, stage_index: int) -> bool:
 	# 둘 다 없으면 모든 stage 등장 (안전 폴백).
 	return true
 
-# VEIL 추천. 플레이어의 실제 수행(GameState.competence_tier — 최근 피격·죽음)에 반응해
-# 맵을 고르고, 사유는 짧은 대사(REC_REASON)로 돌려준다. 표시 측(RouteMap)은 ★ 옆엔
-# "베일 추천"만 두고 이 사유 대사를 VEIL 멘트로 보여준다 — 라벨로 수식을 설명하지 않음.
-#   - first(첫 스테이지) / struggling(고전) → 안전 (가장 낮은 risk, 동점이면 reward 큰 쪽).
-#   - skilled(능숙)                          → 보상 (가장 높은 reward, 동점이면 저위험).
-#   - steady(무난)                           → 순가치(reward-risk) 최대, 동점이면 저위험.
-# hidden / challenge 루트는 항상 제외.
-# 사유 대사는 한 대사 안에서 종결어미가 단조롭지 않게(특히 "~게요" 연발 회피) 변형을 섞음.
+# ─── 보상 축 개편(2026-08-19 사용자 확정: "양 1~3" → "종류") ─────────────────────
+# 문제: 종전엔 reward가 risk와 사실상 1:1 상관(보상<위험 조합이 1개뿐, 3/3이 42%)이라
+# 두 축이 정보를 못 줬고, "보상 같은데 위험만 높은" 열세 카드 추천 사고까지 났다.
+# 새 규칙:
+#   · 클리어 경험치 = 위험도 그대로(r1=1 … r3=3). 위험할수록 항상 더 번다 — 열세 카드가
+#     구조적으로 사라진다(위험 증가에 보상이 자동 동행).
+#   · reward_type = 부가 효과 종류. "xp"(경험치 +2) / "record"(기록 1칸 회복, 가득하면 +2 XP) /
+#     "recon"(다음 구간 VEIL 표시 강화) / ""(탈출 종착 = 없음).
+# 지급은 GameState.on_stage_clear, 표시는 RouteMap(카드 한 줄 + 우측 패널).
+const REWARD_TYPE_LABELS: Dictionary = {
+	"xp": "경험치",
+	"record": "기록",
+	"recon": "정찰",
+	"": "-",
+}
+
+static func reward_type_label(t: String) -> String:
+	return str(REWARD_TYPE_LABELS.get(t, "-"))
+
+# VEIL 추천. 플레이어의 실제 수행(GameState.competence_tier)과 현재 필요(기록 소모 여부)에
+# 반응해 맵을 고르고, 사유는 짧은 대사(REC_REASON)로 돌려준다. 우선순위:
+#   ① first(첫 스테이지) / struggling(고전) → 안전(가장 낮은 risk). 상태가 나쁘면 종류보다 생존.
+#   ② 기록(덮어쓰기)을 소모한 상태 + 풀에 record 루트 존재 → 그 루트(동종 여럿이면 저위험).
+#   ③ skilled(능숙) → 최고 risk(= 최대 클리어 경험치. 위험이 곧 보상이라 손해 카드 없음).
+#   ④ steady(무난) → 중간 risk(2 선호, 없으면 저위험).
+# hidden / challenge 루트는 항상 제외. 사유 대사는 종결어미 단조 회피(어투 규칙).
 const REC_REASON: Dictionary = {
 	"first": [
 		"처음이니 무난한 쪽으로 가요.",
@@ -686,10 +704,15 @@ const REC_REASON: Dictionary = {
 		"좀 힘들었을 거예요. 부담이 적은 쪽을 골랐어요.",
 		"이번엔 덜 험한 길을 골랐어요.",
 	],
+	"record": [
+		"기록이 비었죠. 이 길에서 한 칸 되찾을 수 있어요.",
+		"다음 실수에 대비해 두죠. 기록을 채울 수 있는 쪽입니다.",
+		"이쪽을 지나면 기록 한 칸이 복구돼요.",
+	],
 	"skilled": [
-		"잘 버티고 있어요. 위험해도 크게 버는 길이에요.",
-		"솜씨가 좋네요. 욕심내 봐도 괜찮아요.",
-		"이 정도면 거친 길도 문제없죠. 보상이 커요.",
+		"잘 버티고 있죠. 험한 길일수록 배우는 것도 많습니다.",
+		"솜씨가 좋네요. 거친 쪽이 남는 장사예요.",
+		"욕심내 볼 만해요. 위험한 만큼 돌아오는 게 큽니다.",
 	],
 	"steady": [
 		"이쪽이 좋아 보여요.",
@@ -716,65 +739,55 @@ static func choose_veil_recommendation_with_reason(pool: Array) -> Dictionary:
 			return {"id": pool[0].get("id", ""), "reason": ""}
 		return {"id": "", "reason": ""}
 	# 후보가 하나뿐인 배타 스테이지(lab s8 · core_recovery s13 · escape s14)엔 고를 게 없다 —
-	# 실력 기반 사유("위험해도 크게 버는 길" 등)가 강제 진행 맵에 붙으면 모순(사용자 보고
-	# 2026-08-12: 비상 탈출로에 고위험 고보상 멘트). reason을 비우면 RouteMap이 ★추천 대신
-	# 그 맵 고유 veil_comment를 보여준다.
+	# 실력 기반 사유가 강제 진행 맵에 붙으면 모순(사용자 보고 2026-08-12). reason을 비우면
+	# RouteMap이 ★추천 대신 그 맵 고유 veil_comment를 보여준다.
 	if candidates.size() == 1:
 		return {"id": candidates[0].get("id", ""), "reason": ""}
 	# 모드 — 데이터 없으면 first(첫 스테이지), 아니면 실력 tier.
 	var mode: String = GameState.competence_tier()
 	if GameState.recent_stage_hits.is_empty():
 		mode = "first"
-	var best: Dictionary = candidates[0]
-	var best_score: float = -INF
+	# ① 안전 우선 — 고전 중이거나 첫 판이면 종류를 따지지 않고 가장 수월한 길.
 	if mode == "first" or mode == "struggling":
-		# 안전 — 위험 낮은 쪽 우선, 동점이면 보상 큰 쪽.
+		return {"id": _pick_by_risk(candidates, 1).get("id", ""), "reason": _pick_rec_reason(mode)}
+	# ② 필요 기반 — 기록을 소모했고 되찾을 길이 있으면 그쪽. VEIL이 플레이어 상태를 읽고
+	#    권하는 그림(관측 프레임과 정합). 스토리 모드는 기록 시스템이 없어 제외.
+	if not GameState.story_mode and GameState.overwrite_left < GameState.overwrite_max():
+		var rec_routes: Array = []
 		for c in candidates:
-			var s: float = -float(c.get("risk", 0)) * 2.0 + float(c.get("reward", 0)) * 0.5
-			if s > best_score:
-				best_score = s
-				best = c
-	elif mode == "skilled":
-		# 보상·도전 — 보상 높은 쪽 우선, 동점이면 저위험.
-		# 2026-08-19 수정(사용자 "1/2가 있는데 왜 2/2를 추천하지"): 동점 시 고위험 우대가
-		# 보상이 같은데 위험만 높은 카드를 뽑아 추천이 명백히 손해로 보였다. 능숙 모드의
-		# 차이는 "보상을 위해 고위험을 감수한다"(3/3 > 1/2)이지 "같은 값이면 더 위험하게"가 아니다.
+			if str((c as Dictionary).get("reward_type", "")) == "record":
+				rec_routes.append(c)
+		if not rec_routes.is_empty():
+			return {"id": _pick_by_risk(rec_routes, 1).get("id", ""), "reason": _pick_rec_reason("record")}
+	# ③ 능숙 — 최고 위험 = 최대 클리어 경험치. 동률이면 xp 종류 우선(부가까지 경험치).
+	if mode == "skilled":
+		var best: Dictionary = candidates[0]
+		var best_s: float = -INF
 		for c in candidates:
-			var s: float = float(c.get("reward", 0)) * 2.0 - float(c.get("risk", 0)) * 0.1
-			if s > best_score:
-				best_score = s
-				best = c
-	else:
-		# steady — 순가치(보상-위험) 최대, 동점이면 저위험.
-		for c in candidates:
-			var s: float = (float(c.get("reward", 0)) - float(c.get("risk", 0))) * 10.0 - float(c.get("risk", 0))
-			if s > best_score:
-				best_score = s
-				best = c
-	best = _undominate(best, candidates)
-	return {"id": best.get("id", ""), "reason": _pick_rec_reason(mode)}
+			var route: Dictionary = c
+			var s: float = float(route.get("risk", 0)) * 10.0
+			if str(route.get("reward_type", "")) == "xp":
+				s += 1.0
+			if s > best_s:
+				best_s = s
+				best = route
+		return {"id": best.get("id", ""), "reason": _pick_rec_reason("skilled")}
+	# ④ 무난 — 중간 위험(2) 선호, 없으면 낮은 쪽.
+	var mid: Array = []
+	for c in candidates:
+		if int((c as Dictionary).get("risk", 0)) == 2:
+			mid.append(c)
+	var pool2: Array = mid if not mid.is_empty() else candidates
+	return {"id": _pick_by_risk(pool2, 1).get("id", ""), "reason": _pick_rec_reason("steady")}
 
-# 열세 카드 방지 가드(전 모드 공통) — 어떤 가중치를 쓰든, 보상이 같거나 높으면서 위험이
-# 더 낮은 카드가 후보에 있으면 추천을 그쪽으로 옮긴다. 플레이어 눈에 "두 축 다 손해인데
-# 추천"은 조언자의 신뢰를 즉시 깎는다(2026-08-19 사용자 지적). 가중치 조정으로 같은 함정이
-# 재발하지 않게 선택 뒤에 한 번 더 거른다.
-static func _undominate(best: Dictionary, candidates: Array) -> Dictionary:
-	var b_risk: int = int(best.get("risk", 0))
-	var b_reward: int = int(best.get("reward", 0))
-	var out: Dictionary = best
+# risk 정렬 픽 — dir 1 = 최저 위험(동률이면 풀 순서 = 셔플 유지).
+static func _pick_by_risk(candidates: Array, dir: int) -> Dictionary:
+	var best: Dictionary = candidates[0]
 	for c in candidates:
 		var route: Dictionary = c
-		var risk: int = int(route.get("risk", 0))
-		var reward: int = int(route.get("reward", 0))
-		if reward >= b_reward and risk < b_risk:
-			out = route
-			b_risk = risk
-			b_reward = reward
-		elif reward > b_reward and risk <= b_risk:
-			out = route
-			b_risk = risk
-			b_reward = reward
-	return out
+		if dir * int(route.get("risk", 0)) < dir * int(best.get("risk", 0)):
+			best = route
+	return best
 
 static func _pick_rec_reason(mode: String) -> String:
 	var arr: Array = REC_REASON.get(mode, [])

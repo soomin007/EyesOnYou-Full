@@ -14,19 +14,19 @@ const BUILDS: Array = [
 	{"name": "max",  "skills": {"fire_boost": 3, "multishot": 3, "glide": 3}},
 ]
 const MAPS: Array = [
-	{"rid": "route_substation",     "tags": ["원거리", "드론", "노출", "전투"], "risk": 3, "reward": 3, "stage": 4},
-	{"rid": "route_warehouse",      "tags": ["근접전", "전투"], "risk": 2, "reward": 3, "stage": 3},
+	{"rid": "route_substation",     "tags": ["원거리", "드론", "노출", "전투"], "risk": 3, "stage": 4},
+	{"rid": "route_warehouse",      "tags": ["근접전", "전투"], "risk": 2, "stage": 3},
 	# 방 체인 확산 1호(2026-08-18) — 창고와 함께 체인 목표 밴드(막2~3 90~120s) 검증 대상.
-	{"rid": "route_cooling",        "tags": ["전투", "드론", "함정"], "risk": 2, "reward": 3, "stage": 4},
+	{"rid": "route_cooling",        "tags": ["전투", "드론", "함정"], "risk": 2, "stage": 4},
 	# 배치 2(2026-08-18) — 막2~3 미확산 우선 체인화 3맵.
-	{"rid": "route_control_corridor", "tags": ["전투"], "risk": 3, "reward": 3, "stage": 6},
-	{"rid": "route_server_hall",      "tags": ["전투"], "risk": 3, "reward": 3, "stage": 6},
-	{"rid": "route_demolition_zone", "tags": ["근접전", "어두운_환경", "전투"], "risk": 2, "reward": 2, "stage": 1},
+	{"rid": "route_control_corridor", "tags": ["전투"], "risk": 3, "stage": 6},
+	{"rid": "route_server_hall",      "tags": ["전투"], "risk": 3, "stage": 6},
+	{"rid": "route_demolition_zone", "tags": ["근접전", "어두운_환경", "전투"], "risk": 2, "stage": 1},
 	# 표준 조우 벤치(MapData._bot_bench · 게임 미노출): 평지 3웨이브, 빌드 화력의 순수 비교.
-	{"rid": "route_bot_bench",      "tags": ["전투"], "risk": 2, "reward": 2, "stage": 3},
+	{"rid": "route_bot_bench",      "tags": ["전투"], "risk": 2, "stage": 3},
 	# 막5 벤치(stage 12) — 막 진행 적 강화(HP·사격 빈도) + 실전형 조우(저격·드론 혼성) 검증.
 	# 실런의 만렙 빌드가 실제로 만나는 조우는 이쪽(만렙이 stage 3에 있는 조합은 실런에 없다).
-	{"rid": "route_bot_bench_late", "tags": ["전투", "원거리"], "risk": 2, "reward": 2, "stage": 12},
+	{"rid": "route_bot_bench_late", "tags": ["전투", "원거리"], "risk": 2, "stage": 12},
 	# datacenter는 스위트에서 제외(2026-08-18): 수직 지형이라 봇이 상층 드론을 못 잡고
 	# 90s 타임아웃까지 대치(데드락). 전멸형 대표는 벤치가 맡는다 · 참고치 가치 낮음.
 ]
@@ -83,7 +83,7 @@ func _run_one(build: Dictionary, m: Dictionary) -> void:
 	GameState.current_route_id = rid
 	GameState.current_route_tags = m.get("tags")
 	GameState.current_route_risk = int(m.get("risk"))
-	GameState.current_route_reward = int(m.get("reward"))
+	GameState.current_route_reward_type = ""   # 봇 계측은 종류 효과 미사용
 	GameState.current_stage = int(m.get("stage"))
 	# 방 체인 — 방마다 새 Stage를 띄워 순서대로 주파, 지표는 체인 합산(한 스테이지 = 한 행).
 	var seg_total: int = MapData.segment_count(rid)

@@ -81,7 +81,7 @@ func _ready() -> void:
 	GameState.save_act_snapshot()
 	# 표시용 총계(displayed_total_stages) — 막1~3 동안 "…/ 9"로 보여 막4/5 확장을 숨긴다(반전 공개).
 	stage_label.text = "STAGE %d / %d   루트 선택" % [GameState.current_stage + 1, GameState.displayed_total_stages()]
-	subtitle_label.text = "● 위험도 · 보상(경험치)   ·   ? 미상"
+	subtitle_label.text = "● 위험도(높을수록 클리어 경험치 큼) · 보상 종류 · ? 미상"
 	pool = RouteData.get_route_pool_for_stage(GameState.current_stage, GameState.route_history)
 	var rec: Dictionary = RouteData.choose_veil_recommendation_with_reason(pool)
 	recommended_id = str(rec.get("id", ""))
@@ -387,7 +387,8 @@ func _format_button_text(route: Dictionary, recommended: bool, rival: bool = fal
 	var hidden: bool = route.get("hidden", false)
 	var challenge: bool = route.get("challenge", false)
 	var risk_str: String = "?" if hidden else _dots(route.get("risk", 0))
-	var reward_str: String = "?" if hidden else _dots(route.get("reward", 0))
+	# 보상 축 개편(2026-08-19): 양 게이지 대신 종류 라벨. 클리어 경험치는 위험도가 담당.
+	var reward_str: String = "?" if hidden else RouteData.reward_type_label(str(route.get("reward_type", "")))
 	var prefix: String = "[도전]\n" if challenge else ""
 	var rec: String = "  ★" if recommended else ""
 	if rival:
@@ -536,10 +537,15 @@ func _update_risk_reward_panel(route: Dictionary) -> void:
 	var lines: Array = []
 	var risk: int = int(route.get("risk", 0))
 	if risk >= 3:
-		lines.append("[고위험]\n적 수와 반응 속도가 강해요.")
-	var reward: int = int(route.get("reward", 0))
-	if reward >= 3:
-		lines.append("[고보상]\n클리어 보너스 경험치가 큽니다.")
+		lines.append("[고위험]\n적이 강한 만큼 클리어 경험치도 큽니다.")
+	# 보상 축 개편(2026-08-19): 종류별 효과 설명.
+	match str(route.get("reward_type", "")):
+		"xp":
+			lines.append("[보상 · 경험치]\n클리어 경험치가 추가로 붙어요.")
+		"record":
+			lines.append("[보상 · 기록]\n지나면 기록 1칸을 되찾습니다. 가득하면 경험치로 받아요.")
+		"recon":
+			lines.append("[보상 · 정찰]\n다음 구간에서 표시가 더 멀리, 방해 너머까지 닿습니다.")
 	if lines.is_empty():
 		risk_reward_panel.visible = false
 		return
