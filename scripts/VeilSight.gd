@@ -23,6 +23,8 @@ const RECON_RADIUS_MUL: float = 2.5           # 정찰 보상 탐지 반경 배�
 # 정찰 보상 활성(이 스테이지 한정) — _ready에서 GameState 캡처. 시각 마커에만 적용,
 # 음성 위협 콜은 근접 밴드 규칙(240px) 유지.
 var _recon: bool = false
+# 전파 간섭 펄스(중계소 · Interference가 매 틱 세팅) — 0~1, 마커 알파를 깎는다. recon은 관통.
+var interference: float = 0.0
 const CALM: Color = Color(0.42, 0.86, 1.0)    # 평시 — VEIL 시안 (자막 색과 통일감)
 const WARN: Color = Color(1.0, 0.55, 0.22)    # 공격 임박 — 경고 주황
 const RIVAL: Color = Color(0.80, 0.34, 0.98)  # 재머 마커 — 라이벌 바이올렛(안티-VEIL, rival_veil_concept §5)
@@ -221,6 +223,8 @@ func _scan_for_call() -> void:
 		return
 	if _player_jam_intensity() > 0.35:
 		return   # 재밍 구역 안 = VEIL 없음 → 말로도 못 짚는다
+	if interference > 0.5 and not _recon:
+		return   # 간섭 펄스 절정 — 마커와 같이 음성도 잠깐 끊긴다(무해 · 지나간다)
 	var xform: Transform2D = get_viewport().get_canvas_transform()
 	var view: Vector2 = get_viewport_rect().size
 	var ppos: Vector2 = player.global_position
@@ -339,7 +343,8 @@ func _draw() -> void:
 		var col: Color = WARN if danger else CALM
 		# 등장 = 스트로크(다이아몬드가 한 획씩 그어짐). 알파는 먼저 차올라 긋는 선이 보이게.
 		var appear: float = clamp((_t - float(_seen[id])) / FADE_IN, 0.0, 1.0)
-		var alpha_mul: float = clampf(appear * 2.2, 0.0, 1.0) * (1.0 - jam)   # 재밍 깊을수록 마커 소거
+		var intf: float = 0.0 if _recon else interference   # 간섭 펄스 · 정찰 보상은 관통
+		var alpha_mul: float = clampf(appear * 2.2, 0.0, 1.0) * (1.0 - jam) * (1.0 - intf)
 		if alpha_mul <= 0.01:
 			continue
 		if degraded:

@@ -21,6 +21,8 @@ const MAPS: Array = [
 	# 배치 2(2026-08-18) — 막2~3 미확산 우선 체인화 3맵.
 	{"rid": "route_control_corridor", "tags": ["전투"], "risk": 3, "stage": 6},
 	{"rid": "route_server_hall",      "tags": ["전투"], "risk": 3, "stage": 6},
+	# 배치 3(2026-08-19) — 중계소 3방 체인(간섭 펄스). 드론은 봇 2회 포기 규칙으로 우회.
+	{"rid": "route_relay_station",    "tags": ["원거리", "드론", "노출", "전투"], "risk": 3, "stage": 10},
 	{"rid": "route_demolition_zone", "tags": ["근접전", "어두운_환경", "전투"], "risk": 2, "stage": 1},
 	# 표준 조우 벤치(MapData._bot_bench · 게임 미노출): 평지 3웨이브, 빌드 화력의 순수 비교.
 	{"rid": "route_bot_bench",      "tags": ["전투"], "risk": 2, "stage": 3},

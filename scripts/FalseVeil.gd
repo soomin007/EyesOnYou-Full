@@ -57,7 +57,7 @@ var _anchor_idx: int = 0
 var _fake_spots: Array = []             # 가짜 마커 후보 위치(순환)
 var _spot_idx: int = 0
 var _fakes: Array = []                  # 살아있는 _FakeMarker 참조
-# 실체화 창당 피해 누적(상한 = max_hp/6) · 고DPS 빌드의 "첫 창에 끝" 차단(2026-08-17).
+# 실체화 창당 피해 누적(상한 = max_hp/8 · 2026-08-19 확대) · 고DPS "첫 창에 끝" 차단.
 var _window_dmg: int = 0
 var _next_phased_scale: float = 1.0     # 상한 도달 직후의 잠복만 짧게(화력의 보상)
 # 텔레포트 워프 연출(중반+ 변주) · 이전 자리에 소멸 파문을 남긴다.
@@ -239,7 +239,8 @@ func take_damage(amount: int, from_dir: int = 0) -> void:
 	# 실체화 창당 피해 상한 · "실체화까지 기다렸다 쏘면 5초 컷"(사용자 2026-08-17) 차단.
 	# 상한 = max_hp/6 → 어떤 화력이든 실체화 창 ~6번은 상대해야 변주 3단이 실제로 등장.
 	# 저DPS 빌드는 상한에 닿지 않으므로 영향 없음.
-	var cap: int = maxi(3, int(ceil(float(max_hp) / 6.0)))
+	# 보스전 확대(2026-08-19): 분모 6→8 — 창 ~6개 → ~8개(P3 약 +17s). 창 길이·HP 불변.
+	var cap: int = maxi(3, int(ceil(float(max_hp) / 8.0)))
 	var allowed: int = cap - _window_dmg
 	if allowed <= 0:
 		SfxPlayer.play_at("bullet_deflect_shield", global_position, -6.0)

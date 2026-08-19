@@ -11,14 +11,26 @@ signal phase_changed(new_phase: int)
 signal self_destruct_started
 signal self_destruct_disarmed
 
-const HP_MAX: int = 24
-const HP_PHASE2: int = 16  # 이 값 이하 들어오면 P2
-const HP_PHASE3: int = 8   # 이 값 이하 들어오면 P3
-const HP_SELF_DESTRUCT: int = 5  # 이 값 이하 시 자폭 카운트다운 시작 (버퍼 — 잔탄에 즉사 방지, 자폭 시퀀스 보장)
+const HP_MAX: int = 28     # 보스전 확대(2026-08-19): 24→28 · 실측 20.4s가 클라이맥스로 짧았다
+const HP_PHASE2: int = 19  # 이 값 이하 들어오면 P2
+const HP_PHASE3: int = 10  # 이 값 이하 들어오면 P3
+const HP_SELF_DESTRUCT: int = 6  # 이 값 이하 시 자폭 카운트다운 시작 (버퍼 — 잔탄에 즉사 방지, 자폭 시퀀스 보장)
 const HP_SELF_DESTRUCT_STORY: int = 2  # 스토리 보스(HP 8)는 더 낮게 — 충분히 싸운 뒤 자폭
 # 스토리 모드 — P2/P3 스킵, 자폭 트리거까지 짧게.
 const HP_MAX_STORY: int = 8
 const PHASE_FREEZE_DURATION: float = 1.2  # 페이즈 전환 시 정지 + 무적 시간
+
+# 과부하 배기(vent) — 창당 피해 상한(FalseVeil max_hp/6 문법 이식 · 2026-08-19 보스전 확대).
+# 어떤 화력이든 배기 ~7회를 상대해야 자폭 임계에 닿는다 = 시간 하한 보장(known_issues:
+# "수치 상향만으론 평소와 같음" — HP가 아니라 창이 길이를 만든다). 배기 중 무적 + 증기 방출
+# + 증원 1기 호출(무방비를 잡몹이 메운다). 스토리 모드는 미적용(짧게 유지).
+const VENT_DIVISOR: float = 8.0
+const VENT_DURATION: float = 3.0
+const VENT_SUMMON_CAP: int = 4       # 배기 증원 포함 동시 소환수 상한
+# 위장 자폭(1회) — 페이크 보스 서사(§7 "이긴 순간을 이긴 것 같지 않게")의 전투 내 실연.
+# 첫 자폭은 진짜처럼 터지지만 코어가 재점화한다. 두 번째 자폭이 진짜(기존 흐름).
+const REIGNITE_HP_RATIO: float = 0.18
+const REIGNITE_SPEED_MUL: float = 1.15
 
 const SELF_DESTRUCT_TIME: float = 3.6
 const SELF_DESTRUCT_INNER: float = 280.0   # 이 안: full 데미지
@@ -81,6 +93,12 @@ var danger_ring_inner: Line2D = null  # 자폭 inner 빨간 외곽선
 var danger_ring_outer: Line2D = null  # 자폭 outer 노랑 외곽선
 var self_destruct_fall_v: float = 0.0  # 자폭 중 추락 속도 누적 (gravity-like)
 var spark_t: float = 0.0  # 파지직 spawn 타이머
+var _window_dmg: int = 0            # 배기 창 누적 피해
+var vent_t: float = 0.0             # >0: 과부하 배기 중(무적)
+var _fake_destruct_done: bool = false   # 위장 자폭 소진 여부
+var _speed_mul: float = 1.0         # 재기동 후 이동 배속
+var _vent_summon_kind: int = 2      # 배기 증원 타입 교대(드론↔순찰)
+var _debris_nodes: Array = []       # P3 낙하 잔해(§6-3) — 사망 시 정리
 
 # 텔레그래프 시각 노드
 var bomb_dot: ColorRect = null
@@ -149,6 +167,15 @@ func _physics_process(delta: float) -> void:
 		velocity = Vector2.ZERO
 		move_and_slide()
 		return
+	# 과부하 배기 — 제자리 감속 + 증기 방출. 공격 정지(무방비는 증원이 메운다).
+	if vent_t > 0.0:
+		vent_t -= delta
+		velocity = velocity.move_toward(Vector2.ZERO, 420.0 * delta)
+		move_and_slide()
+		_emit_vent_steam(delta)
+		if vent_t <= 0.0:
+			_window_dmg = 0
+		return
 	_move(delta)
 	_attacks(delta)
 	_check_touch_player()
@@ -198,10 +225,11 @@ func _emit_sparks(delta: float) -> void:
 		tw.tween_callback(spark.queue_free)
 
 func _current_speed() -> float:
+	var base: float = SPEED_P1
 	match phase:
-		2: return SPEED_P2
-		3: return SPEED_P3
-	return SPEED_P1
+		2: base = SPEED_P2
+		3: base = SPEED_P3
+	return base * _speed_mul
 
 func _move(_delta: float) -> void:
 	var p: Node2D = _find_player()
@@ -326,6 +354,23 @@ func take_damage(amount: int, _from_dir: int = 0) -> void:
 	# 문제 — 사용자 보고. 처치는 카운트다운 종료 → _detonate → _die로만 일어남.)
 	if self_destruct_active:
 		return
+	# 과부하 배기 중 무적 — 증기 연출이 "지금은 안 박힌다"의 tell.
+	if vent_t > 0.0:
+		SfxPlayer.play_at("bullet_deflect_shield", global_position, -8.0)
+		return
+	# 창당 피해 상한 — 초과분은 흘려보낸다(고화력 즉사 차단 · 시간 하한).
+	if not story_simplified:
+		var cap: int = maxi(4, int(ceil(float(max_hp) / VENT_DIVISOR)))
+		var allowed: int = cap - _window_dmg
+		if allowed <= 0:
+			# 가득 찬 창에 또 맞으면 즉시 배기 — 페이즈 freeze와 겹쳐 배기가 보류된 경우
+			# 여기서라도 걸어 준다(안 걸면 "창 가득 + 배기 없음" = 영구 무적 데드락 · 하니스 실측).
+			SfxPlayer.play_at("bullet_deflect_shield", global_position, -8.0)
+			if phase_freeze_t <= 0.0:
+				_enter_vent()
+			return
+		amount = mini(amount, allowed)
+		_window_dmg += amount
 	hp = max(0, hp - amount)
 	_flash_hit()
 	if hp > 0:
@@ -344,6 +389,10 @@ func take_damage(amount: int, _from_dir: int = 0) -> void:
 		return
 	if hp <= 0:
 		_die()
+		return
+	# 창 상한 도달 → 과부하 배기(무적 3s + 증기 + 증원 1기). 페이즈 freeze 중이면 그 뒤로.
+	if not story_simplified and _window_dmg >= maxi(4, int(ceil(float(max_hp) / VENT_DIVISOR))) 			and phase_freeze_t <= 0.0:
+		_enter_vent()
 
 func _flash_hit() -> void:
 	if visual == null:
@@ -372,7 +421,82 @@ func _transition_to(new_phase: int) -> void:
 			3: visual.self_modulate = Color(1.4, 0.55, 0.55)  # 빨강 tint
 			_: visual.self_modulate = Color(1, 1, 1)
 	_summon_minions(new_phase)
+	# P3 불안정 구간 — 낙하 잔해 2존(final_boss_rework §6-3 · 자폭 문법과 정합 · 가벼운 빈도).
+	# lab ground 820 기준(HOVER 상수들과 같은 좌표계). 사망 시 _debris_nodes로 정리.
+	if new_phase == 3 and not story_simplified and _debris_nodes.is_empty():
+		for cfg0 in [{"x_min": 300.0, "x_max": 800.0, "interval": 7.0},
+				{"x_min": 1150.0, "x_max": 1650.0, "interval": 8.0, "phase": 0.5}]:
+			var fd := FallingDebris.new()
+			get_parent().add_child(fd)
+			fd.setup(cfg0, 820.0)
+			_debris_nodes.append(fd)
 	emit_signal("phase_changed", new_phase)
+
+# 과부하 배기 진입 — 무적 3s + 증기 + 증원 1기(상한 안에서). 배기가 끝나면 창 리셋.
+func _enter_vent() -> void:
+	if vent_t > 0.0 or self_destruct_active or dead:
+		return
+	vent_t = VENT_DURATION
+	SfxPlayer.play_at("hatch_open", global_position)
+	# 증원 1기 — 배기 중 무방비를 잡몹이 메운다. 타입은 드론↔순찰 교대, 상한 준수.
+	if phase >= 2:
+		var alive: int = 0
+		for m in summoned_minions:
+			if is_instance_valid(m) and not bool((m as Node).get("dead")):
+				alive += 1
+		if alive < VENT_SUMMON_CAP:
+			var kind: int = _vent_summon_kind
+			_vent_summon_kind = 0 if _vent_summon_kind == 2 else 2
+			var y: float = HOVER_Y if kind == 2 else (global_position.y + 280.0)
+			var side: float = -1.0 if randf() < 0.5 else 1.0
+			var pos := Vector2(clampf(global_position.x + side * SUMMON_OFFSET_X, 140.0, 1780.0), y)
+			var hp_for: int = SUMMON_DRONE_HP if kind == 2 else SUMMON_PATROL_HP
+			var m2: CharacterBody2D = _spawn_minion(kind, pos, hp_for)
+			if m2 != null:
+				summoned_minions.append(m2)
+
+# 배기 증기 — 몸체 좌우로 청백 증기 사각이 흩어진다(시각 tell · 피격 플래시(modulate)와
+# 페이즈 틴트(self_modulate)를 건드리지 않는 별도 노드 — known_issues 틴트 충돌 규칙).
+func _emit_vent_steam(delta: float) -> void:
+	spark_t -= delta
+	if spark_t > 0.0:
+		return
+	spark_t = 0.10
+	for i in 2:
+		var puff := ColorRect.new()
+		puff.color = Color(0.75, 0.88, 0.95, 0.55)
+		var sz: float = randf_range(6.0, 14.0)
+		puff.size = Vector2(sz, sz)
+		puff.position = Vector2(randf_range(-46.0, 46.0), randf_range(-16.0, 16.0))
+		puff.z_index = 5
+		add_child(puff)
+		var tw := puff.create_tween()
+		tw.set_parallel(true)
+		tw.tween_property(puff, "position", puff.position + Vector2(randf_range(-40.0, 40.0), -70.0), 0.6)
+		tw.tween_property(puff, "modulate:a", 0.0, 0.6)
+		tw.chain().tween_callback(puff.queue_free)
+
+# 위장 자폭 후 재기동 — 링 정리 + 소량 재점화 HP + 배속. Stage가 disarm 시그널로
+# 배너를 걷고 재기동 자막을 낸다. freeze 무적 1.2s로 인지 시간 보장.
+func _reignite() -> void:
+	_fake_destruct_done = true
+	self_destruct_active = false
+	self_destruct_t = 0.0
+	self_destruct_fall_v = 0.0
+	_window_dmg = 0
+	for ring in [danger_ring_inner, danger_ring_outer]:
+		if ring != null and is_instance_valid(ring):
+			ring.queue_free()
+	danger_ring_inner = null
+	danger_ring_outer = null
+	hp = maxi(hp, int(ceil(float(max_hp) * REIGNITE_HP_RATIO)))
+	_speed_mul = REIGNITE_SPEED_MUL
+	phase = 3
+	phase_freeze_t = PHASE_FREEZE_DURATION
+	SfxPlayer.play_at("boss_self_destruct_disarm", global_position)
+	if visual != null:
+		visual.self_modulate = Color(1.4, 0.55, 0.55)
+	emit_signal("self_destruct_disarmed")
 
 # 페이즈 전환 시 좌/우 화면 가장자리 위쪽에서 잔당 2마리 spawn.
 # P2 = drone 2 (천장 폭격으로 지상 압박), P3 = patrol 2 (지면 추격으로 회피 동선 좁힘).
@@ -492,6 +616,11 @@ func _detonate() -> void:
 	tw.tween_property(blast, "scale", Vector2(1.0, 1.0), 0.5)
 	tw.tween_property(blast, "modulate", Color(1, 1, 1, 0), 0.7)
 	tw.chain().tween_callback(blast.queue_free)
+	# 위장 자폭(1회) — 첫 폭발은 피해·시각까지 진짜와 동일하지만 코어가 재점화한다.
+	# 페이크 보스 서사(§7)의 전투 내 실연 · 두 번째 자폭이 진짜(기존 흐름 그대로).
+	if not _fake_destruct_done and not story_simplified:
+		_reignite()
+		return
 	# 자폭으로 사망 처리
 	_die()
 
@@ -508,6 +637,10 @@ func _die() -> void:
 		if is_instance_valid(m):
 			m.queue_free()
 	summoned_minions.clear()
+	for fd in _debris_nodes:
+		if is_instance_valid(fd):
+			(fd as Node).queue_free()
+	_debris_nodes.clear()
 	emit_signal("self_destruct_disarmed")
 	emit_signal("killed", global_position)
 	# 시각적 사라짐

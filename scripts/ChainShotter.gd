@@ -10,12 +10,9 @@ const STAGE_SCENE: String = "res://scenes/stage.tscn"
 const OUT_DIR: String = "res://poster_out/chain_shots"
 
 const TARGETS: Array = [
-	{"rid": "route_subway",           "stage": 1, "seg": 1, "x": 900.0},
-	{"rid": "route_subway",           "stage": 1, "seg": 1, "x": 2600.0},
-	{"rid": "route_control_corridor", "stage": 6, "seg": 2, "x": 2150.0},
-	{"rid": "route_warehouse",        "stage": 4, "seg": 0, "x": 1200.0},
-	{"rid": "route_warehouse",        "stage": 4, "seg": 2, "x": 1400.0},
-	{"rid": "route_escape_destroy",   "stage": 15, "seg": 0, "x": -1.0},
+	{"rid": "route_relay_station", "stage": 10, "seg": 0, "x": 1400.0},
+	{"rid": "route_relay_station", "stage": 10, "seg": 1, "x": 1600.0},
+	{"rid": "route_relay_station", "stage": 10, "seg": 2, "x": 1500.0},
 ]
 
 func _ready() -> void:

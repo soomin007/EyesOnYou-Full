@@ -869,17 +869,44 @@ static func _datacenter() -> Dictionary:
 					"drone":  [Vector2(960, 200.0)],
 				},
 			},
+			# ── 배치 3 확장(2026-08-19): 웨이브 3 → 6. ARENA는 체인 대신 웨이브 수·구성으로
+			# 시간을 번다(room_chain_expansion §3 · 목표 막3 90~120s). 전개 아크: 지상 개전 →
+			# 원거리 → 지상 러시 → 대공 국면(겹침) → 방패 압박 → 재머 절정.
+			# 소프트락 규칙: 드론 단독 웨이브 금지(스토리 모드 드론 스킵 = 빈 웨이브 = 체인 정지).
 			{
-				"trigger": "prev_clear",  # 직전 웨이브 전원 처치 시
-				"banner":  "FINAL WAVE",
+				"trigger": "prev_clear",
+				"banner":  "WAVE 3",
 				"enemies": {
 					"bomber": [Vector2(600, 790.0), Vector2(1400, 790.0)],
+					"patrol": [Vector2(300, 790.0), Vector2(1620, 790.0)],
+				},
+			},
+			{
+				"trigger": "prev_half",   # 러시가 반쯤 정리되면 위가 열린다 - 겹침 압박
+				"banner":  "WAVE 4",
+				"enemies": {
+					"drone":  [Vector2(600, 200.0), Vector2(1320, 200.0)],
+					"sniper": [Vector2(960, 550.0)],
+				},
+			},
+			{
+				"trigger": "prev_clear",
+				"banner":  "WAVE 5",
+				"enemies": {
+					"shield": [Vector2(500, 790.0), Vector2(1420, 790.0)],
+					"bomber": [Vector2(960, 790.0)],
+				},
+			},
+			{
+				"trigger": "prev_clear",
+				"banner":  "FINAL WAVE",
+				"enemies": {
 					"shield": [Vector2(960, 790.0)],
-					# 라이벌 VEIL 확산(§5·§6, 막3 s6) — server_hall 재머를 ARENA로 옮긴 새 쓰임새.
-					# 절정(근접 웨이브)에 우측 클러스터(shield@960·bomber@1400) 마커가 반경(340) 안에서
-					# 꺼지고 시야가 무너진다. 통과형 복도와 달리 여기선 못 지나치고 갇혀 싸우므로,
-					# ENEMY_CLEAR = 반드시 부숴야 클리어 → "우선 표적" 손맛이 강제된다. 좌측 bomber@600은
-					# 반경 밖이라 유지(비대칭 — 밝은 쪽/가려진 쪽). 막3=드물게(맵당 1기, §4.1 남발 금지).
+					"sniper": [Vector2(200, 550.0), Vector2(1700, 550.0)],
+					"patrol": [Vector2(400, 790.0), Vector2(1500, 790.0)],
+					# 라이벌 VEIL 확산(§5·§6, 막3 s6) - server_hall 재머를 ARENA로 옮긴 새 쓰임새.
+					# 절정(근접 웨이브)에 클러스터 마커가 반경(340) 안에서 꺼지고 시야가 무너진다.
+					# ENEMY_CLEAR = 반드시 부숴야 클리어 - "우선 표적" 손맛 강제. 막3 = 맵당 1기.
 					"jammer": [Vector2(1080, 790.0)],
 				},
 			},
@@ -893,9 +920,9 @@ static func _datacenter() -> Dictionary:
 			"shield": [Vector2(960, 790.0)],
 			"jammer": [Vector2(1080, 790.0)],
 		},
-		"rewards": {"xp_orbs": [], "hp_pickups": []},
+		"rewards": {"xp_orbs": [], "hp_pickups": [Vector2(960, 310.0)]},   # 상층 중앙 · 6웨이브 장기전 유지력
 		"spikes": [],
-		"arena_clear_xp": 4,
+		"arena_clear_xp": 5,   # 웨이브 3→6 확장 상향(2026-08-19)
 		# 후반 ARENA 압박 — 양 벽 중층(서버 랙 높이)에서 가로 교차 발사. 랙 위 캠핑 차단, 타이밍 회피.
 		# 탄 사거리 ~736px라 좌 포탑은 좌측 랙(200/600), 우 포탑은 우측 랙(1400/1000)을 견제 → 중앙은 상대 안전지대.
 		"traps": [
@@ -1760,40 +1787,131 @@ static func _pump_station() -> Dictionary:
 		"spikes": [],
 	}
 
-# ─── 19. 통신 중계소 (HORIZONTAL, 막2) — 저격+드론 복합 노출 ──
+# ─── 19. 통신 중계소 (HORIZONTAL, 막4 s10~12) — 간섭 펄스 + 저격·드론 복합 ──
+# 방 체인 3방(2026-08-19 배치 3 · room_chain_expansion §3). 시그니처 = 전파 간섭 펄스
+# (Interference · 무해): 주기적으로 VEIL 마커·위협 콜이 잠깐 흐려진다. 재머(국소·상시·파괴
+# 가능)의 시간판 — 전역이지만 지나간다. map_identity_rework §8 △ 보강을 막4 맥락으로 재정의
+# (문서의 "막2 무해 펄스" 스케치는 현 배치 s10~12에 맞춰 승격). 정찰 보상(recon)은 관통.
+# 리듬: 방1 학습(12s 주기) → 방2 본 손맛(9s + 재머 이중 간섭) → 방3 절정(7s + 송신 차단기
+# 레버 = 간섭 종료 페이오프). 재머는 체인 전체 1기(방2)로 "맵당 1기" 규약 유지.
 static func _relay_station() -> Dictionary:
+	return {"segments": [_relay_yard(), _relay_hall(), _relay_mast()]}
+
+# 방1 · 안테나 마당(옥외). 간섭 펄스 학습 — 12s 주기, VEIL이 첫 줄로 규칙을 알려준다.
+# 기단 2개(랜드마크) + 저단차 정비 단 + 후반 포켓(수칙: 등간격 메트로놈 해체).
+static func _relay_yard() -> Dictionary:
 	return {
 		"world_type":   "HORIZONTAL",
-		"world_size":   Vector2(3600.0, 720.0),
+		"world_size":   Vector2(3200.0, 720.0),
 		"player_start": Vector2(140.0, 540.0),
 		"goal_type":    "POSITION",
-		"goal_pos":     Vector2(3480.0, 540.0),
+		"goal_pos":     Vector2(3080.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
+		"ambience":     "relay_yard",
+		"indoor_env":   "electrical",
+		"interference": {"period": 12.0, "blur": 2.2},
 		"platforms": [
-			{"pos": Vector2(600, 460),  "w": 200.0},
-			{"pos": Vector2(1080, 440), "w": 180.0},
-			{"pos": Vector2(1560, 460), "w": 200.0},
-			{"pos": Vector2(2060, 440), "w": 180.0},
-			{"pos": Vector2(2560, 460), "w": 200.0},
-			{"pos": Vector2(3040, 470), "w": 200.0},
+			{"pos": Vector2(620, 460),  "w": 220.0},   # 안테나 기단 A(랜드마크·저격)
+			{"pos": Vector2(1050, 520), "w": 150.0},   # 저단차 정비 단
+			{"pos": Vector2(1650, 530), "w": 110.0},   # 발디딤
+			{"pos": Vector2(1900, 450), "w": 200.0},   # 안테나 기단 B(저격)
+			{"pos": Vector2(2600, 470), "w": 180.0},   # 후반 포켓
 		],
 		"enemies": {
-			"patrol": [Vector2(900, 600.0), Vector2(2400, 600.0)],
-			# 안테나/중계기 위 저격 + 머리 위 드론 — 둘 다 동시 압박.
-			"sniper": [Vector2(1560, 428.0), Vector2(2560, 428.0)],
-			"drone":  [Vector2(1300, 230.0), Vector2(2100, 240.0), Vector2(2900, 230.0)],
-			"bomber": [],
-			"shield": [],
-			# 막4 재머 흔해짐(act_identity §6) — 통신 중계소에 교란 장치(서사 정합). server_hall 패턴:
-			# 후반 클러스터(sniper@2560·drone@2900·patrol@2400) 마커가 반경(340) 안에서 꺼진다.
-			# 전반(sniper@1560·drone@1300/2100)은 마커 유지 — 앞은 밝고 뒤는 깜깜(비대칭, fair).
-			"jammer": [Vector2(2700, 600.0)],
+			"patrol": [Vector2(830, 600.0), Vector2(2350, 600.0)],
+			"sniper": [Vector2(620, 448.0), Vector2(1900, 438.0)],
+			"drone":  [Vector2(1450, 235.0)],
+			"bomber": [], "shield": [],
 		},
 		"rewards": {
-			"xp_orbs":    [Vector2(1080, 410.0), Vector2(2060, 410.0), Vector2(3040, 440.0)],
-			"hp_pickups": [Vector2(1560, 430.0)],
+			"xp_orbs":    [Vector2(1050, 490.0), Vector2(2600, 440.0)],
+			"hp_pickups": [],
 		},
 		"spikes": [],
+		"no_spike_fallback": true,
+		"route_lines": [
+			{"x": 300.0, "who": "veil", "text": "전파가 고르지 않아요. 주기적으로 제 표시가 흐려집니다. 흐려지는 동안은 요원 눈이 우선이에요.", "dur": 4.0},
+		],
+	}
+
+# 방2 · 중계 홀(실내). 본 손맛 — 펄스 9s + 재머 1기(후반 클러스터 그늘): 전역(시간)과
+# 국소(공간)의 이중 간섭. 랙 2층 구조로 수직 동선(수칙: 지형마다 서는 적 배치).
+static func _relay_hall() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(3800.0, 720.0),   # 4200→3800 · 봇 실측 방2 89.5s 과중(밴드 상한 초과) 압축
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(3680.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"ambience":     "relay_hall",
+		"indoor_env":   "electrical",
+		"interference": {"period": 9.0, "blur": 2.6},
+		"platforms": [
+			{"pos": Vector2(700, 470),  "w": 200.0},
+			{"pos": Vector2(1250, 380), "w": 180.0},   # 랙 상단(2층 · 저격)
+			{"pos": Vector2(1700, 470), "w": 200.0},
+			{"pos": Vector2(2500, 450), "w": 220.0},
+			{"pos": Vector2(2950, 380), "w": 160.0},   # 랙 상단(2층 · 저격)
+			{"pos": Vector2(3450, 460), "w": 200.0},
+		],
+		"enemies": {
+			"patrol": [Vector2(950, 600.0), Vector2(2250, 600.0)],
+			"sniper": [Vector2(1250, 368.0), Vector2(2950, 368.0)],
+			"drone":  [Vector2(1950, 240.0)],   # 후반 드론 1기 감축(방2 체류 과중)
+			"bomber": [],
+			"shield": [Vector2(2700, 600.0)],
+			# 후반 클러스터(sniper@2950·drone@3300)가 재머 반경(340) 그늘 — 앞은 밝고 뒤는 깜깜.
+			"jammer": [Vector2(3150, 600.0)],
+		},
+		"rewards": {
+			"xp_orbs":    [Vector2(1250, 350.0), Vector2(2500, 420.0)],
+			"hp_pickups": [Vector2(1700, 440.0)],
+		},
+		"spikes": [],
+		"no_spike_fallback": true,
+		"route_lines": [
+			{"x": 2350.0, "who": "veil", "text": "이 방엔 방해 장치도 있어요. 주기 간섭과 달리 저건 부수면 걷힙니다.", "dur": 3.6},
+		],
+	}
+
+# 방3 · 송신탑 기단(절정). 펄스 7s 최고조 + 송신 차단기 레버 = 간섭 종료 + 문 개방
+# (기믹과 관문의 서사 결합). 레버 발판 Δ160 이하 + 상공 드론 금지(배치 1 교훈).
+static func _relay_mast() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(3200.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(3080.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"ambience":     "relay_mast",
+		"indoor_env":   "electrical",
+		"interference": {"period": 7.0, "blur": 2.8, "lever_stops": true},
+		"mid_gate": {"x": 2620.0, "mode": "lever", "lever": Vector2(2340.0, 418.0)},
+		"platforms": [
+			{"pos": Vector2(600, 470),  "w": 180.0},
+			{"pos": Vector2(1500, 440), "w": 200.0},
+			{"pos": Vector2(1950, 520), "w": 130.0},
+			{"pos": Vector2(2340, 440), "w": 160.0},   # 송신 차단기 레버 발판(Δ160)
+			{"pos": Vector2(2900, 470), "w": 160.0},   # 문 뒤 출구 구간
+		],
+		"enemies": {
+			"patrol": [Vector2(900, 600.0), Vector2(2450, 600.0)],
+			"sniper": [Vector2(1500, 428.0)],
+			"drone":  [Vector2(700, 240.0)],
+			"bomber": [Vector2(2100, 600.0)],
+			"shield": [],
+		},
+		"rewards": {
+			"xp_orbs":    [Vector2(1500, 410.0)],
+			"hp_pickups": [],
+		},
+		"spikes": [],
+		"no_spike_fallback": true,
+		"route_lines": [
+			{"x": 1250.0, "who": "veil", "text": "앞쪽 송신 차단기를 내리면 간섭이 멎어요. 문도 그 전원에 물려 있습니다.", "dur": 3.8},
+		],
 	}
 
 # ─── 20. 물류 창고 (HORIZONTAL, 막2) — 적재함 엄폐 + 혼합 근접(방패/폭격) ──
@@ -2600,7 +2718,7 @@ static func _scanner_sweep() -> Dictionary:
 		"spikes": [],
 	}
 
-# ─── 저지선 (ARENA, 웨이브) — 부서지는 엄폐 농성(pop-and-shoot) 기믹 맵 (막2 s4~5) ─────────
+# ─── 저지선 (ARENA, 웨이브 6) — 부서지는 엄폐 농성(pop-and-shoot) · 막4~5 s11~12 ─────────
 # 정체성: 부서지는 바리케이드(DestructibleCover) 뒤에서 몸을 내밀어 쏘고 숨으며(pop-and-shoot) 밀려오는
 #   웨이브를 저지한다. 좌우 벽 포탑(traps, LoS 무관)이 바리케이드를 지속 사격해 갉아 → 엄폐는 유한 자원.
 #   엄폐가 부서질수록 노출이 커져 후반 긴장이 고조된다. 부서지기 전에 다 정리하는 게 목표.
@@ -2688,8 +2806,8 @@ static func _holdout() -> Dictionary:
 		"ground_y":     820.0,
 		# 부서지는 바리케이드 — 안쪽 2개(주 엄폐, hp5) + 바깥 2개(완충, hp4). 좌우 대칭.
 		"destructible_covers": [
-			{"pos": Vector2(740.0, 820.0),  "w": 92.0, "h": 92.0, "hp": 5},
-			{"pos": Vector2(1180.0, 820.0), "w": 92.0, "h": 92.0, "hp": 5},
+			{"pos": Vector2(740.0, 820.0),  "w": 92.0, "h": 92.0, "hp": 6},
+			{"pos": Vector2(1180.0, 820.0), "w": 92.0, "h": 92.0, "hp": 6},
 			{"pos": Vector2(470.0, 820.0),  "w": 84.0, "h": 78.0, "hp": 4},
 			{"pos": Vector2(1450.0, 820.0), "w": 84.0, "h": 78.0, "hp": 4},
 		],
@@ -2730,16 +2848,39 @@ static func _holdout() -> Dictionary:
 					"sniper": [Vector2(340, 490.0)],
 				},
 			},
+			# ── 배치 3 확장(2026-08-19): 웨이브 3 → 6(room_chain_expansion §3 · 목표 막4 100~130s).
+			# 농성 아크: 개전 → 폭탄 압박 → 지상 파도 → 원거리 협공(겹침) → 방패 전진 → 재머 절정.
+			# 엄폐(hp 4~6)는 유한 자원 - 후반일수록 노출 고조가 이 맵의 정체성.
 			{
-				"trigger": "prev_clear",  # 2웨이브 전멸 시 — 최고조: 방패병 중앙 돌파 + 순찰 + 저격 양쪽
+				"trigger": "prev_clear",
+				"banner":  "WAVE 3",
+				"enemies": {
+					"patrol": [Vector2(180, 790.0), Vector2(1740, 790.0), Vector2(120, 790.0)],
+				},
+			},
+			{
+				"trigger": "prev_half",   # 파도가 반쯤 남았을 때 위에서 협공 - 겹침 압박
+				"banner":  "WAVE 4",
+				"enemies": {
+					"sniper": [Vector2(340, 490.0), Vector2(1580, 490.0)],
+					"bomber": [Vector2(960, 790.0)],
+				},
+			},
+			{
+				"trigger": "prev_clear",
+				"banner":  "WAVE 5",
+				"enemies": {
+					"shield": [Vector2(180, 790.0)],
+					"patrol": [Vector2(1740, 790.0), Vector2(1800, 790.0)],
+				},
+			},
+			{
+				"trigger": "prev_clear",
 				"banner":  "FINAL WAVE",
 				"enemies": {
 					"shield": [Vector2(960, 790.0)],
 					"patrol": [Vector2(180, 790.0), Vector2(1740, 790.0)],
 					"sniper": [Vector2(340, 490.0), Vector2(1580, 490.0)],
-					# 막4 재머 흔해짐(act_identity §6) — datacenter 패턴(절정 웨이브 교란). 우측 바리케이드
-					# (1180·1450) 구간과 우측 저격(1580) 마커가 반경(340) 안에서 꺼진다 — 우측 pop이 블라인드.
-					# 좌측(340·740)은 반경 밖 유지(비대칭, fair). ENEMY_CLEAR라 반드시 처치("우선 표적").
 					"jammer": [Vector2(1240, 790.0)],
 				},
 			},
@@ -2759,5 +2900,5 @@ static func _holdout() -> Dictionary:
 			"hp_pickups": [Vector2(960, 700.0)],
 		},
 		"spikes": [],
-		"arena_clear_xp": 5,
+		"arena_clear_xp": 6,   # 웨이브 3→6 확장 상향(2026-08-19)
 	}

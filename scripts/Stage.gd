@@ -86,6 +86,7 @@ func _ready() -> void:
 	# 자체적으로 veil_degraded를 검사하므로(self-gate), 연습장의 시야붕괴 토글로도 테스트된다.
 	_arm_degraded_hazard_warning()
 	_setup_veil_sight()
+	_build_interference()
 	_setup_challenge_mode()
 	_build_lever_puzzles()
 	if GameState.playground_active:
@@ -99,6 +100,16 @@ func _ready() -> void:
 			get_tree().create_timer(1.2, false).timeout.connect(func() -> void:
 				if is_inside_tree():
 					_show_veil_subtitle("정찰 데이터를 반영했어요. 이번 구간은 표시가 더 멀리, 방해 너머까지 닿습니다.", 3.6))
+
+# 전파 간섭 펄스(중계소 시그니처) — MapData "interference" 키가 있으면 생성.
+# blackout은 VeilSight 자체가 없어(_setup_veil_sight early-return) 자동 무효.
+func _build_interference() -> void:
+	var cfg: Dictionary = _map_data.get("interference", {})
+	if cfg.is_empty() or _veil_sight == null or not is_instance_valid(_veil_sight):
+		return
+	var node := Interference.new()
+	add_child(node)
+	node.setup(cfg, _veil_sight)
 
 # 맵 → BGM 트랙 매핑.
 # BPM 점진 증가 (Glass→Cold Gear→Cold Wire→Chrome Grit) 순서를 stage 진행과 매칭.
@@ -1991,6 +2002,175 @@ func _ambience_substation_control() -> void:
 	add_child(tray)
 	_add_lore_label(Vector2(360.0, -30.0), "배전 제어실 · 차단기", Color(0.95, 0.78, 0.35, 0.5), 15)
 
+# 안테나 마당(중계소 체인 방1, 옥외) — 격자 철탑 실루엣 + 접시 안테나 + 처진 가공 케이블.
+# 수직 스트라이프 습관 금지: 철탑은 3기 비등간격 + 사선 브레이스가 실루엣의 본체.
+func _ambience_relay_yard() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 389 + GameState.current_segment * 11 + 3
+	var tower_xs: Array = [520.0, 1720.0, 2680.0]
+	var prev_top: Vector2 = Vector2.ZERO
+	for ti in tower_xs.size():
+		var tx: float = float(tower_xs[ti])
+		var th: float = rng.randf_range(340.0, 430.0)
+		var half: float = 34.0
+		# 다리 2주 + 사선 크로스 브레이스 4단(격자 철탑 실루엣).
+		for sx in [-1.0, 1.0]:
+			var leg := ColorRect.new()
+			leg.color = Color(0.16, 0.17, 0.20)
+			leg.position = Vector2(tx + sx * half - 3.0, GROUND_Y - th)
+			leg.size = Vector2(6.0, th)
+			leg.z_index = -13
+			add_child(leg)
+		for b in 4:
+			var by: float = GROUND_Y - th + float(b) * th * 0.25
+			var brace := Line2D.new()
+			brace.width = 3.0
+			brace.default_color = Color(0.20, 0.21, 0.25, 0.9)
+			brace.add_point(Vector2(tx - half, by))
+			brace.add_point(Vector2(tx + half, by + th * 0.25))
+			brace.z_index = -13
+			add_child(brace)
+			var brace2 := Line2D.new()
+			brace2.width = 3.0
+			brace2.default_color = Color(0.20, 0.21, 0.25, 0.9)
+			brace2.add_point(Vector2(tx + half, by))
+			brace2.add_point(Vector2(tx - half, by + th * 0.25))
+			brace2.z_index = -13
+			add_child(brace2)
+		# 접시 안테나(사각 추상) + 지지 암 · 상단 항공 장애등(정적 적색 — 점멸 금지).
+		var dish := ColorRect.new()
+		dish.color = Color(0.28, 0.30, 0.36)
+		dish.position = Vector2(tx + 18.0, GROUND_Y - th + 26.0)
+		dish.size = Vector2(34.0, 22.0)
+		dish.z_index = -12
+		add_child(dish)
+		var lamp := ColorRect.new()
+		lamp.color = Color(0.85, 0.25, 0.22, 0.85)
+		lamp.position = Vector2(tx - 3.0, GROUND_Y - th - 8.0)
+		lamp.size = Vector2(6.0, 6.0)
+		lamp.z_index = -12
+		add_child(lamp)
+		# 처진 가공 케이블(카테너리 근사) — 직전 탑 상단과 잇는다. 수평 모티프.
+		var top: Vector2 = Vector2(tx, GROUND_Y - th + 12.0)
+		if ti > 0:
+			var cable := Line2D.new()
+			cable.width = 2.0
+			cable.default_color = Color(0.32, 0.34, 0.40, 0.6)
+			var sag: float = 46.0
+			for k in 9:
+				var t: float = float(k) / 8.0
+				var px: float = lerpf(prev_top.x, top.x, t)
+				var py: float = lerpf(prev_top.y, top.y, t) + sag * 4.0 * t * (1.0 - t)
+				cable.add_point(Vector2(px, py))
+			cable.z_index = -13
+			add_child(cable)
+		prev_top = top
+	# 지면 장비 셸터(낮은 상자) 몇 동 — 마당의 발치 질감.
+	var sx2: float = 260.0
+	while sx2 < STAGE_LENGTH - 220.0:
+		if rng.randf() < 0.55:
+			var shed := ColorRect.new()
+			shed.color = Color(0.14, 0.15, 0.17)
+			shed.position = Vector2(sx2, GROUND_Y - rng.randf_range(46.0, 70.0))
+			shed.size = Vector2(rng.randf_range(90.0, 150.0), 70.0)
+			shed.z_index = -12
+			add_child(shed)
+		sx2 += rng.randf_range(360.0, 640.0)
+	_add_lore_label(Vector2(340.0, -30.0), "중계 설비 · 출력 점검 중", Color(0.62, 0.72, 0.85, 0.5), 15)
+
+# 중계 홀(중계소 체인 방2, 실내) — 장비 랙 열 + 파형 모니터(지그재그) + 케이블 트레이.
+func _ambience_relay_hall() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 397 + GameState.current_segment * 11 + 5
+	var x: float = 280.0
+	while x < STAGE_LENGTH - 240.0:
+		var rw: float = rng.randf_range(80.0, 120.0)
+		var rh: float = rng.randf_range(220.0, 300.0)
+		var rack := ColorRect.new()
+		rack.color = Color(0.13, 0.14, 0.17)
+		rack.position = Vector2(x, GROUND_Y - rh)
+		rack.size = Vector2(rw, rh)
+		rack.z_index = -12
+		add_child(rack)
+		# 파형 모니터(랙 상단) — 짧은 지그재그 선. 60%만 켜져 있다.
+		if rng.randf() < 0.6:
+			var wave := Line2D.new()
+			wave.width = 2.0
+			wave.default_color = Color(0.35, 0.85, 0.65, 0.8)
+			var wy: float = GROUND_Y - rh + 28.0
+			for k in 7:
+				wave.add_point(Vector2(x + 10.0 + float(k) * (rw - 20.0) / 6.0,
+					wy + (6.0 if k % 2 == 0 else -6.0) * rng.randf_range(0.5, 1.0)))
+			wave.z_index = -11
+			add_child(wave)
+		# 상태 LED 열(정적 — 점멸은 트윈 저속만).
+		for r in 2:
+			if rng.randf() < 0.6:
+				var led := ColorRect.new()
+				led.color = Color(0.42, 0.80, 0.95, 0.85)
+				led.position = Vector2(x + rng.randf_range(10.0, rw - 14.0), GROUND_Y - rh + 60.0 + float(r) * 30.0)
+				led.size = Vector2(5.0, 5.0)
+				led.z_index = -11
+				add_child(led)
+		x += rw + rng.randf_range(100.0, 260.0)
+	# 케이블 트레이 2단(수평 모티프).
+	for ty in [16.0, 40.0]:
+		var tray := ColorRect.new()
+		tray.color = Color(0.28, 0.26, 0.22, 0.45)
+		tray.position = Vector2(-200.0, ty)
+		tray.size = Vector2(STAGE_LENGTH + 400.0, 8.0)
+		tray.z_index = -9
+		add_child(tray)
+	_add_lore_label(Vector2(360.0, -30.0), "중계 홀 · 회선 점검", Color(0.62, 0.72, 0.85, 0.5), 15)
+
+# 송신탑 기단(중계소 체인 방3) — 좌우 비대칭 거대 탑 다리 + 상방 케이블 + 앵커 블록.
+func _ambience_relay_mast() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 401 + GameState.current_segment * 11 + 9
+	# 탑 다리 2주 — 좌우 비대칭(수직 등간격 습관 금지). 위로 갈수록 안쪽으로 기운다.
+	for cfg0 in [{"x": 700.0, "w": 46.0, "lean": 26.0}, {"x": 2150.0, "w": 60.0, "lean": -34.0}]:
+		var cfg: Dictionary = cfg0
+		var bx: float = float(cfg["x"])
+		var bw: float = float(cfg["w"])
+		var lean: float = float(cfg["lean"])
+		var leg := Polygon2D.new()
+		leg.color = Color(0.15, 0.16, 0.19)
+		leg.polygon = PackedVector2Array([
+			Vector2(bx - bw * 0.5, GROUND_Y),
+			Vector2(bx + bw * 0.5, GROUND_Y),
+			Vector2(bx + bw * 0.30 + lean, -120.0),
+			Vector2(bx - bw * 0.30 + lean, -120.0),
+		])
+		leg.z_index = -13
+		add_child(leg)
+		# 수평 브레이스 3단 — 다리의 가로 리듬.
+		for b in 3:
+			var by: float = GROUND_Y - 140.0 - float(b) * 170.0
+			var brace := ColorRect.new()
+			brace.color = Color(0.21, 0.22, 0.26, 0.9)
+			brace.position = Vector2(bx - bw * 0.7 + lean * float(b) / 3.0, by)
+			brace.size = Vector2(bw * 1.4, 8.0)
+			brace.z_index = -13
+			add_child(brace)
+		# 앵커 블록(발치).
+		var anchor := ColorRect.new()
+		anchor.color = Color(0.19, 0.19, 0.21)
+		anchor.position = Vector2(bx - bw * 0.9, GROUND_Y - 34.0)
+		anchor.size = Vector2(bw * 1.8, 34.0)
+		anchor.z_index = -12
+		add_child(anchor)
+	# 상방 지지 케이블(사선) — 탑에서 화면 위로 뻗는다.
+	for k in 4:
+		var cable := Line2D.new()
+		cable.width = 2.0
+		cable.default_color = Color(0.30, 0.32, 0.38, 0.5)
+		var ax: float = 700.0 if k % 2 == 0 else 2150.0
+		cable.add_point(Vector2(ax + rng.randf_range(-30.0, 30.0), GROUND_Y - 200.0 - float(k) * 90.0))
+		cable.add_point(Vector2(ax + rng.randf_range(500.0, 900.0) * (1.0 if k % 2 == 0 else -1.0), -160.0))
+		cable.z_index = -14
+		add_child(cable)
+	_add_lore_label(Vector2(340.0, -30.0), "송신탑 기단 · 출입 통제", Color(0.62, 0.72, 0.85, 0.5), 15)
+
 # 모니터 전실(통제 회랑 체인 방1) — 소형 모니터 뱅크(대부분 꺼짐 · 한둘만 푸르게).
 func _ambience_control_anteroom() -> void:
 	var rng := RandomNumberGenerator.new()
@@ -3152,6 +3332,10 @@ func _open_mid_gate() -> void:
 		return
 	_mid_gate_opened = true
 	SfxPlayer.play("gate_unlock")
+	# 간섭 종료(중계소 방3) — 문과 간섭이 같은 송신 전원에 물려 있다(레버 페이오프).
+	if bool((_map_data.get("interference", {}) as Dictionary).get("lever_stops", false)):
+		for n in get_tree().get_nodes_in_group("interference"):
+			(n as Node).call("halt")
 	if _mid_gate_col != null and is_instance_valid(_mid_gate_col):
 		_mid_gate_col.set_deferred("disabled", true)
 	if _mid_gate_lamp != null and is_instance_valid(_mid_gate_lamp):
@@ -3544,6 +3728,18 @@ func _build_route_ambience() -> void:
 	# 루트별 시각 분위기 — 콜리전 없는 ColorRect/Polygon overlay만 사용.
 	# 방 체인 세그먼트는 layout의 "ambience" 키가 라우트 매핑보다 우선(방마다 배경이 다르다).
 	match str(_map_data.get("ambience", "")):
+		"relay_yard":
+			_ambience_relay_yard()
+			_apply_act_rival_tint()
+			return
+		"relay_hall":
+			_ambience_relay_hall()
+			_apply_act_rival_tint()
+			return
+		"relay_mast":
+			_ambience_relay_mast()
+			_apply_act_rival_tint()
+			return
 		"substation_switchyard":
 			_ambience_substation_switchyard()
 			_apply_act_rival_tint()
@@ -5974,6 +6170,10 @@ func _on_boss_self_destruct_disarmed() -> void:
 	if boss_self_destruct_layer != null and is_instance_valid(boss_self_destruct_layer):
 		boss_self_destruct_layer.queue_free()
 		boss_self_destruct_layer = null
+	# 위장 자폭 재기동(보스 생존) vs 진짜 사망 — 같은 시그널이라 생존 여부로 가른다.
+	var b: Node = get_tree().get_first_node_in_group("boss")
+	if b != null and is_instance_valid(b) and not bool(b.get("dead")):
+		_show_veil_subtitle("...자폭이 위장이에요. 코어가 다시 점화됩니다. 침착하게, 마무리하세요.", 3.6)
 
 func _on_boss_killed(at_position: Vector2) -> void:
 	# Boss는 ARENA enemy_clear에 자연스럽게 잡히도록 wave_idx=-1로 처리하되,
@@ -6190,6 +6390,10 @@ func _on_enemy_killed(at_position: Vector2, wave_idx: int = -1, shiny: bool = fa
 				call_deferred("_start_rival_p2")
 				return
 			elif _rival_phase == 1:
+				# 재접속 노드 예고(1.1s) 중엔 페이즈를 닫지 않는다 — 예고 중 잔여 노드가
+				# 죽으면 재스폰 전에 가짜 클리어가 시작되는 경쟁 조건 차단.
+				if _p2_respawn_pending:
+					return
 				call_deferred("_start_fake_clear")
 				return
 		if _can_arena_clear():
@@ -6232,6 +6436,11 @@ var _p1_side: int = 0
 # 게이트 = rival_kills >= 1(한 번이라도 격파한 상대에게만). 수치(HP·예고·개수)는 불변,
 # 배치·순서·방향만 회전(replay_support_plan §4.3-6 "네가 외운 자리에는 없다" 문법).
 var _p2_first_side_attempt: int = -1   # 이번 시도에서 먼저 부순 P2 노드(0=좌 1=우) · 격파 시 영속 승격
+# 보스전 확대(2026-08-19) — P2 노드 재접속 1회(첫 격파 자리에 재스폰 = 실질 3노드) ·
+# P3 후반 낙하 잔해(final_boss_rework §6-1). 예약 중 페이즈 조기 종료 가드 포함.
+var _p2_respawned: bool = false
+var _p2_respawn_pending: bool = false
+var _p3_debris_nodes: Array = []
 var _p2_flip_timer: Timer = null     # P2 노드 실드 교대 타이머
 var _p2_turrets: Array = []          # P2 벽 포탑 [좌, 우] — 같은 인덱스 기둥이 전원을 댄다
 var _p2_links: Array = []            # 기둥→포탑 전원 케이블 시각(_P2PowerLink)
@@ -6768,6 +6977,19 @@ func _on_p2_node_down(_pos: Vector2, side: int) -> void:
 	# 실패한 시도는 기억되지 않는다(라이벌이 기억하는 건 자기가 진 판).
 	if _p2_first_side_attempt < 0:
 		_p2_first_side_attempt = side
+	# 보스전 확대 — 첫 격파 자리에 노드 재접속 1회(실질 3노드 = P2 길이 +50%).
+	# 같은 자리 재스폰이라 목표 바 분모(2×per_node)를 넘지 않는다(합산 ≤ 2노드).
+	# 정지시킨 포탑은 되살리지 않는다 — 플레이어가 얻은 진전은 유지(fair).
+	if not _p2_respawned and _rival_phase == 1 and not goal_reached:
+		_p2_respawned = true
+		_p2_respawn_pending = true
+		var rx: float = 350.0 if side == 0 else 2050.0
+		var tel := _WaveSpawnTelegraph.new()
+		tel.lifetime = 1.1
+		tel.position = Vector2(rx, 1010.0)
+		add_child(tel)
+		_show_veil_subtitle("...같은 자리에 회선이 다시 붙어요. 한 번 더 끊어야 합니다.", 3.2)
+		get_tree().create_timer(1.1, false).timeout.connect(_p2_respawn_node.bind(side, rx))
 	if side < _p2_links.size():
 		var link = _p2_links[side]
 		if link != null and is_instance_valid(link):
@@ -6782,6 +7004,36 @@ func _on_p2_node_down(_pos: Vector2, side: int) -> void:
 			var tw := (trap as Node2D).create_tween()
 			tw.tween_property(trap, "modulate", Color(0.4, 0.42, 0.5, 0.75), 0.5)
 			SfxPlayer.play_at("plate_step_inactive", (trap as Node2D).global_position)
+
+# 재접속 노드 실스폰(보스전 확대) — 죽은 자리에 1기, 실드 편은 원래의 반대(같은 풀이 금지).
+func _p2_respawn_node(side: int, rx: float) -> void:
+	_p2_respawn_pending = false
+	if _rival_phase != 1 or goal_reached or not is_inside_tree():
+		return
+	SfxPlayer.play("hatch_open")
+	var d_flip: int = -1 if GameState.rival_kills % 2 == 1 and GameState.rival_kills >= 1 else 1
+	var d_base: int = (1 if side == 0 else -1) * d_flip
+	var node := _spawn_enemy(5, Vector2(rx, 1010.0))
+	node.set("hp", _rival_node_hp_p2)
+	node.set_meta("rival_node", true)
+	node.set_meta("fs_dir", -d_base)
+	var arc := _FlipShieldArc.new()
+	node.add_child(arc)
+	var sock := _P2CoreSocket.new()
+	sock.position = (node as Node2D).global_position + Vector2(0.0, 30.0)
+	add_child(sock)
+	_rival_p2_props.append(sock)
+	node.connect("killed", func(_pos: Vector2) -> void:
+		if is_instance_valid(sock):
+			sock.collapse())
+	var pip2 := _NodeHpPip.new()
+	pip2.target = node
+	pip2.max_hp = _rival_node_hp_p2
+	pip2.jolt_cb = Callable(sock, "jolt")
+	add_child(pip2)
+	_rival_p2_props.append(pip2)
+	node.killed.connect(_on_p2_node_down.bind(side))
+	_enemies_remaining += 1
 
 # P2 전원 케이블 — 기둥→포탑을 잇는 처진 바이올렛 라인 + 흐르는 전류 펄스. power_off로 소등.
 class _P2PowerLink extends Node2D:
@@ -7405,6 +7657,15 @@ func _on_p3_stage_shifted(stage_idx: int) -> void:
 		_show_rival_subtitle("잘 보시네요. 그럼 자리를 옮겨 가며 하죠.", 3.0)
 	elif stage_idx == 2:
 		_show_rival_subtitle("...방이 저를 못 버티기 시작하는군요. 서두르겠습니다.", 3.2)
+		# 낙하 잔해 2존(final_boss_rework §6-1) — 진동이 실제 붕괴로 이어지는 체감.
+		# 그림자 예고 0.9s 문법 유지(FallingDebris 자체) · 격파 시 정리.
+		if _p3_debris_nodes.is_empty():
+			for cfg0 in [{"x_min": 400.0, "x_max": 1000.0, "interval": 6.5},
+					{"x_min": 1400.0, "x_max": 2000.0, "interval": 7.5, "phase": 0.5}]:
+				var fd := FallingDebris.new()
+				add_child(fd)
+				fd.setup(cfg0, 1220.0)
+				_p3_debris_nodes.append(fd)
 		_p3_shudder_timer = Timer.new()
 		_p3_shudder_timer.wait_time = 3.2
 		add_child(_p3_shudder_timer)
@@ -7468,6 +7729,10 @@ func _on_false_veil_defeated() -> void:
 	if _p3_bar_layer != null and is_instance_valid(_p3_bar_layer):
 		_p3_bar_layer.queue_free()
 		_p3_bar_layer = null
+	for fd in _p3_debris_nodes:
+		if is_instance_valid(fd):
+			(fd as Node).queue_free()
+	_p3_debris_nodes.clear()
 	# 격파 슬로우 비트(§2.4) · 시간이 잠깐 늘어지고 눈이 천천히 감긴다(FalseVeil DYING 연출과 정렬).
 	Engine.time_scale = 0.35
 	get_tree().create_timer(0.55, true, false, true).timeout.connect(func() -> void:
