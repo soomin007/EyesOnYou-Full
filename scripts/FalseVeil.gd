@@ -33,6 +33,9 @@ const DRIFT_SPEED: float = 60.0
 var max_hp: int = MAX_HP
 var hp: int = MAX_HP
 var state: State = State.PHASED
+# 다회차 기억 변주 시드(Stage가 setup 전에 세팅) — 가짜 눈 앵커 회전 폭 · 결정타 출처 기록.
+var decoy_shift: int = 1
+var last_hit_from_dir: int = 0
 # 변주 단계(0 전반/1 중반/2 후반) · take_damage에서 HP 비율로 전이. 후반은 창이 짧고 잦다.
 var fight_stage: int = 0
 var phased_dur: float = PHASED_DUR
@@ -78,12 +81,14 @@ func _ready() -> void:
 	col.shape = shape
 	add_child(col)
 	z_index = 2
-	# 가짜 눈 동반 스폰 · 부모(스테이지)에 형제로. 앵커는 본체 앵커를 한 칸 돌린 것(같은 자리 금지).
+	# 가짜 눈 동반 스폰 · 부모(스테이지)에 형제로. 앵커는 본체 앵커를 decoy_shift칸 돌린 것
+	# (같은 자리 금지). 기본 1 · 다회차 기억 변주(수류탄 격파 기억)면 Stage가 2로 시드 —
+	# 지난 회차의 진짜 자리에 가짜가 선다.
 	_decoy = _DecoyEye.new()
 	_decoy.owner_fv = self
 	var d_anchors: Array = []
 	for i in _anchors.size():
-		d_anchors.append(_anchors[(i + 1) % _anchors.size()])
+		d_anchors.append(_anchors[(i + maxi(1, decoy_shift)) % _anchors.size()])
 	_decoy.anchors = d_anchors
 	_decoy.global_position = global_position + Vector2(300.0, 40.0)
 	get_parent().call_deferred("add_child", _decoy)
@@ -222,9 +227,11 @@ func _fire_volley() -> void:
 		b.global_position = global_position + base_dir * 30.0
 		get_parent().add_child(b)
 
-func take_damage(amount: int, _from_dir: int = 0) -> void:
+func take_damage(amount: int, from_dir: int = 0) -> void:
 	if state == State.DYING:
 		return
+	# 결정타 출처 기록(다회차 기억) — 총알 ±1 / 폭발(수류탄) 0. Enemy.take_damage와 같은 규약.
+	last_hit_from_dir = from_dir
 	if state != State.SOLID:
 		# 잠복 중엔 실체가 없다 — 탄이 흘러나감(공정: 실체화 창이 명확히 보임).
 		SfxPlayer.play_at("bullet_deflect_shield", global_position, -6.0)

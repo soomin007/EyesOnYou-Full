@@ -137,6 +137,9 @@ var rival_lure_followed_total: int = 0        # 그중 따른 횟수(간파율 �
 var rival_kills: int = 0                      # 14-1 처치 누적
 var rival_fake_clear_seen: bool = false       # 가짜 클리어 목격 — 재방문 시 자기 폭로 후 P3 직행
 var rival_reentry_count: int = 0              # 기록 재진입 사용 누적
+# 다회차 보스 변주(2026-08-19) — 지난 "격파" 런의 공략 방식. 실패한 시도는 기억 안 됨.
+var rival_boss_first_side: int = -1           # P2 노드를 먼저 부순 쪽(0=좌 1=우 · -1=기록 없음)
+var rival_boss_explosive: bool = false        # P3 결정타가 폭발(수류탄)이었나
 
 var skills: Dictionary = {}
 var current_route_id: String = ""
@@ -973,6 +976,8 @@ func reset_meta_memory() -> void:
 	rival_kills = 0
 	rival_fake_clear_seen = false
 	rival_reentry_count = 0
+	rival_boss_first_side = -1
+	rival_boss_explosive = false
 
 # --- 런 진행 저장(이어하기) — user://run.cfg. RouteMap 진입(스테이지 사이)마다 자동저장. ---
 # 직렬화 단일 소스: _store_run_state/_restore_run_state를 run.cfg(이어하기)와
@@ -1275,6 +1280,8 @@ func load_settings() -> void:
 	rival_kills = int(cf.get_value("rival", "kills", 0))
 	rival_fake_clear_seen = bool(cf.get_value("rival", "fake_clear_seen", false))
 	rival_reentry_count = int(cf.get_value("rival", "reentry_count", 0))
+	rival_boss_first_side = int(cf.get_value("rival", "boss_first_side", -1))
+	rival_boss_explosive = bool(cf.get_value("rival", "boss_explosive", false))
 	screen_brightness = clampf(float(cf.get_value("access", "brightness", 1.0)), 0.5, 1.5)
 	sfx_captions = bool(cf.get_value("access", "sfx_captions", false))
 	camera_shake_enabled = bool(cf.get_value("access", "camera_shake", true))
@@ -1336,6 +1343,8 @@ func save_settings() -> void:
 	cf.set_value("rival", "kills", rival_kills)
 	cf.set_value("rival", "fake_clear_seen", rival_fake_clear_seen)
 	cf.set_value("rival", "reentry_count", rival_reentry_count)
+	cf.set_value("rival", "boss_first_side", rival_boss_first_side)
+	cf.set_value("rival", "boss_explosive", rival_boss_explosive)
 	cf.set_value("access", "brightness", screen_brightness)
 	cf.set_value("access", "sfx_captions", sfx_captions)
 	cf.set_value("access", "camera_shake", camera_shake_enabled)

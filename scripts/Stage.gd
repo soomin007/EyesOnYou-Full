@@ -6228,6 +6228,10 @@ var _rival_fx_layer: CanvasLayer = null  # 간섭 플래시용 레이어(보스�
 var _p1_spawn_timer: Timer = null    # P1 연속 증원 타이머
 var _p1_spawn_idx: int = 0
 var _p1_side: int = 0
+# 다회차 기억 변주(2026-08-19 사용자 확정: "세지는 게 아니라 배치가 달라진다").
+# 게이트 = rival_kills >= 1(한 번이라도 격파한 상대에게만). 수치(HP·예고·개수)는 불변,
+# 배치·순서·방향만 회전(replay_support_plan §4.3-6 "네가 외운 자리에는 없다" 문법).
+var _p2_first_side_attempt: int = -1   # 이번 시도에서 먼저 부순 P2 노드(0=좌 1=우) · 격파 시 영속 승격
 var _p2_flip_timer: Timer = null     # P2 노드 실드 교대 타이머
 var _p2_turrets: Array = []          # P2 벽 포탑 [좌, 우] — 같은 인덱스 기둥이 전원을 댄다
 var _p2_links: Array = []            # 기둥→포탑 전원 케이블 시각(_P2PowerLink)
@@ -6413,6 +6417,11 @@ func _init_rival_boss() -> void:
 	# P1 +0.5lv→+1.0lv, P2 +1.0lv→+1.5lv. 페이즈 전개 재설계는 리워크에서.
 	_rival_node_hp_p1 = RIVAL_P1_NODE_HP + GameState.player_level
 	_rival_node_hp_p2 = RIVAL_P2_NODE_HP + int(float(GameState.player_level) * 1.5)
+	# 다회차 기억 변주 · P1 — 첫 증원 진입 방향 미러 + 타입 회전 시작점 이동.
+	# _p1_side 초기 0 = 첫 증원 우측(x2220). 격파 이력이 있으면 1로 시작 = 첫 증원 좌측.
+	if GameState.rival_kills >= 1:
+		_p1_side = 1
+		_p1_spawn_idx = GameState.rival_kills % _P1_TYPES.size()
 	# 페이즈 목표 바 — "공격이 되는지 알 길이 없다" 반려 기준의 P1·P2 판. 노드 합산 HP를 보스 바
 	# 문법으로 상시 표시(P2 진입 시 다시 차오름 = 페이즈 문법). P3는 FalseVeil 바가 자리를 승계.
 	if GameState.rival_phase_reached < 2:
@@ -6602,7 +6611,13 @@ func _start_rival_p2() -> void:
 	_run_glitch(0.7, 0.38)
 	_rival_beat_flash()
 	_camera_shake(10.0, 0.4)
-	_show_rival_subtitle("병사들이 아깝네요. 그럼, 방하고 싸워 보시죠.", 3.4)
+	# 다회차 기억 변형 대사 — 기존 라인 "대체"(발화 수 증가 없음 · 기억 언급 런당 1~2회 상한 준수).
+	# 기억의 대상은 플레이어가 아니라 이전 작전 기록(4번째 벽 금지, replay_support_plan §4.3).
+	if GameState.rival_kills >= 1 and GameState.rival_boss_first_side >= 0:
+		var side_word: String = "왼쪽" if GameState.rival_boss_first_side == 0 else "오른쪽"
+		_show_rival_subtitle("지난번에는 %s 회선부터 끊으셨죠. 배선은 바꿔 뒀습니다." % side_word, 3.4)
+	else:
+		_show_rival_subtitle("병사들이 아깝네요. 그럼, 방하고 싸워 보시죠.", 3.4)
 	get_tree().create_timer(3.8, false).timeout.connect(_rival_p2_objective_line)
 	# 소등 — 완만한 감광(고대비 점멸 금지, known_issues 광과민성 기준).
 	_rival_cast = CanvasModulate.new()
@@ -6654,6 +6669,13 @@ func _start_rival_p2() -> void:
 	# (§7.2 "격벽 이동·안전지대가 옮겨 다님"의 구현).
 	var sweep := _RivalSweep.new()
 	sweep.host = self   # 첫 격벽 상승 힌트 1회(_p2_bulkhead_spoken)
+	# 다회차 기억 변주 · P2 스윕 — 첫 스윕이 "지난 격파에서 먼저 부순 쪽"에서 들어온다
+	# (그 쪽을 기억하고 먼저 손봤다는 대사와 기계적으로 일치). cycle 시드는 격벽 조합·층
+	# 교대의 시작점을 회차마다 옮긴다. 속도·주기·예고 시간은 불변.
+	if GameState.rival_kills >= 1:
+		# from_left는 매 사이클 rise에서 반전된 뒤 스윕 — 첫 스윕을 좌측발로 만들려면 초기 false.
+		sweep.from_left = GameState.rival_boss_first_side != 0
+		sweep.cycle = GameState.rival_kills % 4
 	add_child(sweep)
 	sweep.t = -2.0      # 온보딩 유예 · 첫 격벽 상승을 4.6s로 늦춰 안내 대사를 읽게
 	_rival_p2_props.append(sweep)
@@ -6667,7 +6689,9 @@ func _p2_spawn_nodes() -> void:
 	SfxPlayer.play("hatch_open")
 	_p2_links.clear()
 	var side: int = 0
-	for cfg in [{"x": 350.0, "d": 1}, {"x": 2050.0, "d": -1}]:
+	# 다회차 기억 변주 — 노드 실드 초기 편 반전(홀수 회차). 플립 주기는 불변.
+	var d_flip: int = -1 if GameState.rival_kills % 2 == 1 and GameState.rival_kills >= 1 else 1
+	for cfg in [{"x": 350.0, "d": 1 * d_flip}, {"x": 2050.0, "d": -1 * d_flip}]:
 		var cd: Dictionary = cfg
 		var node := _spawn_enemy(5, Vector2(float(cd.get("x", 1200.0)), 1010.0))
 		node.set("hp", _rival_node_hp_p2)
@@ -6740,6 +6764,10 @@ func _rival_p2_objective_line() -> void:
 
 # P2 노드 격파 → 그 노드가 전원을 대던 같은 쪽 포탑(하·중층 2기)이 죽는다 · 파괴의 보상 즉시 체감.
 func _on_p2_node_down(_pos: Vector2, side: int) -> void:
+	# 다회차 기억 · 이번 시도에서 먼저 부순 쪽(최초 1회만). 격파 확정 시 영속 승격 —
+	# 실패한 시도는 기억되지 않는다(라이벌이 기억하는 건 자기가 진 판).
+	if _p2_first_side_attempt < 0:
+		_p2_first_side_attempt = side
 	if side < _p2_links.size():
 		var link = _p2_links[side]
 		if link != null and is_instance_valid(link):
@@ -7312,6 +7340,12 @@ func _build_fv_bar(fv: Node2D) -> void:
 	upd.fill = fill
 	_p3_bar_layer.add_child(upd)
 
+static func _rotated(arr: Array, n: int) -> Array:
+	var out: Array = []
+	for i in arr.size():
+		out.append(arr[(i + n) % arr.size()])
+	return out
+
 func _start_rival_p3() -> void:
 	if goal_reached or not is_inside_tree() or _false_veil != null:
 		return
@@ -7328,11 +7362,18 @@ func _start_rival_p3() -> void:
 	fv.hp = fv.max_hp
 	# 리워크(§2.4) · 복층 무대 좌표: 실체화 3지점(중앙 상/좌상/우상 = 중반 텔레포트 지점 겸용),
 	# 가짜 마커는 지상·중층·데크에 분산. 가짜 눈(동반 미끼)은 FalseVeil이 자체 관리.
-	fv.setup(
-		[Vector2(1200.0, 560.0), Vector2(620.0, 640.0), Vector2(1780.0, 640.0)],
-		[Vector2(350.0, 1190.0), Vector2(850.0, 1190.0), Vector2(1550.0, 1190.0), Vector2(2050.0, 1190.0),
-		Vector2(350.0, 1010.0), Vector2(2050.0, 1010.0), Vector2(700.0, 850.0), Vector2(1700.0, 850.0),
-		Vector2(1200.0, 830.0)])
+	var p3_anchors: Array = [Vector2(1200.0, 560.0), Vector2(620.0, 640.0), Vector2(1780.0, 640.0)]
+	var p3_spots: Array = [Vector2(350.0, 1190.0), Vector2(850.0, 1190.0), Vector2(1550.0, 1190.0),
+		Vector2(2050.0, 1190.0), Vector2(350.0, 1010.0), Vector2(2050.0, 1010.0),
+		Vector2(700.0, 850.0), Vector2(1700.0, 850.0), Vector2(1200.0, 830.0)]
+	# 다회차 기억 변주 · P3 — 실체화 시작 지점·가짜 병사 슬롯 순서를 회차로 회전
+	# ("네가 외운 자리에는 없다"). 수류탄으로 끝냈던 기억이 있으면 가짜 눈이 지난 회차의
+	# 진짜 자리(+2 회전)에 선다 — 익숙한 자리일수록 가짜다. 개수·창 길이·HP는 불변.
+	if GameState.rival_kills >= 1:
+		p3_anchors = _rotated(p3_anchors, GameState.rival_kills % p3_anchors.size())
+		p3_spots = _rotated(p3_spots, (GameState.rival_kills * 4) % p3_spots.size())
+		fv.decoy_shift = 2 if GameState.rival_boss_explosive else 1
+	fv.setup(p3_anchors, p3_spots)
 	fv.volley_started.connect(_on_p3_volley)
 	fv.defeated.connect(_on_false_veil_defeated)
 	fv.stage_shifted.connect(_on_p3_stage_shifted)
@@ -7413,6 +7454,12 @@ func _on_false_veil_defeated() -> void:
 	_rival_phase = 3
 	GameState.rival_phase_reached = 0   # 정복 — 체크포인트 경계 해제(지속 플래그 원칙)
 	GameState.rival_kills += 1          # 라이벌 기억(축 C) — 처치 누적(다음 회차 인트로 변형)
+	# 다회차 기억 · 이번 격파의 공략 방식을 영속 프로필로(다음 회차 변주의 씨앗).
+	# P2를 체크포인트로 건너뛴 시도(-1)는 이전 기억을 지우지 않는다.
+	if _p2_first_side_attempt >= 0:
+		GameState.rival_boss_first_side = _p2_first_side_attempt
+	if _false_veil != null and is_instance_valid(_false_veil):
+		GameState.rival_boss_explosive = int(_false_veil.get("last_hit_from_dir")) == 0
 	GameState.save_settings()
 	if _p3_assist_timer != null and is_instance_valid(_p3_assist_timer):
 		_p3_assist_timer.stop()
