@@ -29,7 +29,10 @@ const CALM: Color = Color(0.42, 0.86, 1.0)    # 평시 — VEIL 시안 (자막 �
 const WARN: Color = Color(1.0, 0.55, 0.22)    # 공격 임박 — 경고 주황
 const RIVAL: Color = Color(0.80, 0.34, 0.98)  # 재머 마커 — 라이벌 바이올렛(안티-VEIL, rival_veil_concept §5)
 const EDGE_MARGIN: float = 24.0               # 화면 밖 화살표가 가장자리에서 떨어지는 여백 (피드백: 더 붙게 48→24)
-const RETICLE_R: float = 17.0
+# 존재감 1차 패스(2026-08-21 사용자 "플레이 중 마커가 눈에 잘 안 들어온다" · 승인 방향 ⓐ):
+# 크기 17→20 · 선 1.6→2.2 · 평시 알파 0.62→0.78 + 등장 핑 링 + 위험 이중 링. 재머·간섭·정찰
+# 콘텐츠가 전부 "마커가 보인다/안 보인다"의 대비에 기대므로 기반 가시성이 먼저다.
+const RETICLE_R: float = 20.0
 const FADE_IN: float = 0.5                     # 마커가 "그어지는" 등장 시간(스트로크 연출, 인지 강화 ②)
 const CALL_COOLDOWN: float = 18.0             # VEIL이 말로 짚는 최소 간격 (노이즈 방지)
 const CALL_BAND: float = 240.0                # 위협 콜 대상 = 화면 밖 이 거리 이내(조우 직전만 말로)
@@ -370,9 +373,9 @@ func _draw() -> void:
 			_tag_id = id
 			_tag_until = _t + 2.4
 		if on_screen:
-			# 화면 안 — 요원도 볼 수 있으니 평시엔 은은, 위험할 땐 또렷.
+			# 화면 안 — 평시에도 읽히게, 위험할 땐 확실하게(존재감 1차 패스 2026-08-21).
 			var rc: Color = col
-			rc.a *= (0.92 if danger else 0.62) * alpha_mul
+			rc.a *= (1.0 if danger else 0.78) * alpha_mul
 			_draw_reticle(spos, rc, danger, appear)
 		else:
 			# 화면 밖 — VEIL의 봄이 빛나는 곳. 또렷하게.
@@ -401,7 +404,16 @@ func _draw_reticle(pos: Vector2, col: Color, danger: bool, appear: float) -> voi
 		pos + Vector2(-r, 0.0),
 		pos + Vector2(0.0, -r),
 	])
-	var width: float = 2.0 if danger else 1.6
+	var width: float = 2.6 if danger else 2.2
+	# 등장 핑 — 짚는 순간 퍼지는 옅은 링(1회성 · 존재감 1차 패스). 광과민: 점멸 아님, 단조 확장.
+	if appear < 1.0:
+		var ping_a: float = (1.0 - appear) * 0.35
+		draw_arc(pos, r * (1.0 + (1.0 - appear) * 1.2), 0.0, TAU, 28,
+			Color(col.r, col.g, col.b, ping_a), 1.5, true)
+	# 위험 이중 링 — 경고 주황 마커는 바깥 링이 하나 더 둘러져 한눈에 "임박"으로 읽힌다.
+	if danger:
+		draw_arc(pos, r + 6.0, 0.0, TAU, 30, Color(col.r, col.g, col.b, col.a * 0.5), 1.5, true)
+		draw_circle(pos, 3.0, Color(col.r, col.g, col.b, col.a * 0.6))
 	# 등장 중엔 한 획씩 그어지는 스트로크(인지 강화 ② — "시스템 표시"가 아니라 "누가 그려줌").
 	if appear < 1.0:
 		_draw_partial_polyline(pts, appear, col, width)
@@ -454,10 +466,11 @@ func _draw_edge_arrow(spos: Vector2, center: Vector2, view: Vector2, col: Color)
 		return
 	dir = dir.normalized()
 	var perp: Vector2 = Vector2(-dir.y, dir.x)
-	var tip: Vector2 = edge + dir * 13.0
-	var a: Vector2 = edge - dir * 6.0 + perp * 9.0
-	var b: Vector2 = edge - dir * 6.0 - perp * 9.0
+	# 확대(존재감 1차 패스 2026-08-21) — 화면 밖 화살표는 VEIL의 핵심 가치라 더 커도 된다.
+	var tip: Vector2 = edge + dir * 17.0
+	var a: Vector2 = edge - dir * 7.0 + perp * 11.0
+	var b: Vector2 = edge - dir * 7.0 - perp * 11.0
 	draw_colored_polygon(PackedVector2Array([tip, a, b]), col)
 	var dot: Color = col
 	dot.a *= 0.7
-	draw_circle(edge - dir * 7.0, 3.0, dot)
+	draw_circle(edge - dir * 8.0, 3.6, dot)
