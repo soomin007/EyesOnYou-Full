@@ -359,7 +359,7 @@ const ALL_ROUTES: Array = [
 		"min_stage": 1, "max_stage": 2,
 		"tags": ["원거리", "노출", "전투"],
 		"veil_comment": "펌프장이에요. 파이프 위에서 저격이 내려다봐요. 엄폐 끊어 가요.",
-		"entry_comment": "펌프 설비예요. 위에서 노려요. 한 번에 붙어요.",
+		"entry_comment": "펌프 설비예요. 파이프 위에서 내려다봐요. 사선 밑에 멈춰 서지 말아요.",
 		"stage_color": Color(0.10, 0.14, 0.16),
 	},
 	{

@@ -876,7 +876,8 @@ func _play_arrival_beat() -> void:
 	tw.tween_property(white, "color:a", 0.0, 1.2).set_ease(Tween.EASE_OUT)
 	tw.tween_callback(func() -> void:
 		# 등 뒤에서 무너지는 굉음 한 번 — 두고 온 것의 크기를 소리로만.
-		SfxPlayer.play("bomb_explode")
+		# 낮고 느리게(pitch 0.62) — 플레이어 폭탄과 구분 + 멀고 큰 붕괴의 무게.
+		SfxPlayer.play("bomb_explode", 0.0, 0.62)
 		BgmPlayer.set_ducked(false)
 		if is_instance_valid(layer):
 			layer.queue_free())
@@ -9138,10 +9139,12 @@ func _process(delta: float) -> void:
 	_tick_p3_camp(delta)
 
 # ─── P3 캠핑 감지(2026-08-20 사용자 "맨 위 발판에서 연사 홀드로 무피해 클리어") ───
-# 반경 130px 안에 6초+ 머물면 보스가 잠복 중에도 유도탄을 쏜다(FalseVeil.fire_suppression).
-# 움직이면 즉시 리셋 — 답은 이동. 계속 눌러앉으면 ~2.8s마다 반복. 첫 발동 때 VEIL 1회 안내.
+# x 기준 130px 안에 4.5초+ 머물면 보스가 잠복 중에도 유도탄을 쏜다(FalseVeil.fire_suppression).
+# 판정은 x만 본다(2026-08-21 사용자 "가운데서 점프만 하며 연사가 파훼법") — 유클리드 거리로 재면
+# 제자리 점프의 y 진폭(~245px)이 매번 타이머를 리셋해 캠핑 감지가 영영 안 걸렸다.
+# 좌우로 이동하면 즉시 리셋 — 답은 이동. 계속 눌러앉으면 ~2.4s마다 반복. 첫 발동 VEIL 1회 안내.
 const P3_CAMP_RADIUS: float = 130.0
-const P3_CAMP_TIME: float = 6.0
+const P3_CAMP_TIME: float = 4.5
 var _p3_camp_pos: Vector2 = Vector2.ZERO
 var _p3_camp_t: float = 0.0
 var _p3_camp_line_shown: bool = false
@@ -9152,13 +9155,13 @@ func _tick_p3_camp(delta: float) -> void:
 		return
 	if player == null or not is_instance_valid(player):
 		return
-	if player.global_position.distance_to(_p3_camp_pos) > P3_CAMP_RADIUS:
+	if absf(player.global_position.x - _p3_camp_pos.x) > P3_CAMP_RADIUS:
 		_p3_camp_pos = player.global_position
 		_p3_camp_t = 0.0
 		return
 	_p3_camp_t += delta
 	if _p3_camp_t >= P3_CAMP_TIME:
-		_p3_camp_t = P3_CAMP_TIME - 2.8
+		_p3_camp_t = P3_CAMP_TIME - 2.4
 		_false_veil.call("fire_suppression", player.global_position + Vector2(0.0, -24.0))
 		if not _p3_camp_line_shown:
 			_p3_camp_line_shown = true

@@ -120,7 +120,9 @@ func _surge_factor(delta: float) -> float:
 # 붕락 시작 · 굉음 + 화면 흔들림 + 잔해 한 무더기. "위에서 무너져 내려 쌓였다"는 인과를
 # 소리와 진동으로 먼저 알리고, 그 결과로 표면이 올라온다.
 func _on_surge_start() -> void:
-	SfxPlayer.play("bomb_explode", -9.0)
+	# 폭탄 소스 재활용이지만 낮고 느리게(pitch 0.68) — 플레이어 폭탄과 소리로 구분
+	# (2026-08-21 사용자 "낙석 소리가 내 폭탄 소리랑 똑같아 위화감").
+	SfxPlayer.play("bomb_explode", -9.0, 0.68)
 	var st: Node = get_tree().get_first_node_in_group("stage")
 	if st != null and st.has_method("_camera_shake"):
 		st.call("_camera_shake", 5.0, 0.3)

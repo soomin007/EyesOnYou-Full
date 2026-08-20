@@ -151,7 +151,7 @@ func _try_load_with_ext(name: String) -> AudioStream:
 
 # 효과음 재생. id 미등록(파일 없음) 또는 sfx 볼륨 0 시 no-op.
 # volume_offset_db: 호출 사이트에서 추가 보정. VOLUME_OFFSETS의 기본 보정에 더해짐.
-func play(id: String, volume_offset_db: float = 0.0) -> void:
+func play(id: String, volume_offset_db: float = 0.0, pitch: float = 1.0) -> void:
 	if not _streams.has(id):
 		return
 	var variants: Array = _streams[id]
@@ -165,12 +165,15 @@ func play(id: String, volume_offset_db: float = 0.0) -> void:
 	player.stream = stream
 	var preset_offset: float = float(VOLUME_OFFSETS.get(id, 0.0))
 	player.volume_db = _target_db() + preset_offset + volume_offset_db
+	# 같은 소스 재활용 시 변형용(<1 = 낮고 느리게 · 2026-08-21 사용자 "낙석이 내 폭탄 소리").
+	# 풀 재사용이라 매 재생 무조건 대입(이전 재생의 피치가 남지 않게).
+	player.pitch_scale = pitch
 	player.play()
 	emit_signal("sfx_played", id)
 
 # 위치 기반 재생. world_pos에 음원을 두고 Player.AudioListener2D 기준 거리 감쇠 + 좌우 팬.
 # 그 외 규약은 play()와 동일 — 미등록 id no-op, 볼륨 0이어도 자막 위해 play + emit.
-func play_at(id: String, world_pos: Vector2, volume_offset_db: float = 0.0) -> void:
+func play_at(id: String, world_pos: Vector2, volume_offset_db: float = 0.0, pitch: float = 1.0) -> void:
 	if not _streams.has(id):
 		return
 	var variants: Array = _streams[id]
@@ -185,6 +188,7 @@ func play_at(id: String, world_pos: Vector2, volume_offset_db: float = 0.0) -> v
 	player.global_position = world_pos
 	var preset_offset: float = float(VOLUME_OFFSETS.get(id, 0.0))
 	player.volume_db = _target_db() + preset_offset + volume_offset_db
+	player.pitch_scale = pitch   # 풀 재사용 — 매 재생 무조건 대입
 	player.play()
 	emit_signal("sfx_played", id)
 

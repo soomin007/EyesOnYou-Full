@@ -344,7 +344,7 @@
 | route_pump_station | name | 배수 펌프장 | |
 | | description | 외곽 빗물을 퍼올리던 펌프장. 파이프 위에서 조준선이 내려온다. | |
 | | veil_comment | 펌프장이에요. 파이프 위에서 저격이 내려다봐요. 엄폐 끊어 가요. | |
-| | entry_comment | 펌프 설비예요. 위에서 노려요. 한 번에 붙어요. | |
+| | entry_comment | 펌프 설비예요. 파이프 위에서 내려다봐요. 사선 밑에 멈춰 서지 말아요. | |
 | route_relay_station | name | 통신 중계소 | |
 | | description | 시설 교신을 중계하는 안테나 구역. 중계기 위 저격과 머리 위 드론이 겹친다. | |
 | | veil_comment | 중계소예요. 저격이랑 드론이 동시에 와요. 엄폐 짧게, 빠르게. | |

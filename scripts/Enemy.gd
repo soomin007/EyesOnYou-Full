@@ -52,12 +52,15 @@ const PATROL_FIRE_MAX_DY: float = 48.0
 const PATROL_BULLET_DAMAGE: int = 1
 
 # Bomber — 천천히 접근 + 근접 시 자폭
-const BOMBER_SPEED: float = 50.0
-const BOMBER_DETECT_X: float = 360.0
+# 강화(2026-08-21 사용자 "범위가 너무 좁고 사실상 역할을 못 한다"): 속도 50→58 ·
+# 감지 360→430 · 폭발 70→105. HP 1은 유지 — "멀리서 한 발"이 정답인 상성(fire_boost 카운터)의
+# 정체성이라, 접근을 허용했을 때의 대가(반경·추격)를 키우는 쪽으로 존재감을 만든다.
+const BOMBER_SPEED: float = 58.0
+const BOMBER_DETECT_X: float = 430.0
 const BOMBER_DETECT_Y: float = 90.0
 const BOMBER_ARM_RANGE: float = 90.0   # 이 거리에 들어오면 카운트다운 시작
 const BOMBER_ARM_TIME: float = 0.7     # 카운트다운 길이
-const BOMBER_BLAST_RADIUS: float = 70.0
+const BOMBER_BLAST_RADIUS: float = 105.0
 const BOMBER_BLAST_DAMAGE: int = 1
 
 # Shield — 정면 피격 무효, 측면/후면만 통하는 보병
@@ -128,8 +131,8 @@ const ELITE_DRONE_BOMB_INTERVAL: float = 2.8      # 2연 투하 보상으로 사
 const ELITE_DRONE_SECOND_DROP_GAP: float = 0.25
 const ELITE_DRONE_SECOND_DROP_SPREAD: float = 40.0  # 2발째 좌우 분산 — "그 자리 탈출"이 답
 const ELITE_BOMBER_STALK_MULT: float = 1.8
-const ELITE_BOMBER_DETECT_X: float = 420.0
-const ELITE_BOMBER_BLAST_RADIUS: float = 85.0
+const ELITE_BOMBER_DETECT_X: float = 480.0    # 일반 강화(430)보다 앞서게 상향(2026-08-21)
+const ELITE_BOMBER_BLAST_RADIUS: float = 125.0
 const ELITE_SHIELD_LOCK: float = 2.2              # 대시 쿨(0.7)의 3배 유지 — 측면 창 보존
 const ELITE_VIOLET: Color = Color(0.72, 0.42, 1.0)  # 라이벌 바이올렛 축(간섭 플래시와 동일)
 
@@ -624,7 +627,7 @@ func _eff_drone_speed() -> float:
 	return ELITE_DRONE_SPEED if elite else DRONE_SPEED
 
 func _eff_bomber_stalk_mult() -> float:
-	return ELITE_BOMBER_STALK_MULT if elite else 1.4
+	return ELITE_BOMBER_STALK_MULT if elite else 1.6   # 1.4→1.6(2026-08-21 자폭병 존재감 강화)
 
 func _eff_bomber_detect_x() -> float:
 	return ELITE_BOMBER_DETECT_X if elite else BOMBER_DETECT_X

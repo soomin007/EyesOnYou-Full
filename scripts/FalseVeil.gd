@@ -241,12 +241,13 @@ func fire_suppression(at: Vector2) -> void:
 	if state == State.DYING:
 		return
 	SfxPlayer.play_at("boss_missile_launch", global_position)
-	for i in 2:
+	# 3발 부채꼴(2→3, 2026-08-21) — 제자리 점프 회피까지 감안한 커버.
+	for i in 3:
 		var m := Area2D.new()
 		m.set_script(load("res://scripts/BossMissile.gd"))
-		var from: Vector2 = global_position + Vector2(-26.0 + 52.0 * float(i), -18.0)
+		var from: Vector2 = global_position + Vector2(-26.0 + 26.0 * float(i), -18.0)
 		var v: Vector2 = (at - from).normalized() * 330.0
-		m.set("velocity", v.rotated(-0.35 + 0.7 * float(i)))
+		m.set("velocity", v.rotated(-0.4 + 0.4 * float(i)))
 		m.global_position = from
 		get_parent().add_child(m)
 
