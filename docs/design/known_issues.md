@@ -52,6 +52,22 @@
   순회(2026-08-18 `_mid_gate_guards` 실제 발생 · 봇이 매 프레임 크래시해 가짜 TIMEOUT) ·
   그룹 순회는 대체로 안전하지만 같은 순서 습관으로 통일. 전 스크립트 스윕 완료(2026-08-18).
 
+- **씬 전환(`change_scene_to_file`)은 항상 deferred — 입력 전파/시그널 콜백 안의 동기 전환은
+  현재 씬을 그 자리에서 트리에서 떼어내 크래시까지 간다(2026-08-20 크레딧 ESC 연타로 게임 사망).**
+  증상: `_unhandled_input`의 ESC 분기가 `_on_exit_pressed()`(동기 change_scene) 뒤
+  `get_viewport().set_input_as_handled()`에서 "Cannot call method on a null value" → 입력 전파가
+  깨진 채 엔진 종료. 원인: change_scene_to_file은 현재 씬을 *즉시* 트리에서 제거한다(해제만 deferred).
+  → ⓐ 모든 호출을 `get_tree().change_scene_to_file.call_deferred(path)`로(전 스크립트 스윕 완료,
+  SceneRouter.go 포함) ⓑ `set_input_as_handled()`는 분기 *앞*에서 ⓒ 전환 함수에 이중 발화 가드
+  (`_leaving` 플래그) — ESC 연타·버튼 더블클릭이 reset()/전환을 두 번 태우지 않게.
+
+- **물리 콜백(take_damage·body_entered 체인) 안에서 동기 스폰 금지 — "Can't change this state
+  while flushing queries" 에러로 콜리전 설정(shape disabled·one_way)이 조용히 거부된다(2026-08-20
+  실플레이 로그에서 보스 소환·배기 증원·P3 볼리 30회+ 실측).** 게임은 안 죽지만 스폰된 개체의
+  콜리전 상태가 의도와 달라진다. → 스폰 함수 호출을 `call_deferred`로(BossSentinel 페이즈 소환·
+  배기 증원), 시그널 경유면 `CONNECT_DEFERRED`(FalseVeil volley_started → Stage._on_p3_volley).
+  새 보스/해저드가 "피격 반응으로 뭔가를 낳는" 구조면 이 함정을 기본으로 의심할 것.
+
 - **GDScript: untyped Array/Dictionary 인덱싱 시 명시 타입 선언.** `var x := arr[i]` 대신 `var x: Dictionary = arr[i]`.
   `Array[T]`에 untyped Array(사전 리터럴 값, `Dictionary.get` 결과) 직접 대입 금지(런타임 에러).
 
