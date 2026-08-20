@@ -31,7 +31,7 @@ func _run() -> void:
 func _capture(rid: String, stage_idx: int, seg: int, px: float, extra_wait: int = 0) -> void:
 	GameState.start_main_game()
 	GameState.current_stage = stage_idx
-	GameState.seen_enemies = ["patrol", "sniper", "drone", "bomber", "shield", "jammer", "elite"]
+	GameState.seen_enemies = ["patrol", "sniper", "drone", "bomber", "shield", "jammer", "elite", "caller"]
 	var route: Dictionary = {}
 	for r in RouteData.ALL_ROUTES:
 		if str((r as Dictionary).get("id", "")) == rid:

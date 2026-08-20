@@ -20,6 +20,8 @@ func _draw() -> void:
 		"drone": _drone(c, r)
 		"bomber": _bomber(c, r)
 		"shield": _shield(c, r)
+		"jammer": _jammer(c, r)
+		"caller": _caller(c, r)
 		_: _generic(c, r)
 
 # 정찰병 — 머리 LED + 좌우 순찰 화살표
@@ -69,6 +71,28 @@ func _shield(c: Vector2, r: float) -> void:
 		c + Vector2(r * 0.6, r * 0.25), c + Vector2(0.0, r * 0.85), c + Vector2(-r * 0.6, r * 0.25)])
 	draw_polyline(_closed(pts), col, 2.5, true)
 	draw_circle(c + Vector2(0.0, -r * 0.1), r * 0.17, col)
+
+# 교란기 — 방출 마스트 + 소등 반경(점선 링, 바이올렛)
+func _jammer(c: Vector2, r: float) -> void:
+	var col := Color(0.75, 0.50, 0.95)
+	draw_line(c + Vector2(0.0, r * 0.5), c + Vector2(0.0, -r * 0.4), col, 2.5, true)
+	draw_circle(c + Vector2(0.0, -r * 0.52), r * 0.14, Color(0.92, 0.42, 1.0))
+	var segs: int = 12
+	for i in range(0, segs, 2):
+		var a0: float = float(i) / float(segs) * TAU
+		var a1: float = float(i + 1) / float(segs) * TAU
+		draw_arc(c, r * 0.72, a0, a1, 6, Color(0.72, 0.42, 1.0, 0.8), 1.5, true)
+
+# 호출병 — 안테나 + 퍼지는 신호 호(앰버, "부르는 중")
+func _caller(c: Vector2, r: float) -> void:
+	var col := Color(1.0, 0.64, 0.22)
+	var base: Vector2 = c + Vector2(-r * 0.1, r * 0.7)
+	var tip: Vector2 = c + Vector2(r * 0.18, -r * 0.55)
+	draw_line(base, tip, col, 2.5, true)
+	draw_circle(tip, r * 0.1, col)
+	for i in 3:
+		var rr: float = r * (0.28 + 0.24 * float(i))
+		draw_arc(tip, rr, -PI * 0.75, -PI * 0.15, 12, Color(1.0, 0.60, 0.20, 0.85 - 0.22 * float(i)), 2.0, true)
 
 func _generic(c: Vector2, r: float) -> void:
 	draw_arc(c, r * 0.7, 0.0, TAU, 24, Color(0.8, 0.5, 0.45), 2.0, true)

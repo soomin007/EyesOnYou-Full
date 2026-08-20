@@ -69,7 +69,7 @@ func _new_game(stage_idx: int, skills: Dictionary, story: bool = false) -> void:
 	GameState.start_main_game()
 	GameState.story_mode = story
 	GameState.current_stage = stage_idx
-	GameState.seen_enemies = ["patrol", "sniper", "drone", "bomber", "shield"]
+	GameState.seen_enemies = ["patrol", "sniper", "drone", "bomber", "shield", "jammer", "elite", "caller"]
 	for k in skills.keys():
 		GameState.skills[k] = int(skills[k])
 

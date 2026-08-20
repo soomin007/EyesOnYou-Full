@@ -337,7 +337,7 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_demolition_zone",
 		"name": "철거 구역",
-		"description": "절반쯤 헐린 외곽 건물군. 위에서 잔해가 떨어지고, 무너진 벽 사이로 길이 난다.",
+		"description": "절반쯤 헐린 외곽 건물군. 위에서 잔해가 떨어지고, 무너진 벽을 지나면 파쇄 마당이 이어진다.",
 		"risk": 2,
 		"reward_type": "xp",
 		"hidden": false,

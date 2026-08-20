@@ -127,10 +127,10 @@
 
 베이스라인 스킬 (`STARTING_SKILLS`): `dash`, `double_jump`. 시작부터 보유.
 
-### 적 (아래는 초기 3종의 상세, 현행은 6종 + 엘리트)
+### 적 (아래는 초기 3종의 상세, 현행은 7종 + 엘리트)
 
-> 현행 `Enemy.gd`의 `enum EnemyType`은 **PATROL / SNIPER / DRONE / BOMBER / SHIELD / JAMMER** 6종이고,
-> 여기에 막4부터 확률 승격되는 **엘리트**(같은 타입의 강화 개체)가 얹힌다. 자폭병·방패병·교란기·엘리트의
+> 현행 `Enemy.gd`의 `enum EnemyType`은 **PATROL / SNIPER / DRONE / BOMBER / SHIELD / JAMMER / CALLER** 7종이고,
+> 여기에 막4부터 확률 승격되는 **엘리트**(같은 타입의 강화 개체)가 얹힌다. 자폭병·방패병·교란기·호출병·엘리트의
 > 요약은 [`../README.md`](../README.md) 적 표, 도감 문구는 `scripts/BestiaryData.gd`가 진실.
 > 아래 3종 상세는 초기 사양 그대로 보존한다(수치는 코드가 최종).
 

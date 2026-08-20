@@ -69,7 +69,7 @@ func _capture_skilltree() -> void:
 func _capture_stage(rid: String, stage_idx: int, mode: String) -> void:
 	GameState.start_main_game()
 	GameState.current_stage = stage_idx
-	GameState.seen_enemies = ["patrol", "sniper", "drone", "bomber", "shield"]
+	GameState.seen_enemies = ["patrol", "sniper", "drone", "bomber", "shield", "jammer", "elite", "caller"]
 	# 액션 컷용 화력 — 부채꼴 다중사격 + 사격 강화로 탄이 화면에 많이 보이게.
 	if mode == "action":
 		GameState.skills["multishot"] = 2

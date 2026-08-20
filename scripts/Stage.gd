@@ -2373,6 +2373,108 @@ func _ambience_demolition() -> void:
 	add_child(dust)
 	_add_lore_label(Vector2(360.0, -30.0), "철거 구역 · 접근 주의", Color(0.9, 0.75, 0.3, 0.5), 15)
 
+# 파쇄 마당(철거 체인 방2, 2026-08-20) — 시그니처: 대각 크레인 붐 + 매달린 철구 + 반쯤 헐린
+# 건물 단면(수평 슬래브 층). 중앙 캐노피(처마)가 낙하 없는 휴지 구간(1240~1480)의 "이유"를
+# 그려 준다. 수직 스트라이프 어휘 금지(known_issues) — 크레인은 단일 대각 랜드마크, 건물 단면은
+# 수평 슬래브 층으로.
+func _ambience_demo_yard() -> void:
+	var w: float = STAGE_LENGTH
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 457 + GameState.current_segment * 11 + 29
+	# 잔해 더미 — 방1보다 크고 성기게(마당의 스케일).
+	var x: float = 240.0
+	while x < w:
+		var rw: float = rng.randf_range(120.0, 240.0)
+		var rh: float = rng.randf_range(60.0, 140.0)
+		var pile := Polygon2D.new()
+		pile.color = Color(0.17, 0.16, 0.14)
+		pile.polygon = PackedVector2Array([
+			Vector2(x, GROUND_Y), Vector2(x + rw * 0.25, GROUND_Y - rh),
+			Vector2(x + rw * 0.6, GROUND_Y - rh * 0.55), Vector2(x + rw, GROUND_Y)])
+		pile.z_index = -11
+		add_child(pile)
+		x += rw + rng.randf_range(220.0, 420.0)
+	# 반쯤 헐린 건물 단면(우측 배경) — 수평 슬래브 3층 + 층 사이 어둠 + 늘어진 철근 곡선.
+	var bx: float = w - 900.0
+	for i in 3:
+		var sy: float = GROUND_Y - 120.0 - float(i) * 110.0
+		var slab := ColorRect.new()
+		slab.color = Color(0.20, 0.19, 0.17)
+		slab.position = Vector2(bx, sy)
+		slab.size = Vector2(720.0, 16.0)
+		slab.z_index = -10
+		add_child(slab)
+		var dark := ColorRect.new()
+		dark.color = Color(0.10, 0.10, 0.09, 0.85)
+		dark.position = Vector2(bx + 30.0, sy - 92.0)
+		dark.size = Vector2(660.0, 92.0)
+		dark.z_index = -11
+		add_child(dark)
+		var rebar := Line2D.new()
+		rebar.default_color = Color(0.30, 0.24, 0.18, 0.7)
+		rebar.width = 2.0
+		var rx: float = bx + 90.0 + float(i) * 210.0
+		rebar.points = PackedVector2Array([
+			Vector2(rx, sy + 14.0), Vector2(rx + 12.0, sy + 46.0), Vector2(rx + 4.0, sy + 78.0)])
+		rebar.z_index = -9
+		add_child(rebar)
+	# 크레인 — 좌측 대각 붐 + 수평 지브 + 케이블에 매달린 철구(단일 랜드마크).
+	var boom := Line2D.new()
+	boom.default_color = Color(0.34, 0.30, 0.20)
+	boom.width = 10.0
+	boom.points = PackedVector2Array([Vector2(180.0, GROUND_Y - 20.0), Vector2(620.0, -170.0)])
+	boom.z_index = -10
+	add_child(boom)
+	var jib := Line2D.new()
+	jib.default_color = Color(0.34, 0.30, 0.20)
+	jib.width = 7.0
+	jib.points = PackedVector2Array([Vector2(620.0, -170.0), Vector2(1240.0, -140.0)])
+	jib.z_index = -10
+	add_child(jib)
+	var cable := Line2D.new()
+	cable.default_color = Color(0.22, 0.21, 0.19)
+	cable.width = 2.0
+	cable.points = PackedVector2Array([Vector2(1120.0, -142.0), Vector2(1120.0, 96.0)])
+	cable.z_index = -10
+	add_child(cable)
+	var ball := Polygon2D.new()
+	ball.color = Color(0.24, 0.23, 0.21)
+	var ball_pts := PackedVector2Array()
+	for i in 12:
+		var ang: float = TAU * float(i) / 12.0
+		ball_pts.append(Vector2(1120.0 + cos(ang) * 34.0, 130.0 + sin(ang) * 34.0))
+	ball.polygon = ball_pts
+	ball.z_index = -10
+	add_child(ball)
+	# 캐노피(처마) — 휴지 구간(1240~1480) 위 골함석 지붕 + 지지 스트럿. "여긴 안 떨어진다"의 그림.
+	var canopy := Polygon2D.new()
+	canopy.color = Color(0.26, 0.25, 0.22)
+	canopy.polygon = PackedVector2Array([
+		Vector2(1220.0, 386.0), Vector2(1500.0, 372.0), Vector2(1504.0, 388.0), Vector2(1224.0, 402.0)])
+	canopy.z_index = -8
+	add_child(canopy)
+	for sx in [1260.0, 1460.0]:
+		var strut := Line2D.new()
+		strut.default_color = Color(0.22, 0.21, 0.19)
+		strut.width = 4.0
+		strut.points = PackedVector2Array([Vector2(float(sx), 396.0), Vector2(float(sx) + 14.0, GROUND_Y)])
+		strut.z_index = -9
+		add_child(strut)
+	# 경고 테이프 + 먼지 밴드(방1과 같은 톤 — 같은 구역의 연속성).
+	var tape := ColorRect.new()
+	tape.color = Color(0.9, 0.75, 0.2, 0.35)
+	tape.position = Vector2(-200.0, -50.0)
+	tape.size = Vector2(w + 400.0, 6.0)
+	tape.z_index = -7
+	add_child(tape)
+	var dust2 := ColorRect.new()
+	dust2.color = Color(0.42, 0.39, 0.34, 0.08)
+	dust2.position = Vector2(-200.0, GROUND_Y - 140.0)
+	dust2.size = Vector2(w + 400.0, 160.0)
+	dust2.z_index = -6
+	add_child(dust2)
+	_add_lore_label(Vector2(340.0, -30.0), "파쇄 마당 · 중장비 작동 중", Color(0.9, 0.75, 0.3, 0.5), 15)
+
 # 실험 구역 — 격자 라인 + 관측 유리 패널 + 표지.
 func _ambience_testing() -> void:
 	var w: float = STAGE_LENGTH
@@ -3728,6 +3830,14 @@ func _build_route_ambience() -> void:
 	# 루트별 시각 분위기 — 콜리전 없는 ColorRect/Polygon overlay만 사용.
 	# 방 체인 세그먼트는 layout의 "ambience" 키가 라우트 매핑보다 우선(방마다 배경이 다르다).
 	match str(_map_data.get("ambience", "")):
+		"demo_street":
+			_ambience_demolition()
+			_apply_act_rival_tint()
+			return
+		"demo_yard":
+			_ambience_demo_yard()
+			_apply_act_rival_tint()
+			return
 		"relay_yard":
 			_ambience_relay_yard()
 			_apply_act_rival_tint()
@@ -5700,7 +5810,7 @@ func _spawn_deceits() -> void:
 	var deceits: Array = _deceit_slots("deceits")
 	if deceits.is_empty() or GameState.story_mode:
 		return   # 스토리 모드는 단순화 — 거짓 렌더 제외
-	var kind_map: Dictionary = {"patrol": 0, "sniper": 1, "drone": 2, "bomber": 3, "shield": 4, "jammer": 5}
+	var kind_map: Dictionary = {"patrol": 0, "sniper": 1, "drone": 2, "bomber": 3, "shield": 4, "jammer": 5, "caller": 6}
 	for item in deceits:
 		var d: Dictionary = item
 		var true_kind: int = int(kind_map.get(str(d.get("true", "bomber")), 3))
@@ -5721,7 +5831,7 @@ func _spawn_feigns() -> void:
 # 웨이브 모드 / 일반 모드 공통 — enemies 딕셔너리에서 risk 배율 적용해 spawn.
 # wave_idx: 0+ 면 wave에 속한 적 (kill 시 wave 카운트 감소), -1이면 일반 적.
 func _spawn_from_enemies_dict(enemies: Dictionary, wave_idx: int) -> void:
-	var kind_map: Dictionary = {"patrol": 0, "sniper": 1, "drone": 2, "bomber": 3, "shield": 4, "jammer": 5}
+	var kind_map: Dictionary = {"patrol": 0, "sniper": 1, "drone": 2, "bomber": 3, "shield": 4, "jammer": 5, "caller": 6}
 	var mult: float = GameState.enemy_count_multiplier()
 	for kind_name in enemies.keys():
 		# 스토리 모드 — 드론은 위에서 떨어지는 폭격이라 패턴 인지가 어렵다. 통째로 스킵.
@@ -5740,7 +5850,8 @@ func _spawn_from_enemies_dict(enemies: Dictionary, wave_idx: int) -> void:
 				_spawn_enemy(kind_int, p, wave_idx)
 			continue
 		# 재머는 특정 지점에 놓인 장치 — risk 배율 복제/오프셋 대상이 아니다(nest_snipers와 동형).
-		if str(kind_name) == "jammer":
+		# 호출병도 동일 — 자체가 증원 배수라 개체수 배율까지 겹치면 곱연산(기준 2 위반).
+		if str(kind_name) == "jammer" or str(kind_name) == "caller":
 			for p in positions:
 				_spawn_enemy(kind_int, p, wave_idx)
 			continue
@@ -5876,6 +5987,70 @@ func _do_spawn_wave(idx: int) -> void:
 	# 후속 웨이브 spawn 수를 누적. (idx==0은 _setup이 측정 전이라 카운트 누적 X)
 	if idx >= 1:
 		_enemies_remaining += spawned
+	_assign_wave_escorts()
+
+# 혼성 진형(2026-08-20 사용자 "딜/힐/탱 조합을 갖춰서 오면 훨씬 위협적이지 않겠어?") —
+# 웨이브 스폰 직후, 방패병 근처(300px)의 정찰병을 그 방패의 호위로 붙인다. 데이터 스키마 변경
+# 없이 좌표 근접만으로 스쿼드가 성립하고, risk 배율 복제분(±120px)도 자연히 같은 스쿼드에 든다.
+# 웨이브 맵 한정 — 일반 맵의 기존 배치 밸런스는 건드리지 않는다.
+func _assign_wave_escorts() -> void:
+	var shields: Array = []
+	var patrols: Array = []
+	for e in get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(e) or bool((e as Node).get("dead")):
+			continue
+		var kt = (e as Node).get("enemy_type")
+		if kt == null:
+			continue
+		if int(kt) == 4:
+			shields.append(e)
+		elif int(kt) == 0 and (e as Node).get("escort_leader") == null:
+			patrols.append(e)
+	if shields.is_empty():
+		return
+	for pa in patrols:
+		var best: Node = null
+		var best_d: float = 300.0
+		for sh in shields:
+			var d: float = (pa as Node2D).global_position.distance_to((sh as Node2D).global_position)
+			if d < best_d:
+				best_d = d
+				best = sh
+		if best != null:
+			(pa as Node).set("escort_leader", best)
+
+# ─── 호출병(caller) 증원 ───
+# Enemy(CALLER)가 예고(안테나 신호 링)를 마치면 호출. 실제 스폰은 텔레그래프 0.6s 뒤 타이머로
+# (타이머는 메서드 bind — 람다 freed self 금지 · 물리 콜백 동기 스폰 금지 규약과 동형).
+# 불려 온 증원은 no_reward — 호출병을 살려두고 XP를 파밍하는 구멍을 원천 차단(경보 진압 경비 동형).
+const CALLER_SUMMON_KINDS: Array = [[0, 0], [0, 3]]   # 호출 회차별 구성 — 정찰 2 / 정찰+자폭 교대
+
+func request_caller_summon(caller: Node2D) -> void:
+	if goal_reached or not is_inside_tree():
+		return
+	var calls: int = int(caller.get("caller_calls"))
+	caller.set("caller_calls", calls + 1)
+	var kinds: Array = CALLER_SUMMON_KINDS[calls % CALLER_SUMMON_KINDS.size()]
+	var world_w: float = (_map_data.get("world_size", Vector2(1920.0, 1080.0)) as Vector2).x
+	var side: float = -1.0
+	SfxPlayer.play_at("hatch_open", caller.global_position)
+	for k in kinds:
+		var px: float = clampf(caller.global_position.x + side * randf_range(120.0, 190.0), 60.0, world_w - 60.0)
+		side = -side
+		var pos := Vector2(px, caller.global_position.y)
+		var tel := _WaveSpawnTelegraph.new()
+		tel.lifetime = 0.6
+		tel.position = pos
+		add_child(tel)
+		get_tree().create_timer(0.6, false).timeout.connect(_caller_do_spawn.bind(int(k), pos, caller))
+
+func _caller_do_spawn(kind: int, pos: Vector2, caller: Node2D) -> void:
+	if goal_reached or not is_inside_tree():
+		return
+	var e := _spawn_enemy(kind, pos, -1, -1, false, true)   # no_reward — 호출 증원은 보상 없음
+	_enemies_remaining += 1
+	if is_instance_valid(caller) and caller.has_method("register_summon"):
+		caller.call("register_summon", e)
 
 func _show_wave_banner(text: String) -> void:
 	var layer := CanvasLayer.new()
@@ -6315,6 +6490,10 @@ func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1, disguise_kind: in
 		# jammer — 땅에 놓인 방출 장치(대략 44×44). Enemy.gd build_jammer 시각과 맞춤.
 		shape.size = Vector2(44.0, 44.0)
 		col.position = Vector2(0, -22.0)
+	elif kind == 6:
+		# caller — 등짐 무전기 통신병(휴머노이드). build_caller 시각과 맞춤.
+		shape.size = Vector2(32.0, 48.0)
+		col.position = Vector2(0, -24.0)
 	else:
 		shape.size = Vector2(28.0, 40.0)
 		col.position = Vector2(0, -20.0)
@@ -6339,7 +6518,7 @@ func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1, disguise_kind: in
 	# 위장/시선 거짓(이중 기만 금지 §4.1, 계급장이 위장을 깨는 모순) · 스토리.
 	# 연습장은 기본 제외(테스트 노이즈), 단 "엘리트 강제" 토글이면 전원 승격(전 타입 체험용).
 	var elite: bool = false
-	if kind != 5 and disguise_kind < 0 and not feign \
+	if kind != 5 and kind != 6 and disguise_kind < 0 and not feign \
 			and not (kind == 1 and bool(_map_data.get("nest_snipers", false))) \
 			and not GameState.story_mode:
 		if float(_map_data.get("elite_chance", -1.0)) >= 1.0:
@@ -7674,14 +7853,19 @@ func _on_p3_stage_shifted(stage_idx: int) -> void:
 		_show_rival_subtitle("잘 보시네요. 그럼 자리를 옮겨 가며 하죠.", 3.0)
 	elif stage_idx == 2:
 		_show_rival_subtitle("...방이 저를 못 버티기 시작하는군요. 서두르겠습니다.", 3.2)
-		# 낙하 잔해 2존(final_boss_rework §6-1) — 진동이 실제 붕괴로 이어지는 체감.
+		# 낙하 잔해 3존(final_boss_rework §6-1) — 진동이 실제 붕괴로 이어지는 체감.
 		# 그림자 예고 0.9s 문법 유지(FallingDebris 자체) · 격파 시 정리.
+		# 캠핑 대책 ②(2026-08-20): 존이 최상단 데크(300~600/1800~2100)와 중앙 상단(1090~1310)을
+		# 전부 덮도록 확장 — 종전 존(400~1000/1400~2000)은 데크 절반 + 중앙을 통째로 비워
+		# "맨 위 발판 = 완전 안전"이었다. 발판 표면 예고(mark_platforms)로 상단에도 회피 정보.
 		if _p3_debris_nodes.is_empty():
-			for cfg0 in [{"x_min": 400.0, "x_max": 1000.0, "interval": 6.5},
-					{"x_min": 1400.0, "x_max": 2000.0, "interval": 7.5, "phase": 0.5}]:
+			var plats: Array = _debris_mark_platforms()
+			for cfg0 in [{"x_min": 290.0, "x_max": 1000.0, "interval": 6.0},
+					{"x_min": 1000.0, "x_max": 1400.0, "interval": 8.0, "phase": 0.35},
+					{"x_min": 1400.0, "x_max": 2110.0, "interval": 6.5, "phase": 0.6}]:
 				var fd := FallingDebris.new()
 				add_child(fd)
-				fd.setup(cfg0, 1220.0)
+				fd.setup(cfg0, 1220.0, plats)
 				_p3_debris_nodes.append(fd)
 		_p3_shudder_timer = Timer.new()
 		_p3_shudder_timer.wait_time = 3.2
@@ -8453,11 +8637,23 @@ func _build_arc_zones() -> void:
 			float(d.get("phase", 0.0)), int(d.get("dmg", 1)))
 
 # 낙하 잔해(FallingDebris) · MapData "debris_zones" 키. 철거구역 시그니처(확산 5호).
+# 발판 예고(2026-08-20)는 맵 platforms에서 자동 파생 — 데이터 추가 없이 모든 잔해 맵에 적용.
 func _build_debris_zones() -> void:
+	var plats: Array = _debris_mark_platforms()
 	for entry in _map_data.get("debris_zones", []):
 		var fd := FallingDebris.new()
 		add_child(fd)
-		fd.setup(entry, GROUND_Y)
+		fd.setup(entry, GROUND_Y, plats)
+
+# 맵 platforms → FallingDebris 발판 예고 목록 [{x_min, x_max, y}].
+func _debris_mark_platforms() -> Array:
+	var out: Array = []
+	for p_entry in _map_data.get("platforms", []):
+		var pd: Dictionary = p_entry
+		var pp: Vector2 = pd.get("pos", Vector2.ZERO)
+		var pw: float = float(pd.get("w", 0.0))
+		out.append({"x_min": pp.x - pw * 0.5, "x_max": pp.x + pw * 0.5, "y": pp.y})
+	return out
 
 # 컨베이어(ConveyorBelt) · MapData "conveyors" 키. 물류 창고 시그니처(확산 6호).
 func _build_conveyors() -> void:
@@ -8937,6 +9133,34 @@ func _process(delta: float) -> void:
 	_tick_trap_warning()
 	_tick_avoid_warning()
 	_tick_mid_gate(delta)
+	_tick_p3_camp(delta)
+
+# ─── P3 캠핑 감지(2026-08-20 사용자 "맨 위 발판에서 연사 홀드로 무피해 클리어") ───
+# 반경 130px 안에 6초+ 머물면 보스가 잠복 중에도 유도탄을 쏜다(FalseVeil.fire_suppression).
+# 움직이면 즉시 리셋 — 답은 이동. 계속 눌러앉으면 ~2.8s마다 반복. 첫 발동 때 VEIL 1회 안내.
+const P3_CAMP_RADIUS: float = 130.0
+const P3_CAMP_TIME: float = 6.0
+var _p3_camp_pos: Vector2 = Vector2.ZERO
+var _p3_camp_t: float = 0.0
+var _p3_camp_line_shown: bool = false
+
+func _tick_p3_camp(delta: float) -> void:
+	if _rival_phase != 2 or _false_veil == null or not is_instance_valid(_false_veil):
+		_p3_camp_t = 0.0
+		return
+	if player == null or not is_instance_valid(player):
+		return
+	if player.global_position.distance_to(_p3_camp_pos) > P3_CAMP_RADIUS:
+		_p3_camp_pos = player.global_position
+		_p3_camp_t = 0.0
+		return
+	_p3_camp_t += delta
+	if _p3_camp_t >= P3_CAMP_TIME:
+		_p3_camp_t = P3_CAMP_TIME - 2.8
+		_false_veil.call("fire_suppression", player.global_position + Vector2(0.0, -24.0))
+		if not _p3_camp_line_shown:
+			_p3_camp_line_shown = true
+			_show_veil_subtitle("한자리에 오래 서 있으면 조준이 고정됩니다. 계속 움직이십시오.", 3.2)
 
 # 자막창 흔들림은 완전 제거됨(2026-08-14 2차: 잠깐의 등장 떨림조차 "글씨를 읽을 수 없다" 반려).
 # 통신 두절 톤은 14-1 후반의 대사 조기 끊김(_show_veil_subtitle duration 캡)이 담당한다.

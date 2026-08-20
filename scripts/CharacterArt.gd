@@ -416,6 +416,56 @@ static func build_jammer(parent: Node2D) -> Node2D:
 	]))
 	return root
 
+static func build_caller(parent: Node2D) -> Node2D:
+	# 호출병 — 무기 대신 등짐 무전기를 진 통신병(2026-08-20 신설). 직접 공격이 없어 실루엣부터
+	# "총이 없다"가 읽히게: 양손이 비었고, 등 뒤 무전기 상자 + 비스듬한 채찍 안테나가 정체성.
+	# 발밑 origin(0,0), 대략 x∈[-17,12] y∈[-56,0] (콜리전 32×48에 맞춤). 악센트 = 앰버(신호등).
+	# 안테나 끝은 (0,-56) — Enemy._CallerBeacon 점멸등/신호 링과 정렬(비주얼 플립과 무관한 중심선).
+	var root := Node2D.new()
+	root.name = "Visual"
+	parent.add_child(root)
+
+	root.add_child(_ellipse(Vector2(0, -1), Vector2(16, 4), Color(0, 0, 0, 0.5)))
+
+	var body := Node2D.new()
+	body.name = "Body"
+	root.add_child(body)
+
+	# 다리(어두운 회록)
+	_filled(body, Color(0.20, 0.22, 0.19), PackedVector2Array([
+		Vector2(-9, -16), Vector2(-3, -16), Vector2(-4, 0), Vector2(-10, 0),
+	]))
+	_filled(body, Color(0.20, 0.22, 0.19), PackedVector2Array([
+		Vector2(3, -16), Vector2(9, -16), Vector2(10, 0), Vector2(4, 0),
+	]))
+	# 몸통(올리브 야전복) — 앞으로 살짝 숙인 사다리꼴
+	_filled(body, Color(0.33, 0.36, 0.28), PackedVector2Array([
+		Vector2(-9, -36), Vector2(8, -36), Vector2(10, -14), Vector2(-11, -14),
+	]))
+	# 등짐 무전기(등 = -x 쪽) — 각진 상자 + 앰버 다이얼 + 어두운 스피커 슬릿
+	_filled(body, Color(0.22, 0.23, 0.21), PackedVector2Array([
+		Vector2(-17, -38), Vector2(-8, -38), Vector2(-8, -18), Vector2(-17, -18),
+	]))
+	_filled_circle(body, Vector2(-12.5, -33), 2.6, Color(1.0, 0.64, 0.22))
+	_filled(body, Color(0.15, 0.16, 0.14), PackedVector2Array([
+		Vector2(-16, -26), Vector2(-9, -26), Vector2(-9, -21), Vector2(-16, -21),
+	]))
+	# 빈손 팔 — 헤드셋을 누르는 팔(무장 없음이 한눈에 읽히게 손이 귀 쪽으로)
+	_filled(body, Color(0.30, 0.33, 0.26), PackedVector2Array([
+		Vector2(6, -34), Vector2(12, -32), Vector2(11, -40), Vector2(7, -41),
+	]))
+	# 머리 + 헤드셋 밴드 + 이어컵
+	_filled_circle(body, Vector2(0, -43), 7.0, Color(0.82, 0.68, 0.58))
+	_filled(body, Color(0.22, 0.23, 0.21), PackedVector2Array([
+		Vector2(-7, -47), Vector2(7, -47), Vector2(7, -44), Vector2(-7, -44),
+	]))
+	_filled_circle(body, Vector2(6, -42), 2.2, Color(0.16, 0.17, 0.15))
+	# 채찍 안테나 — 무전기 상단에서 중심선 위(0,-56)로 비스듬히
+	_filled(body, Color(0.46, 0.44, 0.38), PackedVector2Array([
+		Vector2(-0.9, -56), Vector2(1.0, -56), Vector2(-10.5, -38), Vector2(-13.0, -38),
+	]))
+	return root
+
 static func build_tutorial_dummy(parent: Node2D) -> Node2D:
 	# 사격 연습용 목제 더미. 좌표는 origin(0)이 ground level이라는 전제.
 	# 받침대 바닥 = y=0(지면), 본체는 받침대 위, 머리는 본체 위.

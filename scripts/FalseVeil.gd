@@ -98,12 +98,33 @@ func _enter_phased() -> void:
 	state = State.PHASED
 	_state_t = 0.0
 	_window_dmg = 0
-	if not _anchors.is_empty():
-		_anchor_idx = (_anchor_idx + 1) % _anchors.size()
+	_pick_far_anchor()
 	if _decoy != null and is_instance_valid(_decoy):
 		_decoy.cycle_anchor()
 	_spawn_fakes()
 	emit_signal("volley_started")
+
+# 캠핑 대책 ①(2026-08-20 사용자 "P3 지루해 · 맨 위 발판 홀드로 무피해") — 다음 실체화 앵커는
+# 현재 앵커를 제외하고 플레이어에게서 x로 가장 먼 곳. 눌러앉은 자리 근처엔 안 떠서
+# 창마다 이동을 강제한다(연사 이동 감속과 시너지 · 쏘며 갈지 달려가 쏠지 판단이 생김).
+func _pick_far_anchor() -> void:
+	if _anchors.is_empty():
+		return
+	var p := _find_player()
+	if p == null:
+		_anchor_idx = (_anchor_idx + 1) % _anchors.size()
+		return
+	var best: int = -1
+	var best_d: float = -1.0
+	for i in _anchors.size():
+		if i == _anchor_idx:
+			continue
+		var d: float = absf((_anchors[i] as Vector2).x - p.global_position.x)
+		if d > best_d:
+			best_d = d
+			best = i
+	if best >= 0:
+		_anchor_idx = best
 
 func _spawn_fakes() -> void:
 	if _fake_spots.is_empty():
@@ -170,8 +191,8 @@ func _physics_process(delta: float) -> void:
 				# 튄다. 가짜 눈도 동시에 다른 지점으로 튀어 "어느 쪽이 진짜인가"가 매번 갱신.
 				# 워프 연출(사용자 2026-08-17 "위치 초기화 텔레포트가 맞나?") · 의도된 변주지만
 				# 연출 없이 스냅해 버그처럼 읽혔다 · 이전 자리 소멸 파문을 남겨 "옮겨 갔다"로.
+				# 목적지는 캠핑 대책 ①과 동일 규칙(플레이어 반대편) — _enter_phased가 이미 골랐다.
 				if fight_stage >= 1 and not _anchors.is_empty():
-					_anchor_idx = (_anchor_idx + 1 + (randi() % maxi(1, _anchors.size() - 1))) % _anchors.size()
 					_warp_from = global_position
 					_warp_t = 0.4
 					global_position = _anchors[_anchor_idx]
@@ -212,6 +233,22 @@ func _update_blink(delta: float) -> void:
 		_lid = 1.0 - (cycle - 0.14) / 0.14
 	else:
 		_lid = 0.0
+
+# 캠핑 대책 ③(2026-08-20) — 한자리 장기 체류 시 잠복 중에도 유도탄 2발(Stage._tick_p3_camp가
+# 호출). 잠복 무적은 그대로 두고 "숨어만 있으면 완전 안전"만 깬다. 미사일은 발사음 + 궤적이
+# 보이는 약유도(BossMissile)라 움직이기만 하면 피해진다 — 답 = 이동.
+func fire_suppression(at: Vector2) -> void:
+	if state == State.DYING:
+		return
+	SfxPlayer.play_at("boss_missile_launch", global_position)
+	for i in 2:
+		var m := Area2D.new()
+		m.set_script(load("res://scripts/BossMissile.gd"))
+		var from: Vector2 = global_position + Vector2(-26.0 + 52.0 * float(i), -18.0)
+		var v: Vector2 = (at - from).normalized() * 330.0
+		m.set("velocity", v.rotated(-0.35 + 0.7 * float(i)))
+		m.global_position = from
+		get_parent().add_child(m)
 
 # 실체화 순간의 조준 3연탄 — "볼 수 있는 창 = 위험한 창"의 리스크 교환.
 func _fire_volley() -> void:

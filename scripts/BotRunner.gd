@@ -68,7 +68,7 @@ func _ready() -> void:
 
 func _run_one(build: Dictionary, m: Dictionary) -> void:
 	GameState.reset()
-	for eid in ["patrol", "shield", "sniper", "drone", "bomber", "elite", "jammer"]:
+	for eid in ["patrol", "shield", "sniper", "drone", "bomber", "elite", "jammer", "caller"]:
 		GameState.mark_enemy_seen(eid)
 	GameState.playground_active = true   # 골 도달 = 세계 정지(계측 종료 신호) + 습관 기록 제외
 	GameState.bot_headless = true        # 방 체인 씬 전환 생략 · 러너가 방을 직접 띄운다

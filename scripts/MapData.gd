@@ -871,39 +871,48 @@ static func _datacenter() -> Dictionary:
 			},
 			# ── 배치 3 확장(2026-08-19): 웨이브 3 → 6. ARENA는 체인 대신 웨이브 수·구성으로
 			# 시간을 번다(room_chain_expansion §3 · 목표 막3 90~120s). 전개 아크: 지상 개전 →
-			# 원거리 → 지상 러시 → 대공 국면(겹침) → 방패 압박 → 재머 절정.
+			# 원거리 → 혼성 스쿼드 → 대공+호출 → 스쿼드 협공 → 재머 절정.
 			# 소프트락 규칙: 드론 단독 웨이브 금지(스토리 모드 드론 스킵 = 빈 웨이브 = 체인 정지).
+			# ── 혼성 진형(2026-08-20 사용자): 같은 타입끼리 몰려와 관통에 쓸리던 것을 스쿼드로 재편.
+			# 방패 근처(300px) 정찰병은 스폰 직후 그 방패의 호위가 된다(Stage._assign_wave_escorts).
 			{
 				"trigger": "prev_clear",
 				"banner":  "WAVE 3",
 				"enemies": {
-					"bomber": [Vector2(600, 790.0), Vector2(1400, 790.0)],
-					"patrol": [Vector2(300, 790.0), Vector2(1620, 790.0)],
+					# 좌측 스쿼드: 방패 선두 + 정찰 2 후위(호위 대형) · 우측에서 자폭 협공.
+					"shield": [Vector2(560, 790.0)],
+					"patrol": [Vector2(470, 790.0), Vector2(410, 790.0)],
+					"bomber": [Vector2(1700, 790.0)],
 				},
 			},
 			{
-				"trigger": "prev_half",   # 러시가 반쯤 정리되면 위가 열린다 - 겹침 압박
+				"trigger": "prev_half",   # 스쿼드가 반쯤 정리되면 위가 열린다 - 겹침 압박
 				"banner":  "WAVE 4",
 				"enemies": {
+					# 대공 국면 + 호출병: 드론에 시선이 묶인 사이 지상 증원이 계속 불려 온다.
 					"drone":  [Vector2(600, 200.0), Vector2(1320, 200.0)],
-					"sniper": [Vector2(960, 550.0)],
+					"caller": [Vector2(1620, 790.0)],
 				},
 			},
 			{
 				"trigger": "prev_clear",
 				"banner":  "WAVE 5",
 				"enemies": {
-					"shield": [Vector2(500, 790.0), Vector2(1420, 790.0)],
-					"bomber": [Vector2(960, 790.0)],
+					# 우측 스쿼드(방패+정찰 호위+후방 랙 저격) · 좌측 자폭 측면.
+					"shield": [Vector2(1420, 790.0)],
+					"patrol": [Vector2(1510, 790.0)],
+					"sniper": [Vector2(1700, 550.0)],
+					"bomber": [Vector2(200, 790.0)],
 				},
 			},
 			{
 				"trigger": "prev_clear",
 				"banner":  "FINAL WAVE",
 				"enemies": {
+					# 중앙 스쿼드 + 양익 저격 + 재머 절정.
 					"shield": [Vector2(960, 790.0)],
+					"patrol": [Vector2(880, 790.0), Vector2(1040, 790.0)],
 					"sniper": [Vector2(200, 550.0), Vector2(1700, 550.0)],
-					"patrol": [Vector2(400, 790.0), Vector2(1500, 790.0)],
 					# 라이벌 VEIL 확산(§5·§6, 막3 s6) - server_hall 재머를 ARENA로 옮긴 새 쓰임새.
 					# 절정(근접 웨이브)에 클러스터 마커가 반경(340) 안에서 꺼지고 시야가 무너진다.
 					# ENEMY_CLEAR = 반드시 부숴야 클리어 - "우선 표적" 손맛 강제. 막3 = 맵당 1기.
@@ -916,9 +925,10 @@ static func _datacenter() -> Dictionary:
 			"patrol": [Vector2(400, 790.0), Vector2(1200, 790.0), Vector2(1700, 790.0)],
 			"sniper": [Vector2(200, 550.0), Vector2(1700, 550.0)],
 			"drone":  [Vector2(960, 200.0)],
-			"bomber": [Vector2(600, 790.0), Vector2(1400, 790.0)],
+			"bomber": [Vector2(200, 790.0), Vector2(1700, 790.0)],
 			"shield": [Vector2(960, 790.0)],
 			"jammer": [Vector2(1080, 790.0)],
+			"caller": [Vector2(1620, 790.0)],
 		},
 		"rewards": {"xp_orbs": [], "hp_pickups": [Vector2(960, 310.0)]},   # 상층 중앙 · 6웨이브 장기전 유지력
 		"spikes": [],
@@ -1693,9 +1703,14 @@ static func _testing_grounds() -> Dictionary:
 		],
 	}
 
-# ─── 17. 철거 구역 (HORIZONTAL, 막1) — 잔해 엄폐 + 방패병, 바닥 포탑 1 ──
-# 막1 난이도 유지(patrol/방패만). 잔해 발판 + 바닥 상향 포탑 하나로 동선 변주.
+# ─── 17. 철거 구역 (HORIZONTAL, 막1) — 2방 체인(2026-08-20 사용자 "컨셉 좋은데 활용도 없고
+# 짧다") · 방1 철거 가로(학습: 그림자 보고 비키기) → 방2 파쇄 마당(본 손맛: 잔해가 더 잦고
+# 적도 맞는다 = 유인 처치). 막1 밴드(합산 45~60s, room_chain_expansion §전개 문법)에 맞춤.
 static func _demolition_zone() -> Dictionary:
+	return {"segments": [_demo_street(), _demo_yard()]}
+
+# 방1 · 철거 가로 — 기존 단일 맵 유지(잔해 스텝 + 계단 세트피스 + 상향 포탑 1). 기믹 학습 방.
+static func _demo_street() -> Dictionary:
 	return {
 		"world_type":   "HORIZONTAL",
 		"world_size":   Vector2(3200.0, 720.0),
@@ -1703,6 +1718,9 @@ static func _demolition_zone() -> Dictionary:
 		"goal_type":    "POSITION",
 		"goal_pos":     Vector2(3080.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
+		"ambience":     "demo_street",
+		"indoor_env":   "interior",
+		"no_spike_fallback": true,
 		"platforms": [
 			# 잔해 스텝 + 계단식 세트피스 + 휴지(1500~1800 빈 지면) · 수칙 1·3·5(2026-08-17).
 			{"pos": Vector2(560, 470),  "w": 200.0},   # 기
@@ -1738,6 +1756,53 @@ static func _demolition_zone() -> Dictionary:
 		],
 		"route_lines": [
 			{"x": 300.0, "who": "veil", "text": "위가 계속 무너집니다. 바닥에 그림자가 지면 그 자리를 비키세요.", "dur": 3.8},
+		],
+	}
+
+# 방2 · 파쇄 마당 — 잔해 본 손맛: 낙하가 더 잦고(4.4/4.8s) 적도 맞는다(FallingDebris 적 판정).
+# 방패병이 낙하 구간 안에 서 있어 "그림자 밑으로 유인"이 정면 돌파의 대안이 된다.
+# 중앙 1240~1480은 캐노피(처마) 휴지 구간 — 낙하 없음(배경 캐노피가 이유를 그려 준다).
+static func _demo_yard() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(2800.0, 720.0),
+		"player_start": Vector2(120.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(2680.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"ambience":     "demo_yard",
+		"indoor_env":   "interior",
+		"no_spike_fallback": true,
+		"platforms": [
+			# 낮은 잔해 스텝 위주 — 낙하 플레이는 지면에서, 발판은 짧은 회피 고지.
+			{"pos": Vector2(620, 490),  "w": 150.0},
+			{"pos": Vector2(1000, 450), "w": 130.0},
+			{"pos": Vector2(1360, 470), "w": 200.0},   # 캐노피 밑 안전 데크(휴지)
+			{"pos": Vector2(1720, 480), "w": 140.0},
+			{"pos": Vector2(2100, 430), "w": 150.0},
+			{"pos": Vector2(2380, 500), "w": 120.0},
+		],
+		"enemies": {
+			# 방패병·정찰병이 낙하 구간 안 — 정면이 막히면 그림자로 유인해 잡는 맵.
+			"patrol": [Vector2(760, 600.0), Vector2(1900, 600.0)],
+			"sniper": [],
+			"drone":  [],
+			"bomber": [Vector2(2250, 600.0)],
+			"shield": [Vector2(1650, 600.0)],
+		},
+		"rewards": {
+			# xp는 낙하 구간 한가운데(위험 프리미엄) · hp는 캐노피 휴지.
+			"xp_orbs":    [Vector2(1000, 420.0), Vector2(2100, 400.0)],
+			"hp_pickups": [Vector2(1360, 440.0)],
+		},
+		"spikes": [],
+		"traps": [],
+		"debris_zones": [
+			{"x_min": 480.0, "x_max": 1240.0, "interval": 4.4},
+			{"x_min": 1480.0, "x_max": 2620.0, "interval": 4.8, "phase": 0.5},
+		],
+		"route_lines": [
+			{"x": 260.0, "who": "veil", "text": "여기부턴 잔해가 더 잦습니다. 그리고 잔해는 적도 가리지 않습니다. 그림자 밑으로 유인하는 것도 방법입니다.", "dur": 4.2},
 		],
 	}
 
@@ -2851,37 +2916,45 @@ static func _holdout() -> Dictionary:
 				},
 			},
 			# ── 배치 3 확장(2026-08-19): 웨이브 3 → 6(room_chain_expansion §3 · 목표 막4 100~130s).
-			# 농성 아크: 개전 → 폭탄 압박 → 지상 파도 → 원거리 협공(겹침) → 방패 전진 → 재머 절정.
+			# 농성 아크: 개전 → 폭탄 압박 → 좌측 스쿼드 → 원거리+호출 → 우측 스쿼드 → 재머 절정.
 			# 엄폐(hp 4~6)는 유한 자원 - 후반일수록 노출 고조가 이 맵의 정체성.
+			# ── 혼성 진형(2026-08-20 사용자): 같은 타입 뭉침을 스쿼드로 재편. 방패 근처(300px)
+			# 정찰병은 스폰 직후 그 방패의 호위가 된다(Stage._assign_wave_escorts).
 			{
 				"trigger": "prev_clear",
 				"banner":  "WAVE 3",
 				"enemies": {
-					"patrol": [Vector2(180, 790.0), Vector2(1740, 790.0), Vector2(120, 790.0)],
+					# 좌측 전진 스쿼드: 방패 선두 + 정찰 2 후위 - 관통 한 줄로 안 쓸린다.
+					"shield": [Vector2(230, 790.0)],
+					"patrol": [Vector2(150, 790.0), Vector2(90, 790.0)],
 				},
 			},
 			{
 				"trigger": "prev_half",   # 파도가 반쯤 남았을 때 위에서 협공 - 겹침 압박
 				"banner":  "WAVE 4",
 				"enemies": {
+					# 저격 이중 사선 + 호출병: 사선에 묶여 있는 동안 증원이 계속 불려 온다.
 					"sniper": [Vector2(340, 490.0), Vector2(1580, 490.0)],
-					"bomber": [Vector2(960, 790.0)],
+					"caller": [Vector2(1700, 790.0)],
 				},
 			},
 			{
 				"trigger": "prev_clear",
 				"banner":  "WAVE 5",
 				"enemies": {
-					"shield": [Vector2(180, 790.0)],
-					"patrol": [Vector2(1740, 790.0), Vector2(1800, 790.0)],
+					# 우측 전진 스쿼드: 방패+정찰 호위+자폭 측면.
+					"shield": [Vector2(1730, 790.0)],
+					"patrol": [Vector2(1800, 790.0)],
+					"bomber": [Vector2(1650, 790.0)],
 				},
 			},
 			{
 				"trigger": "prev_clear",
 				"banner":  "FINAL WAVE",
 				"enemies": {
+					# 중앙 스쿼드 + 양익 저격 + 재머 절정.
 					"shield": [Vector2(960, 790.0)],
-					"patrol": [Vector2(180, 790.0), Vector2(1740, 790.0)],
+					"patrol": [Vector2(880, 790.0), Vector2(1040, 790.0)],
 					"sniper": [Vector2(340, 490.0), Vector2(1580, 490.0)],
 					"jammer": [Vector2(1240, 790.0)],
 				},
@@ -2895,6 +2968,7 @@ static func _holdout() -> Dictionary:
 			"shield": [Vector2(960, 790.0)],
 			"drone":  [],
 			"jammer": [Vector2(1240, 790.0)],
+			"caller": [Vector2(1700, 790.0)],
 		},
 		"rewards": {
 			# 안쪽 엄폐 뒤(안전) xp / 중앙 뒤 hp — 거점을 오래 비우지 않게 중앙 근처에.

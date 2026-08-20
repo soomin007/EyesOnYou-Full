@@ -624,7 +624,7 @@ camera:       가로 follow
 - **지하 주차장 (parking_lot) — HORIZONTAL, 막1 s0~1**: 차량/기둥 엄폐 + 방패병 1 도입. s0 선택지를 2→3으로.
 - **변전소 (substation) — HORIZONTAL, 막2 s3~5**: 변압기 위 저격 + 머리 위 드론. 노출 전투(server_hall 막2 변형).
 - **실험 구역 (testing_grounds) — HORIZONTAL, 막2 s3~5**: 자폭병·방패병 혼합 + 관측 발판 밑 하향 포탑(함정).
-- **철거 구역 (demolition_zone) — HORIZONTAL, 막1 s1~2**: 잔해 엄폐 + 방패병 + 갭 상향 포탑 1(막1 난이도 유지).
+- **철거 구역 (demolition_zone) — HORIZONTAL, 막1 s1~2**: 2방 체인(2026-08-20). 방1 철거 가로(잔해 엄폐 + 방패병 + 갭 상향 포탑 · 낙석 학습) → 방2 파쇄 마당(낙석 잦음 + 적도 맞음 = 유인 처치 · 크레인/캐노피 배경).
 - **배수 펌프장 (pump_station) — HORIZONTAL, 막1 s1~2**: 파이프 위 저격 노출. 사선 끊으며 전진.
 - **통신 중계소 (relay_station) — HORIZONTAL, 막2 s3~5**: 중계기 위 저격 + 머리 위 드론 동시 압박(고위험).
 - **물류 창고 (warehouse) — HORIZONTAL, 막2 s3~5**: 컨테이너 엄폐 + 방패병·자폭병 혼합 근접.

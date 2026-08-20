@@ -2,7 +2,7 @@ extends CharacterBody2D
 
 signal killed(at_position: Vector2)
 
-enum EnemyType { PATROL, SNIPER, DRONE, BOMBER, SHIELD, JAMMER }
+enum EnemyType { PATROL, SNIPER, DRONE, BOMBER, SHIELD, JAMMER, CALLER }
 enum PatrolState { ROAMING, FIRING, TELEGRAPH, CHARGING, RECOVERING }
 enum BomberState { ROAMING, STALKING, ARMING }
 
@@ -73,6 +73,20 @@ const SHIELD_TOUCH_COOLDOWN: float = 0.8
 # 파괴하면 시야가 돌아온다 = "우선 표적". 능동 공격 없음, 접촉 데미지만(고정이라 회피 쉬움).
 const JAMMER_RADIUS: float = 340.0   # VeilSight 마커 소등 반경 (재밍 필드 = 이 반경의 바이올렛 링)
 const JAMMER_HP: int = 3
+
+# Caller(호출병) — 직접 공격이 없는 증원 통신병(2026-08-20 사용자 제안 "호출기"). 살려두면
+# 주기적으로 안테나를 세워 증원을 부른다. 실제 스폰은 Stage.request_caller_summon 경유 —
+# 텔레그래프 후 타이머 스폰(물리 콜백 동기 스폰 금지 규약과 동형). 플레이어가 다가오면 반대로
+# 물러나 추격을 강제하고, 접촉 데미지가 없다(무공격 정체성). 불려 온 증원은 처치 보상이 없다
+# (무한 파밍 차단 · 경보 진압 경비 무보상과 동형).
+const CALLER_HP: int = 2
+const CALLER_FLEE_SPEED: float = 95.0
+const CALLER_FLEE_RANGE: float = 400.0    # 이 안으로 접근하면 반대쪽으로 물러남
+const CALLER_AGGRO_RANGE: float = 760.0   # 플레이어가 이 안에 있어야 호출 사이클 진행(화면 밖 무한 소환 방지)
+const CALLER_SUMMON_INTERVAL: float = 6.5
+const CALLER_FIRST_DELAY: float = 2.2     # 첫 호출까지 여유 — "우선 표적" 판단 시간
+const CALLER_CHARGE_TIME: float = 1.1     # 호출 예고(안테나 신호 링) — 이 동안 끊으면 이번 호출 무산
+const CALLER_LIVE_CAP: int = 4            # 이 호출병이 부른 생존 증원 상한
 
 # Sniper — 시야가 트여 있을 때만 발사
 const SNIPER_FIRE_INTERVAL: float = 2.6
@@ -200,6 +214,20 @@ var shiny: bool = false
 var hunt: bool = false
 const HUNT_HOP_VELOCITY: float = -520.0   # 엄폐 최고 92px < 도약 ~123px
 
+# 혼성 진형 호위(2026-08-20 사용자 "진형을 갖춰서 오면 위협적") — 웨이브 스폰 직후 Stage가
+# 방패병 근처 정찰병에 리더를 배정한다. 호위 정찰병은 방패 뒤(플레이어 반대쪽)를 따라붙어
+# "방패가 막고 사수가 쏘는" 대형이 된다. 리더가 죽으면 평소 행동으로 복귀.
+var escort_leader: Node2D = null
+const ESCORT_GAP: float = 80.0            # 리더 뒤 유지 거리
+
+# 호출병 상태 — charging 중엔 정지(취약 창), 사이클은 플레이어 인지 범위 안에서만 흐른다.
+var caller_cycle_t: float = 0.0
+var caller_charging: bool = false
+var caller_charge_t: float = 0.0
+var caller_calls: int = 0                 # 호출 회차(Stage가 증원 구성 교대에 사용)
+var _caller_summons: Array = []           # 살아 있는 증원 참조(상한 판정용)
+var _caller_beacon: Node2D = null
+
 # 지속 기본 틴트 — 텔레그래프/조준 점멸이 리셋할 목표색(기본 흰색). shiny는 금빛으로 바꿔
 # 몸통 자체가 항상 황금이게 한다(known_issues 함정의 ⓑ 해법: 리셋 목표를 틴트 값으로).
 var _base_tint: Color = Color(1, 1, 1)
@@ -250,6 +278,24 @@ class _ShinyGlint extends Node2D:
 			var x: float = lerp(body_rect.position.x - 3.0, body_rect.end.x + 3.0, k)
 			var ga: float = 0.55 * (1.0 - absf(k - 0.5) * 2.0)
 			draw_line(Vector2(x - 6.0, body_rect.position.y - 2.0), Vector2(x + 6.0, body_rect.end.y + 2.0), Color(1.0, 0.95, 0.55, ga), 3.0)
+
+# 호출병 안테나 표시 — 평상시 느린 점멸등, 호출 예고 중엔 안테나 끝에서 퍼지는 신호 링.
+# 링이 보이는 동안 처치하면 이번 호출이 무산된다(끊는 손맛). 점멸은 느리게(광과민 기준 준수).
+class _CallerBeacon extends Node2D:
+	var charge_frac: float = -1.0   # -1 = 예고 아님, 0~1 = 예고 진행도(소유자가 매 틱 갱신)
+	var t: float = 0.0
+	func _process(delta: float) -> void:
+		t += delta
+		queue_redraw()
+	func _draw() -> void:
+		var tip := Vector2(0.0, -56.0)
+		var idle_a: float = 0.45 + 0.25 * sin(t * 2.6)
+		draw_circle(tip, 2.8, Color(1.0, 0.64, 0.22, idle_a))
+		if charge_frac < 0.0:
+			return
+		for i in 3:
+			var k: float = fmod(charge_frac * 1.4 + float(i) / 3.0, 1.0)
+			draw_arc(tip, 7.0 + 30.0 * k, 0.0, TAU, 26, Color(1.0, 0.60, 0.20, 0.5 * (1.0 - k)), 2.0, true)
 
 # 재밍 필드 — 마커가 소등되는 구역을 라이벌 바이올렛 링으로 그린다.
 # 작가성(known_issues): "마커가 그냥 사라진다"가 아니라 "여기가 가로막혔다"로 읽히게, 반경을 눈에 보이게.
@@ -392,6 +438,14 @@ func _ready() -> void:
 			field.owner_ref = self
 			field.z_index = -2   # 캐릭터 아트 뒤
 			add_child(field)
+		EnemyType.CALLER:
+			hp = CALLER_HP
+			visual = CharacterArt.build_caller(self)
+			caller_cycle_t = CALLER_FIRST_DELAY
+			var beacon := _CallerBeacon.new()
+			beacon.z_index = 3
+			add_child(beacon)
+			_caller_beacon = beacon
 	# 막 진행 강화(라이벌 침식, 2026-08-18 사용자 "적을 강화해") — 막4/5 일반 유닛 내구 상향.
 	# 엘리트 램프와 같은 경계(막4+) = "막3까지는 데모 느낌" 제약 준수. 폭탄병 1 유지(원거리 1샷
 	# 정답 보존, 엘리트와 동형) · 재머 제외(라이벌의 "손"은 별개 문법). 엘리트는 아래 오버라이드가
@@ -509,6 +563,8 @@ func veil_is_telegraphing() -> bool:
 			return patrol_state == PatrolState.TELEGRAPH or patrol_state == PatrolState.CHARGING
 		EnemyType.BOMBER:
 			return bomber_state == BomberState.ARMING
+		EnemyType.CALLER:
+			return caller_charging   # 호출 예고 중 = "지금 끊어야 하는" 순간
 	return false
 
 func _telegraph_time() -> float:
@@ -587,11 +643,70 @@ func _enemy_id() -> String:
 		EnemyType.BOMBER: return "bomber"
 		EnemyType.SHIELD: return "shield"
 		EnemyType.JAMMER: return "jammer"
+		EnemyType.CALLER: return "caller"
 	return ""
 
 # VeilSight가 마커 소등 반경을 읽는다 (const는 get()으로 못 꺼내므로 메서드로 노출).
 func jam_radius() -> float:
 	return JAMMER_RADIUS
+
+# ─── 호출병(caller) ───────────────────────────────────────────
+
+# 살아 있는 증원 수 — 죽었거나 해제된 참조는 여기서 정리(is_instance_valid가 항상 맨 앞).
+func _caller_live_summons() -> int:
+	var pruned: Array = []
+	for s in _caller_summons:
+		if is_instance_valid(s) and not bool(s.get("dead")):
+			pruned.append(s)
+	_caller_summons = pruned
+	return pruned.size()
+
+# Stage._caller_do_spawn이 스폰 직후 호출 — 상한 판정 대상 등록.
+func register_summon(e: Node) -> void:
+	_caller_summons.append(e)
+
+func _tick_caller(delta: float) -> void:
+	if not is_on_floor():
+		velocity.y = min(velocity.y + GRAVITY * delta, 1100.0)
+	else:
+		velocity.y = 0.0
+	var p := _find_player()
+	velocity.x = 0.0
+	if p != null:
+		# 이동 — 가까워지면 반대쪽으로 물러난다(무기 없는 통신병). 가장자리/벽에선 멈춰 선다.
+		# 예고 중엔 정지(취약 창 — 끊을 기회).
+		if not caller_charging:
+			var dx: float = p.global_position.x - global_position.x
+			if absf(dx) < CALLER_FLEE_RANGE:
+				var flee_dir: int = -1 if dx > 0.0 else 1
+				if not is_on_wall() and (not is_on_floor() or _has_ground_ahead(flee_dir)):
+					dir = flee_dir
+					velocity.x = float(flee_dir) * CALLER_FLEE_SPEED
+		# 시선은 항상 플레이어 쪽(물러나며 돌아봄).
+		_flip_visual(p.global_position.x < global_position.x)
+		# 호출 사이클 — 플레이어가 인지 범위 안에 있을 때만 진행.
+		if not harmless and absf(p.global_position.x - global_position.x) <= CALLER_AGGRO_RANGE:
+			if caller_charging:
+				caller_charge_t -= delta
+				if caller_charge_t <= 0.0:
+					caller_charging = false
+					caller_cycle_t = CALLER_SUMMON_INTERVAL
+					_caller_request_summon()
+			else:
+				caller_cycle_t -= delta
+				if caller_cycle_t <= 0.0 and _caller_live_summons() < CALLER_LIVE_CAP:
+					caller_charging = true
+					caller_charge_t = CALLER_CHARGE_TIME
+					SfxPlayer.play_at("enemy_sniper_charge", global_position)
+	if _caller_beacon != null:
+		_caller_beacon.set("charge_frac",
+			(1.0 - caller_charge_t / CALLER_CHARGE_TIME) if caller_charging else -1.0)
+	move_and_slide()
+
+func _caller_request_summon() -> void:
+	var sn := get_tree().get_first_node_in_group("stage")
+	if sn != null and sn.has_method("request_caller_summon"):
+		sn.call("request_caller_summon", self)
 
 func _flip_visual(facing_left: bool) -> void:
 	if visual != null:
@@ -619,6 +734,8 @@ func _build_visual_for(kind: int) -> Node2D:
 				v.scale = Vector2(1.4, 1.4)
 		EnemyType.JAMMER:
 			v = CharacterArt.build_jammer(self)
+		EnemyType.CALLER:
+			v = CharacterArt.build_caller(self)
 	return v
 
 # §4 거짓 렌더 — 위장이 벗겨지는 조건: (a) 참 종류가 텔레그래프 시작(behavior가 거짓을 배신) 또는
@@ -689,8 +806,10 @@ func _physics_process(delta: float) -> void:
 			_tick_bomber(delta)
 		EnemyType.SHIELD:
 			_tick_shield(delta)
-	# bomber는 자체 폭발만 — 평상시 근접 데미지 없음
-	if enemy_type == EnemyType.BOMBER:
+		EnemyType.CALLER:
+			_tick_caller(delta)
+	# bomber는 자체 폭발만 — 평상시 근접 데미지 없음. 호출병은 무공격 정체성이라 접촉도 없음.
+	if enemy_type == EnemyType.BOMBER or enemy_type == EnemyType.CALLER:
 		return
 	_check_touch_player()
 
@@ -757,9 +876,30 @@ func _tick_patrol(delta: float) -> void:
 		move_and_slide()
 		return
 
+	# 호위 리더 유효성 — 해제/사망 리더는 해제(is_instance_valid가 항상 맨 앞, known_issues).
+	if escort_leader != null and (not is_instance_valid(escort_leader) or bool(escort_leader.get("dead"))):
+		escort_leader = null
+
 	match patrol_state:
 		PatrolState.ROAMING:
-			if hunt and p != null and not harmless:
+			if escort_leader != null and p != null and not harmless:
+				# 혼성 진형 호위 — 방패 리더 뒤(플레이어 반대쪽) ESCORT_GAP 지점을 따라붙는다.
+				# 방패가 전면 탄을 막는 동안 뒤에서 사격(사격/돌진 전환은 아래 공통 분기 그대로 —
+				# 플레이어가 파고들면 대형을 깨고 나오는 것도 정상 행동).
+				var lead_x: float = escort_leader.global_position.x
+				var behind_x: float = lead_x - (1.0 if p.global_position.x > lead_x else -1.0) * ESCORT_GAP
+				var ddx: float = behind_x - global_position.x
+				if absf(ddx) > 12.0:
+					dir = 1 if ddx > 0.0 else -1
+					velocity.x = float(dir) * _eff_patrol_speed() * 1.15
+					if is_on_floor() and not _has_ground_ahead(dir):
+						velocity.x = 0.0
+					else:
+						_try_hunt_hop()
+				else:
+					velocity.x = 0.0
+					dir = 1 if p.global_position.x > global_position.x else -1
+			elif hunt and p != null and not harmless:
 				# 사냥 모드 — 순찰 범위/벽 반전 무시, 플레이어 쪽으로 전진. 벽(엄폐)은 타넘기.
 				# 가장자리 검사도 생략(농성 맵은 평지 + 엄폐 꼭대기 통과라 낙하가 안전).
 				dir = 1 if p.global_position.x > global_position.x else -1

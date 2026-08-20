@@ -32,6 +32,7 @@
 | lab 위장 자폭 재기동(`_on_boss_self_destruct_disarmed`) | ...자폭이 위장이에요. 코어가 다시 점화됩니다. 침착하게, 마무리하세요. | |
 | lab 첫 과부하 배기(`_on_boss_vent_started`) | 몸체가 달아오르면 김을 빼면서 잠깐 단단해집니다. 그 틈엔 증원부터 정리해요. | |
 | 14-1 P2 노드 재접속(`_on_p2_node_down`) | ...같은 자리에 회선이 다시 붙어요. 한 번 더 끊어야 합니다. | |
+| 14-1 P3 캠핑 감지(`_tick_p3_camp`, 1회) | 한자리에 오래 서 있으면 조준이 고정됩니다. 계속 움직이십시오. | |
 | beam | 게이트는 스캔 빔이 지나갈 때만 열려요. 빔을 뒤따라 통과하세요. | |
 
 ### 감시등 경보 (감시탑 탐조등·순찰로 경계등 공용, 맵당 1회)
@@ -300,6 +301,7 @@
 | `_ambience_control_room` | 통제실 · 감시망 | |
 | `_ambience_checkpoint` | 보안 검문 · 신원 확인 | |
 | `_ambience_demolition` | 철거 구역 · 접근 주의 | |
+| `_ambience_demo_yard` | 파쇄 마당 · 중장비 작동 중 | |
 | `_ambience_testing` | 실험 구역 · 관측 | |
 | `_ambience_gauntlet` | 함정 통로 · 경고 | |
 | `_ambience_collapse` | 붕괴 진행 · 대피 | |
