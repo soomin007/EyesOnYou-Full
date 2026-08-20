@@ -10,7 +10,7 @@ const JUMP_VELOCITY: float = -540.0
 const GRAVITY: float = 1400.0
 const MAX_FALL_SPEED: float = 1100.0
 const GLIDE_FALL_SPEED: float = 130.0  # glide(공중 글라이드) 시 점프 키 홀드 중 최대 낙하 속도
-const ATTACK_COOLDOWN: float = 0.30
+const ATTACK_COOLDOWN: float = 0.42  # 연사 하향 0.30→0.42(2026-08-20): 무지성 홀드 억제 + 권총 무게. T2 속사(×0.70)면 예전 기본과 비슷.
 const DASH_SPEED: float = 720.0
 const DASH_DURATION: float = 0.18
 const DASH_COOLDOWN: float = 0.7
@@ -53,10 +53,13 @@ const MAX_EXPLOSION_HITS: int = 3
 
 var facing: int = 1
 var attack_cd: float = 0.0
-# fire_boost T2 "사격 시 잠깐 가속" — 사격 직후 _SPRINT_DURATION 동안 이동 속도 ×_SPRINT_MULT.
-const _SPRINT_DURATION: float = 0.5
-const _SPRINT_MULT: float = 1.4
-var sprint_t: float = 0.0
+# 사격 중 이동 감속(2026-08-20) — "손을 떼는 게 손해"이던 무지성 홀드를 뒤집는다. 발사마다
+# 짧은 감속 창이 갱신돼 홀드 연사 중엔 지속 감속, 손을 떼면 곧 풀 스피드로 복귀.
+# fire_boost T2는 감속을 완화(옛 "사격 후 가속"은 이 감속과 정면 모순이라 재설계).
+const _FIRE_SLOW_DURATION: float = 0.45  # 쿨다운(0.42)보다 살짝 길어 홀드 중 끊김 없이 이어짐
+const _FIRE_SLOW_MULT: float = 0.7
+const _FIRE_SLOW_MULT_T2: float = 0.85
+var fire_slow_t: float = 0.0
 # hp T3 "피격 슬로모" — 피격 시 짧게 Engine.time_scale 감소.
 const _HIT_SLOWMO_DURATION: float = 0.35
 const _HIT_SLOWMO_SCALE: float = 0.4
@@ -231,8 +234,8 @@ func _physics_process(delta: float) -> void:
 func _tick_timers(delta: float) -> void:
 	if attack_cd > 0.0:
 		attack_cd -= delta
-	if sprint_t > 0.0:
-		sprint_t -= delta
+	if fire_slow_t > 0.0:
+		fire_slow_t -= delta
 	if dash_timer > 0.0:
 		dash_timer -= delta
 	if dash_cd > 0.0:
@@ -304,8 +307,11 @@ func _handle_input(delta: float) -> void:
 		var dash_speed_mult: float = 1.3 if GameState.get_skill_tier("dash_boost") >= 2 else 1.0
 		velocity.x = float(facing) * DASH_SPEED * dash_speed_mult
 	else:
-		# fire_boost T2 — 사격 직후 0.5s 동안 이동 속도 ×1.4 ("사격 시 잠깐 가속" desc 구현).
-		var move_mult: float = _SPRINT_MULT if sprint_t > 0.0 else 1.0
+		# 사격 감속 — 발사 직후 창 동안 이동 ×0.7(fire_boost T2는 ×0.85). 홀드 연사 = 지속 감속.
+		# 대시 분기가 위에서 우선이라 대시 회피는 감속과 무관(사격 중 탈출 수단 보존).
+		var move_mult: float = 1.0
+		if fire_slow_t > 0.0:
+			move_mult = _FIRE_SLOW_MULT_T2 if GameState.get_skill_tier("fire_boost") >= 2 else _FIRE_SLOW_MULT
 		velocity.x = dir * SPEED * move_mult
 	# 바람(옥상 돌풍 등) · WindGust가 매 프레임 세팅하는 속도 오프셋. 공중에서 크게,
 	# 지상에선 살짝만 밀린다. 넉백 중엔 임펄스가 진실이라 제외.
@@ -419,14 +425,13 @@ func get_skill_cd_max() -> float:
 func _try_attack() -> void:
 	if attack_cd > 0.0:
 		return
-	# fire_boost T2 "속사": 사격 쿨다운 -30%(연사 속도↑) + 사격 후 0.5s 이동 가속(_handle_input에서 적용).
+	# fire_boost T2 "속사": 사격 쿨다운 -30%(연사 속도↑) + 사격 감속 완화(_handle_input에서 적용).
 	var fb_tier: int = GameState.get_skill_tier("fire_boost")
 	var cd_mult: float = 0.70 if fb_tier >= 2 else 1.0
 	attack_cd = ATTACK_COOLDOWN * cd_mult
 	shots_fired += 1   # 이스터에그(평화주의) 판정용 — 이 스테이지에서 발포했는가
 	GameState.profile_note_shot(not is_on_floor(), _nearest_enemy_dist())
-	if fb_tier >= 2:
-		sprint_t = _SPRINT_DURATION
+	fire_slow_t = _FIRE_SLOW_DURATION  # 사격 감속 창 갱신(티어 무관 · T2는 배율만 완화)
 	_show_muzzle_flash()
 	SfxPlayer.play("bullet_fire")
 	# multishot T1=3발, T2/T3=5발.

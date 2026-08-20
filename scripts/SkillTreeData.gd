@@ -26,7 +26,7 @@ const LINES: Array = [
 		"id": "fire_boost", "family": FAMILY_COMBAT,
 		"tiers": [
 			{"name": "사격 강화",   "desc": "사격 데미지 +1",                  "active": false},
-			{"name": "속사",       "desc": "연사 속도 +40%, 사격 후 잠깐 이동 가속", "active": false},
+			{"name": "속사",       "desc": "연사 속도 +40%, 쏘면서도 덜 느려짐", "active": false},
 			{"name": "관통",       "desc": "총알이 적을 뚫고 나감 (뚫을 때마다 피해 감소)", "active": false},
 		],
 	},
