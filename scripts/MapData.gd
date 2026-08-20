@@ -1750,9 +1750,11 @@ static func _demo_street() -> Dictionary:
 		],
 		# 시그니처 · 낙하 잔해(§5 확산 5호, 2026-08-17): 철거 중 구조물이 주기적으로 떨어진다.
 		# 예고 = 바닥 그림자 마커 0.9s + 천장 먼지 · 회피 = 마커 비키기. dmg 1 · 즉사 없음.
+		# 빈도 2배(2026-08-20 사용자 "최소 2배는 자주") · 실주기 = interval + 예고 0.9 + 낙하 0.65
+		# + 잔해 0.5 ≈ interval + 2.05 (dwell-time honest math): 7.55→3.65s / 8.25→4.05s = ×2.07/×2.04.
 		"debris_zones": [
-			{"x_min": 700.0, "x_max": 1500.0, "interval": 5.5},
-			{"x_min": 1800.0, "x_max": 2800.0, "interval": 6.2, "phase": 0.45},
+			{"x_min": 700.0, "x_max": 1500.0, "interval": 1.6},
+			{"x_min": 1800.0, "x_max": 2800.0, "interval": 2.0, "phase": 0.45},
 		],
 		"route_lines": [
 			{"x": 300.0, "who": "veil", "text": "위가 계속 무너집니다. 바닥에 그림자가 지면 그 자리를 비키세요.", "dur": 3.8},
@@ -1797,9 +1799,10 @@ static func _demo_yard() -> Dictionary:
 		},
 		"spikes": [],
 		"traps": [],
+		# 빈도 2배(2026-08-20 사용자) · 실주기 = interval + 2.05: 6.45→3.15s / 6.85→3.35s = ×2.05/×2.04.
 		"debris_zones": [
-			{"x_min": 480.0, "x_max": 1240.0, "interval": 4.4},
-			{"x_min": 1480.0, "x_max": 2620.0, "interval": 4.8, "phase": 0.5},
+			{"x_min": 480.0, "x_max": 1240.0, "interval": 1.1},
+			{"x_min": 1480.0, "x_max": 2620.0, "interval": 1.3, "phase": 0.5},
 		],
 		"route_lines": [
 			{"x": 260.0, "who": "veil", "text": "여기부턴 잔해가 더 잦습니다. 그리고 잔해는 적도 가리지 않습니다. 그림자 밑으로 유인하는 것도 방법입니다.", "dur": 4.2},

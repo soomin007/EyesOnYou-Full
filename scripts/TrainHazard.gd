@@ -157,7 +157,11 @@ func _check_enemy_hits() -> void:
 		if not is_instance_valid(e) or not (e is Node2D):
 			continue
 		var en: Node2D = e as Node2D
-		if bool(en.get("dead")) or bool(en.get("harmless")):
+		# 일반 Enemy만 — "enemy" 그룹의 보스/더미는 속성이 없어 bool(null) 크래시(2026-08-20
+		# FallingDebris에서 실측된 동형 잠복 버그). truthiness로 전환 + enemy_type 게이트.
+		if en.get("enemy_type") == null:
+			continue
+		if en.get("dead") or en.get("harmless"):
 			continue
 		if _hit_enemies.has(en.get_instance_id()):
 			continue
@@ -179,7 +183,7 @@ func _check_enemy_hits() -> void:
 			# 나중에 플레이어가 마무리한 몫까지 삼키지 않게 한다.
 			en.set("env_killed", true)
 			en.call("take_damage", dmg, _dir)
-			if is_instance_valid(en) and not bool(en.get("dead")):
+			if is_instance_valid(en) and not en.get("dead"):
 				en.set("env_killed", false)
 
 func _draw() -> void:

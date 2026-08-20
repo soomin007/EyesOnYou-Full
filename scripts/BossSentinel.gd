@@ -25,8 +25,14 @@ const PHASE_FREEZE_DURATION: float = 1.2  # 페이즈 전환 시 정지 + 무적
 # 어떤 화력이든 배기 ~7회를 상대해야 자폭 임계에 닿는다 = 시간 하한 보장(known_issues:
 # "수치 상향만으론 평소와 같음" — HP가 아니라 창이 길이를 만든다). 배기 중 무적 + 증기 방출
 # + 증원 1기 호출(무방비를 잡몹이 메운다). 스토리 모드는 미적용(짧게 유지).
-const VENT_DIVISOR: float = 8.0
+# 창당 상한 분모 8.0→5.5(2026-08-20 사용자 "공격 두 번이면 충전, 버려지는 시간이 많다"):
+# 28HP 기준 창 7회→5회로 배기 빈도 자체를 줄인다.
+const VENT_DIVISOR: float = 5.5
 const VENT_DURATION: float = 3.0
+# 강제 배출(2026-08-20 재해석) — 배기 중 피격 1발당 배기 시간 단축. 배기가 "기다리는 무적"이
+# 아니라 "쏘면 빨리 끝나는 창"이 된다. 고화력 빌드일수록 배기가 짧아져 잦음이 상쇄된다.
+# 계산: 기본 연사(1발/0.42s) 사격 시 3s 배기 ≈ 1.8s에 종료 · 오연사 만렙 ≈ 0.7s.
+const VENT_HIT_SHAVE: float = 0.3
 const VENT_SUMMON_CAP: int = 4       # 배기 증원 포함 동시 소환수 상한
 # 위장 자폭(1회) — 페이크 보스 서사(§7 "이긴 순간을 이긴 것 같지 않게")의 전투 내 실연.
 # 첫 자폭은 진짜처럼 터지지만 코어가 재점화한다. 두 번째 자폭이 진짜(기존 흐름).
@@ -396,9 +402,13 @@ func take_damage(amount: int, _from_dir: int = 0) -> void:
 	# 문제 — 사용자 보고. 처치는 카운트다운 종료 → _detonate → _die로만 일어남.)
 	if self_destruct_active:
 		return
-	# 과부하 배기 중 무적 — 증기 연출이 "지금은 안 박힌다"의 tell.
+	# 과부하 배기 중 — HP는 안 깎이지만 맞을 때마다 배출이 빨라진다(강제 배출). 사격을 멈출
+	# 이유가 없어져 배기가 대기 시간이 아니라 연속 사격 창이 된다. 바닥은 0.05로 클램프 —
+	# 여기서 0으로 만들면 _physics_process의 배기 종료 정리(창 리셋·라벨 소등)를 건너뛰어
+	# "창 가득 + 배기 없음" 데드락이 된다(다음 물리 틱이 자연 종료하게 맡긴다).
 	if vent_t > 0.0:
-		SfxPlayer.play_at("bullet_deflect_shield", global_position, -8.0)
+		vent_t = maxf(0.05, vent_t - VENT_HIT_SHAVE)
+		SfxPlayer.play_at("bullet_deflect_shield", global_position, -12.0)
 		return
 	# 창당 피해 상한 — 초과분은 흘려보낸다(고화력 즉사 차단 · 시간 하한).
 	if not story_simplified:

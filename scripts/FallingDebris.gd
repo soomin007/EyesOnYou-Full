@@ -110,7 +110,11 @@ func _check_enemy_hits() -> void:
 		if not is_instance_valid(e) or not (e is Node2D):
 			continue
 		var en := e as Node2D
-		if bool(en.get("dead")) or bool(en.get("harmless")):
+		# 일반 Enemy만 — "enemy" 그룹에는 BossSentinel·TutorialDummy도 있다. 속성 없는 노드에
+		# bool(null) 크래시(2026-08-20 lab 잔해에서 실측) + 보스가 자기 잔해에 맞는 설계 오류 차단.
+		if en.get("enemy_type") == null:
+			continue
+		if en.get("dead") or en.get("harmless"):
 			continue
 		if _hit_enemies.has(en.get_instance_id()):
 			continue
@@ -120,7 +124,7 @@ func _check_enemy_hits() -> void:
 			if en.has_method("take_damage"):
 				en.set("env_killed", true)
 				en.call("take_damage", ENEMY_DAMAGE, 0)
-				if is_instance_valid(en) and not bool(en.get("dead")):
+				if is_instance_valid(en) and not en.get("dead"):
 					en.set("env_killed", false)
 				SfxPlayer.play_at("bullet_impact_enemy", ep, -4.0)
 

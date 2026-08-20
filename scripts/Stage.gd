@@ -5997,10 +5997,12 @@ func _assign_wave_escorts() -> void:
 	var shields: Array = []
 	var patrols: Array = []
 	for e in get_tree().get_nodes_in_group("enemy"):
-		if not is_instance_valid(e) or bool((e as Node).get("dead")):
+		if not is_instance_valid(e):
 			continue
 		var kt = (e as Node).get("enemy_type")
 		if kt == null:
+			continue
+		if (e as Node).get("dead"):   # truthiness — 속성 없는 노드는 위 enemy_type 게이트가 거름
 			continue
 		if int(kt) == 4:
 			shields.append(e)
@@ -6216,7 +6218,7 @@ func _on_boss_vent_started() -> void:
 	if _boss_vent_line_shown:
 		return
 	_boss_vent_line_shown = true
-	_show_veil_subtitle("몸체가 달아오르면 김을 빼면서 잠깐 단단해집니다. 그 틈엔 증원부터 정리해요.", 4.2)
+	_show_veil_subtitle("김을 빼는 동안엔 총알이 안 박힙니다. 대신 쏠수록 배출이 빨라져요. 그 사이 증원도 정리하고요.", 4.2)
 
 # ─── 보스 인트로 컷씬(2026-08-10 사용자 제안) — Violet Signal 빌드업(0~25s)에 맞춘 대사 비트 ───
 # 보스 AI 정지(intro_hold) + 전투 입력 잠금 + 레터박스 + SENTINEL/VEIL 대사. 점프/사격/확인 키로

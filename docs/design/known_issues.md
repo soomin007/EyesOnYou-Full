@@ -79,6 +79,12 @@
   기본값 있는 dict는 `bool(d.get("k", false))`(get에 default가 있으면 null이 안 나와 안전). (2026-07-03
   DefenseCore가 "enemy" 그룹의 harmless 속성 없는 더미 노드에서 크래시 — `--import`는 통과, **창모드
   부팅에서만** 잡힘. 함수 본문 런타임 에러는 import 캐시가 놓친다는 기존 교훈 재확인.)
+  **재발(2026-08-20)**: FallingDebris 적 판정을 TrainHazard에서 복사하며 `bool(en.get("harmless"))`
+  패턴까지 복사 → lab 잔해가 "enemy" 그룹의 **BossSentinel**(harmless 속성 없음)을 스캔해 에디터째
+  사망(사용자 실플레이 중단). 교훈: **규칙이 있어도 복사 원본이 위반이면 재발한다** — 기존 코드를
+  템플릿 삼을 때도 known_issues 패턴 검사를 통과시킬 것. 방지책: "enemy" 그룹을 도는 데미지 루프는
+  ⓐ `enemy_type == null` 게이트로 일반 Enemy만(보스·더미 제외 = 크래시와 "보스가 자기 해저드에
+  맞는" 설계 오류 동시 차단) ⓑ 속성 접근은 truthiness. TrainHazard 원본도 소급 수정(2026-08-20).
 
 - **`int(배열)`/`int(딕셔너리)` 호출 금지 — "Nonexistent 'int' constructor" 크래시.**
   값이 *개수*가 아니라 *컬렉션*일 때 `int()`로 변환하면 크래시. 적 종류 집계에서 wave의 enemies 값이
