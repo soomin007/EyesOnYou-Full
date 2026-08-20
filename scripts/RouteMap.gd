@@ -490,7 +490,7 @@ func _update_veil_comment() -> void:
 	_update_skill_rec_panel(route)
 
 const _SKILL_DISPLAY: Dictionary = {"explosive": "폭발물", "barrier": "방어막", "glide": "글라이드", "fire_boost": "사격 강화", "multishot": "다중사격"}
-const _ENEMY_DISPLAY: Dictionary = {"shield": "방패병", "sniper": "저격수", "drone": "드론", "bomber": "폭격기", "patrol": "정찰병"}
+const _ENEMY_DISPLAY: Dictionary = {"shield": "방패병", "sniper": "저격수", "drone": "드론", "bomber": "자폭병", "patrol": "정찰병"}
 
 # 이 맵 적 구성에 가장 잘 듣는 상성 스킬(SkillTreeData.MATCHUP 우선순위순).
 # 스포일러 방지: 아직 안 만난 적은 추천 근거로 쓰지 않는다(루트 카드의 ? 아이콘과 일관).
@@ -615,7 +615,7 @@ func _on_settings_closed() -> void:
 func _on_pause_to_title() -> void:
 	get_tree().paused = false
 	GameState.reset()
-	get_tree().change_scene_to_file(SceneRouter.TITLE)
+	get_tree().change_scene_to_file.call_deferred(SceneRouter.TITLE)
 
 func _on_button_pressed(idx: int) -> void:
 	if idx < 0 or idx >= pool.size():
@@ -632,4 +632,4 @@ func _on_button_pressed(idx: int) -> void:
 	# (choose_veil_recommendation_with_reason). 어투 trust +2도 같이 안 붙는다(선택이 아니므로).
 	var counted_rec: String = recommended_id if recommended_reason != "" else ""
 	GameState.record_route_choice(route, counted_rec)
-	get_tree().change_scene_to_file(SceneRouter.STAGE)
+	get_tree().change_scene_to_file.call_deferred(SceneRouter.STAGE)

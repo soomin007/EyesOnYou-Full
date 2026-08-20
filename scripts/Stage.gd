@@ -710,7 +710,7 @@ func _finish_hidden_archive() -> void:
 	# "지속 플래그는 의미가 끝나는 경계에서 해제").
 	GameState.veil_reversal_pending = false
 	GameState.current_stage += 1
-	get_tree().change_scene_to_file(SceneRouter.BRIEFING)
+	get_tree().change_scene_to_file.call_deferred(SceneRouter.BRIEFING)
 
 # 첫 방문(hidden_visit_count == 0): 기존 VEIL-1 고정.
 # 이후 방문: 추가 풀(VEIL-1 첫 임무 / VEIL-2 마지막 교신 / 익명 클라이언트) 중 1개 랜덤.
@@ -5938,6 +5938,7 @@ func _spawn_enemies_fallback() -> void:
 var boss: Node = null
 var boss_hp_bar_layer: CanvasLayer = null
 var boss_hp_bar_fill: ColorRect = null
+var _boss_vent_line_shown: bool = false  # 첫 과부하 배기 VEIL 해설 1회
 var boss_hp_label: Label = null
 var boss_self_destruct_layer: CanvasLayer = null
 var boss_self_destruct_label: Label = null
@@ -5959,6 +5960,7 @@ func _spawn_boss(boss_meta: Dictionary) -> void:
 	boss.phase_changed.connect(_on_boss_phase_changed)
 	boss.self_destruct_started.connect(_on_boss_self_destruct_started)
 	boss.self_destruct_disarmed.connect(_on_boss_self_destruct_disarmed)
+	boss.vent_started.connect(_on_boss_vent_started)
 	_build_boss_hp_bar()
 	# 플레이어 성장 스케일(2026-08-10) — 15스테이지 확장으로 s8 시점 화력이 원 설계(9스테이지)보다
 	# 높아 보스가 너무 빨리 녹는다는 피드백. 공격 계열 티어 합 × 2 HP 가산.
@@ -6012,6 +6014,11 @@ func _refresh_boss_hp_bar() -> void:
 	# 분모는 인스턴스 max_hp — 성장 스케일(apply_hp_bonus)·스토리 축소가 반영된 실제 최대치.
 	var ratio: float = clamp(float(boss.get("hp")) / maxf(float(boss.get("max_hp")), 1.0), 0.0, 1.0)
 	boss_hp_bar_fill.size.x = 400.0 * ratio
+	# 과부하 배기 중 — "지금은 안 박힌다"를 HP바 색으로도(증기 tell과 같은 청백 계열).
+	var vent_v = boss.get("vent_t")
+	if vent_v != null and float(vent_v) > 0.0:
+		boss_hp_bar_fill.color = Color(0.55, 0.80, 0.95)
+		return
 	# 페이즈에 따라 색 변화
 	var ph: int = int(boss.get("phase"))
 	match ph:
@@ -6028,6 +6035,13 @@ func _on_boss_phase_changed(new_phase: int) -> void:
 			_show_boss_alert("패턴이 바뀌었어요. 양쪽 조심해요.", Color(1.0, 0.78, 0.40), 3.0)
 		3:
 			_show_boss_alert("불안정해졌어요. 거리 두고 빠르게.", Color(1.0, 0.45, 0.45), 3.0)
+
+# 첫 과부하 배기 — 무적+김의 "왜"를 한 번은 말로(2026-08-20 사용자 "뭐라도 이해가 되게").
+func _on_boss_vent_started() -> void:
+	if _boss_vent_line_shown:
+		return
+	_boss_vent_line_shown = true
+	_show_veil_subtitle("몸체가 달아오르면 김을 빼면서 잠깐 단단해집니다. 그 틈엔 증원부터 정리해요.", 4.2)
 
 # ─── 보스 인트로 컷씬(2026-08-10 사용자 제안) — Violet Signal 빌드업(0~25s)에 맞춘 대사 비트 ───
 # 보스 AI 정지(intro_hold) + 전투 입력 잠금 + 레터박스 + SENTINEL/VEIL 대사. 점프/사격/확인 키로
@@ -6253,7 +6267,8 @@ func _boss_glitch_flash() -> void:
 	tw.tween_callback(g.queue_free)
 
 # 이스터에그 — 황금 희귀 개체(shiny). 적 스폰당 확률·보너스 오브 가치.
-const SHINY_CHANCE: float = 0.015
+# 0.015는 런당 ~3기 꼴로 "이스터에그라기 민망"(사용자 2026-08-20) — 1/200로 희귀화.
+const SHINY_CHANCE: float = 0.005
 const SHINY_ORB_VALUE: int = 5
 
 # 엘리트(라이벌의 군대, elite_enemies_plan.md §4) — 막4부터 확률 승격. 라이벌이 시설 유닛을
@@ -7626,7 +7641,9 @@ func _start_rival_p3() -> void:
 		p3_spots = _rotated(p3_spots, (GameState.rival_kills * 4) % p3_spots.size())
 		fv.decoy_shift = 2 if GameState.rival_boss_explosive else 1
 	fv.setup(p3_anchors, p3_spots)
-	fv.volley_started.connect(_on_p3_volley)
+	# deferred — volley_started는 take_damage(물리 콜백)에서 발화, 동기 스폰은 flushing 에러
+	# (2026-08-20 실플레이 로그 실측 · BossSentinel 소환과 동형).
+	fv.volley_started.connect(_on_p3_volley, CONNECT_DEFERRED)
 	fv.defeated.connect(_on_false_veil_defeated)
 	fv.stage_shifted.connect(_on_p3_stage_shifted)
 	fv.window_capped.connect(_on_p3_window_capped)
@@ -8237,8 +8254,17 @@ func _build_goal_position() -> void:
 	# 문 하단을 지면에 클램프해 *축소*하고, 빛기둥·글로우 폭도 판정 폭(60)에 맞춘다.
 	var vis := Node2D.new()
 	goal.add_child(vis)
-	# 그림 하단(로컬) — 판정 하단(+100)이 지면 아래로 박히는 만큼 줄인다(최소 높이 보장).
-	var vbot: float = clampf(100.0 - maxf(0.0, (pos.y + 100.0) - GROUND_Y), 30.0, 100.0)
+	# 그림 하단(로컬) — 판정 하단(+100)이 *받침면* 아래로 박히는 만큼 줄인다(최소 높이 보장).
+	# 받침면 = 지면 또는 골 바로 아래 발판 top(발판 위 출구가 발판을 뚫고 내려와 보이던
+	# 붕괴 샤프트 출구 데크 사건, 2026-08-20 사용자). 골 x를 덮는 발판 중 골 중심 아래 최상단.
+	var support_y: float = GROUND_Y
+	for p_entry in _map_data.get("platforms", []):
+		var pd: Dictionary = p_entry
+		var pp: Vector2 = pd.get("pos", Vector2.ZERO)
+		var pw: float = float(pd.get("w", 0.0))
+		if absf(pp.x - pos.x) <= pw * 0.5 and pp.y >= pos.y:
+			support_y = minf(support_y, pp.y)
+	var vbot: float = clampf(100.0 - maxf(0.0, (pos.y + 100.0) - support_y), 30.0, 100.0)
 	var door := Polygon2D.new()
 	door.polygon = PackedVector2Array([
 		Vector2(-30.0, -100.0), Vector2(30.0, -100.0), Vector2(30.0, vbot), Vector2(-30.0, vbot)])
@@ -8597,7 +8623,7 @@ func _begin_clear_sequence() -> void:
 	# 남은 "처치 드롭" XP orb 회수 — 마지막 처치가 곧 클리어인 맵(ENEMY_CLEAR)에서 그 드롭이
 	# 씬 전환으로 버려지지 않게. 종전의 "곁 순간이동 + 금빛 궤적 라인"은 시체와 캐릭터를 잇는
 	# 노란 선으로 읽히는 노이즈였다(2026-08-15 지적 2회 → 라인 폐지). 대신 **자연 흡수**:
-	# 흡인 반경을 전역으로 풀어 오브가 스스로 날아와 먹힌다(ATTRACT_SPEED 480/s). 클리어 딜레이
+	# 흡인 반경을 전역으로 풀어 오브가 스스로 날아와 먹힌다(가속 흡인, 최대 1500/s). 클리어 딜레이
 	# 안에 못 닿을 원거리 미수집 오브만 소리 없이 곁으로 옮긴다. 배치형(placed)은 종전대로 제외
 	# (게이트 오브 등 유인 설계 보호, 2026-08-11).
 	if player != null and is_instance_valid(player):
@@ -8706,7 +8732,7 @@ func _transition_after_clear() -> void:
 		# 최종 스테이지 = 탈출(escape, 양 모드 공통). 엔딩별 에필로그 1챕터를 거쳐 엔딩으로 잇는다.
 		_play_final_epilogue()
 	else:
-		get_tree().change_scene_to_file(SceneRouter.BRIEFING)
+		get_tree().change_scene_to_file.call_deferred(SceneRouter.BRIEFING)
 
 # 막3 핵심부(lab) 클라이맥스 — 보스 처치 후: 회수한 드라이브를 문서로 reveal(ArcturusDocumentOverlay
 # 재사용) → 처리 선택(DisposalChoiceOverlay 4지선다) → 선택 저장 후 다음 스테이지(탈출 s8)로.
@@ -8791,7 +8817,7 @@ func _play_final_epilogue() -> void:
 		await lt.finished
 		await get_tree().create_timer(0.35).timeout
 	await get_tree().create_timer(0.6).timeout
-	get_tree().change_scene_to_file(SceneRouter.ENDING)
+	get_tree().change_scene_to_file.call_deferred(SceneRouter.ENDING)
 
 func _show_playground_clear_msg() -> void:
 	# PlaygroundOverlay(layer 30) 위로 띄우기 위해 별도 CanvasLayer 사용
@@ -8811,7 +8837,7 @@ func _show_playground_clear_msg() -> void:
 
 func _on_player_died() -> void:
 	GameState.register_death()
-	get_tree().change_scene_to_file(SceneRouter.DEATH)
+	get_tree().change_scene_to_file.call_deferred(SceneRouter.DEATH)
 
 # 코어 함락 = 방어 실패. 플레이어 사망과 동일 경로(재시도)로 처리한다.
 # breached는 DefenseCore._physics_process 안에서 emit되므로 씬 전환은 call_deferred로 한 프레임 미룬다.
@@ -9400,4 +9426,4 @@ func _on_settings_closed() -> void:
 func _on_pause_to_title() -> void:
 	get_tree().paused = false
 	GameState.reset()
-	get_tree().change_scene_to_file(SceneRouter.TITLE)
+	get_tree().change_scene_to_file.call_deferred(SceneRouter.TITLE)

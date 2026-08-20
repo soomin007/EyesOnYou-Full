@@ -28,6 +28,15 @@ var input_lockout_t: float = GameState.INPUT_LOCKOUT_DURATION
 # 안전판 — _process가 어떤 이유로든 typing을 시작 못 하면 2초 후 첫 줄을 강제 표시.
 # (사용자 보고: "결말 C 제목만 나오고 그 아래 비어있음" 추적용 fallback.)
 var stall_watchdog_t: float = 0.0
+# 씬 전환 이중 발화 가드 — ESC 연타/홀드 완료가 같은 프레임에 겹쳐도 전환은 1회만.
+var _leaving: bool = false
+
+# 씬 전환은 deferred — 입력 콜백 안 동기 전환은 크래시 경로(2026-08-20 크레딧 사건과 동형).
+func _goto_credits() -> void:
+	if _leaving:
+		return
+	_leaving = true
+	get_tree().change_scene_to_file.call_deferred(SceneRouter.CREDITS)
 
 func _ready() -> void:
 	# 안전망: 이전 scene에서 paused가 carry되어 Ending이 freeze되는 패턴 차단.
@@ -201,7 +210,7 @@ func _process(delta: float) -> void:
 				hold_progress_bar.size.x = 260.0 * clamp(hold_progress / HOLD_TO_QUIT_DURATION, 0.0, 1.0)
 			if hold_progress >= HOLD_TO_QUIT_DURATION:
 				# 결말 → 크레딧. 크레딧 종료 시 GameState.reset() 후 타이틀로.
-				get_tree().change_scene_to_file(SceneRouter.CREDITS)
+				_goto_credits()
 				return
 		else:
 			hold_progress = max(0.0, hold_progress - delta * 1.5)  # 손 떼면 빠르게 줄어듦
@@ -301,7 +310,7 @@ func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel") and not waiting_choice:
 		get_viewport().set_input_as_handled()
 		if sequence_complete:
-			get_tree().change_scene_to_file(SceneRouter.CREDITS)  # 종료 프롬프트 → 바로 크레딧
+			_goto_credits()  # 종료 프롬프트 → 바로 크레딧
 		else:
 			line_idx = lines.size()   # 내러티브 즉시 종료
 			_on_sequence_done()       # 종료 프롬프트 노출

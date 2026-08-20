@@ -226,7 +226,7 @@ func _input(event: InputEvent) -> void:
 	# (오프닝/브리핑에서 ESC가 안 먹던 문제. 어떤 화면에서도 ESC는 즉시 반응.)
 	if event.is_action_pressed("ui_cancel"):
 		get_viewport().set_input_as_handled()
-		get_tree().change_scene_to_file(SceneRouter.ROUTE_MAP)
+		get_tree().change_scene_to_file.call_deferred(SceneRouter.ROUTE_MAP)
 		return
 	if card_active:
 		# 막 진입 카드는 락아웃 경과 후 점프/스킵으로 건너뛴다(ESC는 위에서 처리됨).
@@ -251,6 +251,6 @@ func _input(event: InputEvent) -> void:
 func _advance() -> void:
 	line_idx += 1
 	if line_idx >= lines.size():
-		get_tree().change_scene_to_file(SceneRouter.ROUTE_MAP)
+		get_tree().change_scene_to_file.call_deferred(SceneRouter.ROUTE_MAP)
 		return
 	_start_line()

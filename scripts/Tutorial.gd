@@ -1120,7 +1120,7 @@ func _finish_tutorial() -> void:
 	GameState.save_settings()
 	# reset()이 아니라 start_main_game() — 튜토리얼에서 고른 스킬 보존
 	GameState.start_main_game()
-	get_tree().change_scene_to_file(SceneRouter.BRIEFING)
+	get_tree().change_scene_to_file.call_deferred(SceneRouter.BRIEFING)
 
 # ─── 일시정지 / 설정 ──────────────────────────────────────────
 
@@ -1170,4 +1170,4 @@ func _on_settings_closed() -> void:
 func _on_pause_to_title() -> void:
 	get_tree().paused = false
 	GameState.reset()
-	get_tree().change_scene_to_file(SceneRouter.TITLE)
+	get_tree().change_scene_to_file.call_deferred(SceneRouter.TITLE)

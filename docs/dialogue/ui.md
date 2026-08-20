@@ -477,6 +477,7 @@
 | 골 라벨(`_build_goal_position`) | ▼ 출구 | |
 | 황금 개체 태그(`Stage.gd` shiny 라벨) | 황금 개체 | |
 | 보스 자폭 회피 안내(`Stage.gd` avoid_label) | 노란 원 밖으로 멀어져요 | |
+| 보스 과부하 배기 라벨(`BossSentinel.gd` `_vent_label`) | 과열 · 열 배출 중 | |
 
 ### 9.2 조작 힌트 한 줄 (`GameState.gd` `controls_hint_line` / `action_label`)
 

@@ -74,7 +74,7 @@ func _input(event: InputEvent) -> void:
 		return
 	if event.is_action_pressed("ui_cancel"):
 		GameState.reset()
-		get_tree().change_scene_to_file(SceneRouter.TITLE)
+		get_tree().change_scene_to_file.call_deferred(SceneRouter.TITLE)
 		return
 	if event.is_action_pressed("ui_skip") or event.is_action_pressed("jump") or OrientationGuard.is_tap(event):
 		if not done:
@@ -91,10 +91,10 @@ func _restart_stage() -> void:
 	# register_death가 이미 마쳤고, 여기선 경로만 브리핑으로 바꾼다(루트 재선택 필요).
 	if GameState.overwrite_exhausted:
 		GameState.overwrite_exhausted = false
-		get_tree().change_scene_to_file(SceneRouter.BRIEFING)
+		get_tree().change_scene_to_file.call_deferred(SceneRouter.BRIEFING)
 		return
 	# 14-1 보스전 사망 = 항상 P1부터(2026-08-15 사용자 확정). 사망 경로 한정 —
 	# 연습장 페이즈 직행·_init_rival_boss 체크포인트 분기는 그대로 쓴다.
 	if GameState.current_route_id == "route_core_recovery":
 		GameState.rival_phase_reached = 0
-	get_tree().change_scene_to_file(SceneRouter.STAGE)
+	get_tree().change_scene_to_file.call_deferred(SceneRouter.STAGE)

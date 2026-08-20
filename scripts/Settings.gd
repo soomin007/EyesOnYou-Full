@@ -403,7 +403,7 @@ func _on_ending_preview_pressed(ending_id: String) -> void:
 	GameState.trust_score = 12 if GameState.followed_count >= 4 else 0  # stats 게이지 표시용.
 	GameState.visited_arcturus = true
 	get_tree().paused = false
-	get_tree().change_scene_to_file(SceneRouter.ENDING)
+	get_tree().change_scene_to_file.call_deferred(SceneRouter.ENDING)
 
 func _on_playground_pressed() -> void:
 	GameState.playground_active = true
@@ -420,7 +420,7 @@ func _on_playground_pressed() -> void:
 	GameState.player_level = 1
 	# pause 메뉴에서 진입한 경우 paused 해제 후 scene 전환
 	get_tree().paused = false
-	get_tree().change_scene_to_file(SceneRouter.STAGE)
+	get_tree().change_scene_to_file.call_deferred(SceneRouter.STAGE)
 
 func _build_av_tab() -> Control:
 	var outer := MarginContainer.new()
@@ -849,7 +849,7 @@ func _on_data_reset_pressed() -> void:
 	# 타이틀로 복귀: 런 도중 초기화해도 다음 RouteMap 자동저장이 run.cfg를 되살리는 누수를 막고,
 	# 타이틀의 이어하기 버튼 표시도 새 상태로 갱신된다.
 	get_tree().paused = false
-	get_tree().change_scene_to_file(SceneRouter.TITLE)
+	get_tree().change_scene_to_file.call_deferred(SceneRouter.TITLE)
 
 func _disarm_data_reset() -> void:
 	_data_reset_arm_t = 0.0

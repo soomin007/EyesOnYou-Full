@@ -57,7 +57,7 @@ VEIL은 네 시야를 **렌더링**하는 존재다. 그래서 세계의 상태�
 - **적이 딴 데 보는 척하다 기습** ✅(2026-07-07) — `Enemy.feign_ambush`: patrol이 각성을 숨긴 채 정지·플레이어
   반대로 응시(안전해 보임)하다 근접(170) 시 홱 돌아 기습(압축 텔레그래프→돌진). `_GlitchTell` 공유 tell(항상
   경고). MapData `feigns`(control_corridor 회랑 초입 @900). §4.1 준수(위장 적과 배타·이격, 맵당 소수).
-- **적 종류 둔갑** ✅(2026-07-06) — patrol처럼 보이나 사실 폭격기. `Enemy.disguise_as`(참 종류·hp·행동 유지,
+- **적 종류 둔갑** ✅(2026-07-06) — patrol처럼 보이나 사실 자폭병. `Enemy.disguise_as`(참 종류·hp·행동 유지,
   시각만 위장) + `_GlitchTell`(붉은 지직거림, 근접·신뢰로 강도) + 근접/텔레그래프 시 리빌(참 모습 복원 +
   언마스크 플래시). MapData `deceits`로 배치(control_corridor 막3). §4.1 공정 규칙 준수(항상 tell / 신뢰가
   리빌 반경 확대 / 맵당 소수 / 무시하면 참 종류로 자폭 = hard but fair).

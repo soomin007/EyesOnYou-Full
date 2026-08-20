@@ -47,7 +47,11 @@ var score: int = 0
 var hits_taken: int = 0              # 누적 피격 수 (take_hit이 invuln 통과 시 +1)
 var _stage_hits_base: int = 0        # 현재 스테이지 진입 시점 hits_taken 스냅샷
 var _stage_deaths_base: int = 0      # 현재 스테이지 진입 시점 death_count 스냅샷
-var _stage_start_msec: int = 0       # 현재 스테이지 진입 시각
+# 스테이지 타이머 — wall clock이 아니라 _process delta 누적(2026-08-20). 일시정지(ESC 메뉴·
+# 레벨업·도감 카드) 중엔 _process가 멈추므로, 멈추고 메모하는 시간이 기록을 오염시키지 않는다.
+# 맵 선택·브리핑은 원래 측정 창 밖(record_route_choice ~ on_stage_clear).
+var _stage_timer_on: bool = false    # 스테이지 진입~클리어 동안만 누적
+var _stage_play_secs: float = 0.0    # 현재 스테이지 활동 시간(초)
 var recent_stage_hits: Array = []    # 최근 스테이지별 피격 수 (최대 2)
 var recent_stage_deaths: Array = []  # 최근 스테이지별 죽음 수 (최대 2)
 var last_stage_secs: float = 0.0     # 직전 스테이지 소요 시간 (참고용)
@@ -366,7 +370,7 @@ var run_play_secs: float = 0.0  # 런 누적 플레이 시간(스테이지 소�
 # 맵별 상세 기록(설계 진단): "번호|route|총초|seg:방별초|kill:처치/스폰|hit:피격|xp:획득".
 # seg 항은 체인 맵만. 스폰 수는 스폰 이벤트 기준(사망 재시도 시 재스폰 포함 · 무사망이면 정확).
 var stage_time_log: Array = []
-var _seg_start_msec: int = 0
+var _seg_play_secs: float = 0.0      # 현재 방(세그먼트) 활동 시간 — 스테이지 타이머와 동일 누적
 var _stage_seg_times: Array = []
 var stage_enemies_spawned: int = 0
 var _stage_kills_base: int = 0
@@ -374,8 +378,8 @@ var _stage_xp_gained: int = 0
 
 # 방 체인 전환에서 Stage가 호출 — 방별 스플릿 기록.
 func note_segment_split() -> void:
-	_stage_seg_times.append(float(Time.get_ticks_msec() - _seg_start_msec) / 1000.0)
-	_seg_start_msec = Time.get_ticks_msec()
+	_stage_seg_times.append(_seg_play_secs)
+	_seg_play_secs = 0.0
 
 # 처치 = 정산 카운트 + 실시간 점수(2026-08-15: 종전엔 점수가 클리어 시점에만 올라
 # "실시간으로 안 오른다" 지적). 기본 10, 엘리트 +20, 황금 +40. 클리어 가산(100×스테이지)과 병행.
@@ -540,7 +544,9 @@ func _reset_perf_metrics() -> void:
 	hits_taken = 0
 	_stage_hits_base = 0
 	_stage_deaths_base = 0
-	_stage_start_msec = 0
+	_stage_timer_on = false
+	_stage_play_secs = 0.0
+	_seg_play_secs = 0.0
 	recent_stage_hits = []
 	recent_stage_deaths = []
 	last_stage_secs = 0.0
@@ -591,9 +597,10 @@ func record_route_choice(route: Dictionary, recommended_id: String) -> void:
 	# 않으므로 baseline..on_stage_clear 한 창에 재시도의 피격·죽음이 모두 누적된다.
 	_stage_hits_base = hits_taken
 	_stage_deaths_base = death_count
-	_stage_start_msec = Time.get_ticks_msec()
+	_stage_timer_on = true
+	_stage_play_secs = 0.0
 	# 상세 런 로그(2026-08-18 사용자 "방별 타이머 등 자세하게") — 방별 스플릿·처치/스폰·XP.
-	_seg_start_msec = _stage_start_msec
+	_seg_play_secs = 0.0
 	_stage_seg_times = []
 	stage_enemies_spawned = 0
 	_stage_kills_base = kills_total
@@ -608,13 +615,14 @@ func register_hit() -> void:
 func _finalize_stage_metrics() -> void:
 	var hits: int = max(0, hits_taken - _stage_hits_base)
 	var deaths: int = max(0, death_count - _stage_deaths_base)
-	last_stage_secs = float(Time.get_ticks_msec() - _stage_start_msec) / 1000.0
+	_stage_timer_on = false
+	last_stage_secs = _stage_play_secs
 	# 런 정산 — 스테이지 소요 누적 + 맵별 상세 기록(페이싱·전멸 플레이 진단).
 	run_play_secs += last_stage_secs
 	var segs_txt: String = ""
 	if _stage_seg_times.size() > 0:
 		# 마지막 방 스플릿 마감 후 "seg:a+b+c" 항 구성(체인 맵만).
-		_stage_seg_times.append(float(Time.get_ticks_msec() - _seg_start_msec) / 1000.0)
+		_stage_seg_times.append(_seg_play_secs)
 		var parts: Array = []
 		for s in _stage_seg_times:
 			parts.append("%.1f" % float(s))
@@ -1442,6 +1450,10 @@ func _process(delta: float) -> void:
 	# 일시정지(레벨업 오버레이 등) 중엔 _process가 멈추므로 활동 시간만 쌓인다.
 	if _ps_active:
 		_ps_time += delta
+	# 스테이지/방 타이머도 같은 원리 — 일시정지·메모 시간은 [RUN] 기록에서 자동 제외.
+	if _stage_timer_on:
+		_stage_play_secs += delta
+		_seg_play_secs += delta
 
 func get_playstyle() -> Dictionary:
 	if not _ps_loaded:

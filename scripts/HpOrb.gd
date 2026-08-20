@@ -4,12 +4,16 @@ extends Node2D
 # 플레이어가 가까이 오면 잡아당겨 흡수, HP 1 회복.
 
 const PICKUP_RANGE: float = 200.0
-const ATTRACT_SPEED: float = 380.0
+# 흡인 가속 — ExpOrb와 동일 손맛(2026-08-20 "빨려들어왔으면").
+const ATTRACT_SPEED_START: float = 300.0
+const ATTRACT_ACCEL: float = 2400.0
+const ATTRACT_SPEED_MAX: float = 1300.0
 const HEAL_AMOUNT: int = 1
 
 @onready var sprite: ColorRect = $Sprite
 
 var collected: bool = false
+var _attract_v: float = 0.0
 
 func _ready() -> void:
 	add_to_group("hp_orb")
@@ -26,7 +30,10 @@ func _process(delta: float) -> void:
 		_collect()
 		return
 	if to.length() < PICKUP_RANGE:
-		position += to.normalized() * ATTRACT_SPEED * delta
+		_attract_v = minf(maxf(_attract_v, ATTRACT_SPEED_START) + ATTRACT_ACCEL * delta, ATTRACT_SPEED_MAX)
+		position += to.normalized() * minf(_attract_v * delta, to.length())
+	else:
+		_attract_v = 0.0
 
 func _find_player() -> Node2D:
 	var nodes := get_tree().get_nodes_in_group("player")

@@ -508,9 +508,9 @@ func _on_tutor_pressed(want_tutorial: bool) -> void:
 	# 새 게임 시작 — 이전 진행 저장(run.cfg) 삭제(이어하기와 분리). 모드는 모드 선택에서 이미 박혔다.
 	GameState.clear_run()
 	if want_tutorial:
-		get_tree().change_scene_to_file(SceneRouter.TUTORIAL)
+		get_tree().change_scene_to_file.call_deferred(SceneRouter.TUTORIAL)
 	else:
-		get_tree().change_scene_to_file(SceneRouter.BRIEFING)
+		get_tree().change_scene_to_file.call_deferred(SceneRouter.BRIEFING)
 
 func _on_back_pressed() -> void:
 	match state:

@@ -335,7 +335,7 @@
 | | entry_comment | 변전 설비예요. 여러 각에서 쏴요. 변압기 뒤로 붙어요. | |
 | route_testing_grounds | name | 실험 구역 | |
 | | description | 봉인된 실험 베이가 늘어선 구역. 무엇을 시험했는지 관측창마다 지워져 있다. | |
-| | veil_comment | 실험 구역이에요. 폭격기랑 방패병, 천장 포탑까지. 화력 있으면 편해요. | |
+| | veil_comment | 실험 구역이에요. 자폭병이랑 방패병, 천장 포탑까지. 화력 있으면 편해요. | |
 | | entry_comment | 실험 베이예요. 위에서 쏘는 포탑 조심해요. | |
 | route_demolition_zone | name | 철거 구역 | |
 | | description | 절반쯤 헐린 외곽 건물군. 위에서 잔해가 떨어지고, 무너진 벽 사이로 길이 난다. | |
@@ -351,7 +351,7 @@
 | | entry_comment | 통신 중계기예요. 위에서도 아래에서도 쏴요. 멈추지 말아요. | |
 | route_warehouse | name | 물류 창고 | |
 | | description | 시설 보급을 쌓아둔 적재 창고. 컨베이어가 아직 돌아 바닥이 흐른다. | |
-| | veil_comment | 물류 창고예요. 바닥 컨베이어가 밀어요. 거스르는 구간에 폭격기랑 방패병. | |
+| | veil_comment | 물류 창고예요. 바닥 컨베이어가 밀어요. 거스르는 구간에 자폭병이랑 방패병. | |
 | | entry_comment | 적재 창고예요. 컨테이너를 엄폐로. 근접 조심해요. | |
 | route_checkpoint | name | 보안 검문소 | |
 | | description | 내부 구역을 나누는 보안 검문선. 검문 레이저를 건드리면 포탑이 깨어난다. | |
@@ -490,7 +490,7 @@
 | shield | 방패병 | |
 | sniper | 저격수 | |
 | drone | 드론 | |
-| bomber | 폭격기 | |
+| bomber | 자폭병 | |
 | patrol | 정찰병 | |
 
 ---

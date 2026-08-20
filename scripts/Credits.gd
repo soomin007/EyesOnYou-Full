@@ -198,6 +198,11 @@ func _input(event: InputEvent) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	# ESC는 최우선 — 입력 락아웃과 무관하게 즉시 반응(락아웃은 점프 연타 차단용이라 ESC엔 불필요).
 	if event.is_action_pressed("ui_cancel"):
+		# 소비 표시를 분기 *전에* — 분기가 씬 전환을 일으키면 이 노드가 트리를 떠나
+		# get_viewport()가 null이 된다(2026-08-20 ESC 연타 크래시의 직접 원인).
+		var vp := get_viewport()
+		if vp != null:
+			vp.set_input_as_handled()
 		if _is_overlay:
 			# 오버레이 — 짧게 페이드 후 닫기.
 			_finish(false)
@@ -207,7 +212,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		else:
 			# 메뉴에서 ESC — 메인으로.
 			_on_exit_pressed()
-		get_viewport().set_input_as_handled()
 		return
 	if _input_lockout_t > 0.0:
 		return
@@ -228,7 +232,17 @@ func _actually_finish() -> void:
 		return
 	# scene 모드  타이틀로.
 	GameState.reset()
-	get_tree().change_scene_to_file(SceneRouter.TITLE)
+	_goto_scene(SceneRouter.TITLE)
+
+# 씬 전환 단일 출구 — deferred(입력 전파 중 동기 전환 = 크래시, 2026-08-20) + ESC/버튼
+# 연타 이중 발화 가드.
+var _leaving: bool = false
+
+func _goto_scene(path: String) -> void:
+	if _leaving:
+		return
+	_leaving = true
+	get_tree().change_scene_to_file.call_deferred(path)
 
 # Settings에서 호출. closed 시그널을 듣고 부모가 free하면 됨.
 func open_as_overlay() -> void:
@@ -366,14 +380,18 @@ func _scramble(target: String, reveal: float) -> String:
 
 func _on_replay_pressed() -> void:
 	# 명시적 다회차 — 물음표 변형 활성. 새 런(노멀) 시작.
+	if _leaving:
+		return
 	GameState.replaying = true
 	GameState.reset()
-	get_tree().change_scene_to_file(SceneRouter.BRIEFING)
+	_goto_scene(SceneRouter.BRIEFING)
 
 func _on_feedback_pressed() -> void:
 	GameState.open_feedback()
 
 func _on_exit_pressed() -> void:
+	if _leaving:
+		return
 	GameState.replaying = false
 	GameState.reset()
-	get_tree().change_scene_to_file(SceneRouter.TITLE)
+	_goto_scene(SceneRouter.TITLE)

@@ -10,6 +10,7 @@ signal killed(at_position: Vector2)
 signal phase_changed(new_phase: int)
 signal self_destruct_started
 signal self_destruct_disarmed
+signal vent_started
 
 const HP_MAX: int = 28     # 보스전 확대(2026-08-19): 24→28 · 실측 20.4s가 클라이맥스로 짧았다
 const HP_PHASE2: int = 19  # 이 값 이하 들어오면 P2
@@ -99,6 +100,27 @@ var _fake_destruct_done: bool = false   # 위장 자폭 소진 여부
 var _speed_mul: float = 1.0         # 재기동 후 이동 배속
 var _vent_summon_kind: int = 2      # 배기 증원 타입 교대(드론↔순찰)
 var _debris_nodes: Array = []       # P3 낙하 잔해(§6-3) — 사망 시 정리
+# 과열 가독(2026-08-20 사용자 "김 나는 이펙트가 뭔지 모르겠다 · 뜬금없이 무적"): 창이 찰수록
+# 몸체 주변이 달아오르고(예고 tell), 배기 중엔 라벨이 상태를 글자로 말한다.
+var _heat_glow: Node2D = null
+var _vent_label: Label = null
+
+# 과열 글로우 — 창 누적(_window_dmg/cap)에 비례하는 주황 발광. modulate 틴트는 피격
+# 플래시·페이즈 틴트가 덮어쓰므로(known_issues) 별도 자식 노드로 그린다.
+class _HeatGlow extends Node2D:
+	var heat: float = 0.0
+	func _draw() -> void:
+		if heat <= 0.02:
+			return
+		var a: float = clampf(heat, 0.0, 1.0)
+		draw_circle(Vector2.ZERO, 58.0, Color(1.0, 0.42, 0.14, 0.14 * a))
+		draw_circle(Vector2.ZERO, 40.0, Color(1.0, 0.55, 0.20, 0.30 * a))
+
+func _set_heat(v: float) -> void:
+	if _heat_glow == null:
+		return
+	(_heat_glow as _HeatGlow).heat = clampf(v, 0.0, 1.0)
+	_heat_glow.queue_redraw()
 
 # 텔레그래프 시각 노드
 var bomb_dot: ColorRect = null
@@ -143,6 +165,21 @@ func _ready() -> void:
 		Vector2(20, -2), Vector2(32, -2), Vector2(32, 2), Vector2(20, 2),
 	])
 	add_child(wing_r)
+	# 과열 글로우(몸체 뒤) + 배기 상태 라벨(몸체 위) — 배기 무적의 "왜"를 화면이 말하게.
+	_heat_glow = _HeatGlow.new()
+	_heat_glow.z_index = -1
+	add_child(_heat_glow)
+	_vent_label = Label.new()
+	_vent_label.text = "과열 · 열 배출 중"
+	_vent_label.add_theme_font_size_override("font_size", 13)
+	_vent_label.add_theme_color_override("font_color", Color(1.0, 0.72, 0.32))
+	_vent_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	_vent_label.add_theme_constant_override("outline_size", 4)
+	_vent_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_vent_label.position = Vector2(-70.0, -92.0)
+	_vent_label.size = Vector2(140.0, 18.0)
+	_vent_label.visible = false
+	add_child(_vent_label)
 
 func _physics_process(delta: float) -> void:
 	if dead:
@@ -173,8 +210,13 @@ func _physics_process(delta: float) -> void:
 		velocity = velocity.move_toward(Vector2.ZERO, 420.0 * delta)
 		move_and_slide()
 		_emit_vent_steam(delta)
+		# 배기가 진행될수록 달아오름이 식는다 — "열을 빼는 중"이 색으로 읽히게.
+		_set_heat(vent_t / VENT_DURATION)
 		if vent_t <= 0.0:
 			_window_dmg = 0
+			_set_heat(0.0)
+			if _vent_label != null:
+				_vent_label.visible = false
 		return
 	_move(delta)
 	_attacks(delta)
@@ -371,6 +413,8 @@ func take_damage(amount: int, _from_dir: int = 0) -> void:
 			return
 		amount = mini(amount, allowed)
 		_window_dmg += amount
+		# 과열 예고 tell — 창이 찰수록 몸체가 달아오른다(배기의 "왜"를 미리 보여줌).
+		_set_heat(float(_window_dmg) / float(cap))
 	hp = max(0, hp - amount)
 	_flash_hit()
 	if hp > 0:
@@ -420,7 +464,9 @@ func _transition_to(new_phase: int) -> void:
 			2: visual.self_modulate = Color(1.2, 0.85, 0.65)  # 주황 tint
 			3: visual.self_modulate = Color(1.4, 0.55, 0.55)  # 빨강 tint
 			_: visual.self_modulate = Color(1, 1, 1)
-	_summon_minions(new_phase)
+	# deferred — take_damage(물리 콜백) 경로에서 동기 스폰하면 "flushing queries" 에러로
+	# 콜리전 설정이 거부된다(2026-08-20 실플레이 로그 실측, known_issues).
+	call_deferred("_summon_minions", new_phase)
 	# P3 불안정 구간 — 낙하 잔해 2존(final_boss_rework §6-3 · 자폭 문법과 정합 · 가벼운 빈도).
 	# lab ground 820 기준(HOVER 상수들과 같은 좌표계). 사망 시 _debris_nodes로 정리.
 	if new_phase == 3 and not story_simplified and _debris_nodes.is_empty():
@@ -438,22 +484,33 @@ func _enter_vent() -> void:
 		return
 	vent_t = VENT_DURATION
 	SfxPlayer.play_at("hatch_open", global_position)
-	# 증원 1기 — 배기 중 무방비를 잡몹이 메운다. 타입은 드론↔순찰 교대, 상한 준수.
-	if phase >= 2:
-		var alive: int = 0
-		for m in summoned_minions:
-			if is_instance_valid(m) and not bool((m as Node).get("dead")):
-				alive += 1
-		if alive < VENT_SUMMON_CAP:
-			var kind: int = _vent_summon_kind
-			_vent_summon_kind = 0 if _vent_summon_kind == 2 else 2
-			var y: float = HOVER_Y if kind == 2 else (global_position.y + 280.0)
-			var side: float = -1.0 if randf() < 0.5 else 1.0
-			var pos := Vector2(clampf(global_position.x + side * SUMMON_OFFSET_X, 140.0, 1780.0), y)
-			var hp_for: int = SUMMON_DRONE_HP if kind == 2 else SUMMON_PATROL_HP
-			var m2: CharacterBody2D = _spawn_minion(kind, pos, hp_for)
-			if m2 != null:
-				summoned_minions.append(m2)
+	# 가독 — 달아오름 최대 + 상태 라벨 점등(첫 배기 VEIL 해설은 Stage가 vent_started로).
+	_set_heat(1.0)
+	if _vent_label != null:
+		_vent_label.visible = true
+	emit_signal("vent_started")
+	# 증원은 deferred — _enter_vent는 take_damage(물리 콜백)에서 불려 동기 스폰 시
+	# "flushing queries" 에러로 콜리전 설정이 거부된다(2026-08-20 실측).
+	call_deferred("_vent_summon")
+
+# 배기 증원 1기 — 배기 중 무방비를 잡몹이 메운다. 타입은 드론↔순찰 교대, 상한 준수.
+func _vent_summon() -> void:
+	if dead or phase < 2:
+		return
+	var alive: int = 0
+	for m in summoned_minions:
+		if is_instance_valid(m) and not bool((m as Node).get("dead")):
+			alive += 1
+	if alive < VENT_SUMMON_CAP:
+		var kind: int = _vent_summon_kind
+		_vent_summon_kind = 0 if _vent_summon_kind == 2 else 2
+		var y: float = HOVER_Y if kind == 2 else (global_position.y + 280.0)
+		var side: float = -1.0 if randf() < 0.5 else 1.0
+		var pos := Vector2(clampf(global_position.x + side * SUMMON_OFFSET_X, 140.0, 1780.0), y)
+		var hp_for: int = SUMMON_DRONE_HP if kind == 2 else SUMMON_PATROL_HP
+		var m2: CharacterBody2D = _spawn_minion(kind, pos, hp_for)
+		if m2 != null:
+			summoned_minions.append(m2)
 
 # 배기 증기 — 몸체 좌우로 청백 증기 사각이 흩어진다(시각 tell · 피격 플래시(modulate)와
 # 페이즈 틴트(self_modulate)를 건드리지 않는 별도 노드 — known_issues 틴트 충돌 규칙).

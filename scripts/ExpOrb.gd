@@ -1,7 +1,11 @@
 extends Node2D
 
 const PICKUP_RANGE: float = 220.0
-const ATTRACT_SPEED: float = 480.0
+# 흡인 가속(2026-08-20 사용자 "딸려올 때 가속 붙으면서 빨려들어왔으면") — 잡히는 순간은
+# 잔잔하게 시작해 붙을수록 급가속. 이탈하면 리셋.
+const ATTRACT_SPEED_START: float = 320.0
+const ATTRACT_ACCEL: float = 2600.0
+const ATTRACT_SPEED_MAX: float = 1500.0
 const VALUE: int = 1
 
 @onready var sprite: ColorRect = $Sprite
@@ -9,6 +13,7 @@ const VALUE: int = 1
 var collected: bool = false
 var spawn_anim_t: float = 0.0
 var bounce_velocity: Vector2 = Vector2.ZERO
+var _attract_v: float = 0.0   # 현재 흡인 속도(가속 누적)
 # 흡인 반경 — 기본 PICKUP_RANGE. 글라이드 게이트 오브는 작게(44) 설정.
 var attract_range: float = PICKUP_RANGE
 # 획득 시 부여 경험치 — 게이트 오브는 더 높게(글라이드 투자 보상). Stage._spawn_orb이 set.
@@ -43,7 +48,11 @@ func _process(delta: float) -> void:
 		# (흡인 반경을 줄여도 직선거리만 보면 아래/옆 메인 경로에서 빨려올 수 있어, LoS로 확실히 차단.)
 		if is_gate and not _has_clear_path(player):
 			return
-		position += to.normalized() * ATTRACT_SPEED * delta
+		# 빨려드는 가속 — 이동량은 남은 거리로 클램프(고속 오버슈트로 주변을 도는 것 방지).
+		_attract_v = minf(maxf(_attract_v, ATTRACT_SPEED_START) + ATTRACT_ACCEL * delta, ATTRACT_SPEED_MAX)
+		position += to.normalized() * minf(_attract_v * delta, to.length())
+	else:
+		_attract_v = 0.0
 
 # 오브 → 플레이어 직선에 막힌 지형(layer 1: 발판/바닥)이 없는지. 게이트 오브 흡인 게이팅용.
 func _has_clear_path(p: Node2D) -> bool:

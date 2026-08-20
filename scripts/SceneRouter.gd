@@ -19,10 +19,12 @@ static func go(tree: SceneTree, path: String) -> void:
 	# 안전망: scene 전환 시 paused 무조건 해제 — 직전 scene의 LevelUpOverlay/도전방 fail 등에서
 	# 해제 누락 시 새 scene이 freeze되는 패턴 차단.
 	tree.paused = false
-	tree.change_scene_to_file(path)
+	# 씬 전환은 항상 deferred — 입력 전파/물리 콜백 중 동기 전환은 현재 씬을 그 자리에서
+	# 트리에서 떼어내 엔진 크래시까지 간다(2026-08-20 크레딧 ESC 연타 사건, known_issues).
+	tree.change_scene_to_file.call_deferred(path)
 
 static func start_after_title(tree: SceneTree) -> void:
 	if not GameState.tutorial_done:
-		tree.change_scene_to_file(TUTORIAL)
+		tree.change_scene_to_file.call_deferred(TUTORIAL)
 	else:
-		tree.change_scene_to_file(BRIEFING)
+		tree.change_scene_to_file.call_deferred(BRIEFING)

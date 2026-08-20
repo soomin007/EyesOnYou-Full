@@ -312,7 +312,7 @@ static func _matchup_line(skill_id: String) -> String:
 		"explosive": return "방패병이 정면을 막아요. 폭발물이면 방패째 뚫리죠."
 		"barrier":   return "저격수가 노리네요. 방어막이 있으면 한 발은 막고 지나가요."
 		"glide":     return "드론이 위에서 와요. 글라이드로 떠서 피하면서 처리해 보세요."
-		"fire_boost": return "폭격기가 붙기 전에 화력을 올려 두는 게 어때요?"
+		"fire_boost": return "자폭병이 붙기 전에 화력을 올려 두는 게 어때요?"
 	return "이 구역에 맞는 한 수가 있어요."
 
 static func get_death_briefing(death_count: int, followed_advice: bool) -> String:

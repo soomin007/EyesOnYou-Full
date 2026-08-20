@@ -1110,13 +1110,15 @@ static func _escape_destroy_mezz() -> Dictionary:
 # 방3 · 지상 터널 → 도시 야경(기존 탈출 배경 자산 재사용). 붕괴는 아래에 두고 왔다 · 추격 없음.
 # 터널 출구(_TUNNEL_END_X=1600) 밖은 BGM 감쇠·야경과 함께 이완 구간, VEIL 마무리 멘트.
 # arrival_beat = 지상 돌파 비트(2026-08-18 페이오프): 화이트 인 + 정적 → 등 뒤 굉음.
+# 야외(야경) 구간 1000→1640px 연장(2026-08-20 사용자 "야경 구간 살짝만 길게") — 이완이
+# 한 호흡 더 가게. 적·장애물은 추가하지 않는다(결의 톤 유지).
 static func _escape_destroy_surface() -> Dictionary:
 	return {
 		"world_type":   "HORIZONTAL",
-		"world_size":   Vector2(2600.0, 720.0),
+		"world_size":   Vector2(3240.0, 720.0),
 		"player_start": Vector2(140.0, 540.0),
 		"goal_type":    "POSITION",
-		"goal_pos":     Vector2(2480.0, 540.0),
+		"goal_pos":     Vector2(3120.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
 		"elite_chance": 0.0,
 		"arrival_beat": "surface_breakout",
@@ -1648,7 +1650,7 @@ static func _substation_control() -> Dictionary:
 	}
 
 # ─── 16. 실험 구역 (HORIZONTAL, 막2) — 봉인 실험 베이. 혼합 적 + 하향 포탑 함정 ──
-# 폭격기(상성=fire_boost)·방패병 혼합 + 관측 발판 밑면 하향 포탑(subway 포탑 패턴). 화력·기동 복합.
+# 자폭병(상성=fire_boost)·방패병 혼합 + 관측 발판 밑면 하향 포탑(subway 포탑 패턴). 화력·기동 복합.
 static func _testing_grounds() -> Dictionary:
 	return {
 		"world_type":   "HORIZONTAL",
@@ -1670,13 +1672,13 @@ static func _testing_grounds() -> Dictionary:
 			"patrol": [Vector2(820, 600.0), Vector2(2200, 600.0)],
 			"sniper": [],
 			"drone":  [],
-			# 폭격기 — 붙기 전에 화력으로(상성=fire_boost).
+			# 자폭병 — 붙기 전에 화력으로(상성=fire_boost).
 			"bomber": [Vector2(1700, 600.0)],
 			# 방패병 — 정면 차단(상성=폭발물).
 			"shield": [Vector2(2460, 600.0)],
 			# 재머 — "부재로 가르치기"(인지 강화 ③, 2026-08-14): 중반 재밍 그늘에서 마커가 꺼지는
 			# 대비를 초반부(s3~5)에 한 번 겪게 한다. 봉인 실험 베이의 관측 차단 장치(관측창이
-			# 지워진 이유)라는 로어와도 맞물림. 폭격기(1700)가 그늘 안 무표시 기습 담당.
+			# 지워진 이유)라는 로어와도 맞물림. 자폭병(1700)이 그늘 안 무표시 기습 담당.
 			"jammer": [Vector2(1560, 600.0)],
 		},
 		"rewards": {
@@ -1960,7 +1962,7 @@ static func _warehouse_dock() -> Dictionary:
 		],
 	}
 
-# 방2 · 보관 랙(원 창고 계승). 순·역 벨트 2개 + 적재탑 — 역벨트를 거스르며 폭격기·방패병을
+# 방2 · 보관 랙(원 창고 계승). 순·역 벨트 2개 + 적재탑 — 역벨트를 거스르며 자폭병·방패병을
 # 상대하는 이 맵의 본 손맛.
 static func _warehouse_racks() -> Dictionary:
 	return {
@@ -2004,7 +2006,7 @@ static func _warehouse_racks() -> Dictionary:
 		},
 		"spikes": [],
 		# 시그니처 · 컨베이어 바닥(§8 확산 6호, 2026-08-17): 지면 구간이 흐른다.
-		# 벨트 A = 순방향(타면 빠름) / 벨트 B = 역방향(거스르며 폭격기·방패병 상대 = 이 맵 손맛) /
+		# 벨트 A = 순방향(타면 빠름) / 벨트 B = 역방향(거스르며 자폭병·방패병 상대 = 이 맵 손맛) /
 		# 벨트 C = 순방향(탑 C 저격 아래 질주) / 벨트 D = 역방향(막판 저항).
 		"conveyors": [
 			{"x1": 700.0,  "x2": 1350.0, "dir": 1,  "speed": 120.0},
