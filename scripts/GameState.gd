@@ -714,6 +714,11 @@ func veil_trust_gauge_dots() -> String:
 	var filled: int = 0
 	if rec_count > 0:
 		filled = int(round(5.0 * float(effective_followed()) / float(rec_count)))
+		# 소표본 착시 방지(2026-08-21 사용자 "새 게임인데 게이지가 꽉 참"): 비율만 보면 첫 추천
+		# 하나만 따라도 1/1=100%로 5칸이 다 찬다. 칸 수를 표본 수(rec_count)로 상한 — 근거가
+		# 쌓인 만큼만 차오른다. 엔딩 판정(유효 수용률 50%+)은 비율 그대로라 불변이고,
+		# 종반(rec 5+)엔 상한이 무효라 게이지와 판정이 다시 일치한다.
+		filled = mini(filled, rec_count)
 	var dots: String = ""
 	for i in 5:
 		dots += "●" if i < filled else "○"
