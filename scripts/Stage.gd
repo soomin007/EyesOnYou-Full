@@ -3310,7 +3310,8 @@ func _build_moving_platforms() -> void:
 		)
 
 # 부서지는 엄폐물(DestructibleCover 기믹) — MapData "destructible_covers" 배열을 읽어 생성.
-# 각 항목 = {pos(바닥 접점=하단 중앙), w, h, hp}. 솔리드 + 적탄 피격으로 파괴(엄폐 관리 = 이 맵 정체성).
+# 각 항목 = {pos(바닥 접점=하단 중앙), w, h, hp, style?("car"/"container")}. 솔리드 + 적탄
+# 피격으로 파괴(엄폐 관리 = 이 맵 정체성). container = 키 큰 적재 컨테이너(고가 저격의 사각).
 func _build_destructible_covers() -> void:
 	for entry in _map_data.get("destructible_covers", []):
 		var d: Dictionary = entry
@@ -3318,7 +3319,8 @@ func _build_destructible_covers() -> void:
 		add_child(cover)
 		cover.position = d.get("pos", Vector2.ZERO)
 		cover.z_index = -1  # 배우(플레이어/적) 뒤 — 항상 플레이어가 보이게
-		cover.setup(float(d.get("w", 96.0)), float(d.get("h", 72.0)), int(d.get("hp", 3)))
+		cover.setup(float(d.get("w", 96.0)), float(d.get("h", 72.0)), int(d.get("hp", 3)),
+			str(d.get("style", "car")))
 
 # 솔리드 장애물(붕괴 잔해 등) — MapData "hurdles" 배열. {x, w, h}. 두 방향 솔리드(넘어야 함).
 # 강제 전진 맵에서 점프/등반을 강제해 시간 손실 → 추격 벽이 따라붙게 만드는 요소.
@@ -6482,9 +6484,63 @@ func _on_boss_phase_changed(new_phase: int) -> void:
 	_camera_shake(8.0 if new_phase == 2 else 14.0, 0.45)
 	match new_phase:
 		2:
-			_show_boss_alert("패턴이 바뀌었습니다. 양쪽 경계.", Color(1.0, 0.78, 0.40), 3.0)
+			# 리워크(sentinel_rework §3 P2) — 시설 소환 = 룰 변화. 스폰은 물리 콜백 밖으로
+			# (take_damage 경유 시그널 · known_issues "flushing 중 동기 스폰 금지").
+			_show_boss_alert("격납 개방. 시설 설비가 전투에 개입합니다.", Color(1.0, 0.78, 0.40), 3.2)
+			_summon_facility_hazards.call_deferred()
 		3:
 			_show_boss_alert("코어가 불안정합니다. 거리 두고, 빠르게.", Color(1.0, 0.45, 0.45), 3.0)
+
+# ─── P2 시설 소환(리워크 2026-08-22 · "시설이 연기하는 최종 보스") ───────────────
+# 막1~2에서 배운 시설 기믹(증기 분출 · 방전 아크)이 보스의 무기로 무대에 등장한다 —
+# 바닥 해치 개방 연출 + SteamVent 2기 + ElectricArc 2구간. 보스 격파 시 함께 정리.
+var _boss_facility_nodes: Array = []
+
+func _summon_facility_hazards() -> void:
+	if boss == null or not is_instance_valid(boss) or GameState.story_mode:
+		return
+	if not _boss_facility_nodes.is_empty():
+		return
+	SfxPlayer.play("hatch_open")
+	# 바닥 해치 개방 플래시 — 소환 지점 4곳에 짧은 앰버 밴드.
+	for hx in [480.0, 1440.0, 720.0, 1200.0]:
+		var hatch := ColorRect.new()
+		hatch.color = Color(0.95, 0.75, 0.30, 0.55)
+		hatch.position = Vector2(float(hx) - 60.0, GROUND_Y - 4.0)
+		hatch.size = Vector2(120.0, 8.0)
+		hatch.z_index = 2
+		add_child(hatch)
+		var htw := hatch.create_tween()
+		htw.tween_property(hatch, "modulate:a", 0.0, 1.2)
+		htw.tween_callback(hatch.queue_free)
+	# 증기 분출구 2기 — 냉각 설비의 회수. 높이 200(중층 피난 발판은 침범 안 함).
+	for entry in [[480.0, 0.0], [1440.0, 0.5]]:
+		var e: Array = entry
+		var vent := SteamVent.new()
+		vent.position = Vector2(float(e[0]), GROUND_Y)
+		vent.height = 200.0
+		vent.phase = float(e[1])
+		add_child(vent)
+		_boss_facility_nodes.append(vent)
+	# 방전 아크 2구간 — 변전 설비의 회수. 지상 체류 비용(스텝·중층 발판이 답).
+	for entry in [[620.0, 820.0, 0.0], [1100.0, 1300.0, 0.5]]:
+		var e: Array = entry
+		var arc := ElectricArc.new()
+		add_child(arc)
+		arc.setup(float(e[0]), float(e[1]), GROUND_Y, float(e[2]), 1)
+		_boss_facility_nodes.append(arc)
+	# 학습 회수를 말로 1회 — "지나온 설비가 이 병기의 몸".
+	get_tree().create_timer(1.2, false).timeout.connect(func() -> void:
+		if is_inside_tree():
+			_show_veil_subtitle(VeilDialogue.banded("증기와 방전, 지나온 설비들입니다. 리듬은 이미 배우셨습니다. 바닥에 오래 서지 마십시오.", "증기랑 방전, 지나온 설비들이에요. 리듬은 이미 배웠잖아요. 바닥에 오래 서지 말아요."), 4.2))
+
+func _clear_facility_hazards() -> void:
+	# 즉시 제거 — 노드 바인딩 페이드 트윈이 격파 프레임에서 완주를 보장하지 못했다
+	# (2026-08-22 스모크 실측: 0.83s 뒤에도 잔존). 격파 플래시·소등이 이질감을 가린다.
+	for n in _boss_facility_nodes:
+		if is_instance_valid(n):
+			(n as Node).queue_free()
+	_boss_facility_nodes.clear()
 
 # 첫 과부하 배기 — 무적+김의 "왜"를 한 번은 말로(2026-08-20 사용자 "뭐라도 이해가 되게").
 func _on_boss_vent_started() -> void:
@@ -6542,23 +6598,78 @@ func _play_boss_intro() -> void:
 		tw.tween_property(bar, "modulate:a", 1.0, 0.5)
 	_run_boss_intro_beats(bars)
 
-# 대사 비트 — 합계 ~22.8s(+페이드)라 미스킵 시 전투 개시가 음악 킥(25s)과 맞물린다.
+# 대사 비트 — 무대 연출(~4.3s) + 대사(~19s)가 미스킵 시 전투 개시를 음악 킥(25s)에 맞춘다.
 func _run_boss_intro_beats(bars: CanvasLayer) -> void:
-	var skipped: bool = await _boss_intro_wait(1.4)
+	# 무대 연출(리워크 2026-08-22 · sentinel_rework §3): 소등 → 격납 셔터 개방 → 조명 순차 점등.
+	# "최종 방어선의 연극"에 걸맞은 등장 — 재도전은 _play_boss_intro의 seen_run 가드가 건너뛴다.
+	var skipped: bool = await _boss_intro_stagecraft(bars)
 	if not skipped:
 		_show_boss_alert("침입자 식별. 회수 권한: 없음.", Color(1.0, 0.45, 0.40), 5.0)
-		skipped = await _boss_intro_wait(5.6)
+		skipped = await _boss_intro_wait(4.8)
 	if not skipped:
 		_show_boss_alert("격리 프로토콜 SENTINEL, 기동.", Color(1.0, 0.45, 0.40), 5.0)
-		skipped = await _boss_intro_wait(5.6)
+		skipped = await _boss_intro_wait(4.8)
 	if not skipped:
 		# "커요"만 쓰면 주어 실종(사용자 지적 2026-08-10) — 대상을 명시.
 		_show_veil_subtitle(VeilDialogue.banded("상대가 큽니다. 눈은 제가 맡습니다. 빨간 신호가 멎은 틈에 쏘십시오.", "상대가 커요. 그래도 눈은 제가 돼 드릴게요. 빨간 신호가 멎은 틈에 쏴요."), 5.4)
-		skipped = await _boss_intro_wait(6.2)
+		skipped = await _boss_intro_wait(5.6)
 	if not skipped:
 		_show_boss_alert("제거를 시작한다.", Color(1.0, 0.30, 0.28), 3.0)
-		skipped = await _boss_intro_wait(4.0)
+		skipped = await _boss_intro_wait(3.4)
 	_end_boss_intro(bars, skipped)
+
+# 무대 연출 — 소등(0.5) → 격납 셔터 두 판이 갈라짐(1.2) → 조명 3개 순차 점등(1.35) →
+# 어둠 걷힘(0.8). 전부 스킵 가능. 요소는 bars 레이어 자식이라 _end_boss_intro 정리에 편승.
+func _boss_intro_stagecraft(bars: CanvasLayer) -> bool:
+	var vs: Vector2 = get_viewport().get_visible_rect().size
+	# 소등 — 시설 조명이 죽는다.
+	var dark := ColorRect.new()
+	dark.color = Color(0.01, 0.01, 0.03, 0.0)
+	dark.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bars.add_child(dark)
+	bars.move_child(dark, 0)   # 레터박스 바 아래
+	var tw := dark.create_tween()
+	tw.tween_property(dark, "color:a", 0.74, 0.5)
+	var skipped: bool = await _boss_intro_wait(1.0)
+	# 격납 셔터 — 화면 상부 중앙의 두 판이 좌우로 갈라진다.
+	if not skipped:
+		SfxPlayer.play("hatch_open")
+		_camera_shake(4.0, 0.3)
+		for side in [-1, 1]:
+			var panel := ColorRect.new()
+			panel.color = Color(0.10, 0.12, 0.15, 0.96)
+			panel.position = Vector2(vs.x * 0.5 - (300.0 if side < 0 else 0.0), 70.0)
+			panel.size = Vector2(300.0, 330.0)
+			panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			bars.add_child(panel)
+			var ptw := panel.create_tween()
+			ptw.tween_property(panel, "position:x", panel.position.x + 280.0 * float(side), 1.0) \
+				.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+			ptw.parallel().tween_property(panel, "modulate:a", 0.4, 1.0)
+		skipped = await _boss_intro_wait(1.2)
+	# 실루엣 점등 — 조명 3개가 순차로 켜져 거대한 것을 비춘다.
+	if not skipped:
+		for i in 3:
+			SfxPlayer.play("boss_alert_text", -8.0)
+			var cone := Polygon2D.new()
+			var cx: float = vs.x * 0.5 + float(i - 1) * 130.0
+			cone.polygon = PackedVector2Array([
+				Vector2(cx - 26.0, -10.0), Vector2(cx + 26.0, -10.0),
+				Vector2(cx + 120.0, 330.0), Vector2(cx - 120.0, 330.0)])
+			cone.color = Color(0.85, 0.92, 1.0, 0.0)
+			bars.add_child(cone)
+			var ct := cone.create_tween()
+			ct.tween_property(cone, "color:a", 0.16, 0.25)
+			skipped = await _boss_intro_wait(0.45)
+			if skipped:
+				break
+	# 어둠 걷힘 — 경보와 함께 전장 조명 복구.
+	var out := dark.create_tween()
+	out.tween_property(dark, "color:a", 0.0, 0.8)
+	if not skipped:
+		skipped = await _boss_intro_wait(0.6)
+	return skipped
 
 # sec 동안 대기 — _input이 세운 스킵 플래그를 매 프레임 확인. 스킵 시 true.
 # (씬 전환/보스 소멸 시에도 안전 종료.)
@@ -6646,6 +6757,25 @@ func _on_boss_killed(at_position: Vector2) -> void:
 	if boss_clear_dialogue_played:
 		return
 	boss_clear_dialogue_played = true
+	# 리워크(§3 격파): 소환 설비 정리 + "순순한 셧다운" — 조명이 위에서부터 순차 소등되고
+	# 옅은 어둠이 reveal까지 잔류. 저항 없는 소등이 "너무 쉽게 무너졌다"는 위화감을 만들고,
+	# 곧이은 라이벌 첫 발화(_play_sentinel_reveal)가 그 위화감을 회수한다.
+	_clear_facility_hazards()
+	if not GameState.story_mode:
+		var off_layer := CanvasLayer.new()
+		off_layer.layer = 12
+		add_child(off_layer)
+		var vs: Vector2 = get_viewport().get_visible_rect().size
+		for i in 3:
+			var band := ColorRect.new()
+			band.color = Color(0.0, 0.0, 0.02, 0.0)
+			band.position = Vector2(0.0, vs.y * float(i) / 3.0)
+			band.size = Vector2(vs.x, vs.y / 3.0 + 1.0)
+			band.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			off_layer.add_child(band)
+			var btw := band.create_tween()
+			btw.tween_interval(0.35 * float(i))
+			btw.tween_property(band, "color:a", 0.26, 0.4)
 	# 보스 HP 바 페이드아웃
 	if boss_hp_bar_layer != null and is_instance_valid(boss_hp_bar_layer):
 		var holder := boss_hp_bar_layer.get_child(0) as Control

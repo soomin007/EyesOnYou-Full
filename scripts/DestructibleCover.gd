@@ -25,6 +25,9 @@ var _hp: int = 3
 var _max_hp: int = 3
 var _w: float = 96.0
 var _h: float = 72.0
+# 스타일(2026-08-22 고가 저격 도입): "car" = 낮은 정비 차량(지상 사선 차단) /
+# "container" = 키 큰 적재 컨테이너(고가 저격 사선까지 차단 — 그 사각이 답).
+var _style: String = "car"
 var _art: Node2D = null
 var _col: CollisionShape2D = null
 var _dead: bool = false
@@ -37,11 +40,12 @@ class _CoverArt extends Node2D:
 		if host != null and host.has_method("_render_art"):
 			host.call("_render_art", self)
 
-func setup(w: float, h: float, hp: int) -> void:
+func setup(w: float, h: float, hp: int, style: String = "car") -> void:
 	_w = maxf(w, 32.0)
 	_h = maxf(h, 32.0)
 	_max_hp = maxi(hp, 1)
 	_hp = _max_hp
+	_style = style
 	collision_layer = 1   # 월드 — 플레이어·적탄·플레이어탄(모두 mask 1)이 충돌
 	collision_mask = 0
 	_build_collision()
@@ -96,23 +100,35 @@ func _break() -> void:
 		tw.tween_interval(0.35)
 	tw.tween_callback(queue_free)
 
-# _CoverArt._draw에서 호출 — 차량 아트 + 피해 균열.
+# _CoverArt._draw에서 호출 — 스타일별 아트(차량/컨테이너) + 피해 균열.
 func _render_art(art: Node2D) -> void:
 	var hw: float = _w * 0.5
 	var ratio: float = _hp_ratio()
-	# 본체(피해로 어두워짐)
 	var body_col: Color = COL_BODY.darkened((1.0 - ratio) * 0.35)
-	art.draw_rect(Rect2(Vector2(-hw, -_h), Vector2(_w, _h)), body_col)
-	# 캐빈 창(가로 스트립)
-	var cab_y: float = -_h + _h * 0.20
-	art.draw_rect(Rect2(Vector2(-hw + _w * 0.12, cab_y), Vector2(_w * 0.76, _h * 0.26)), COL_CABIN)
-	# 상단 앰버 트림 — "엄폐물" 신호
-	art.draw_rect(Rect2(Vector2(-hw, -_h), Vector2(_w, 5.0)), COL_TRIM)
-	# 바퀴(하단 양쪽)
-	art.draw_circle(Vector2(-hw + _w * 0.22, -6.0), 9.0, COL_WHEEL)
-	art.draw_circle(Vector2(hw - _w * 0.22, -6.0), 9.0, COL_WHEEL)
-	# 테두리
-	art.draw_rect(Rect2(Vector2(-hw, -_h), Vector2(_w, _h)), COL_EDGE, false, 1.5)
+	if _style == "container":
+		# 적재 컨테이너 — 키 큰 박스 + 가로 골판 주름 + 모서리 캡. 바퀴·캐빈 없음.
+		art.draw_rect(Rect2(Vector2(-hw, -_h), Vector2(_w, _h)), body_col.lightened(0.04))
+		var ry: float = -_h + 14.0
+		while ry < -12.0:
+			art.draw_rect(Rect2(Vector2(-hw + 4.0, ry), Vector2(_w - 8.0, 3.0)),
+				Color(0.10, 0.11, 0.13, 0.8))
+			ry += 18.0
+		# 상단 앰버 트림 — "엄폐물" 신호(차량과 공통 어휘).
+		art.draw_rect(Rect2(Vector2(-hw, -_h), Vector2(_w, 5.0)), COL_TRIM)
+		# 모서리 캡(수직 보강재 — 좌우 얇은 기둥).
+		for cx in [-hw, hw - 6.0]:
+			art.draw_rect(Rect2(Vector2(float(cx), -_h), Vector2(6.0, _h)),
+				Color(0.14, 0.15, 0.18, 0.95))
+		art.draw_rect(Rect2(Vector2(-hw, -_h), Vector2(_w, _h)), COL_EDGE, false, 1.5)
+	else:
+		# 정비 차량 — 본체 + 캐빈 창 + 바퀴.
+		art.draw_rect(Rect2(Vector2(-hw, -_h), Vector2(_w, _h)), body_col)
+		var cab_y: float = -_h + _h * 0.20
+		art.draw_rect(Rect2(Vector2(-hw + _w * 0.12, cab_y), Vector2(_w * 0.76, _h * 0.26)), COL_CABIN)
+		art.draw_rect(Rect2(Vector2(-hw, -_h), Vector2(_w, 5.0)), COL_TRIM)
+		art.draw_circle(Vector2(-hw + _w * 0.22, -6.0), 9.0, COL_WHEEL)
+		art.draw_circle(Vector2(hw - _w * 0.22, -6.0), 9.0, COL_WHEEL)
+		art.draw_rect(Rect2(Vector2(-hw, -_h), Vector2(_w, _h)), COL_EDGE, false, 1.5)
 	# 균열 — 받은 피해 수만큼(결정적: idx로 분산).
 	var dmg: int = _max_hp - _hp
 	for i in dmg:

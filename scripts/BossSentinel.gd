@@ -12,10 +12,14 @@ signal self_destruct_started
 signal self_destruct_disarmed
 signal vent_started
 
-const HP_MAX: int = 28     # 보스전 확대(2026-08-19): 24→28 · 실측 20.4s가 클라이맥스로 짧았다
-const HP_PHASE2: int = 19  # 이 값 이하 들어오면 P2
-const HP_PHASE3: int = 10  # 이 값 이하 들어오면 P3
-const HP_SELF_DESTRUCT: int = 6  # 이 값 이하 시 자폭 카운트다운 시작 (버퍼 — 잔탄에 즉사 방지, 자폭 시퀀스 보장)
+# 리워크(2026-08-22 사용자 확정, sentinel_rework.md): 목표 전투 시간 = 현 최종 보스급(60~90s ·
+# "지금의 최종 보스전 시간이 중간 보스에서 걸리게"). 28→36 + P2 시설 소환(증기·방전, Stage
+# _summon_facility_hazards)의 회피 부하가 실효 DPS를 낮춰 추가 연장. 창당 상한은 max_hp 비례라
+# 배기 창 수(≈5.5회)는 불변 — 창 사이 교전이 길어지는 구조. 14-1은 이후 이보다 길게(후속).
+const HP_MAX: int = 36
+const HP_PHASE2: int = 25  # 이 값 이하 들어오면 P2
+const HP_PHASE3: int = 13  # 이 값 이하 들어오면 P3
+const HP_SELF_DESTRUCT: int = 7  # 이 값 이하 시 자폭 카운트다운 시작 (버퍼 — 잔탄에 즉사 방지, 자폭 시퀀스 보장)
 const HP_SELF_DESTRUCT_STORY: int = 2  # 스토리 보스(HP 8)는 더 낮게 — 충분히 싸운 뒤 자폭
 # 스토리 모드 — P2/P3 스킵, 자폭 트리거까지 짧게.
 const HP_MAX_STORY: int = 8
