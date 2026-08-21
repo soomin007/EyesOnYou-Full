@@ -1839,35 +1839,42 @@ static func _pump_station() -> Dictionary:
 		"camera_mode":  "HORIZONTAL",
 		# 레버 y = 발판 top(330) - 22 — 공중 부양 금지(냉각 레버와 동형 수정 2026-08-18).
 		"mid_gate": {"x": 3210.0, "mode": "lever", "lever": Vector2(3060.0, 308.0)},
+		# 정체성 실물화(2026-08-22 사용자 "'파이프 위에서 내려다본다'가 전혀 공감 안 됨"):
+		# 종전 저격 고도 Δ~140으론 "내려다봄"이 성립하지 않았다. → 상부 파이프 거치대(y340 ·
+		# Δ260)로 격상 + 배경에 대구경 파이프 실물(_ambience_pump_pipes). 거치대는 성기게 —
+		# 연속 데크면 저격 자신의 발판이 하향 사선을 막는다(기하 검토). 답 2개: 바로 밑·스텝
+		# 뒤 = 사각(엄폐), 또는 스텝(y470)→거치대(Δ130)로 올라가 정면에서 끊기.
 		"platforms": [
-			# 전반 — 펌프/파이프 발판(기존 유지).
-			{"pos": Vector2(540, 460),  "w": 190.0},
-			{"pos": Vector2(1000, 460), "w": 190.0},
-			{"pos": Vector2(1460, 460), "w": 200.0},
-			{"pos": Vector2(1960, 460), "w": 190.0},
-			{"pos": Vector2(2440, 470), "w": 200.0},
+			# 워밍업 스텝.
+			{"pos": Vector2(540, 470),  "w": 150.0},
+			# 존1 — 파이프 거치대 2(저격) + 등반 스텝.
+			{"pos": Vector2(1150, 470), "w": 140.0},
+			{"pos": Vector2(1500, 340), "w": 120.0},
+			{"pos": Vector2(1900, 470), "w": 150.0},
+			{"pos": Vector2(2300, 340), "w": 120.0},
 			# 관문 동선 — 상단 파이프 계단(지면→430→330, 레버 자리). Δ190(더블)·Δ100(단일).
 			{"pos": Vector2(2840, 430), "w": 170.0},
 			{"pos": Vector2(3060, 330), "w": 150.0},
-			# 후반 — 격벽 너머 배관 구간.
-			{"pos": Vector2(3560, 460), "w": 200.0},
-			{"pos": Vector2(4060, 440), "w": 190.0},
-			{"pos": Vector2(4560, 460), "w": 200.0},
-			{"pos": Vector2(5060, 440), "w": 190.0},
-			{"pos": Vector2(5560, 470), "w": 200.0},
+			# 존2 — 격벽 너머 파이프 거치대 2 + 등반 스텝.
+			{"pos": Vector2(3800, 470), "w": 140.0},
+			{"pos": Vector2(4150, 340), "w": 120.0},
+			{"pos": Vector2(4550, 470), "w": 150.0},
+			{"pos": Vector2(4950, 340), "w": 120.0},
+			# 골 직전 스텝.
+			{"pos": Vector2(5560, 470), "w": 150.0},
+		],
+		"route_lines": [
+			{"x": 1050.0, "who": "veil", "text": "저격이 파이프 통로 위에 거치돼 있습니다. 바로 밑은 안 보이는 사각입니다. 올라가서 끊거나, 조준 틈에 지나가십시오.", "dur": 4.4},
 		],
 		"enemies": {
-			# 압력 파일럿(2026-08-21, hp_survival_economy §4 · 사용자 승인) — 순차 조우를 교전 존
-			# 2개로 재편(막1이라 완만하게):
-			#   존1 x1300~2600 = 저격 1460/2440의 사선이 중앙(≈1620~2280)에서 겹치고,
-			#     순찰 1750/2250이 회피 중인 플레이어를 조인다(제자리 금지 = 순찰 돌진).
-			#   존2 x3900~5200 = 방패병이 지상 전진을 막는 동안 파이프 위 저격 4060/5060이
-			#     내려다본다 — 정면(방패)과 위(사선)가 같은 구간에서 겹치는 교차.
+			# 압력(파일럿 유지 + 고도 격상): 존1 = 거치대 저격 1500/2300의 하향 사선이 지상
+			# 중앙에서 겹치고 순찰 1750/2250이 조인다. 존2 = 방패병 4350 정면 × 거치대 저격
+			# 4150/4950의 위 사선 교차. 재조준이 지상 체류 비용.
 			"patrol": [Vector2(800, 600.0), Vector2(1750, 600.0), Vector2(2250, 600.0),
 				Vector2(3700, 600.0), Vector2(4700, 600.0), Vector2(5650, 600.0)],
-			# 저격 — 파이프 위 거치. 전반 2 + 후반 2(사선 끊으며 전진).
-			"sniper": [Vector2(1460, 428.0), Vector2(2440, 438.0),
-				Vector2(4060, 408.0), Vector2(5060, 408.0)],
+			# 저격 — 상부 파이프 거치(Δ260). 올라가면 같은 높이 = 정면 교전으로 끊을 수 있다.
+			"sniper": [Vector2(1500, 312.0), Vector2(2300, 312.0),
+				Vector2(4150, 312.0), Vector2(4950, 312.0)],
 			"drone":  [],
 			# 자폭병 제거(막1 팔레트 계약 위반 — act identity "막1 = 인간 경비만"에 자폭병이
 			# 새어 있었다 · 페이싱 확장 때 유입 추정) → 막1 합법인 방패병으로 교체(존2 정면 차단).
@@ -1875,9 +1882,10 @@ static func _pump_station() -> Dictionary:
 			"shield": [Vector2(4350, 600.0)],
 		},
 		"rewards": {
-			"xp_orbs":    [Vector2(1000, 430.0), Vector2(1960, 430.0),
-				Vector2(3060, 300.0), Vector2(4560, 430.0), Vector2(5300, 560.0)],
-			"hp_pickups": [Vector2(2440, 440.0), Vector2(5560, 440.0)],
+			# 거치대 위 XP = 올라가서 끊는 루트의 보상(저격 곁 · 리스크-리워드).
+			"xp_orbs":    [Vector2(2300, 282.0), Vector2(3060, 300.0), Vector2(4950, 282.0),
+				Vector2(5300, 560.0)],
+			"hp_pickups": [Vector2(1900, 440.0), Vector2(5560, 440.0)],
 		},
 		"spikes": [],
 	}
@@ -2403,7 +2411,52 @@ static func _core_recovery() -> Dictionary:
 # ─── 23. 응축기 구역 (HORIZONTAL, 막2) — 증기 타이밍 + 드론(cooling 자매, 게이트 없음) ──
 # 시그니처 = 증기 분출구(SteamVent) 타이밍 통과 + 머리 위 드론. cooling과 같은 해저드 계열이나
 # 글라이드 게이트 없는 순수 통과형(드론 처리·증기 회피 학습).
+# 방 체인 3방(2026-08-21 배치 4 · room_chain_expansion §3 "낙수 3방" · 사용자 "왜 이렇게
+# 작고 짧아" 대응): 인입 매니폴드(학습) → 응축기 홀(원형 계승 · 본 손맛) → 집수조(절정 ·
+# 배수 밸브 lever 관문). 압력 문법(hp_survival_economy §5b) 내장 — 방마다 사선 교차 1+.
 static func _condenser() -> Dictionary:
+	return {"segments": [_condenser_inlet(), _condenser_hall(), _condenser_basin()]}
+
+# 방1 · 인입 매니폴드. 낙수 3기(간격 넉넉) 학습 — 리듬 읽기를 가볍게.
+static func _condenser_inlet() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(2600.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(2480.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"ambience":     "condenser_inlet",
+		"indoor_env":   "water",
+		"no_spike_fallback": true,
+		"platforms": [
+			{"pos": Vector2(620, 470),  "w": 180.0},
+			{"pos": Vector2(1180, 450), "w": 160.0},
+			{"pos": Vector2(1750, 470), "w": 180.0},
+			{"pos": Vector2(2250, 460), "w": 180.0},
+		],
+		"drips": [
+			{"x": 900.0,  "interval": 3.2, "phase": 0.0},
+			{"x": 1500.0, "interval": 3.4, "phase": 0.5},
+			{"x": 2050.0, "interval": 3.0, "phase": 0.25},
+		],
+		"route_lines": [
+			{"x": 300.0, "who": "veil", "text": "천장 배관에서 끓는 냉각수가 떨어집니다. 맞으면 데입니다. 방울이 맺히면 바닥 표시를 피하십시오.", "dur": 4.0},
+		],
+		"enemies": {
+			# 압력: 낙수 1500의 회피 타이밍과 순찰 1650 압박이 겹치는 교차 1개(학습 강도).
+			"patrol": [Vector2(760, 600.0), Vector2(1650, 600.0)],
+			"sniper": [], "drone": [], "bomber": [], "shield": [],
+		},
+		"rewards": {
+			"xp_orbs":    [Vector2(1180, 420.0)],
+			"hp_pickups": [],
+		},
+		"spikes": [],
+	}
+
+# 방2 · 응축기 홀(원형 계승). 낙수 6 + 드론 3 — 이 맵의 본 손맛.
+static func _condenser_hall() -> Dictionary:
 	return {
 		"world_type":   "HORIZONTAL",
 		"world_size":   Vector2(3400.0, 720.0),
@@ -2411,6 +2464,9 @@ static func _condenser() -> Dictionary:
 		"goal_type":    "POSITION",
 		"goal_pos":     Vector2(3280.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
+		"ambience":     "condenser_hall",
+		"indoor_env":   "water",
+		"no_spike_fallback": true,
 		"platforms": [
 			# 상부 코일 포켓 + 저단차(수칙 3·4) · 낙수점(420~2760)과 간섭 없는 x 유지.
 			{"pos": Vector2(600, 460),  "w": 190.0},
@@ -2432,11 +2488,11 @@ static func _condenser() -> Dictionary:
 			{"x": 2300.0, "interval": 2.6, "phase": 0.55},
 			{"x": 2760.0, "interval": 3.0, "phase": 0.85},
 		],
-		"route_lines": [
-			{"x": 300.0, "who": "veil", "text": "천장 배관에서 끓는 냉각수가 떨어집니다. 맞으면 데입니다. 방울이 맺히면 바닥 표시를 피하십시오.", "dur": 4.0},
-		],
 		"enemies": {
-			"patrol": [Vector2(820, 600.0), Vector2(2200, 600.0)],
+			# 압력: 존A(1100~1560) 드론 위 + 낙수 1340 + 순찰 1250 / 존B(2300~2760) 드론 +
+			# 낙수 2기 + 순찰 2200·3000 협공(제자리 금지 = 순찰 돌진 + 낙수 시한).
+			"patrol": [Vector2(820, 600.0), Vector2(1250, 600.0), Vector2(2200, 600.0),
+				Vector2(3000, 600.0)],
 			"sniper": [],
 			"drone":  [Vector2(1100, 250.0), Vector2(2040, 240.0), Vector2(2760, 250.0)],
 			"bomber": [],
@@ -2445,6 +2501,54 @@ static func _condenser() -> Dictionary:
 		"rewards": {
 			"xp_orbs":    [Vector2(1100, 390.0), Vector2(1560, 310.0)],
 			"hp_pickups": [Vector2(2980, 440.0)],
+		},
+		"spikes": [],
+	}
+
+# 방3 · 집수조(절정). 낙수 밀집 + 파이프 위 저격 + 배수 밸브 레버 관문.
+static func _condenser_basin() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(3000.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(2880.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"ambience":     "condenser_basin",
+		"indoor_env":   "water",
+		"no_spike_fallback": true,
+		# 레버 y = 발판 top(440) - 22 · Δ160(더블점프 직행) · 상공 드론 초기 배치 금지 규칙 준수.
+		"mid_gate": {"x": 2700.0, "mode": "lever", "lever": Vector2(2380.0, 418.0)},
+		"platforms": [
+			{"pos": Vector2(600, 460),  "w": 180.0},
+			{"pos": Vector2(1150, 440), "w": 160.0},
+			{"pos": Vector2(1700, 460), "w": 180.0},
+			{"pos": Vector2(2380, 440), "w": 150.0},   # 배수 밸브 레버 발판
+		],
+		# 낙수 절정 — 간격을 좁혀 리듬이 겹친다(학습 3.2s → 절정 2.0~2.4s).
+		"drips": [
+			{"x": 480.0,  "interval": 2.0, "phase": 0.0},
+			{"x": 900.0,  "interval": 2.2, "phase": 0.5},
+			{"x": 1320.0, "interval": 2.0, "phase": 0.25},
+			{"x": 1740.0, "interval": 2.2, "phase": 0.75},
+			{"x": 2120.0, "interval": 2.0, "phase": 0.5},
+			{"x": 2560.0, "interval": 2.4, "phase": 0.0},
+		],
+		"route_lines": [
+			{"x": 1900.0, "who": "veil", "text": "앞의 밸브 레버를 당기면 배수구 문이 열립니다. 낙수 밑에 멈춰 서지 마십시오.", "dur": 3.6},
+		],
+		"enemies": {
+			# 압력 절정: 레버 접근(1900~2380) = 낙수 2120·2560 타이밍 × 발판 위 저격 1700
+			# 사선(재조준 = 레버 체류 비용) × 순찰 2250 압박.
+			"patrol": [Vector2(950, 600.0), Vector2(2250, 600.0)],
+			"sniper": [Vector2(1700, 428.0)],
+			"drone":  [Vector2(1150, 240.0)],
+			"bomber": [],
+			"shield": [],
+		},
+		"rewards": {
+			"xp_orbs":    [Vector2(1150, 410.0)],
+			"hp_pickups": [Vector2(600, 430.0)],
 		},
 		"spikes": [],
 	}
@@ -2495,8 +2599,54 @@ static func _perimeter() -> Dictionary:
 	}
 
 # ─── 25. 함정 통로 (HORIZONTAL, 막2) — 함정 내비게이션(적 적음, 포탑 다수) ──
-# 적보다 해저드가 주력 — 상·하향 주기 포탑 + 트립와이어 연동. 타이밍/동선이 핵심.
+# 방 체인 3방(2026-08-21 배치 4 · "밀도 램프 3방"): 진입 회랑(학습: 하향 포탑 + 감지선
+# 1회) → 본 통로(원형 계승) → 격자 사로(절정: 포탑열 안 동력 레버 관문). 적은 끝까지 최소 —
+# "적보다 함정" 정체성 유지, 압박 램프는 포탑 밀도·위상으로만 올린다.
 static func _gauntlet() -> Dictionary:
+	return {"segments": [_gauntlet_entry(), _gauntlet_main(), _gauntlet_grid()]}
+
+# 방1 · 진입 회랑. 하향 포탑 2(간격 여유) + 감지선-상향 연동 1조 학습.
+static func _gauntlet_entry() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(2600.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(2480.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"ambience":     "gauntlet_entry",
+		"indoor_env":   "interior",
+		"no_spike_fallback": true,
+		"platforms": [
+			{"pos": Vector2(620, 460),  "w": 190.0},
+			{"pos": Vector2(1250, 450), "w": 180.0},
+			{"pos": Vector2(1900, 460), "w": 190.0},
+		],
+		"traps": [
+			{"x": 1250, "y": 468.0, "dir": "down", "interval": 2.0, "phase": 0.0},
+			{"x": 1900, "y": 478.0, "dir": "down", "interval": 2.0, "phase": 0.5},
+			{"x": 2250, "y": 588.0, "dir": "up", "mode": "triggered", "trigger_id": "ge1", "burst": 3},
+		],
+		"tripwires": [
+			{"x": 2120, "y": 540.0, "dir": "up", "len": 200.0, "trigger_id": "ge1", "cooldown": 2.6},
+		],
+		"route_lines": [
+			{"x": 300.0, "who": "veil", "text": "여기는 경비보다 포탑이 많습니다. 발사 간격을 읽고, 바닥의 붉은 감지선은 밟지 마십시오.", "dur": 4.0},
+		],
+		"enemies": {
+			# 압력: 하향 포탑 1250 타이밍 × 순찰 1400 압박 교차 1개(학습 강도).
+			"patrol": [Vector2(1400, 600.0)],
+			"sniper": [], "drone": [], "bomber": [], "shield": [],
+		},
+		"rewards": {
+			"xp_orbs":    [Vector2(1250, 420.0)],
+			"hp_pickups": [],
+		},
+		"spikes": [],
+	}
+
+# 방2 · 본 통로(원형 계승). 하향 2 + 감지선-상향 2 연동 — 본 손맛.
+static func _gauntlet_main() -> Dictionary:
 	return {
 		"world_type":   "HORIZONTAL",
 		"world_size":   Vector2(3400.0, 720.0),
@@ -2504,6 +2654,9 @@ static func _gauntlet() -> Dictionary:
 		"goal_type":    "POSITION",
 		"goal_pos":     Vector2(3280.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
+		"ambience":     "gauntlet_main",
+		"indoor_env":   "interior",
+		"no_spike_fallback": true,
 		"platforms": [
 			{"pos": Vector2(560, 460),  "w": 200.0},
 			{"pos": Vector2(1060, 440), "w": 180.0},
@@ -2536,60 +2689,181 @@ static func _gauntlet() -> Dictionary:
 		],
 	}
 
+# 방3 · 격자 사로(절정). 하향 3(위상 1/3 엇갈림) + 감지선-상향 2조 + 포탑열 안 동력 레버 관문 —
+# 레버 당기기가 포탑 리듬 읽기의 최종 시험.
+static func _gauntlet_grid() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(3000.0, 720.0),
+		"player_start": Vector2(140.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(2880.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"ambience":     "gauntlet_grid",
+		"indoor_env":   "interior",
+		"no_spike_fallback": true,
+		# 레버 y = 발판 top(440) - 22 · Δ160 · 상공 드론 없음(규칙 준수).
+		"mid_gate": {"x": 2600.0, "mode": "lever", "lever": Vector2(2300.0, 418.0)},
+		"platforms": [
+			{"pos": Vector2(560, 460),  "w": 180.0},
+			{"pos": Vector2(1150, 440), "w": 170.0},
+			{"pos": Vector2(1750, 460), "w": 180.0},
+			{"pos": Vector2(2300, 440), "w": 150.0},   # 동력 레버 발판(하향 포탑 아래)
+		],
+		"traps": [
+			{"x": 1150, "y": 458.0, "dir": "down", "interval": 1.6, "phase": 0.0},
+			{"x": 1750, "y": 478.0, "dir": "down", "interval": 1.6, "phase": 0.33},
+			# 레버 발판 위 하향 포탑 — 당기기 = 발사 틈 읽기(절정). telegraph 기본 0.5 유지.
+			{"x": 2300, "y": 458.0, "dir": "down", "interval": 1.7, "phase": 0.66},
+			{"x": 1000, "y": 588.0, "dir": "up", "mode": "triggered", "trigger_id": "gg1", "burst": 3},
+			{"x": 1150, "y": 588.0, "dir": "up", "mode": "triggered", "trigger_id": "gg1", "burst": 3},
+			{"x": 2050, "y": 588.0, "dir": "up", "mode": "triggered", "trigger_id": "gg2", "burst": 3},
+			{"x": 2200, "y": 588.0, "dir": "up", "mode": "triggered", "trigger_id": "gg2", "burst": 3},
+		],
+		"tripwires": [
+			{"x": 900.0,  "y": 540.0, "dir": "up", "len": 200.0, "trigger_id": "gg1", "cooldown": 2.6},
+			{"x": 1950.0, "y": 540.0, "dir": "up", "len": 200.0, "trigger_id": "gg2", "cooldown": 2.6},
+		],
+		"route_lines": [
+			{"x": 2000.0, "who": "veil", "text": "마지막 포탑열 안쪽의 동력 레버가 문을 엽니다. 포탑이 쉬는 틈에 당기십시오.", "dur": 3.6},
+		],
+		"enemies": {
+			# 압력: 하향 포탑 위상 격자 × 순찰 2기 압박(제자리 금지). 적은 여전히 최소.
+			"patrol": [Vector2(700, 600.0), Vector2(1900, 600.0)],
+			"sniper": [], "drone": [], "bomber": [], "shield": [],
+		},
+		"rewards": {
+			"xp_orbs":    [Vector2(1150, 410.0)],
+			"hp_pickups": [Vector2(560, 430.0)],
+		},
+		"spikes": [],
+	}
+
 # ─── 26. 화물 리프트 (HORIZONTAL, 막2) — 이동 발판 기믹 주역 ──
 # reskin 탈피 첫 "진짜 기믹 맵"(2026-06-26, act_identity 2번 레버). 정비 화물구역:
 # 스파이크 구덩이(dmg2) 위를 왕복하는 화물 리프트(MovingPlatform)를 타이밍 맞춰 건넌다.
 # 발판이 동선의 *주역* — 적은 최소(patrol 3). 지면은 연속이라 구덩이=스파이크 구간(한 구덩이 도보
 # 횡단≈치명) → 발판이 안전 동선. 단 떨어져도 즉사 아님(dmg2 진입 1회=HP 손실)이라 완주 안전.
 # 중앙 수직 리프트는 XP 보너스(선택 — 메인 동선 아님). cycle 넉넉(5~5.5s)·phase 엇갈림으로 리듬.
+# 방 체인 3방(2026-08-21 배치 4 · "페리 릴레이 3방"): 하역 마당(학습: 단일 페리 + 수직
+# 보너스) → 릴레이 홀(본 손맛: 공중 갈아타기 + 저격 사선) → 출하 갠트리(절정: 3연속
+# 갈아타기 + 저격 크로스). 관문 없음 — 기믹 리듬 자체가 문(구성 중복 금지 원칙 유지).
 static func _freight_lift() -> Dictionary:
-	# 페이싱 확장 파일럿(2026-08-16): 3300→6000 + 기믹 리듬 연장 ⓒ(관문 없음 — 구성 중복 금지).
-	# 신설 = 릴레이 구간(구덩이 4): 페리 두 대를 공중에서 갈아타는 변주 + 저격 조준 아래 타이밍 점프.
+	return {"segments": [_freight_yard(), _freight_relay(), _freight_gantry()]}
+
+# 방1 · 하역 마당. 단일 페리 2 + 수직 보너스 리프트 — 타이밍 학습.
+static func _freight_yard() -> Dictionary:
 	return {
 		"world_type":   "HORIZONTAL",
-		"world_size":   Vector2(6000.0, 720.0),
+		"world_size":   Vector2(2600.0, 720.0),
 		"player_start": Vector2(140.0, 520.0),
 		"goal_type":    "POSITION",
-		"goal_pos":     Vector2(5860.0, 540.0),
+		"goal_pos":     Vector2(2480.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
+		"ambience":     "freight_yard",
+		"no_spike_fallback": true,
 		"platforms": [
-			# 수직 리프트 상단 보너스 알코브 받침(선택 경로)
-			{"pos": Vector2(1330, 300), "w": 150.0},
-			# 릴레이 구간 감시 저격 거치대(후반) — 갈아타는 동안 조준 압박.
-			{"pos": Vector2(4850, 430), "w": 130.0},
+			{"pos": Vector2(1330, 300), "w": 150.0},   # 수직 리프트 상단 보너스 알코브
 		],
 		"moving_platforms": [
-			# 구덩이 1 — 수평 화물 리프트(낮음)
 			{"from": Vector2(800, 520), "to": Vector2(1120, 520), "w": 180.0, "cycle": 5.0, "phase": 0.0},
 			# 보너스 — 중앙 수직 리프트(지면→알코브). 선택(메인 동선 아님).
 			{"from": Vector2(1330, 580), "to": Vector2(1330, 340), "w": 130.0, "cycle": 4.5, "phase": 0.2},
-			# 구덩이 2 — 수평(약간 높음, 더 김)
-			{"from": Vector2(1580, 480), "to": Vector2(1960, 480), "w": 180.0, "cycle": 5.5, "phase": 0.35},
-			# 구덩이 3 — 수평
-			{"from": Vector2(2440, 520), "to": Vector2(2760, 520), "w": 170.0, "cycle": 5.0, "phase": 0.6},
-			# 구덩이 4 — 릴레이: 페리 1(3350~3900)에서 페리 2(4050~4600)로 공중 갈아타기.
-			# 위상 0.0/0.5 오프셋 — 페리 1이 오른끝에 설 때 페리 2가 왼끝으로 들어온다.
-			{"from": Vector2(3350, 500), "to": Vector2(3900, 500), "w": 170.0, "cycle": 5.5, "phase": 0.0},
-			{"from": Vector2(4050, 460), "to": Vector2(4600, 460), "w": 170.0, "cycle": 5.5, "phase": 0.5},
-			# 구덩이 5 — 마무리 수평(짧게 한 번 더).
-			{"from": Vector2(5000, 520), "to": Vector2(5400, 520), "w": 170.0, "cycle": 5.0, "phase": 0.3},
+			{"from": Vector2(1660, 480), "to": Vector2(2040, 480), "w": 180.0, "cycle": 5.5, "phase": 0.35},
 		],
 		"enemies": {
-			"patrol": [Vector2(460, 540.0), Vector2(2180, 540.0), Vector2(2980, 540.0),
-				Vector2(4780, 540.0), Vector2(5700, 540.0)],
-			"sniper": [Vector2(4850, 398.0)],
+			"patrol": [Vector2(460, 540.0), Vector2(2250, 540.0)],
+			"sniper": [], "drone": [], "bomber": [], "shield": [],
+		},
+		"rewards": {
+			"xp_orbs":    [Vector2(1300, 270.0), Vector2(1360, 270.0)],
+			"hp_pickups": [],
+		},
+		"spikes": [
+			{"x": 960.0, "w": 300.0, "dmg": 2},
+			{"x": 1850.0, "w": 340.0, "dmg": 2},
+		],
+	}
+
+# 방2 · 릴레이 홀. 페리 2대 공중 갈아타기 + 감시 저격 사선 — 본 손맛.
+static func _freight_relay() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(3000.0, 720.0),
+		"player_start": Vector2(140.0, 520.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(2880.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"ambience":     "freight_relay",
+		"no_spike_fallback": true,
+		"platforms": [
+			# 감시 저격 거치대 — 오르면 저격 정면 처치 + HP(리스크-리워드).
+			{"pos": Vector2(2200, 430), "w": 130.0},
+		],
+		"moving_platforms": [
+			# 릴레이 — 페리 1이 오른끝에 설 때 페리 2가 왼끝으로 들어온다(위상 0.0/0.5).
+			{"from": Vector2(700, 500),  "to": Vector2(1250, 500), "w": 170.0, "cycle": 5.5, "phase": 0.0},
+			{"from": Vector2(1400, 460), "to": Vector2(1950, 460), "w": 170.0, "cycle": 5.5, "phase": 0.5},
+			# 마무리 단일 페리.
+			{"from": Vector2(2400, 520), "to": Vector2(2680, 520), "w": 170.0, "cycle": 5.0, "phase": 0.3},
+		],
+		"route_lines": [
+			{"x": 500.0, "who": "veil", "text": "여기부터는 리프트를 공중에서 갈아탑니다. 다음 리프트가 들어올 때를 보고 건너뛰십시오.", "dur": 3.8},
+		],
+		"enemies": {
+			# 압력: 갈아타기(700~1950) 상공 사선 = 거치대 저격(재조준이 릴레이 체류 비용) +
+			# 착지 지점 순찰 압박.
+			"patrol": [Vector2(500, 540.0), Vector2(2500, 540.0)],
+			"sniper": [Vector2(2200, 398.0)],
 			"drone": [], "bomber": [], "shield": [],
 		},
 		"rewards": {
-			"xp_orbs":    [Vector2(1300, 270.0), Vector2(1360, 270.0), Vector2(3975, 430.0)],
-			"hp_pickups": [Vector2(4850, 400.0)],
+			"xp_orbs":    [Vector2(1325, 430.0)],
+			"hp_pickups": [Vector2(2200, 400.0)],
 		},
 		"spikes": [
-			{"x": 960.0, "w": 300.0, "dmg": 2},    # 구덩이 1
-			{"x": 1770.0, "w": 320.0, "dmg": 2},   # 구덩이 2
-			{"x": 2600.0, "w": 300.0, "dmg": 2},   # 구덩이 3
-			{"x": 3980.0, "w": 1300.0, "dmg": 2},  # 구덩이 4 — 릴레이 전체(3330~4630)
-			{"x": 5200.0, "w": 400.0, "dmg": 2},   # 구덩이 5
+			{"x": 1350.0, "w": 1360.0, "dmg": 2},   # 릴레이 구덩이 전체(670~2030)
+			{"x": 2540.0, "w": 300.0, "dmg": 2},
+		],
+	}
+
+# 방3 · 출하 갠트리(절정). 3연속 갈아타기 + 저격 크로스 — 램프의 정점.
+static func _freight_gantry() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(3000.0, 720.0),
+		"player_start": Vector2(140.0, 520.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(2880.0, 540.0),
+		"camera_mode":  "HORIZONTAL",
+		"ambience":     "freight_gantry",
+		"no_spike_fallback": true,
+		"platforms": [
+			# 저격 크로스 거치대 2 — 구덩이 상공 좌/우에서 릴레이 동선을 교차로 조준.
+			{"pos": Vector2(1250, 380), "w": 120.0},
+			{"pos": Vector2(2350, 400), "w": 120.0},
+		],
+		"moving_platforms": [
+			# 3연속 릴레이 — 위상 0.0/0.5/0.15로 "기다렸다 두 번 갈아타기"의 정점.
+			{"from": Vector2(550, 510),  "to": Vector2(1150, 510), "w": 170.0, "cycle": 5.5, "phase": 0.0},
+			{"from": Vector2(1300, 460), "to": Vector2(1900, 460), "w": 170.0, "cycle": 5.5, "phase": 0.5},
+			{"from": Vector2(2050, 510), "to": Vector2(2560, 510), "w": 170.0, "cycle": 5.0, "phase": 0.15},
+		],
+		"route_lines": [
+			{"x": 400.0, "who": "veil", "text": "마지막 구간입니다. 리프트 세 대를 이어 타야 합니다. 위 조준선은 갈아타는 순간을 노립니다.", "dur": 4.0},
+		],
+		"enemies": {
+			# 압력 절정: 저격 크로스(1250·2350)가 릴레이 상공을 좌우에서 교차 + 출구 순찰.
+			"patrol": [Vector2(350, 540.0), Vector2(2800, 540.0)],
+			"sniper": [Vector2(1250, 348.0), Vector2(2350, 368.0)],
+			"drone": [], "bomber": [], "shield": [],
+		},
+		"rewards": {
+			"xp_orbs":    [Vector2(1600, 430.0)],
+			"hp_pickups": [],
+		},
+		"spikes": [
+			{"x": 1550.0, "w": 2100.0, "dmg": 2},   # 갠트리 구덩이 전체(500~2600)
 		],
 	}
 
@@ -2600,7 +2874,14 @@ static func _freight_lift() -> Dictionary:
 #     노출된다("머물면 엄폐가 깨진다"). 목표까지 커버가 남아있는 동안 전진하는 레이스.
 # 램프: risk3라 s3 금지(min_stage 4). 앞쪽 = 여유(엄폐 많음, warmup patrol) → 뒤쪽 = 저격 2 + 함정
 #   침식으로 노출 최고조(막2 고조에 맞는 곡선).
+# 방 체인 2방(2026-08-21 배치 4 · "엄폐 레이스 2방+저격 램프"): 정비로(원형 계승) →
+# 야적 마당(절정: 저격 4 + 양방향 침식 + 자폭병 플러시). 고가 저격은 배제 — 엄폐(h72) 위로
+# 사선이 넘어가 "숨으면 안전" 문법 자체가 깨진다(설계 검토에서 기각).
 static func _car_cover() -> Dictionary:
+	return {"segments": [_carcover_row(), _carcover_yard()]}
+
+# 방1 · 정비로(원형 계승). 저격 3 분산 + 우측 포탑 침식 — 엄폐 전진 학습과 본 손맛.
+static func _carcover_row() -> Dictionary:
 	return {
 		"world_type":   "HORIZONTAL",
 		"world_size":   Vector2(3000.0, 720.0),
@@ -2608,6 +2889,8 @@ static func _car_cover() -> Dictionary:
 		"goal_type":    "POSITION",
 		"goal_pos":     Vector2(2960.0, 540.0),   # 포탑(2900) 너머 오른쪽 = 좌향 사선 밖(출구에선 안 맞음)
 		"camera_mode":  "HORIZONTAL",
+		"ambience":     "carcover_row",
+		"no_spike_fallback": true,
 		# 엘리트 잠금 — 저격 레이스 맵이라 강화 개체가 unfair(재머 금지와 같은 원칙).
 		"elite_chance": 0.0,
 		"platforms": [],
@@ -2636,6 +2919,54 @@ static func _car_cover() -> Dictionary:
 		"rewards": {
 			"xp_orbs":    [Vector2(600, 560.0), Vector2(1200, 560.0), Vector2(1880, 560.0)],
 			"hp_pickups": [Vector2(2300, 560.0)],  # 마지막 트로프 — 노출된 최종 진입 전 회복
+		},
+		"spikes": [],
+	}
+
+# 방2 · 야적 마당(절정). 저격 4(지상 분산) + 양방향 침식(앞 좌향 + 뒤 우향 포탑) +
+# 자폭병 1(엄폐 뒤 눌러앉기 플러시 = 제자리 금지). 엄폐가 등 뒤부터 깎여 "머물수록
+# 설 곳이 사라지는" 레이스의 정점. 바리케이드(넓고 낮음 · hp 4)와 차량 혼합.
+static func _carcover_yard() -> Dictionary:
+	return {
+		"world_type":   "HORIZONTAL",
+		"world_size":   Vector2(2800.0, 720.0),
+		"player_start": Vector2(130.0, 540.0),
+		"goal_type":    "POSITION",
+		"goal_pos":     Vector2(2760.0, 540.0),   # 좌향 포탑(2700) 오른쪽 = 사선 밖
+		"camera_mode":  "HORIZONTAL",
+		"ambience":     "carcover_yard",
+		"no_spike_fallback": true,
+		"elite_chance": 0.0,
+		"platforms": [],
+		"destructible_covers": [
+			{"pos": Vector2(400, 600),  "w": 96.0,  "h": 72.0, "hp": 3},
+			{"pos": Vector2(700, 600),  "w": 110.0, "h": 64.0, "hp": 4},
+			{"pos": Vector2(1020, 600), "w": 96.0,  "h": 72.0, "hp": 3},
+			{"pos": Vector2(1340, 600), "w": 110.0, "h": 64.0, "hp": 4},
+			{"pos": Vector2(1700, 600), "w": 96.0,  "h": 72.0, "hp": 3},
+			{"pos": Vector2(2060, 600), "w": 110.0, "h": 64.0, "hp": 4},
+			{"pos": Vector2(2380, 600), "w": 96.0,  "h": 72.0, "hp": 3},
+		],
+		"enemies": {
+			# 저격 램프 절정: 4기 분산 — 트로프마다 다음 저격의 사선이 기다린다.
+			"patrol": [Vector2(560, 540.0)],
+			"sniper": [Vector2(880, 540.0), Vector2(1520, 540.0), Vector2(2200, 540.0),
+				Vector2(2600, 540.0)],
+			"drone": [], "shield": [],
+			"bomber": [Vector2(1900, 540.0)],
+		},
+		# 양방향 침식 — 앞(2700 좌향)은 진행을 조준하고, 뒤(100 우향)는 지나온 엄폐의
+		# 등을 깎는다. 눌러앉으면 숨을 자리부터 사라진다.
+		"traps": [
+			{"x": 2700.0, "y": 560.0, "dir": "left",  "interval": 1.7, "phase": 0.0, "telegraph": 0.6, "dmg": 1},
+			{"x": 100.0,  "y": 560.0, "dir": "right", "interval": 1.9, "phase": 0.5, "telegraph": 0.6, "dmg": 1},
+		],
+		"route_lines": [
+			{"x": 350.0, "who": "veil", "text": "이 마당은 양쪽에서 포탑이 훑습니다. 엄폐가 등 뒤부터 깎입니다. 머물수록 설 곳이 사라집니다.", "dur": 4.2},
+		],
+		"rewards": {
+			"xp_orbs":    [Vector2(560, 560.0), Vector2(1560, 560.0)],
+			"hp_pickups": [Vector2(2220, 560.0)],
 		},
 		"spikes": [],
 	}

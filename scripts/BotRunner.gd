@@ -28,6 +28,11 @@ const MAPS: Array = [
 	# 감시탑은 추가 불가(실측 2026-08-21): VERTICAL_UP 골이라 봇이 시작 지점에서 정지 —
 	# 봇 내비에 수직 상승이 없다(datacenter 제외와 같은 구조 한계). 검증은 실플레이로.
 	{"rid": "route_pump_station",   "tags": ["원거리", "노출", "전투"], "risk": 2, "stage": 1},
+	# 배치 4(2026-08-22) — 응축기·함정 통로·차량 엄폐 체인. 화물 리프트는 제외:
+	# 페리(이동 발판) 대기·탑승 리듬이 봇에 없다(구조 한계) — 검증은 스크린샷+실플레이.
+	{"rid": "route_condenser",      "tags": ["드론", "함정", "전투"], "risk": 2, "stage": 4},
+	{"rid": "route_gauntlet",       "tags": ["함정", "이동"], "risk": 2, "stage": 4},
+	{"rid": "route_car_cover",      "tags": ["원거리", "이동", "전투"], "risk": 3, "stage": 10},
 	# 표준 조우 벤치(MapData._bot_bench · 게임 미노출): 평지 3웨이브, 빌드 화력의 순수 비교.
 	{"rid": "route_bot_bench",      "tags": ["전투"], "risk": 2, "stage": 3},
 	# 막5 벤치(stage 12) — 막 진행 적 강화(HP·사격 빈도) + 실전형 조우(저격·드론 혼성) 검증.

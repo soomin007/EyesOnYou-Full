@@ -1693,6 +1693,228 @@ func _ambience_pump_station(label: String = "배수 펌프 · B2") -> void:
 	add_child(water)
 	_add_lore_label(Vector2(360.0, -22.0), label, Color(0.45, 0.70, 0.90, 0.45), 15)
 
+# 펌프장 전용 · 상부 파이프 실물화(2026-08-22 정체성 재작업 — "파이프 위 저격"이 배경
+# 어휘로 존재해야 읽힌다). 거치대 발판(y340) 바로 밑에 대구경 파이프 밴드를 깔아
+# "발판 = 파이프 위"가 되게 하고, 행거·엘보 드롭·밸브 휠로 배관망을 완성한다.
+func _ambience_pump_pipes() -> void:
+	_ambience_pump_station()
+	# 존별 파이프 런(거치대 x 범위와 정렬 · MapData._pump_station 참고).
+	for run0 in [[1380.0, 2420.0], [4030.0, 5070.0]]:
+		var run: Array = run0
+		var x1: float = float(run[0])
+		var x2: float = float(run[1])
+		# 대구경 파이프 본체 — 발판(top 340) 바로 아래 356~384.
+		var pipe := ColorRect.new()
+		pipe.color = Color(0.26, 0.34, 0.38, 0.95)
+		pipe.position = Vector2(x1, 356.0)
+		pipe.size = Vector2(x2 - x1, 28.0)
+		pipe.z_index = -9
+		add_child(pipe)
+		var hl := ColorRect.new()
+		hl.color = Color(0.48, 0.62, 0.70, 0.55)
+		hl.position = Vector2(x1, 360.0)
+		hl.size = Vector2(x2 - x1, 4.0)
+		hl.z_index = -8
+		add_child(hl)
+		# 양 끝 엘보 — 지면까지 수직 드롭(배관이 어디서 와서 어디로 가는지).
+		for ex in [x1, x2 - 26.0]:
+			var drop := ColorRect.new()
+			drop.color = Color(0.24, 0.31, 0.35, 0.9)
+			drop.position = Vector2(float(ex), 356.0)
+			drop.size = Vector2(26.0, GROUND_Y - 356.0)
+			drop.z_index = -10
+			add_child(drop)
+		# 행거 로드 — 천장에서 파이프를 매단 얇은 로드(성기게).
+		var hx: float = x1 + 140.0
+		while hx < x2 - 60.0:
+			var rod := ColorRect.new()
+			rod.color = Color(0.18, 0.22, 0.25, 0.8)
+			rod.position = Vector2(hx, -40.0)
+			rod.size = Vector2(5.0, 396.0)
+			rod.z_index = -11
+			add_child(rod)
+			hx += 320.0
+		# 밸브 휠 2개 — 파이프 위 강조점.
+		for vx in [x1 + 220.0, x2 - 260.0]:
+			var valve := ColorRect.new()
+			valve.color = Color(0.60, 0.28, 0.24, 0.9)
+			valve.position = Vector2(float(vx), 348.0)
+			valve.size = Vector2(16.0, 16.0)
+			valve.z_index = -8
+			add_child(valve)
+
+# 응축기 방1 · 인입 매니폴드 — 펌프 베이스 + 낙수점 위 수직 드롭 파이프(낙수의 출처를
+# 배경이 설명한다) + 플랜지.
+func _ambience_condenser_inlet() -> void:
+	_ambience_pump_station("응축 인입 · 매니폴드")
+	for dx in [900.0, 1500.0, 2050.0]:
+		var drop := ColorRect.new()
+		drop.color = Color(0.24, 0.32, 0.36, 0.9)
+		drop.position = Vector2(float(dx) - 11.0, -40.0)
+		drop.size = Vector2(22.0, 190.0)
+		drop.z_index = -9
+		add_child(drop)
+		var flange := ColorRect.new()
+		flange.color = Color(0.40, 0.52, 0.58, 0.8)
+		flange.position = Vector2(float(dx) - 16.0, 142.0)
+		flange.size = Vector2(32.0, 8.0)
+		flange.z_index = -8
+		add_child(flange)
+
+# 응축기 방3 · 집수조 — 펌프 베이스 + 진한 수면 밴드 + 배수 그레이팅 + 표면 김.
+func _ambience_condenser_basin() -> void:
+	_ambience_pump_station("집수조 · 배수 밸브")
+	var w: float = STAGE_LENGTH
+	# 수면 — 베이스의 옅은 물보다 진하게(여기가 물이 모이는 곳).
+	var pool := ColorRect.new()
+	pool.color = Color(0.18, 0.42, 0.48, 0.38)
+	pool.position = Vector2(-200.0, GROUND_Y - 34.0)
+	pool.size = Vector2(w + 400.0, 48.0)
+	pool.z_index = -3
+	add_child(pool)
+	# 배수 그레이팅 — 바닥 가로 대시 열.
+	var gx: float = 360.0
+	while gx < w:
+		var grate := ColorRect.new()
+		grate.color = Color(0.10, 0.16, 0.18, 0.85)
+		grate.position = Vector2(gx, GROUND_Y - 6.0)
+		grate.size = Vector2(110.0, 5.0)
+		grate.z_index = -2
+		add_child(grate)
+		gx += 520.0
+	# 표면 김 — 얇은 밝은 안개 밴드(끓는 물의 온도를 색으로).
+	var steam := ColorRect.new()
+	steam.color = Color(0.80, 0.90, 0.92, 0.06)
+	steam.position = Vector2(-200.0, GROUND_Y - 70.0)
+	steam.size = Vector2(w + 400.0, 34.0)
+	steam.z_index = -3
+	add_child(steam)
+
+# 함정 통로 방1 · 진입 회랑 — 베이스 + 진입 시브론(노랑-검정 사선 대비 밴드) + 통제 표지.
+func _ambience_gauntlet_entry() -> void:
+	_ambience_gauntlet()
+	for hy in [GROUND_Y - 130.0, GROUND_Y - 118.0]:
+		var band := ColorRect.new()
+		band.color = Color(0.9, 0.75, 0.2, 0.22) if int(hy) % 2 == 0 else Color(0.08, 0.08, 0.08, 0.5)
+		band.position = Vector2(160.0, hy)
+		band.size = Vector2(300.0, 8.0)
+		band.z_index = -8
+		add_child(band)
+	_add_lore_label(Vector2(320.0, GROUND_Y - 170.0), "사로 진입 · 통제 구역", Color(0.9, 0.6, 0.2, 0.5), 14)
+
+# 함정 통로 방3 · 격자 사로 — 베이스 + 천장/바닥 포탑 장착 레일(수평 모티프) + 출력 표지.
+func _ambience_gauntlet_grid() -> void:
+	_ambience_gauntlet()
+	var w: float = STAGE_LENGTH
+	for entry in [[-24.0, 10.0], [GROUND_Y + 4.0, 8.0]]:
+		var e: Array = entry
+		var rail := ColorRect.new()
+		rail.color = Color(0.16, 0.15, 0.13, 0.9)
+		rail.position = Vector2(-200.0, float(e[0]))
+		rail.size = Vector2(w + 400.0, float(e[1]))
+		rail.z_index = -8
+		add_child(rail)
+		var glow := ColorRect.new()
+		glow.color = Color(0.85, 0.30, 0.22, 0.25)
+		glow.position = Vector2(-200.0, float(e[0]) + float(e[1]) - 2.0)
+		glow.size = Vector2(w + 400.0, 2.0)
+		glow.z_index = -7
+		add_child(glow)
+	_add_lore_label(Vector2(320.0, GROUND_Y - 170.0), "격자 사로 · 출력 제어", Color(0.9, 0.5, 0.25, 0.5), 14)
+
+# 화물 리프트 방2 · 릴레이 홀 — 상부 갠트리 거더 + 호이스트 체인 + 매달린 컨테이너 실루엣.
+func _ambience_freight_relay() -> void:
+	var w: float = STAGE_LENGTH
+	# 갠트리 거더 — 상부 수평 빔 2단.
+	for entry in [[64.0, 18.0], [96.0, 8.0]]:
+		var e: Array = entry
+		var beam := ColorRect.new()
+		beam.color = Color(0.22, 0.19, 0.14, 0.95)
+		beam.position = Vector2(-200.0, float(e[0]))
+		beam.size = Vector2(w + 400.0, float(e[1]))
+		beam.z_index = -11
+		add_child(beam)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 613 + 3
+	# 호이스트 체인 + 매달린 컨테이너(운반 중 정지 실루엣) — 구덩이 위 상공을 채운다.
+	var cx: float = 500.0
+	while cx < w - 300.0:
+		var chain := ColorRect.new()
+		chain.color = Color(0.15, 0.14, 0.12, 0.85)
+		var clen: float = rng.randf_range(60.0, 150.0)
+		chain.position = Vector2(cx, 82.0)
+		chain.size = Vector2(4.0, clen)
+		chain.z_index = -11
+		add_child(chain)
+		var box := ColorRect.new()
+		var bw: float = rng.randf_range(70.0, 120.0)
+		box.color = Color(0.25, 0.20, 0.14, 0.9)
+		box.position = Vector2(cx - bw * 0.5 + 2.0, 82.0 + clen)
+		box.size = Vector2(bw, rng.randf_range(44.0, 64.0))
+		box.z_index = -11
+		add_child(box)
+		cx += rng.randf_range(520.0, 780.0)
+	_add_lore_label(Vector2(340.0, 150.0), "릴레이 홀 · 이송 중", Color(0.85, 0.75, 0.5, 0.5), 14)
+
+# 화물 리프트 방3 · 출하 갠트리 — 릴레이 홀 어휘 + 경광등 + 상차 표지(절정 톤).
+func _ambience_freight_gantry() -> void:
+	_ambience_freight_relay()
+	var w: float = STAGE_LENGTH
+	var lx: float = 600.0
+	while lx < w:
+		var lamp := ColorRect.new()
+		lamp.color = Color(0.95, 0.55, 0.20, 0.6)
+		lamp.position = Vector2(lx, 48.0)
+		lamp.size = Vector2(14.0, 10.0)
+		lamp.z_index = -10
+		add_child(lamp)
+		var tw := lamp.create_tween()
+		tw.set_loops()
+		tw.tween_property(lamp, "modulate:a", 0.2, 0.8)
+		tw.tween_property(lamp, "modulate:a", 1.0, 0.8)
+		lx += 900.0
+	_add_lore_label(Vector2(340.0, 190.0), "출하 갠트리 · 상차 구역", Color(0.95, 0.65, 0.35, 0.55), 14)
+
+# 차량 엄폐 방2 · 야적 마당 — 야외: 뒷줄 차량 실루엣 + 펜스 와이어 + 조명 마스트.
+func _ambience_carcover_yard() -> void:
+	var w: float = STAGE_LENGTH
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.current_stage * 727 + 9
+	# 뒷줄 야적 차량 — 멀리, 어둡게(전경 엄폐 차량과 톤 분리 · 발판 오독 방지).
+	var cx: float = 300.0
+	while cx < w:
+		var cw: float = rng.randf_range(90.0, 130.0)
+		var body := ColorRect.new()
+		body.color = Color(0.10, 0.10, 0.12, 0.8)
+		body.position = Vector2(cx, GROUND_Y - 96.0)
+		body.size = Vector2(cw, 40.0)
+		body.z_index = -12
+		add_child(body)
+		cx += cw + rng.randf_range(60.0, 160.0)
+	# 펜스 — 수평 와이어 3줄(지주는 성기게 · 수직 스트라이프 습관 금지 준수).
+	for wy in [GROUND_Y - 190.0, GROUND_Y - 168.0, GROUND_Y - 146.0]:
+		var wire := ColorRect.new()
+		wire.color = Color(0.30, 0.32, 0.36, 0.4)
+		wire.position = Vector2(-200.0, float(wy))
+		wire.size = Vector2(w + 400.0, 2.0)
+		wire.z_index = -13
+		add_child(wire)
+	var px: float = 500.0
+	while px < w:
+		var post := ColorRect.new()
+		post.color = Color(0.22, 0.24, 0.28, 0.6)
+		post.position = Vector2(px, GROUND_Y - 196.0)
+		post.size = Vector2(6.0, 196.0)
+		post.z_index = -13
+		add_child(post)
+		px += 860.0
+	# 조명 마스트 — 성긴 광원 + 빛 원뿔.
+	var mx: float = 800.0
+	while mx < w:
+		_add_light_cone(mx, 40.0, 60.0, 260.0, GROUND_Y - 40.0, Color(0.95, 0.90, 0.70, 0.05), -11)
+		mx += 1400.0
+	_add_lore_label(Vector2(340.0, GROUND_Y - 230.0), "차량 야적장 · 검수 대기", Color(0.80, 0.85, 0.95, 0.45), 14)
+
 # 변전소/통신 중계소 — 변압기 박스(방열핀) + 상단 케이블 + 애자 앰버 점 + 표지.
 func _ambience_electrical(label: String) -> void:
 	var w: float = STAGE_LENGTH
@@ -3947,6 +4169,50 @@ func _build_route_ambience() -> void:
 			_ambience_sewer_junction()
 			_apply_act_rival_tint()
 			return
+		"condenser_inlet":
+			_ambience_condenser_inlet()
+			_apply_act_rival_tint()
+			return
+		"condenser_hall":
+			_ambience_pump_station("응축기 구역 · 냉각수")
+			_apply_act_rival_tint()
+			return
+		"condenser_basin":
+			_ambience_condenser_basin()
+			_apply_act_rival_tint()
+			return
+		"gauntlet_entry":
+			_ambience_gauntlet_entry()
+			_apply_act_rival_tint()
+			return
+		"gauntlet_main":
+			_ambience_gauntlet()
+			_apply_act_rival_tint()
+			return
+		"gauntlet_grid":
+			_ambience_gauntlet_grid()
+			_apply_act_rival_tint()
+			return
+		"freight_yard":
+			_ambience_warehouse("화물 구역 · 리프트")
+			_apply_act_rival_tint()
+			return
+		"freight_relay":
+			_ambience_freight_relay()
+			_apply_act_rival_tint()
+			return
+		"freight_gantry":
+			_ambience_freight_gantry()
+			_apply_act_rival_tint()
+			return
+		"carcover_row":
+			_ambience_garage_props()
+			_apply_act_rival_tint()
+			return
+		"carcover_yard":
+			_ambience_carcover_yard()
+			_apply_act_rival_tint()
+			return
 	match GameState.current_route_id:
 		"route_sewers":
 			_ambience_sewers()
@@ -3986,7 +4252,7 @@ func _build_route_ambience() -> void:
 		"route_parking_lot", "route_car_cover":
 			_ambience_garage_props()
 		"route_pump_station":
-			_ambience_pump_station()
+			_ambience_pump_pipes()
 		"route_condenser":
 			_ambience_pump_station("응축기 구역 · 냉각수")
 		"route_substation":

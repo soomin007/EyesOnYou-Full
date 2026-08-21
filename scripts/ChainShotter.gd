@@ -10,9 +10,11 @@ const STAGE_SCENE: String = "res://scenes/stage.tscn"
 const OUT_DIR: String = "res://poster_out/chain_shots"
 
 const TARGETS: Array = [
-	{"rid": "route_relay_station", "stage": 10, "seg": 0, "x": 1400.0},
-	{"rid": "route_relay_station", "stage": 10, "seg": 1, "x": 1600.0},
-	{"rid": "route_relay_station", "stage": 10, "seg": 2, "x": 1500.0},
+	# 배치 4(2026-08-22) — 신설 배경 검증(응축기·함정 통로는 1차 실행에서 캡처 완료).
+	{"rid": "route_freight_lift", "stage": 9, "seg": 1, "x": 1300.0},
+	{"rid": "route_freight_lift", "stage": 9, "seg": 2, "x": 1400.0},
+	{"rid": "route_car_cover", "stage": 10, "seg": 1, "x": 1200.0},
+	{"rid": "route_pump_station", "stage": 1, "seg": 0, "x": 1800.0},
 ]
 
 func _ready() -> void:
