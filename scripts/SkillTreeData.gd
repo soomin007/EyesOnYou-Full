@@ -60,7 +60,7 @@ const LINES: Array = [
 		"tiers": [
 			{"name": "대시 강화",    "desc": "대시 쿨다운 -20%",              "active": false},
 			{"name": "대시 거리+",   "desc": "대시 거리 +30%",                "active": false},
-			{"name": "대시 무적",    "desc": "대시 후 0.3s 무적",             "active": false},
+			{"name": "대시 무적",    "desc": "대시 후 0.15s 무적",            "active": false},
 		],
 	},
 	# 생존 ────────────────────────────────────────────

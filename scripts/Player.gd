@@ -507,14 +507,17 @@ func _try_dash() -> void:
 	SfxPlayer.play("player_dash")
 	GameState.profile_note_dash()
 	# dash_boost: T1=쿨다운 -20%, T2=거리 +30%(_handle_input의 dash_timer 분기에서 적용),
-	#            T3=대시 후 0.3s 무적 추가.
+	#            T3=대시 후 무적 추가.
+	# 무적 창 축소(2026-08-21 사용자 확정, hp_survival_economy §4-B): 종전 = 대시 전 구간(0.18)
+	# +T3 0.3 → 무적 가동률이 T3 기준 86%(0.48/0.56)라 회피가 만능이었다. 대시의 앞부분만
+	# 무적(0.12 · 후반은 취약) + T3 추가 0.15 → 가동률 ~48%. 이동 거리·속도·쿨다운은 불변.
 	var db_tier: int = GameState.get_skill_tier("dash_boost")
 	var cd_mult: float = 0.8 if db_tier >= 1 else 1.0
 	dash_timer = DASH_DURATION
 	dash_cd = DASH_COOLDOWN * cd_mult
-	var iframe: float = DASH_DURATION
+	var iframe: float = 0.12
 	if db_tier >= 3:
-		iframe += 0.3
+		iframe += 0.15
 	invuln = max(invuln, iframe)
 
 # 수류탄 차징 시작 — 충전이 있어야 시작(없으면 무시).
