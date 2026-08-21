@@ -3723,12 +3723,15 @@ func _build_spike(center_x: float, w: float, base_y: float = -1.0, dmg: int = 1)
 	var zone := Area2D.new()
 	zone.collision_layer = 0
 	zone.collision_mask = 2  # 플레이어
-	zone.position = Vector2(center_x, base_y - 12.0)
+	# 판정 = 보이는 가시와 일치(2026-08-21 사용자 "블랙아웃이 가시 판정 때문에 끊긴다"):
+	# 종전 존(w × 36 · 중심 base_y-12)은 가시 끝(base_y-23)보다 7px 위 + 가시 없는 좌우
+	# 베이스 여백까지 덮었다. → 세로는 끝높이까지만(24 · 중심 base_y-10), 가로는 14px 축소.
+	zone.position = Vector2(center_x, base_y - 10.0)
 	zone.set_meta("damage", dmg)
 	add_child(zone)
 	var col := CollisionShape2D.new()
 	var shape := RectangleShape2D.new()
-	shape.size = Vector2(w, 36.0)
+	shape.size = Vector2(maxf(w - 14.0, 20.0), 24.0)
 	col.shape = shape
 	zone.add_child(col)
 	zone.body_entered.connect(_on_spike_touched.bind(zone))
@@ -9150,24 +9153,33 @@ func _process(delta: float) -> void:
 	_tick_p3_camp(delta)
 
 # ─── P3 캠핑 감지(2026-08-20 사용자 "맨 위 발판에서 연사 홀드로 무피해 클리어") ───
-# x 기준 130px 안에 4.5초+ 머물면 보스가 잠복 중에도 유도탄을 쏜다(FalseVeil.fire_suppression).
-# 판정은 x만 본다(2026-08-21 사용자 "가운데서 점프만 하며 연사가 파훼법") — 유클리드 거리로 재면
-# 제자리 점프의 y 진폭(~245px)이 매번 타이머를 리셋해 캠핑 감지가 영영 안 걸렸다.
-# 좌우로 이동하면 즉시 리셋 — 답은 이동. 계속 눌러앉으면 ~2.4s마다 반복. 첫 발동 VEIL 1회 안내.
-const P3_CAMP_RADIUS: float = 130.0
+# 판정 3차 개정(2026-08-21 사용자 "발판 하나에서 좌우 와리가리만 하면 유도탄이 영영 안 옴"):
+#   1차 유클리드 130px → 제자리 점프 y 진폭이 리셋(구멍) → 2차 x만 130px → 130px 넘는 좌우
+#   왕복이 매번 리셋(구멍). → 3차 = **체류 범위 창**: 최근 이동이 300px 폭(발판 하나+여유) 안에
+#   머무는 동안 타이머가 계속 흐른다. 왕복·점프는 창 안 = 캠핑, 다른 데크로 실제 이동만 리셋.
+# 발동 시 잠복 중에도 유도탄(FalseVeil.fire_suppression) · ~2.4s마다 반복 · 첫 발동 VEIL 1회.
+const P3_CAMP_SPAN: float = 300.0
 const P3_CAMP_TIME: float = 4.5
-var _p3_camp_pos: Vector2 = Vector2.ZERO
+var _p3_min_x: float = 1e9
+var _p3_max_x: float = -1e9
 var _p3_camp_t: float = 0.0
 var _p3_camp_line_shown: bool = false
 
 func _tick_p3_camp(delta: float) -> void:
 	if _rival_phase != 2 or _false_veil == null or not is_instance_valid(_false_veil):
 		_p3_camp_t = 0.0
+		_p3_min_x = 1e9
+		_p3_max_x = -1e9
 		return
 	if player == null or not is_instance_valid(player):
 		return
-	if absf(player.global_position.x - _p3_camp_pos.x) > P3_CAMP_RADIUS:
-		_p3_camp_pos = player.global_position
+	var px: float = player.global_position.x
+	_p3_min_x = minf(_p3_min_x, px)
+	_p3_max_x = maxf(_p3_max_x, px)
+	if _p3_max_x - _p3_min_x > P3_CAMP_SPAN:
+		# 창을 벗어나는 실제 이동 — 현 위치부터 새 창.
+		_p3_min_x = px
+		_p3_max_x = px
 		_p3_camp_t = 0.0
 		return
 	_p3_camp_t += delta

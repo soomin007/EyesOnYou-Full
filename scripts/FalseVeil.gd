@@ -114,17 +114,23 @@ func _pick_far_anchor() -> void:
 	if p == null:
 		_anchor_idx = (_anchor_idx + 1) % _anchors.size()
 		return
-	var best: int = -1
-	var best_d: float = -1.0
+	# 개정(2026-08-21 사용자 "멀리 소환 로직 때문에 가운데 나오는 건 항상 가짜"): 최원거리
+	# 1곳 고정은 캠핑은 막지만 "거리 = 진짜 판별"이라는 역정보를 준다. → 충분히 먼 후보
+	# (최대 거리의 55%+ · 현재 앵커 제외) 중 **무작위**. 캠퍼 근처엔 여전히 안 뜨고,
+	# 거리로는 진짜를 못 가린다(_spawn_fakes도 같은 분포로 통일).
+	var max_d: float = 0.0
+	for i in _anchors.size():
+		max_d = maxf(max_d, absf((_anchors[i] as Vector2).x - p.global_position.x))
+	var far: Array = []
 	for i in _anchors.size():
 		if i == _anchor_idx:
 			continue
-		var d: float = absf((_anchors[i] as Vector2).x - p.global_position.x)
-		if d > best_d:
-			best_d = d
-			best = i
-	if best >= 0:
-		_anchor_idx = best
+		if absf((_anchors[i] as Vector2).x - p.global_position.x) >= max_d * 0.55:
+			far.append(i)
+	if far.is_empty():
+		_anchor_idx = (_anchor_idx + 1) % _anchors.size()
+		return
+	_anchor_idx = int(far[randi() % far.size()])
 
 func _spawn_fakes() -> void:
 	if _fake_spots.is_empty():
@@ -132,9 +138,19 @@ func _spawn_fakes() -> void:
 	var parent := get_parent()
 	if parent == null:
 		return
-	for i in FAKES_PER_VOLLEY:
-		var spot: Vector2 = _fake_spots[_spot_idx % _fake_spots.size()]
-		_spot_idx += 1
+	# 가짜도 "먼 곳" 분포(2026-08-21) — 진짜만 멀리 가면 거리가 판별 단서가 된다. 플레이어에서
+	# 먼 순으로 정렬한 상위 풀에서 무작위 추출 → 진짜/가짜 분포가 같아져 의도된 tell(유도
+	# 미끼·표식 결)로만 가려진다. 고정 순환(_spot_idx)은 폐지.
+	var spots: Array = _fake_spots.duplicate()
+	var p := _find_player()
+	if p != null:
+		var px: float = p.global_position.x
+		spots.sort_custom(func(a: Vector2, b: Vector2) -> bool:
+			return absf(a.x - px) > absf(b.x - px))
+	var pool: Array = spots.slice(0, mini(spots.size(), FAKES_PER_VOLLEY + 2))
+	pool.shuffle()
+	for i in mini(FAKES_PER_VOLLEY, pool.size()):
+		var spot: Vector2 = pool[i]
 		var m := _FakeMarker.new()
 		m.position = spot
 		m.lifetime = PHASED_DUR + 1.0

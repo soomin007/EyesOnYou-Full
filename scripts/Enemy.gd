@@ -1480,15 +1480,17 @@ func _check_touch_player() -> void:
 			player.take_hit(TOUCH_DAMAGE)
 			touch_cd = TOUCH_COOLDOWN
 
-func take_damage(amount: int, from_dir: int = 0) -> void:
+# 반환: true = 방패류에 막힘 — 탄이 여기서 소멸해야 한다(관통 포함). "정면은 막혔는데 관통탄이
+# 뒤의 적을 죽이는" 모순 차단(2026-08-21 사용자 지적). 폭발/스킬 호출자는 반환값 무시해도 된다.
+func take_damage(amount: int, from_dir: int = 0) -> bool:
 	if dead:
-		return
+		return false
 	# 14-1 P2 제어 노드 — 교대 실드(meta fs_dir = 실드가 향한 쪽). 막힌 쪽에서 온 탄은 무효,
 	# 주기적으로 편이 바뀐다(Stage가 플립). 폭발(from_dir 0)은 관통 = 수류탄이 정답 카드.
 	if has_meta("fs_dir") and from_dir != 0 and from_dir * int(get_meta("fs_dir")) < 0:
 		_show_block_spark(from_dir)
 		SfxPlayer.play_at("bullet_deflect_shield", global_position)
-		return
+		return true
 	# 방패병 — 정면(enemy.dir이 가리키는 쪽)으로 날아오는 사격은 막힘.
 	# 즉 bullet의 진행 방향(from_dir)과 enemy의 dir이 반대 부호일 때 head-on이라 막음.
 	if enemy_type == EnemyType.SHIELD and from_dir != 0 and _shield_blocks(from_dir):
@@ -1496,7 +1498,7 @@ func take_damage(amount: int, from_dir: int = 0) -> void:
 			_reveal_disguise()   # 정찰병인 줄 알고 쏜 정면 사격이 튕김 = 정체 노출(§4 교전 리빌)
 		_show_block_spark(from_dir)
 		SfxPlayer.play_at("bullet_deflect_shield", global_position)
-		return
+		return true
 	# 엘리트 방패병 — 폭발 면역(§2, 사용자 제안: 만능이 된 수류탄을 라이벌이 학습해 카운터).
 	# from_dir == 0 = 폭발/스킬류(수류탄. Bullet은 항상 dir을 넘긴다). 측면 사격 정답은 그대로.
 	# tell = 방패 전체 바이올렛 번쩍 + deflect SFX — "안 통한다"가 즉시 읽히게.
@@ -1510,20 +1512,28 @@ func take_damage(amount: int, from_dir: int = 0) -> void:
 			var sn := get_tree().get_first_node_in_group("stage")
 			if sn != null:
 				sn.call("_show_veil_subtitle", "폭발 피해 무효 확인. 저 방패병은 측면과 후방 사격만 유효합니다.", 3.8)
-		return
+		return true
 	# 교전(피격) = 위장이 벗겨지는 주 시점 — 지직거림 tell을 못 봤어도 여기서 정체가 드러난다.
 	if _disguised:
 		_reveal_disguise()
 	# from_dir != 0이면 bullet 명중. 폭발/스킬(from_dir == 0)은 자체 SFX 별도.
 	if from_dir != 0:
 		SfxPlayer.play_at("bullet_impact_enemy", global_position)
-	hp -= amount
+	# 상성 명문화(2026-08-21 사용자 "방패병이 폭탄 두 방에 안 죽는다"): 폭발(from_dir 0)은
+	# 방패병에게 +1. 막 진행 HP 상향(막5 방패 = 5)에서 폭탄(2) 2방 = 4로 한 끗 모자라
+	# "폭발물이면 방패째 뚫린다" 문법을 배신하던 것 해소 — 어느 막에서든 2방 안에 잡힌다.
+	# (엘리트 방패는 위 폭발 무효 분기에서 이미 걸러짐.)
+	var eff: int = amount
+	if enemy_type == EnemyType.SHIELD and from_dir == 0:
+		eff += 1
+	hp -= eff
 	modulate = Color(1.6, 1.6, 1.6)
 	create_tween().tween_property(self, "modulate", Color(1, 1, 1), 0.15)
 	if hp <= 0:
 		_die()
 	else:
 		SfxPlayer.play_at("enemy_hurt", global_position)
+	return false
 
 # 엘리트 방패병 폭발 무효 tell — 몸 전체 바이올렛 번쩍 + 확산 링 + "무효" 라벨.
 # (플래시만으론 폭발 이펙트에 묻혀 안 읽힌다는 피드백 2026-08-11로 강화.)

@@ -87,6 +87,7 @@ func _physics_process(delta: float) -> void:
 		if _stop_active:
 			_edge = minf(_edge, stop_edge)
 		position.x = _edge
+		_tick_debris_x(delta)
 	else:
 		# y_up · edge가 위로(y 감소) 전진. 선두 아래(py > edge)가 삼켜진 영역.
 		_edge -= speed * _surge_factor(delta) * delta
@@ -138,6 +139,54 @@ func _spawn_debris() -> void:
 		"h": randf_range(8.0, 22.0),
 	})
 
+# ── x축(수평 · 붕괴 갱도) 시각(2026-08-21 사용자 "가시 벽이랑 '붕괴 갱도'가 무슨 상관") ──
+# 톱니 경계가 "쫓아오는 가시 벽"으로 읽혔다 → y_up(붕괴 회랑)에서 검증된 문법 이식:
+# 잔해 더미 실루엣 + 천장 낙하 잔해 + 주기 굉음·흔들림. 속도·판정은 불변(시각 전용).
+var _rumble_t: float = 1.4
+
+func _tick_debris_x(delta: float) -> void:
+	_rumble_t -= delta
+	if _rumble_t <= 0.0:
+		_rumble_t = randf_range(1.8, 3.0)
+		SfxPlayer.play("bomb_explode", -12.0, 0.66)
+		var st: Node = get_tree().get_first_node_in_group("stage")
+		if st != null and st.has_method("_camera_shake"):
+			st.call("_camera_shake", 3.5, 0.22)
+		for i in 3:
+			_spawn_debris_x()
+	_debris_t -= delta
+	if _debris_t <= 0.0:
+		_debris_t = randf_range(0.35, 0.8)
+		_spawn_debris_x()
+	var keep: Array = []
+	for d0 in _debris:
+		var d: Dictionary = d0
+		d["vy"] = float(d["vy"]) + 760.0 * delta
+		d["y"] = float(d["y"]) + float(d["vy"]) * delta
+		if float(d["y"]) >= float(d.get("gy", 610.0)):
+			_puffs.append({"x": float(d["x"]), "t": 0.0, "y": float(d.get("gy", 610.0))})
+		else:
+			keep.append(d)
+	_debris = keep
+	var keep_p: Array = []
+	for q0 in _puffs:
+		var q: Dictionary = q0
+		q["t"] = float(q["t"]) + delta
+		if float(q["t"]) < 0.5:
+			keep_p.append(q)
+	_puffs = keep_p
+
+func _spawn_debris_x() -> void:
+	# 선두 언저리(-30~+190)의 천장에서 떨어져 바닥에 박힌다 — "무너지며 전진"의 인과.
+	_debris.append({
+		"x": _edge + randf_range(-30.0, 190.0),
+		"y": randf_range(-380.0, -160.0),
+		"vy": randf_range(180.0, 340.0),
+		"w": randf_range(8.0, 26.0),
+		"h": randf_range(7.0, 18.0),
+		"gy": randf_range(580.0, 625.0),
+	})
+
 # 낙하 잔해 갱신(y_up 전용 · 시각만, 판정 없음). 더미 표면(edge)에 닿으면 분진 퍼프.
 func _tick_debris(delta: float) -> void:
 	_debris_t -= delta
@@ -173,16 +222,32 @@ func _draw() -> void:
 	if axis == "x":
 		# 삼켜진 어두운 영역(선두 왼쪽 전부)
 		draw_rect(Rect2(Vector2(-4200.0, V_TOP), Vector2(4200.0, V_BOT - V_TOP)), Color(0.05, 0.04, 0.05, 0.97))
-		# 선두 톱니 경계 · 무너지는 가장자리
-		var jag: PackedVector2Array = PackedVector2Array()
+		# 선두 = 무너져 쌓인 잔해 더미 실루엣(2026-08-21 톱니 폐지 — "쫓아오는 가시 벽"으로
+		# 읽혔다 · y_up 문법 이식). 결정적 해시로 덩어리 변주 — 매 프레임 동일(지글거림 방지).
 		var y: float = V_TOP
-		var i: int = 0
+		var k: int = 0
 		while y < V_BOT:
-			var jx: float = -18.0 if (i % 2 == 0) else 5.0
-			jag.append(Vector2(jx, y))
-			y += 34.0
-			i += 1
-		draw_polyline(jag, Color(0.34, 0.29, 0.26, 0.9), 3.0, true)
+			var hsh: float = fposmod(sin(float(k) * 12.9898) * 43758.5453, 1.0)
+			var ch: float = 40.0 + hsh * 64.0                          # 덩어리 세로 길이
+			var cw: float = 10.0 + fposmod(hsh * 7.31, 1.0) * 34.0    # 오른쪽 돌출 폭
+			var tone: float = 0.12 + fposmod(hsh * 3.17, 1.0) * 0.08
+			draw_rect(Rect2(Vector2(-8.0, y), Vector2(cw + 8.0, ch)), Color(tone + 0.04, tone, tone * 0.9, 1.0))
+			draw_rect(Rect2(Vector2(cw - 2.0, y), Vector2(2.5, ch)), Color(0.38, 0.32, 0.28, 0.75))
+			# 더미 틈의 잔불 — 드문 주황 점(y_up과 동일 어휘).
+			if fposmod(hsh * 11.7, 1.0) < 0.22:
+				draw_rect(Rect2(Vector2(cw * 0.35, y + ch * 0.4), Vector2(5.0, 4.0)), Color(0.85, 0.38, 0.14, 0.7))
+			y += ch + 4.0
+			k += 1
+		# 낙하 잔해 + 착지 분진(로컬 x = 월드 x - _edge · position.x = _edge).
+		for d0 in _debris:
+			var d: Dictionary = d0
+			draw_rect(Rect2(Vector2(float(d["x"]) - _edge, float(d["y"])), Vector2(float(d["w"]), float(d["h"]))),
+				Color(0.30, 0.26, 0.23, 0.95))
+		for q0 in _puffs:
+			var q: Dictionary = q0
+			var qa: float = 1.0 - float(q["t"]) / 0.5
+			draw_circle(Vector2(float(q["x"]) - _edge, float(q.get("y", 610.0))),
+				6.0 + 14.0 * float(q["t"]) / 0.5, Color(0.4, 0.35, 0.3, 0.35 * qa))
 		# 앞쪽 먼지 경고대(반투명) · "곧 삼켜진다"
 		draw_rect(Rect2(Vector2(0.0, V_TOP), Vector2(DUST_W, V_BOT - V_TOP)), Color(0.36, 0.30, 0.26, 0.16))
 		draw_rect(Rect2(Vector2(DUST_W, V_TOP), Vector2(DUST_W * 0.7, V_BOT - V_TOP)), Color(0.36, 0.30, 0.26, 0.07))

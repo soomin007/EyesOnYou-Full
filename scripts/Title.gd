@@ -143,7 +143,8 @@ func _fill_patch_panel(patch: Dictionary, latest: bool) -> void:
 		patch_v.add_child(sub)
 	for item in patch.get("items", []):
 		var l := Label.new()
-		l.text = "· " + str(item)
+		# keep_all — 어절 단위 줄바꿈("조여옵니/다" 같은 음절 꺾임 방지 · TextUtil 참고).
+		l.text = TextUtil.keep_all("· " + str(item))
 		l.add_theme_font_size_override("font_size", 13)
 		l.add_theme_color_override("font_color", Color(0.78, 0.82, 0.88))
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

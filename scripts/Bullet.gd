@@ -141,7 +141,12 @@ func _on_body_entered(body: Node) -> void:
 		if body.has_method("take_damage"):
 			# bullet의 진행 방향(dir)을 전달 — 방패 판정에 사용. 위치(global_position.x)는
 			# 충돌 시점에 enemy 안쪽으로 이미 들어가 있어 부호가 어긋날 수 있음.
-			body.take_damage(damage, dir)
+			# 반환 true = 방패에 막힘 → 관통이어도 탄 소멸("막혔는데 뒤가 죽는" 모순 차단
+			# 2026-08-21 사용자 지적). 반환 없는 take_damage(보스류)는 null이라 무시.
+			var blocked: Variant = body.take_damage(damage, dir)
+			if blocked == true:
+				queue_free()
+				return
 		if not pierce:
 			queue_free()
 		else:
@@ -156,6 +161,12 @@ func _on_body_entered(body: Node) -> void:
 		SfxPlayer.play_at("bullet_impact_wall", global_position)
 		queue_free()
 	elif body is StaticBody2D:
+		# 부서지는 엄폐물(차량)은 내 탄에도 갉힌다(2026-08-21 사용자 "왜 적 탄에만 부서지냐" —
+		# 규칙 일관성: 탄이면 갉는다). 내 엄폐를 아끼는 것도, 일부러 사선을 여는 것도 판단이 된다.
+		if body.has_method("hit_by_bullet"):
+			body.call("hit_by_bullet")   # 자체 SFX·균열 처리
+			queue_free()
+			return
 		# 벽/바닥 충돌 — 사라짐. 경계벽·바닥은 "수직 벽"이 아니라 impact SFX 생략.
 		var skip_sfx: bool = body.is_in_group("boundary_wall") or body.is_in_group("ground")
 		if not skip_sfx:
