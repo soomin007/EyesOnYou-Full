@@ -94,6 +94,12 @@ const CALLER_LIVE_CAP: int = 4            # 이 호출병이 부른 생존 증�
 # Sniper — 시야가 트여 있을 때만 발사
 const SNIPER_FIRE_INTERVAL: float = 2.6
 const SNIPER_AIM_TIME: float = 0.7
+# 재조준(압력 파일럿 2026-08-21, hp_survival_economy §4-A · 사용자 승인): 발사 직후·조준 중
+# 시야 끊김 직후에는 다음 사이클 대기를 줄여 "한 번 피하고 서 있기"를 막는다. 예고(aim) 시간은
+# 불변 — 보고 피할 수 있음은 유지, 유휴 간격만 줄어든다. 첫 조우(사거리 진입)는 풀 인터벌.
+# 사거리 밖 이탈은 풀 리셋 — 전진(이탈)이 보상, 제자리가 비용.
+const SNIPER_REAIM_GAP: float = 0.5        # 일반·엘리트: 발사 후 이 시간 뒤 재조준 시작
+const NEST_SNIPER_REAIM_GAP: float = 1.2   # 둥지(회피 전용): 등반 여유 보존 · 완만한 재조준
 # 저격수다운 사거리 — 플레이어 총알 사거리(495px)보다 충분히 길게.
 # 플레이어가 사거리 안에 들어오면 LoS 체크 후 발사. 엄폐가 보일 만큼 길어야 진짜 저격수.
 const SNIPER_RANGE: float = 820.0
@@ -604,6 +610,11 @@ func _is_nest_sniper() -> bool:
 func _eff_sniper_range() -> float:
 	return NEST_SNIPER_RANGE if _is_nest_sniper() else SNIPER_RANGE
 
+# 재조준 타이머 — 예고 시간 + 짧은 대기. 풀 인터벌(_sniper_interval)은 첫 조우·사거리 이탈에만.
+func _reaim_timer() -> float:
+	var gap: float = NEST_SNIPER_REAIM_GAP if _is_nest_sniper() else SNIPER_REAIM_GAP
+	return _eff_sniper_aim_time() + gap
+
 func _eff_sniper_aim_time() -> float:
 	if _is_nest_sniper():
 		return NEST_SNIPER_AIM_TIME
@@ -1057,12 +1068,15 @@ func _tick_sniper(delta: float) -> void:
 			var aim_prog: float = clampf(1.0 - fire_timer / _eff_sniper_aim_time(), 0.0, 1.0)
 			_update_aim(aim_prog)
 		else:
-			# 시야 끊김 → 발사 취소, 조준 다시 처음부터
+			# 시야 끊김 → 발사 취소, 조준 다시 처음부터. 재조준: 엄폐 빼꼼 반복이
+			# 사이클 리셋 파밍이 되지 않게 짧은 대기 후 곧바로 다시 조준(예고 시간은 그대로).
 			_clear_aim()
-			fire_timer = _sniper_interval()
+			fire_timer = _reaim_timer()
 
 	if fire_timer <= 0.0:
-		fire_timer = _sniper_interval()
+		# 재조준: 발사 후에도 사거리 안에 머물면 짧은 대기 뒤 곧바로 다음 조준 —
+		# "한 번 피하면 끝"이 아니라 피하는 동안 전진하거나 처치해야 한다.
+		fire_timer = _reaim_timer()
 		if aim_los_clear:
 			_fire_at_player()
 		_clear_aim()

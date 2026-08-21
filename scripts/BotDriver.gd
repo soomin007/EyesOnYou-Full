@@ -49,6 +49,12 @@ var _use_grenade: bool = false
 var _kills_seen: int = 0
 var _pull_pulse: int = 0            # 레버 당기기(공격 키 just_pressed 펄스)
 var _pull_t: float = 0.0
+# 레버 스테이징(2026-08-21 펌프장 실측): 레버가 더블점프(~190px)로 안 닿는 높이면 바로 밑에서
+# 수직 점프만 반복하는 교착이 난다(계단식 접근 맵). 밑에서 일정 시간 막히면 옆(±230px)을
+# 경유 목표로 잡아 계단 발판을 밟고 오른다 — 좌우 교대로 시도.
+var _lever_stuck_t: float = 0.0
+var _lever_stage_dx: float = 0.0
+var _lever_stage_until: float = -1.0
 # 사용자 기법 이식(2026-08-18 직접 설명): 방패병 크로스 · 대공 점프샷.
 var _cross_t: float = -1.0          # ≥0이면 방패병 뛰어넘기 진행 중
 var _cross_dir: float = 0.0
@@ -268,7 +274,10 @@ func _physics_process(delta: float) -> void:
 		move_dir = _cross_dir
 	elif lever_pos != Vector2.INF and target == null:
 		# 레버 감지 Area가 40px 폭(반폭 20) — 정지 문턱이 넓으면 감지 밖에 서서 헛사격한다.
-		move_dir = signf(lever_dx) if absf(lever_dx) > 14.0 else 0.0
+		# 스테이징 중엔 경유 x(레버 ± 오프셋)로 — 계단 발판을 먼저 밟는다.
+		var lever_tx: float = lever_pos.x + (_lever_stage_dx if _clock < _lever_stage_until else 0.0)
+		var lever_tdx: float = lever_tx - _player.global_position.x
+		move_dir = signf(lever_tdx) if absf(lever_tdx) > 14.0 else 0.0
 	elif target != null and best < engage_range * 0.75:
 		move_dir = 0.0
 	elif aa != null:
@@ -352,9 +361,26 @@ func _physics_process(delta: float) -> void:
 			_hop_t = 0.0
 	else:
 		_hop_t = 0.0
+	# 레버 교착 감지 — 바로 밑(수평 근접) 지면에서 더블점프로 안 닿는 높이차. 2.2s 지속 시
+	# 스테이징 발동(좌 → 우 교대 · 3.5s 유지). ⚠ 판정은 **접지 상태에서만** — 점프 정점에서
+	# 높이차가 순간적으로 좁혀져 타이머가 매번 리셋되는 구멍이 있었다(2026-08-21 펌프장 실측:
+	# 등반 점프 사이클마다 리셋 → 스테이징이 영영 발동 안 함). 공중에서는 판정을 건너뛴다.
+	if lever_pos != Vector2.INF and target == null and absf(lever_dx) < 70.0:
+		if _player is CharacterBody2D and (_player as CharacterBody2D).is_on_floor():
+			if _player.global_position.y - lever_pos.y > 210.0:
+				_lever_stuck_t += delta
+				if _lever_stuck_t > 2.2:
+					_lever_stage_dx = -230.0 if _lever_stage_dx >= 0.0 else 230.0
+					_lever_stage_until = _clock + 3.5
+					_lever_stuck_t = 0.0
+			else:
+				_lever_stuck_t = 0.0   # 계단 위(레버 높이대) 도달 — 교착 아님
+	else:
+		_lever_stuck_t = 0.0
 	# 머리 위 목적지(발판 위 저격수·레버) — 밑에서 등반 점프 리듬(이단 점프는 공중 재입력).
+	# 스테이징 경유 지점에서도 등반이 나가야 하므로 게이트 폭 220→260(오프셋 230 커버).
 	var climb_up: float = 0.0
-	if lever_pos != Vector2.INF and target == null and absf(lever_dx) < 220.0:
+	if lever_pos != Vector2.INF and target == null and absf(lever_dx) < 260.0:
 		climb_up = _player.global_position.y - lever_pos.y
 	elif aa_fire:
 		# 대공 점프샷 — 더블점프 정점(~190)이 드론 고도(-220) 언저리의 조준 밴드에 든다.
@@ -365,9 +391,12 @@ func _physics_process(delta: float) -> void:
 	# 못 올라 레버·저격 둥지 접근이 실패한다(2026-08-18 냉각 레버 TIMEOUT 실측).
 	# 시퀀스 진행 중엔 climb_up 게이트를 무시 — 1단 상승 중 높이 차가 좁혀지며 게이트가 꺼져
 	# 더블점프 입력이 영영 안 나가는 자가 리셋이 있었다(y 진동 무한 반복의 원인).
-	if climb_up > 100.0 or _climb_seq != 0:
+	# 레버 목표일 땐 게이트 60px — 계단 마지막 단(Δ~100)에서 player 중심 기준 climb_up이
+	# 100 밑으로 내려와 점프가 영영 안 나가고 걸어서 떨어지는 루프가 있었다(2026-08-21 펌프장 실측).
+	var climb_gate: float = 60.0 if (lever_pos != Vector2.INF and target == null) else 100.0
+	if climb_up > climb_gate or _climb_seq != 0:
 		_climb_t += delta
-		if _climb_seq == 0 and climb_up > 100.0 and _climb_t > 0.4 and _jump_pulse == 0:
+		if _climb_seq == 0 and climb_up > climb_gate and _climb_t > 0.4 and _jump_pulse == 0:
 			Input.action_press("jump")
 			_jump_pulse = 2
 			_climb_seq = 1
