@@ -8,6 +8,12 @@ extends RefCounted
 #   unique                 : true면 한 번 선택 후 다시 등장 안 함 (현재는 route_history 필터로 보편 규칙)
 #   hidden                 : VEIL 추천 대상에서 제외 (??? 전용)
 #
+# ─── 어투 밴드 스윕(2026-08-21 사용자 승인) ───
+#   veil_comment / entry_comment 기본 문안 = **중립 전술 보고체**(첫 판 = cold 밴드에서
+#   warm처럼 들리지 않게). warm 밴드에서만 부드러운 변형을 쓰며, 그 문안은
+#   veil_comment_warm / entry_comment_warm 키에 둔다(없으면 기본 폴백 · VeilDialogue.banded 참고).
+#   warm 키는 warm 도달이 가능한 맵(스테이지 4+ 등장)에만 — 막1 전용 맵은 구조적으로 불가(trust 적립 속도).
+#
 # ─── 막 정체성 계약 (단일 소스 = docs/design/act_identity.md) — 새 맵 추가 시 지킬 것 ───
 #   막1(침투, s0~2) 팔레트 = **인간 경비만**(patrol/방패병/저격). 드론·자폭병·증기·포탑·레이저는 막2+ 전용.
 #     → 막2 진입의 "기계가 깨어난다" 문턱(첫 드론 반응, B-4)이 성립하려면 막1엔 기계 위협이 없어야 한다.
@@ -36,8 +42,8 @@ const ALL_ROUTES: Array = [
 		"unique": false,
 		"min_stage": 0, "max_stage": 1,
 		"tags": ["우회", "어두운_환경"],
-		"veil_comment": "여기로 가요. 경비도 약하고, 길도 단순해요.",
-		"entry_comment": "외곽으로 들어왔어요. 깊숙한 안쪽이 목표예요. 다 싸울 필요는 없어요.",
+		"veil_comment": "이쪽을 권합니다. 경비가 약하고, 길이 단순합니다.",
+		"entry_comment": "외곽 진입 확인. 목표는 깊숙한 안쪽입니다. 다 싸울 필요는 없습니다.",
 		"entry_comment_replay": "외곽으로 들어왔습니다. 이 어둠이 어쩐지 익숙합니다. 처음일 텐데 말입니다. 안쪽 깊은 곳까지, 서두르지 말고 가십시오.",
 		"stage_color": Color(0.12, 0.12, 0.14),
 	},
@@ -51,8 +57,8 @@ const ALL_ROUTES: Array = [
 		"unique": false,
 		"min_stage": 0, "max_stage": 1,
 		"tags": ["원거리", "노출", "이동"],
-		"veil_comment": "옥상으로 갈래요? 시야는 트이지만 노출되고, 바람이 심해요.",
-		"entry_comment": "옥상이 출구예요. 다 상대하지 않아도 돼요. 멈추지 말고 빠져요.",
+		"veil_comment": "옥상 경로입니다. 시야는 트이지만 그만큼 노출되고, 바람이 심합니다.",
+		"entry_comment": "출구는 옥상입니다. 전부 상대할 필요 없습니다. 멈추지 말고 빠지십시오.",
 		"stage_color": Color(0.10, 0.13, 0.20),
 	},
 	{
@@ -66,8 +72,8 @@ const ALL_ROUTES: Array = [
 		# 지상(rooftops) 직후 깊은 지하로 가는 게 어색해 stage 2 이후로 한정. 5막: 막1(0-2) 안에 유지.
 		"min_stage": 2, "max_stage": 2,
 		"tags": ["근접전", "어두운_환경", "함정", "전투"],
-		"veil_comment": "지하 배수로예요. 펌프가 아직 돌아서 물이 오르내려요. 높은 발판을 봐 두세요.",
-		"entry_comment": "아래로 빠지는 길이에요. 물이 차면 오르고, 빠지면 내려가요. 발 밑도 봐요.",
+		"veil_comment": "지하 배수로입니다. 펌프가 아직 돌아 물이 오르내립니다. 높은 발판을 봐 두십시오.",
+		"entry_comment": "아래로 빠지는 길입니다. 물이 차면 오르고, 빠지면 내려가는 리듬입니다. 발밑 주의.",
 		"stage_color": Color(0.18, 0.22, 0.20),
 	},
 	{
@@ -81,8 +87,8 @@ const ALL_ROUTES: Array = [
 		# 막1(외곽) 진입 bridge — 외벽 단계 안에서만. 막2부터는 내부 맵.
 		"min_stage": 1, "max_stage": 2,
 		"tags": ["근접전", "함정", "전투"],
-		"veil_comment": "옛 지하철이에요. 폐역인데 선로는 살아 있어요. 신호등을 봐 두세요.",
-		"entry_comment": "폐역 승강장이에요. 선로 구간에선 오래 서 있지 마세요. 신호가 울리면 비켜요.",
+		"veil_comment": "옛 지하철입니다. 폐역인데 선로는 살아 있습니다. 신호등을 봐 두십시오.",
+		"entry_comment": "폐역 승강장입니다. 선로 구간에 오래 서 있지 마십시오. 신호가 울리면 비키는 겁니다.",
 		"stage_color": Color(0.08, 0.10, 0.14),
 	},
 	{
@@ -96,8 +102,10 @@ const ALL_ROUTES: Array = [
 		# 드론 첫 등장 — 막2(잠입) 전반.
 		"min_stage": 3, "max_stage": 5,
 		"tags": ["전투", "드론", "함정"],
-		"veil_comment": "냉각 플랜트예요. 바닥 증기는 타이밍 보고 지나가요. 드론은 위에 떠 있어요.",
-		"entry_comment": "여긴 서버를 식히는 곳이에요. ...저도 이런 데 어딘가 있겠죠. 바닥 증기 조심해요.",
+		"veil_comment": "냉각 플랜트입니다. 바닥 증기는 타이밍을 보고 지나가십시오. 드론은 위에 떠 있습니다.",
+		"veil_comment_warm": "냉각 플랜트예요. 바닥 증기는 타이밍 보고 지나가요. 드론은 위에 떠 있어요.",
+		"entry_comment": "서버를 식히는 구역입니다. ...저도 이런 곳 어딘가에 있을 겁니다. 바닥 증기 주의.",
+		"entry_comment_warm": "여긴 서버를 식히는 곳이에요. ...저도 이런 데 어딘가 있겠죠. 바닥 증기 조심해요.",
 		"entry_comment_replay": "서버를 식히는 곳이에요. 저도 이런 데 어딘가 있겠죠. ...전에도 이런 생각을 한 것 같아요. 증기 조심하세요.",
 		"stage_color": Color(0.10, 0.16, 0.20),
 	},
@@ -113,8 +121,8 @@ const ALL_ROUTES: Array = [
 		# act_identity.md §2-3: s0 안전 / s1 변형(risk≤2) / s2 고조(이 맵 = 막1 클라이맥스, 노출결).
 		"min_stage": 2, "max_stage": 2,
 		"tags": ["원거리", "전투", "노출"],
-		"veil_comment": "감시탑은 위험해요. 저격이 많아요. 엄폐 짧게, 이동은 빠르게.",
-		"entry_comment": "관제 구역이에요. 시야 안에 들어가는 순간 쏴와요.",
+		"veil_comment": "감시탑은 위험합니다. 저격이 많습니다. 엄폐는 짧게, 이동은 빠르게.",
+		"entry_comment": "관제 구역입니다. 시야에 드는 순간 사격이 옵니다.",
 		"stage_color": Color(0.18, 0.16, 0.22),
 	},
 	{
@@ -129,8 +137,10 @@ const ALL_ROUTES: Array = [
 		# 격리 병동은 ??? 맵 복선 트리거 — 막2 풀에 보장(guaranteed).
 		"guaranteed_in_stages": [4],
 		"tags": ["우회", "어두운_환경", "은폐"],
-		"veil_comment": "격리 병동이에요. 도면이랑 다르게 생겼을 거예요.",
-		"entry_comment": "격리 병동에 들어왔어요. 안쪽이 어둡고 좁아요.",
+		"veil_comment": "격리 병동입니다. 도면과 다르게 생겼을 겁니다.",
+		"veil_comment_warm": "격리 병동이에요. 도면이랑 다르게 생겼을 거예요.",
+		"entry_comment": "격리 병동 진입. 안쪽이 어둡고 좁습니다.",
+		"entry_comment_warm": "격리 병동에 들어왔어요. 안쪽이 어둡고 좁아요.",
 		"stage_color": Color(0.12, 0.10, 0.14),
 	},
 	{
@@ -144,8 +154,10 @@ const ALL_ROUTES: Array = [
 		# 막3 진입 전투(핵심부 직전, 시야붕괴 실연). server_hall·control_corridor·??? 와 함께 막3 전투 풀(s6-7).
 		"min_stage": 6, "max_stage": 7,
 		"tags": ["전투", "드론", "원거리"],
-		"veil_comment": "데이터 센터예요. 드론·저격 동시에 와요. 한 번에 정리해야 빠져요.",
-		"entry_comment": "서버 랙이에요. 위에서 드론, 같은 층에서 저격.",
+		"veil_comment": "데이터 센터입니다. 드론과 저격이 동시에 옵니다. 한 번에 정리해야 빠집니다.",
+		"veil_comment_warm": "데이터 센터예요. 드론·저격 동시에 와요. 한 번에 정리해야 빠져요.",
+		"entry_comment": "서버 랙 구역입니다. 위에서 드론, 같은 층에서 저격.",
+		"entry_comment_warm": "서버 랙이에요. 위에서 드론, 같은 층에서 저격.",
 		"stage_color": Color(0.14, 0.18, 0.24),
 	},
 	{
@@ -162,8 +174,10 @@ const ALL_ROUTES: Array = [
 		"available_stages": [14],
 		"story_only": true,
 		"tags": ["우회", "은폐"],
-		"veil_comment": "비상 탈출로예요. 빨리 빠지면 그만큼 안전해요.",
-		"entry_comment": "조용한 길이에요. 멈추지 말고 빠지면 돼요.",
+		"veil_comment": "비상 탈출로입니다. 빨리 빠질수록 안전합니다.",
+		"veil_comment_warm": "비상 탈출로예요. 빨리 빠지면 그만큼 안전해요.",
+		"entry_comment": "조용한 길입니다. 멈추지 말고 빠지면 됩니다.",
+		"entry_comment_warm": "조용한 길이에요. 멈추지 말고 빠지면 돼요.",
 		"entry_comment_replay": "조용한 길이에요. 여기, 낯이 익죠. 이번엔 뭐가 다를까요. 멈추지 말고 빠지세요.",
 		"stage_color": Color(0.10, 0.12, 0.14),
 	},
@@ -179,8 +193,10 @@ const ALL_ROUTES: Array = [
 		"min_stage": 14, "max_stage": 14, "available_stages": [14],
 		"disposal": "extract",
 		"tags": ["전투", "노출"],
-		"veil_comment": "전부 이쪽으로 몰려와요. 뚫고 나가는 수밖에 없겠네요.",
-		"entry_comment": "드라이브가 신호를 흘려요. 위치가 계속 새고 있어요. 정면뿐이에요, 뚫죠.",
+		"veil_comment": "전부 이쪽으로 몰립니다. 뚫고 나가는 수밖에 없습니다.",
+		"veil_comment_warm": "전부 이쪽으로 몰려와요. 뚫고 나가는 수밖에 없겠네요.",
+		"entry_comment": "드라이브가 신호를 흘립니다. 위치가 계속 샙니다. 길은 정면뿐, 뚫고 갑니다.",
+		"entry_comment_warm": "드라이브가 신호를 흘려요. 위치가 계속 새고 있어요. 정면뿐이에요, 뚫죠.",
 		"stage_color": Color(0.22, 0.10, 0.10),
 	},
 	{
@@ -192,8 +208,10 @@ const ALL_ROUTES: Array = [
 		"min_stage": 14, "max_stage": 14, "available_stages": [14],
 		"disposal": "destroy",
 		"tags": ["노출"],
-		"veil_comment": "저쪽이 시설을 쥔 채로 타고 있어요. 쥔 손이 풀리는 데부터 무너져요. 멈추지만 않으면 돼요.",
-		"entry_comment": "하부 버팀이 풀렸어요. 아래에서부터 내려앉아요. 위로. 돌아보지 말고요.",
+		"veil_comment": "저쪽이 시설을 쥔 채로 타고 있습니다. 쥔 손이 풀리는 데부터 무너집니다. 멈추지만 않으면 됩니다.",
+		"veil_comment_warm": "저쪽이 시설을 쥔 채로 타고 있어요. 쥔 손이 풀리는 데부터 무너져요. 멈추지만 않으면 돼요.",
+		"entry_comment": "하부 버팀이 풀렸습니다. 아래부터 내려앉습니다. 위로. 돌아보지 마십시오.",
+		"entry_comment_warm": "하부 버팀이 풀렸어요. 아래에서부터 내려앉아요. 위로. 돌아보지 말고요.",
 		"stage_color": Color(0.20, 0.12, 0.08),
 	},
 	{
@@ -205,8 +223,10 @@ const ALL_ROUTES: Array = [
 		"min_stage": 14, "max_stage": 14, "available_stages": [14],
 		"disposal": "conceal",
 		"tags": ["은폐", "우회"],
-		"veil_comment": "조용히 나가야 해요. 들키면 은닉이 아니게 되죠.",
-		"entry_comment": "수색이 붙었어요. 저쪽이 우리 위치를 흘리는 것 같아요. 빛을 피해요.",
+		"veil_comment": "조용히 나가야 합니다. 들키면 은닉이 아니게 됩니다.",
+		"veil_comment_warm": "조용히 나가야 해요. 들키면 은닉이 아니게 되죠.",
+		"entry_comment": "수색이 붙었습니다. 저쪽이 우리 위치를 흘리는 듯합니다. 빛을 피하십시오.",
+		"entry_comment_warm": "수색이 붙었어요. 저쪽이 우리 위치를 흘리는 것 같아요. 빛을 피해요.",
 		"stage_color": Color(0.06, 0.09, 0.13),
 	},
 	{
@@ -218,8 +238,10 @@ const ALL_ROUTES: Array = [
 		"min_stage": 14, "max_stage": 14, "available_stages": [14],
 		"disposal": "leave",
 		"tags": ["우회"],
-		"veil_comment": "막는 게 없어요. ...이상할 만큼요.",
-		"entry_comment": "조용하네요. 너무 조용해요. 보이는 걸 다 믿진 말아요.",
+		"veil_comment": "막는 게 없습니다. ...이상할 만큼.",
+		"veil_comment_warm": "막는 게 없어요. ...이상할 만큼요.",
+		"entry_comment": "조용합니다. 지나치게 조용합니다. 보이는 걸 다 믿지는 마십시오.",
+		"entry_comment_warm": "조용하네요. 너무 조용해요. 보이는 걸 다 믿진 말아요.",
 		"stage_color": Color(0.13, 0.10, 0.16),
 	},
 	{
@@ -234,8 +256,10 @@ const ALL_ROUTES: Array = [
 		# 보스 스테이지라 배타 배치(다른 route가 이 인덱스에 겹치면 보스 우회 가능 — 소프트락/스킵 위험).
 		"min_stage": 8, "max_stage": 8,
 		"tags": ["전투", "드론", "밝은_환경"],
-		"veil_comment": "핵심부예요. 정면 돌파에 드론이 상시 순찰해요. 그만큼 크게 벌어요.",
-		"entry_comment": "핵심부에 들어왔어요. 거리 잘 잡아요.",
+		"veil_comment": "핵심부입니다. 정면 돌파에 드론 상시 순찰. 그만큼 크게 법니다.",
+		"veil_comment_warm": "핵심부예요. 정면 돌파에 드론이 상시 순찰해요. 그만큼 크게 벌어요.",
+		"entry_comment": "핵심부 진입. 거리를 잘 잡으십시오.",
+		"entry_comment_warm": "핵심부에 들어왔어요. 거리 잘 잡아요.",
 		"entry_comment_replay": "핵심부예요. 그런데 이 안쪽, 묘하게 익숙합니다. 왜일까요. 거리 두고 움직이세요.",
 		"stage_color": Color(0.22, 0.18, 0.18),
 	},
@@ -251,8 +275,10 @@ const ALL_ROUTES: Array = [
 		"available_stages": [5],
 		"guaranteed_in_stages": [5],
 		"tags": ["도전", "어두운_환경"],
-		"veil_comment": "[도전] 교신이 끊겨요. 안에선 저도 못 도와드려요. 한 번에 빠져나오셔야 해요.",
-		"entry_comment": "여기서부터 교신 끊겨요. 30초 안에 빠져나오세요.",
+		"veil_comment": "[도전] 교신이 끊깁니다. 안에서는 저도 못 돕습니다. 한 번에 빠져나와야 합니다.",
+		"veil_comment_warm": "[도전] 교신이 끊겨요. 안에선 저도 못 도와드려요. 한 번에 빠져나오셔야 해요.",
+		"entry_comment": "여기서부터 교신이 끊깁니다. 30초 안에 빠져나오십시오.",
+		"entry_comment_warm": "여기서부터 교신 끊겨요. 30초 안에 빠져나오세요.",
 		"stage_color": Color(0.02, 0.02, 0.04),
 	},
 	{
@@ -269,7 +295,8 @@ const ALL_ROUTES: Array = [
 		"min_stage": 6, "max_stage": 7,
 		"guaranteed_in_stages": [6],
 		"tags": ["우회", "정보"],
-		"veil_comment": "...저도 모르겠어요. 들어가실래요?",
+		"veil_comment": "...저도 모르겠습니다. 들어가시겠습니까?",
+		"veil_comment_warm": "...저도 모르겠어요. 들어가실래요?",
 		"entry_comment": "...뭐가 있는 거지.",
 		"stage_color": Color(0.06, 0.06, 0.08),
 	},
@@ -284,8 +311,10 @@ const ALL_ROUTES: Array = [
 		# 막3 진입 전투(핵심부 직전). datacenter·control_corridor·??? 와 함께 막3 전투 풀(s6-7).
 		"min_stage": 6, "max_stage": 7,
 		"tags": ["전투", "드론", "원거리"],
-		"veil_comment": "서버 복도예요. 드론이 위, 저격이 랙 위에. 랙을 엄폐로 쓰면서 빠져요.",
-		"entry_comment": "핵심부 직전이에요. 여기만 지나면... 조심해요.",
+		"veil_comment": "서버 복도입니다. 드론이 위, 저격이 랙 위. 랙을 엄폐로 쓰며 빠지십시오.",
+		"veil_comment_warm": "서버 복도예요. 드론이 위, 저격이 랙 위에. 랙을 엄폐로 쓰면서 빠져요.",
+		"entry_comment": "핵심부 직전입니다. 여기만 지나면... 조심하십시오.",
+		"entry_comment_warm": "핵심부 직전이에요. 여기만 지나면... 조심해요.",
 		"stage_color": Color(0.16, 0.18, 0.22),
 	},
 	{
@@ -299,8 +328,8 @@ const ALL_ROUTES: Array = [
 		# 막1 침투 변형 — s1~2(첫 맵 s0엔 안 둠: 방패병이 첫 맵엔 불합리, 사용자 보고 2026-06-25).
 		"min_stage": 1, "max_stage": 2,
 		"tags": ["우회", "근접전", "어두운_환경"],
-		"veil_comment": "지하 주차장이에요. 셔터가 열릴 때 지나가요. 램프가 붉으면 곧 닫혀요.",
-		"entry_comment": "주차장이에요. 차 사이로 빠져요. 다 상대 안 해도 돼요.",
+		"veil_comment": "지하 주차장입니다. 셔터가 열릴 때 지나가십시오. 램프가 붉으면 곧 닫힙니다.",
+		"entry_comment": "주차장입니다. 차 사이로 빠지십시오. 전부 상대할 필요는 없습니다.",
 		"stage_color": Color(0.12, 0.12, 0.15),
 	},
 	{
@@ -315,8 +344,10 @@ const ALL_ROUTES: Array = [
 		# act_identity.md §4: s3 도입(r2 기계 입문) / s4 전개 / s5 고조. s4~5 전개·고조 구간에 배치.
 		"min_stage": 4, "max_stage": 5,
 		"tags": ["원거리", "드론", "노출", "전투"],
-		"veil_comment": "변전소예요. 바닥 방전은 발판 위로 피해요. 변압기 위 저격, 머리 위 드론.",
-		"entry_comment": "변전 설비예요. 여러 각에서 쏴요. 변압기 뒤로 붙어요.",
+		"veil_comment": "변전소입니다. 바닥 방전은 발판 위로 피하십시오. 변압기 위 저격, 머리 위 드론.",
+		"veil_comment_warm": "변전소예요. 바닥 방전은 발판 위로 피해요. 변압기 위 저격, 머리 위 드론.",
+		"entry_comment": "변전 설비입니다. 여러 각도에서 쏩니다. 변압기 뒤에 붙으십시오.",
+		"entry_comment_warm": "변전 설비예요. 여러 각에서 쏴요. 변압기 뒤로 붙어요.",
 		"stage_color": Color(0.16, 0.15, 0.10),
 	},
 	{
@@ -330,8 +361,10 @@ const ALL_ROUTES: Array = [
 		# 막2 잠입 혼합 전투 — 시설 내부 단계(s3~5) 풀.
 		"min_stage": 3, "max_stage": 5,
 		"tags": ["근접전", "함정", "전투"],
-		"veil_comment": "실험 구역이에요. 자폭병이랑 방패병, 천장 포탑까지. 화력 있으면 편해요.",
-		"entry_comment": "실험 베이예요. 위에서 쏘는 포탑 조심해요.",
+		"veil_comment": "실험 구역입니다. 자폭병과 방패병, 천장 포탑까지. 화력이 있으면 수월합니다.",
+		"veil_comment_warm": "실험 구역이에요. 자폭병이랑 방패병, 천장 포탑까지. 화력 있으면 편해요.",
+		"entry_comment": "실험 베이입니다. 위에서 쏘는 포탑을 조심하십시오.",
+		"entry_comment_warm": "실험 베이예요. 위에서 쏘는 포탑 조심해요.",
 		"stage_color": Color(0.13, 0.16, 0.15),
 	},
 	{
@@ -344,8 +377,8 @@ const ALL_ROUTES: Array = [
 		"unique": false,
 		"min_stage": 1, "max_stage": 2,
 		"tags": ["근접전", "어두운_환경", "전투"],
-		"veil_comment": "철거 구역이에요. 위에서 잔해가 떨어져요. 바닥 그림자를 봐요.",
-		"entry_comment": "무너진 건물이에요. 머리 위 조심하고, 잔해 뒤로 붙어요.",
+		"veil_comment": "철거 구역입니다. 위에서 잔해가 떨어집니다. 바닥 그림자를 보십시오.",
+		"entry_comment": "무너진 건물입니다. 머리 위를 조심하고, 잔해 뒤에 붙으십시오.",
 		"stage_color": Color(0.14, 0.12, 0.11),
 	},
 	{
@@ -358,8 +391,8 @@ const ALL_ROUTES: Array = [
 		"unique": false,
 		"min_stage": 1, "max_stage": 2,
 		"tags": ["원거리", "노출", "전투"],
-		"veil_comment": "펌프장이에요. 파이프 위에서 저격이 내려다봐요. 엄폐 끊어 가요.",
-		"entry_comment": "펌프 설비예요. 파이프 위에서 내려다봐요. 사선 밑에 멈춰 서지 말아요.",
+		"veil_comment": "펌프장입니다. 파이프 위에서 저격이 내려다봅니다. 엄폐를 끊어 가십시오.",
+		"entry_comment": "펌프 설비입니다. 파이프 위에서 내려다봅니다. 조준선 아래 멈춰 서지 마십시오.",
 		"stage_color": Color(0.10, 0.14, 0.16),
 	},
 	{
@@ -373,8 +406,10 @@ const ALL_ROUTES: Array = [
 		# 막4 램프 s10 전개~막5 s12(act_identity §6): 저격·드론·재머 복합 — s9 도입 금지.
 		"min_stage": 10, "max_stage": 12,
 		"tags": ["원거리", "드론", "노출", "전투"],
-		"veil_comment": "중계소예요. 저격이랑 드론이 동시에 와요. 엄폐 짧게, 빠르게.",
-		"entry_comment": "통신 중계기예요. 위에서도 아래에서도 쏴요. 멈추지 말아요.",
+		"veil_comment": "중계소입니다. 저격과 드론이 동시에 옵니다. 엄폐는 짧게, 빠르게.",
+		"veil_comment_warm": "중계소예요. 저격이랑 드론이 동시에 와요. 엄폐 짧게, 빠르게.",
+		"entry_comment": "통신 중계기 구역입니다. 위에서도 아래에서도 쏩니다. 멈추지 마십시오.",
+		"entry_comment_warm": "통신 중계기예요. 위에서도 아래에서도 쏴요. 멈추지 말아요.",
 		"stage_color": Color(0.12, 0.16, 0.18),
 	},
 	{
@@ -387,8 +422,10 @@ const ALL_ROUTES: Array = [
 		"unique": false,
 		"min_stage": 3, "max_stage": 5,
 		"tags": ["근접전", "전투"],
-		"veil_comment": "물류 창고예요. 바닥 컨베이어가 밀어요. 거스르는 구간에 자폭병이랑 방패병.",
-		"entry_comment": "적재 창고예요. 컨테이너를 엄폐로. 근접 조심해요.",
+		"veil_comment": "물류 창고입니다. 바닥 컨베이어가 밉니다. 거스르는 구간에 자폭병과 방패병.",
+		"veil_comment_warm": "물류 창고예요. 바닥 컨베이어가 밀어요. 거스르는 구간에 자폭병이랑 방패병.",
+		"entry_comment": "적재 창고입니다. 컨테이너를 엄폐로. 근접을 조심하십시오.",
+		"entry_comment_warm": "적재 창고예요. 컨테이너를 엄폐로. 근접 조심해요.",
 		"stage_color": Color(0.15, 0.14, 0.12),
 	},
 	{
@@ -401,8 +438,10 @@ const ALL_ROUTES: Array = [
 		"unique": false,
 		"min_stage": 3, "max_stage": 5,
 		"tags": ["함정", "원거리", "전투"],
-		"veil_comment": "검문소예요. 바닥 레이저 건드리면 포탑이 일제히 쏴요. 타이밍 봐요.",
-		"entry_comment": "보안 검문선이에요. 레이저 밟으면 앞에서 쏴와요. 끊어 가요.",
+		"veil_comment": "검문소입니다. 바닥 레이저를 건드리면 포탑이 일제히 쏩니다. 타이밍을 보십시오.",
+		"veil_comment_warm": "검문소예요. 바닥 레이저 건드리면 포탑이 일제히 쏴요. 타이밍 봐요.",
+		"entry_comment": "보안 검문선입니다. 레이저를 밟으면 앞에서 사격이 옵니다. 끊어 가십시오.",
+		"entry_comment_warm": "보안 검문선이에요. 레이저 밟으면 앞에서 쏴와요. 끊어 가요.",
 		"stage_color": Color(0.16, 0.14, 0.16),
 	},
 	{
@@ -416,8 +455,10 @@ const ALL_ROUTES: Array = [
 		# 막3 전투 풀(s6-7) — datacenter/server_hall과 같은 통과형. ???(guaranteed)와 함께 선택.
 		"min_stage": 6, "max_stage": 7,
 		"tags": ["전투", "드론", "원거리"],
-		"veil_comment": "통제실 복도예요. 드론·저격 동시에. 핵심부가 코앞이에요.",
-		"entry_comment": "통제실 직전이에요. 사방에서 쏴요. 엄폐 쓰면서 빠져요.",
+		"veil_comment": "통제실 복도입니다. 드론과 저격이 동시에. 핵심부가 코앞입니다.",
+		"veil_comment_warm": "통제실 복도예요. 드론·저격 동시에. 핵심부가 코앞이에요.",
+		"entry_comment": "통제실 직전입니다. 사방에서 쏩니다. 엄폐를 쓰며 빠지십시오.",
+		"entry_comment_warm": "통제실 직전이에요. 사방에서 쏴요. 엄폐 쓰면서 빠져요.",
 		"stage_color": Color(0.15, 0.17, 0.21),
 	},
 	{
@@ -430,8 +471,10 @@ const ALL_ROUTES: Array = [
 		"unique": false,
 		"min_stage": 3, "max_stage": 5,
 		"tags": ["드론", "함정", "전투"],
-		"veil_comment": "응축기 구역이에요. 천장에서 방울이 맺히면 곧 떨어져요. 드론은 위에 떠 있어요.",
-		"entry_comment": "응축 배관 구역이에요. 방울이 맺히는 걸 보고 피해요. 위 조심.",
+		"veil_comment": "응축기 구역입니다. 천장에 방울이 맺히면 곧 떨어집니다. 드론은 위에 떠 있습니다.",
+		"veil_comment_warm": "응축기 구역이에요. 천장에서 방울이 맺히면 곧 떨어져요. 드론은 위에 떠 있어요.",
+		"entry_comment": "응축 배관 구역입니다. 방울이 맺히는 걸 보고 피하십시오. 위쪽 주의.",
+		"entry_comment_warm": "응축 배관 구역이에요. 방울이 맺히는 걸 보고 피해요. 위 조심.",
 		"stage_color": Color(0.10, 0.15, 0.18),
 	},
 	{
@@ -444,8 +487,8 @@ const ALL_ROUTES: Array = [
 		"unique": false,
 		"min_stage": 1, "max_stage": 2,
 		"tags": ["우회", "이동"],
-		"veil_comment": "순찰로예요. 전투는 가벼운데, 경계등에 걸리면 시끄러워져요.",
-		"entry_comment": "외곽 순찰선이에요. 다 상대 안 해도 돼요. 멈추지 말고.",
+		"veil_comment": "순찰로입니다. 전투는 가볍지만, 경계등에 걸리면 시끄러워집니다.",
+		"entry_comment": "외곽 순찰선입니다. 전부 상대할 필요 없습니다. 멈추지 말고 가십시오.",
 		"stage_color": Color(0.11, 0.13, 0.13),
 	},
 	{
@@ -458,8 +501,10 @@ const ALL_ROUTES: Array = [
 		"unique": false,
 		"min_stage": 3, "max_stage": 5,
 		"tags": ["함정", "이동"],
-		"veil_comment": "함정 통로예요. 포탑이 많아요. 타이밍이랑 동선이 전부예요.",
-		"entry_comment": "포탑 통로예요. 위아래로 쏴요. 레이저도 조심. 끊어 가요.",
+		"veil_comment": "함정 통로입니다. 포탑이 많습니다. 타이밍과 동선이 전부입니다.",
+		"veil_comment_warm": "함정 통로예요. 포탑이 많아요. 타이밍이랑 동선이 전부예요.",
+		"entry_comment": "포탑 통로입니다. 위아래로 쏩니다. 레이저도 주의. 끊어 가십시오.",
+		"entry_comment_warm": "포탑 통로예요. 위아래로 쏴요. 레이저도 조심. 끊어 가요.",
 		"stage_color": Color(0.14, 0.13, 0.10),
 	},
 	{
@@ -473,8 +518,10 @@ const ALL_ROUTES: Array = [
 		# 막4 램프 s9-10 도입(act_identity §6): 전투 최소 타이밍 학습 — 막4의 순한 문.
 		"min_stage": 9, "max_stage": 10,
 		"tags": ["이동", "함정"],
-		"veil_comment": "화물 리프트예요. 발판이 오가죠. 가장자리에서 잠깐 멈출 때 올라타세요. 서두를 것 없습니다.",
-		"entry_comment": "리프트가 왕복합니다. 끝에서 멈출 때 타세요. 밑은 스파이크. 타이밍이 전부입니다.",
+		"veil_comment": "화물 리프트입니다. 발판이 오갑니다. 가장자리에서 잠깐 멈출 때 올라타십시오. 서두를 것 없습니다.",
+		"veil_comment_warm": "화물 리프트예요. 발판이 오가죠. 가장자리에서 잠깐 멈출 때 올라타세요. 서두를 것 없습니다.",
+		"entry_comment": "리프트가 왕복합니다. 끝에서 멈출 때 타십시오. 밑은 스파이크. 타이밍이 전부입니다.",
+		"entry_comment_warm": "리프트가 왕복합니다. 끝에서 멈출 때 타세요. 밑은 스파이크. 타이밍이 전부입니다.",
 		"stage_color": Color(0.15, 0.13, 0.09),
 	},
 	{
@@ -488,8 +535,10 @@ const ALL_ROUTES: Array = [
 		# 막4 램프 s10 전개~막5 s12(act_identity §6): 저격 레이스 — 재머 금지 맵(블라인드 unfair).
 		"min_stage": 10, "max_stage": 12,
 		"tags": ["원거리", "이동", "전투"],
-		"veil_comment": "차량 뒤에 붙어서 가세요. 저격에 걸리는 건 넘어갈 때뿐입니다. 엄폐는 맞을수록 부서지니, 한자리에 오래 머물지 마시고요.",
-		"entry_comment": "정비 차량이 엄폐입니다. 뒤에 붙으면 저격이 못 보죠. 노출은 넘을 때뿐. 다만 차량은 영원하지 않습니다.",
+		"veil_comment": "차량 뒤에 붙어 가십시오. 저격에 걸리는 건 넘어갈 때뿐입니다. 엄폐는 맞을수록 부서집니다. 한자리에 오래 머물지 마십시오.",
+		"veil_comment_warm": "차량 뒤에 붙어서 가세요. 저격에 걸리는 건 넘어갈 때뿐입니다. 엄폐는 맞을수록 부서지니, 한자리에 오래 머물지 마시고요.",
+		"entry_comment": "정비 차량이 엄폐입니다. 뒤에 붙으면 저격이 못 봅니다. 노출은 넘을 때뿐. 다만 차량은 영원하지 않습니다.",
+		"entry_comment_warm": "정비 차량이 엄폐입니다. 뒤에 붙으면 저격이 못 보죠. 노출은 넘을 때뿐. 다만 차량은 영원하지 않습니다.",
 		"stage_color": Color(0.14, 0.13, 0.15),
 	},
 	{
@@ -503,8 +552,10 @@ const ALL_ROUTES: Array = [
 		# 막4 램프 s11 고조~막5 s12(act_identity §6): 추격 절정 — 막4 "추적"의 시그니처. 재머 금지.
 		"min_stage": 11, "max_stage": 12,
 		"tags": ["이동", "노출"],
-		"veil_comment": "뒤가 무너져요. 멈추지 말아요. 잔해는 넘고, 계속 앞으로.",
-		"entry_comment": "구조가 버티질 못해요. 붕괴가 따라와요. 멈추면 삼켜져요. 앞으로만.",
+		"veil_comment": "뒤가 무너집니다. 멈추지 마십시오. 잔해는 넘고, 계속 앞으로.",
+		"veil_comment_warm": "뒤가 무너져요. 멈추지 말아요. 잔해는 넘고, 계속 앞으로.",
+		"entry_comment": "구조가 버티지 못합니다. 붕괴가 따라옵니다. 멈추면 삼켜집니다. 앞으로만.",
+		"entry_comment_warm": "구조가 버티질 못해요. 붕괴가 따라와요. 멈추면 삼켜져요. 앞으로만.",
 		"stage_color": Color(0.10, 0.08, 0.07),
 	},
 	{
@@ -518,8 +569,10 @@ const ALL_ROUTES: Array = [
 		# 막5 전투 s12 전용(act_identity §7): "코어 방어" 직후 s13 "코어 회수" — 서사 랠리.
 		"min_stage": 12, "max_stage": 12,
 		"tags": ["전투", "원거리"],
-		"veil_comment": "중앙 코어를 지켜요. 적이 코어 곁에 오래 머물면 코어가 깎여요. 넘어오는 걸 밀어내고 자리를 지켜요.",
-		"entry_comment": "코어 방어예요. 적이 코어 구역에 들어오면 코어가 버티질 못해요. 몰려드는 걸 막고 다 정리하면 끝나요.",
+		"veil_comment": "중앙 코어를 지킵니다. 적이 코어 곁에 오래 머물면 코어가 깎입니다. 넘어오는 걸 밀어내고 자리를 지키십시오.",
+		"veil_comment_warm": "중앙 코어를 지켜요. 적이 코어 곁에 오래 머물면 코어가 깎여요. 넘어오는 걸 밀어내고 자리를 지켜요.",
+		"entry_comment": "코어 방어전입니다. 적이 코어 구역에 들면 코어가 버티지 못합니다. 몰려드는 걸 막고 전부 정리하면 끝납니다.",
+		"entry_comment_warm": "코어 방어예요. 적이 코어 구역에 들어오면 코어가 버티질 못해요. 몰려드는 걸 막고 다 정리하면 끝나요.",
 		"stage_color": Color(0.09, 0.11, 0.13),
 	},
 	{
@@ -533,8 +586,10 @@ const ALL_ROUTES: Array = [
 		# 막4 램프 s9-11(act_identity §6): 리듬 스텔스 — risk3이나 적 2뿐(전투 스파이크 아님)이라 s9 허용.
 		"min_stage": 9, "max_stage": 11,
 		"tags": ["이동", "노출"],
-		"veil_comment": "스캔이 통로를 훑어요. 빔이 올 때 차폐 안에 있어요. 지나가면 다음으로. 리듬을 타요.",
-		"entry_comment": "감시 빔이 통로를 훑습니다. 빔이 지날 땐 차폐 사각에 숨으세요. 지나간 뒤에 다음 사각까지 달리는 겁니다. 사각 밖에서 멈추면 그대로 노출입니다.",
+		"veil_comment": "스캔이 통로를 훑습니다. 빔이 올 때는 차폐 안에. 지나가면 다음으로. 리듬을 타십시오.",
+		"veil_comment_warm": "스캔이 통로를 훑어요. 빔이 올 때 차폐 안에 있어요. 지나가면 다음으로. 리듬을 타요.",
+		"entry_comment": "감시 빔이 통로를 훑습니다. 빔이 지날 땐 차폐 사각에 숨으십시오. 지나간 뒤 다음 사각까지 달리는 겁니다. 사각 밖에서 멈추면 그대로 노출입니다.",
+		"entry_comment_warm": "감시 빔이 통로를 훑습니다. 빔이 지날 땐 차폐 사각에 숨으세요. 지나간 뒤에 다음 사각까지 달리는 겁니다. 사각 밖에서 멈추면 그대로 노출입니다.",
 		"stage_color": Color(0.12, 0.09, 0.10),
 	},
 	{
@@ -548,8 +603,10 @@ const ALL_ROUTES: Array = [
 		# 막4 램프 s11 고조~막5 s12(act_identity §6): 발각 농성 + FINAL WAVE 재머.
 		"min_stage": 11, "max_stage": 12,
 		"tags": ["전투", "근접"],
-		"veil_comment": "바리케이드 뒤에서 버팁니다. 몸을 내밀어 쏘고, 다시 숨으세요. 엄폐는 계속 갉아먹히니 부서지기 전에 정리해야 합니다.",
-		"entry_comment": "저지선입니다. 적이 밀려옵니다. 엄폐 뒤에서 쏘고 숨으세요. 포탑이 엄폐를 갉아먹으니 오래는 못 버팁니다.",
+		"veil_comment": "바리케이드 뒤에서 버팁니다. 몸을 내밀어 쏘고, 다시 숨으십시오. 엄폐는 계속 갉히니 부서지기 전에 정리해야 합니다.",
+		"veil_comment_warm": "바리케이드 뒤에서 버팁니다. 몸을 내밀어 쏘고, 다시 숨으세요. 엄폐는 계속 갉아먹히니 부서지기 전에 정리해야 합니다.",
+		"entry_comment": "저지선입니다. 적이 밀려옵니다. 엄폐 뒤에서 쏘고 숨으십시오. 포탑이 엄폐를 갉으니 오래는 못 버팁니다.",
+		"entry_comment_warm": "저지선입니다. 적이 밀려옵니다. 엄폐 뒤에서 쏘고 숨으세요. 포탑이 엄폐를 갉아먹으니 오래는 못 버팁니다.",
 		"stage_color": Color(0.13, 0.10, 0.09),
 	},
 	{
@@ -641,7 +698,8 @@ const STORY_OVERRIDES: Dictionary = {
 	"route_escape": {
 		"name": "최종 탈출",
 		"description": "임무를 마치고 시설 밖으로 빠져나가는 길. 마지막 한 걸음.",
-		"veil_comment": "조용히 빠져요. 거의 다 왔어요.",
+		"veil_comment": "조용히 빠집니다. 거의 다 왔습니다.",
+		"veil_comment_warm": "조용히 빠져요. 거의 다 왔어요.",
 	},
 }
 
@@ -674,7 +732,7 @@ static func _stage_in_range(route: Dictionary, stage_index: int) -> bool:
 #   · 클리어 경험치 = 위험도 그대로(r1=1 … r3=3). 위험할수록 항상 더 번다 — 열세 카드가
 #     구조적으로 사라진다(위험 증가에 보상이 자동 동행).
 #   · reward_type = 부가 효과 종류. "xp"(경험치 +2) / "record"(기록 1칸 회복, 가득하면 +2 XP) /
-#     "recon"(다음 구간 VEIL 표시 강화) / ""(탈출 종착 = 없음).
+#     "recon"(다음 구간 숨은 요소 표시 · 재정의 2026-08-21) / ""(탈출 종착 = 없음).
 # 지급은 GameState.on_stage_clear, 표시는 RouteMap(카드 한 줄 + 우측 패널).
 const REWARD_TYPE_LABELS: Dictionary = {
 	"xp": "경험치",
@@ -693,12 +751,36 @@ static func reward_type_label(t: String) -> String:
 #   ③ skilled(능숙) → 최고 risk(= 최대 클리어 경험치. 위험이 곧 보상이라 손해 카드 없음).
 #   ④ steady(무난) → 중간 risk(2 선호, 없으면 저위험).
 # hidden / challenge 루트는 항상 제외. 사유 대사는 종결어미 단조 회피(어투 규칙).
+# 어투 밴드 스윕(2026-08-21): 기본 = 중립 보고체, warm 밴드는 REC_REASON_WARM(부드러운 변형).
+# "first"는 데이터 없는 첫 스테이지 전용이라 항상 cold — warm 풀 불필요.
 const REC_REASON: Dictionary = {
 	"first": [
-		"처음이니 무난한 쪽으로 가요.",
-		"첫 길은 이쪽이 수월해요.",
-		"초반엔 이쪽을 권해요.",
+		"처음이니 무난한 쪽을 권합니다.",
+		"첫 길은 이쪽이 수월합니다.",
+		"초반에는 이쪽입니다.",
 	],
+	"struggling": [
+		"방금 고전하셨습니다. 이 중에서는 이쪽이 낫습니다.",
+		"부담이 적은 쪽을 골랐습니다.",
+		"이번에는 덜 험한 길입니다.",
+	],
+	"record": [
+		"기록이 비었습니다. 이 길에서 한 칸 되찾을 수 있습니다.",
+		"다음 실수에 대비해 둡니다. 기록을 채울 수 있는 쪽입니다.",
+		"이쪽을 지나면 기록 한 칸이 복구됩니다.",
+	],
+	"skilled": [
+		"잘 버티고 계십니다. 험한 길일수록 얻는 것도 많습니다.",
+		"솜씨가 좋으시군요. 거친 쪽이 남는 장사입니다.",
+		"욕심낼 만합니다. 위험한 만큼 돌아오는 게 큽니다.",
+	],
+	"steady": [
+		"이쪽이 좋아 보입니다.",
+		"여기가 적당합니다.",
+		"이 길을 권합니다.",
+	],
+}
+const REC_REASON_WARM: Dictionary = {
 	"struggling": [
 		"방금 고전했죠. 이 중엔 이쪽이 나아요.",
 		"좀 힘들었을 거예요. 부담이 적은 쪽을 골랐어요.",
@@ -790,7 +872,12 @@ static func _pick_by_risk(candidates: Array, dir: int) -> Dictionary:
 	return best
 
 static func _pick_rec_reason(mode: String) -> String:
-	var arr: Array = REC_REASON.get(mode, [])
+	# warm 밴드면 부드러운 변형 풀 우선(없는 모드는 중립 폴백) — 어투 밴드 스윕.
+	var arr: Array = []
+	if GameState.veil_register_band() == "warm":
+		arr = REC_REASON_WARM.get(mode, [])
+	if arr.is_empty():
+		arr = REC_REASON.get(mode, [])
 	if arr.is_empty():
 		return ""
 	return str(arr[randi() % arr.size()])

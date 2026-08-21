@@ -56,7 +56,8 @@ static func show(host: Node, on_picked: Callable) -> CanvasLayer:
 
 	# VEIL 한 마디 — 신뢰 톤색으로.
 	var veil_lbl := Label.new()
-	veil_lbl.text = "VEIL   요원이 정하세요. 어느 쪽이든, 받아들일게요."
+	# 어투 밴드 스윕(2026-08-21): 기본 = 중립 보고체, warm만 부드럽게.
+	veil_lbl.text = "VEIL   " + VeilDialogue.banded("요원이 정하십시오. 어느 쪽이든, 받아들이겠습니다.", "요원이 정하세요. 어느 쪽이든, 받아들일게요.")
 	veil_lbl.add_theme_font_size_override("font_size", 18)
 	veil_lbl.add_theme_color_override("font_color", GameState.veil_tone_color())
 	veil_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

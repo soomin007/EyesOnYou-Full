@@ -150,9 +150,27 @@ const INTRO_VEIL_REPLAY: Array[String] = [
 	"심장부까지 들어가 데이터를 확보한 뒤, 살아서 빠져나오면 됩니다.\n모든 적과 싸울 필요는 없습니다. 길만 열면 그 구역은 통과입니다.\n이번엔 다른 길이 보일지도 모르겠습니다. 외곽부터, 천천히.",
 ]
 
+# ─── 단일 문형 대사의 밴드 이원화(2026-08-21 어투 스윕, 사용자 승인) ─────────────
+# 밴드 풀이 없는 한 줄짜리 대사의 공통 규칙: 기본 = 중립 전술 보고체(첫 판 = cold 밴드에서
+# warm처럼 들리지 않게), warm 밴드에서만 부드러운 변형. warm 문안이 비면 기본을 그대로 쓴다.
+# 전투·경고 콜아웃은 밴드 무관 보고체 단문 유지(규약: korean-dialogue-register §6).
+static func banded(neutral: String, warm: String = "") -> String:
+	if warm != "" and GameState.veil_register_band() == "warm":
+		return warm
+	return neutral
+
 # 레벨업 fallback — 특정 추천(★)이 없을 때. 그래서 카드에 ★가 안 붙으니, 멘트도 "딱 집어줄 게
 # 없다 / 요원 선택을 따른다"로 일관되게(위치 참조 금지 — "두 번째" 같은 건 ★ 앵커가 없어 혼란).
+# 기본 = 중립 보고체, warm 밴드는 아래 _WARM 풀(어투 밴드 스윕).
 const SKILL_GENERIC_COMMENTS: Array[String] = [
+	"어느 쪽도 나쁘지 않습니다. 요원이 고르십시오.",
+	"딱 집어드릴 게 없습니다. 끌리는 쪽으로.",
+	"지금 스타일에 맞는 쪽으로 가시죠.",
+	"이건 요원 판단이 낫습니다.",
+	"무엇을 골라도 받치겠습니다.",
+	"어느 쪽이든, 이유가 있으면 됩니다.",
+]
+const SKILL_GENERIC_COMMENTS_WARM: Array[String] = [
 	"이번엔 어느 쪽도 나쁘지 않아요. 요원이 골라요.",
 	"딱 집어줄 게 없네요. 끌리는 쪽으로.",
 	"지금 스타일에 맞는 걸로 가요.",
@@ -285,35 +303,36 @@ static func get_levelup_advice(player_skills: Dictionary, route_tags: Array, rou
 	if mskill != "":
 		var fam: String = str(SkillTreeData.find_line(mskill).get("family", ""))
 		return {"line": _matchup_line(mskill), "family": fam, "skill_id": mskill}
-	# 2순위(폴백): 기존 route_tags 기반 family 추천.
+	# 2순위(폴백): 기존 route_tags 기반 family 추천. 기본 = 중립 보고체, warm만 부드럽게(banded).
 	var has_ranged_buff: bool = player_skills.has("fire_boost") or player_skills.has("multishot") or player_skills.has("explosive")
 	var has_mobility_buff: bool = player_skills.has("dash_boost") or player_skills.has("glide")
 	var has_survival: bool = player_skills.has("hp") or player_skills.has("shield") or player_skills.has("barrier")
 	if "근접전" in route_tags and not has_ranged_buff:
-		return {"line": "근접전이 많아요. 화력이 있으면 좋겠어요.", "family": SkillTreeData.FAMILY_COMBAT, "skill_id": ""}
+		return {"line": banded("근접전이 많은 구간입니다. 화력이 필요합니다.", "근접전이 많아요. 화력이 있으면 좋겠어요."), "family": SkillTreeData.FAMILY_COMBAT, "skill_id": ""}
 	if "함정" in route_tags and not has_mobility_buff:
-		return {"line": "함정 구간이에요. 대시 강화나 글라이드가 도움돼요.", "family": SkillTreeData.FAMILY_MOBILITY, "skill_id": ""}
+		return {"line": banded("함정 구간입니다. 대시 강화나 글라이드가 유효합니다.", "함정 구간이에요. 대시 강화나 글라이드가 도움돼요."), "family": SkillTreeData.FAMILY_MOBILITY, "skill_id": ""}
 	if "드론" in route_tags and not has_ranged_buff:
-		return {"line": "드론은 위에서 와요. 원거리가 있으면 한결 안전하죠.", "family": SkillTreeData.FAMILY_COMBAT, "skill_id": ""}
+		return {"line": banded("드론은 위에서 옵니다. 원거리 화력이 있으면 한결 안전합니다.", "드론은 위에서 와요. 원거리가 있으면 한결 안전하죠."), "family": SkillTreeData.FAMILY_COMBAT, "skill_id": ""}
 	if "노출" in route_tags and not has_survival:
-		return {"line": "이 구간은 숨을 데가 없어요. 생존 쪽이 안심돼요.", "family": SkillTreeData.FAMILY_SURVIVAL, "skill_id": ""}
+		return {"line": banded("이 구간은 숨을 데가 없습니다. 생존 계열을 권합니다.", "이 구간은 숨을 데가 없어요. 생존 쪽이 안심돼요."), "family": SkillTreeData.FAMILY_SURVIVAL, "skill_id": ""}
 	if "수직" in route_tags and not has_mobility_buff:
-		return {"line": "위로 가는 길이네요. 이동 능력이 있으면 편하고요.", "family": SkillTreeData.FAMILY_MOBILITY, "skill_id": ""}
+		return {"line": banded("위로 가는 길입니다. 이동 능력이 있으면 수월합니다.", "위로 가는 길이네요. 이동 능력이 있으면 편하고요."), "family": SkillTreeData.FAMILY_MOBILITY, "skill_id": ""}
 	if "도전" in route_tags and not has_survival:
-		return {"line": "여기 위험해요. 생존 능력 한 줄 챙겨두는 게 어때요.", "family": SkillTreeData.FAMILY_SURVIVAL, "skill_id": ""}
+		return {"line": banded("위험한 구간입니다. 생존 능력 한 줄을 챙겨 두십시오.", "여기 위험해요. 생존 능력 한 줄 챙겨두는 게 어때요."), "family": SkillTreeData.FAMILY_SURVIVAL, "skill_id": ""}
 	if "전투" in route_tags and not has_ranged_buff:
-		return {"line": "정면 교전이에요. 화력이 부족하면 길어져요.", "family": SkillTreeData.FAMILY_COMBAT, "skill_id": ""}
-	var idx: int = randi() % SKILL_GENERIC_COMMENTS.size()
-	return {"line": SKILL_GENERIC_COMMENTS[idx], "family": "", "skill_id": ""}
+		return {"line": banded("정면 교전입니다. 화력이 부족하면 길어집니다.", "정면 교전이에요. 화력이 부족하면 길어져요."), "family": SkillTreeData.FAMILY_COMBAT, "skill_id": ""}
+	var pool: Array = SKILL_GENERIC_COMMENTS_WARM if GameState.veil_register_band() == "warm" else SKILL_GENERIC_COMMENTS
+	var idx: int = randi() % pool.size()
+	return {"line": str(pool[idx]), "family": "", "skill_id": ""}
 
-# 스킬-적 상성 추천 멘트 — 어느 적에 왜 그 스킬인지 콕 짚어 가르친다.
+# 스킬-적 상성 추천 멘트 — 어느 적에 왜 그 스킬인지 콕 짚어 가르친다. 기본 보고체 · warm 변형.
 static func _matchup_line(skill_id: String) -> String:
 	match skill_id:
-		"explosive": return "방패병이 정면을 막아요. 폭발물이면 방패째 뚫리죠."
-		"barrier":   return "저격수가 노리네요. 방어막이 있으면 한 발은 막고 지나가요."
-		"glide":     return "드론이 위에서 와요. 글라이드로 떠서 피하면서 처리해 보세요."
-		"fire_boost": return "자폭병이 붙기 전에 화력을 올려 두는 게 어때요?"
-	return "이 구역에 맞는 한 수가 있어요."
+		"explosive": return banded("방패병이 정면을 막습니다. 폭발물이면 방패째 뚫립니다.", "방패병이 정면을 막아요. 폭발물이면 방패째 뚫리죠.")
+		"barrier":   return banded("저격수가 노립니다. 방어막이 있으면 한 발은 막고 지나갑니다.", "저격수가 노리네요. 방어막이 있으면 한 발은 막고 지나가요.")
+		"glide":     return banded("드론이 위에서 옵니다. 글라이드로 떠서 피하며 처리하십시오.", "드론이 위에서 와요. 글라이드로 떠서 피하면서 처리해 보세요.")
+		"fire_boost": return banded("자폭병이 붙기 전에 화력부터 올려 두십시오.", "자폭병이 붙기 전에 화력을 올려 두는 게 어때요?")
+	return banded("이 구역에 맞는 한 수가 있습니다.", "이 구역에 맞는 한 수가 있어요.")
 
 static func get_death_briefing(death_count: int, followed_advice: bool) -> String:
 	# 어투 밴드(신뢰) × 맥락 + 실력 오버레이. (ACT/stage가 아니라 신뢰로 톤 결정.)

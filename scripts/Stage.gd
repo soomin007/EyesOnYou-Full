@@ -99,7 +99,7 @@ func _ready() -> void:
 		if GameState.veilsight_recon_active:
 			get_tree().create_timer(1.2, false).timeout.connect(func() -> void:
 				if is_inside_tree():
-					_show_veil_subtitle("정찰 데이터를 반영했어요. 이번 구간은 표시가 더 멀리, 방해 너머까지 닿습니다.", 3.6))
+					_show_veil_subtitle(VeilDialogue.banded("정찰 데이터를 반영했습니다. 이 구간의 숨겨진 레버와 보급품, 청색 표식으로 짚어 두겠습니다.", "정찰 데이터 반영했어요. 숨겨진 레버랑 보급품, 청색으로 짚어 둘게요."), 3.6))
 
 # 전파 간섭 펄스(중계소 시그니처) — MapData "interference" 키가 있으면 생성.
 # blackout은 VeilSight 자체가 없어(_setup_veil_sight early-return) 자동 무효.
@@ -220,7 +220,8 @@ func _setup_veil_mistakes() -> void:
 		var entry_rep: String = ""
 		for r in RouteData.ALL_ROUTES:
 			if r.get("id", "") == GameState.current_route_id:
-				entry = str(r.get("entry_comment", ""))
+				# 어투 밴드 스윕(2026-08-21): 기본 = 중립 보고체, warm 밴드는 _warm 변형(없으면 기본).
+				entry = VeilDialogue.banded(str(r.get("entry_comment", "")), str(r.get("entry_comment_warm", "")))
 				entry_rep = str(r.get("entry_comment_replay", ""))
 				break
 		# 다회차(완주 1회+/리플레이)면 그 맵의 진입 멘트 변형을 우선(있을 때만). 없으면 1회차 멘트.
@@ -291,7 +292,7 @@ func _on_ward_foreshadow_zone(body: Node) -> void:
 	ward_foreshadow_triggered = true
 	# 한 줄에 합쳐 큐 부담 최소화 — 이전 3줄(...,오래됐어요,봉인했는지 몰라요)이
 	# 이스터에그 paused 동안 쌓였다가 풀린 뒤 줄줄이 표시되어 겹친 듯 보이던 문제.
-	_show_veil_subtitle("이 구역은 오래됐어요. 누가 봉인했는지 저도 몰라요.", 3.6)
+	_show_veil_subtitle(VeilDialogue.banded("오래된 구역입니다. 누가 봉인했는지, 기록에 없습니다.", "이 구역은 오래됐어요. 누가 봉인했는지 저도 몰라요."), 3.6)
 
 func _arm_veil_mistake_at(trigger_x: float, before_line: String, after_line: String) -> void:
 	# 트리거가 월드 밖이면 (vertical 등 좁은 맵) 건너뛰기
@@ -407,16 +408,17 @@ func _fire_act3_vision(line: String) -> void:
 # 시야 역전 최고조 한 줄 (v3 §4). 스토리 s3 = 최고조(서버 접근 톤),
 # 일반 모드는 첫 ACT3(stage 5) 핵심부 진입 → 최종 stage 서버 접근으로 점증.
 func _act3_vision_line(stage: int) -> String:
+	# 서사 비트라 밴드 이원화(어투 스윕) — 기본 = 중립 보고체, warm은 기존 부드러운 문안 유지.
 	if GameState.story_mode:
 		# 보스 직전(stage 2)은 역전의 시작, 보스(stage 3)는 클라이맥스로 점증.
 		if stage >= 3:
-			return "여기는... 저도 안 보여요. 이제 요원이 봐요. 저는 들을게요."
-		return "여기서부터는 잘 안 보여요. 이제 요원이 제 눈이 돼 줘요."
+			return VeilDialogue.banded("여기는... 저도 안 보입니다. 이제 요원이 보십시오. 저는 듣겠습니다.", "여기는... 저도 안 보여요. 이제 요원이 봐요. 저는 들을게요.")
+		return VeilDialogue.banded("여기서부터는 잘 안 보입니다. 이제 요원이 제 눈입니다.", "여기서부터는 잘 안 보여요. 이제 요원이 제 눈이 돼 줘요.")
 	if stage >= GameState.effective_total_stages() - 1:
-		return "여기는... 저도 안 보여요. 이제 요원이 봐요. 저는 들을게요."
+		return VeilDialogue.banded("여기는... 저도 안 보입니다. 이제 요원이 보십시오. 저는 듣겠습니다.", "여기는... 저도 안 보여요. 이제 요원이 봐요. 저는 들을게요.")
 	# 본편 onset은 막5(재구조화 후) — 막3 붕괴·reveal·막4 추적을 다 겪은 뒤의 재발이라
 	# "처음 알리는" 옛 문장은 시점이 안 맞았다(2026-08-15 지적). 겪어 본 현상의 귀환 톤으로.
-	return "또 시작이네요. 심장부에 드니 시야가 다시 죽습니다. 전처럼, 안 보이는 쪽은 요원이 봐 줘요."
+	return VeilDialogue.banded("또 시작입니다. 심장부에 드니 시야가 다시 죽습니다. 전처럼, 안 보이는 쪽은 요원 몫입니다.", "또 시작이네요. 심장부에 드니 시야가 다시 죽습니다. 전처럼, 안 보이는 쪽은 요원이 봐 줘요.")
 
 # ─── 시야 붕괴 후 위험 미리 경고 (못 잡는 적 안내 §2) ───────────────
 # 이미 시야가 붕괴(GameState.veil_degraded)한 ACT3 후속 맵에 진입하면, VEIL은 함정·매복을
@@ -435,9 +437,9 @@ func _arm_degraded_hazard_warning() -> void:
 	var has_nest: bool = bool(_map_data.get("nest_snipers", false))
 	if not (has_traps or has_nest):
 		return
-	var line: String = "여기, 제가 잘 못 봐요. 함정이 있어도 못 짚어줄 수 있어요. 직접 살펴요."
+	var line: String = VeilDialogue.banded("여기는 제 시야가 흐립니다. 함정이 있어도 못 짚어줄 수 있습니다. 직접 살피십시오.", "여기, 제가 잘 못 봐요. 함정이 있어도 못 짚어줄 수 있어요. 직접 살펴요.")
 	if has_nest and not has_traps:
-		line = "여기, 제가 잘 못 봐요. 매복이 있어도 못 짚어줄 수 있어요. 직접 살펴요."
+		line = VeilDialogue.banded("여기는 제 시야가 흐립니다. 매복이 있어도 못 짚어줄 수 있습니다. 직접 살피십시오.", "여기, 제가 잘 못 봐요. 매복이 있어도 못 짚어줄 수 있어요. 직접 살펴요.")
 	# 진입 멘트(4.5s)가 가신 뒤 한 박자 늦게 — 겹쳐서 줄줄이 뜨지 않게.
 	var tw := create_tween()
 	tw.tween_interval(6.0)
@@ -987,14 +989,14 @@ func _on_locked_door_approached(body: Node) -> void:
 	# 첫 진입 시 VEIL 발화 (1회만) — 한 호흡으로 두 줄 묶음.
 	if not locked_door_triggered:
 		locked_door_triggered = true
-		_show_veil_subtitle("그쪽은 임무 범위 밖이에요.\n그 문, 도면에는 없어요.", 3.5)
+		_show_veil_subtitle(VeilDialogue.banded("그쪽은 임무 범위 밖입니다.\n그 문, 도면에 없습니다.", "그쪽은 임무 범위 밖이에요.\n그 문, 도면에는 없어요."), 3.5)
 
 func _on_arcturus_lever_pulled(_id: String) -> void:
 	# 레버를 당겼다 — 발판 활성. 이미 발판 위에 서 있으면 PressurePlate.arm()이 즉시 step.
 	if arcturus_plate != null and is_instance_valid(arcturus_plate):
 		arcturus_plate.arm()
 	_unlock_door_visual()
-	_show_veil_subtitle("뭔가 풀렸어요. 잠긴 문 앞 발판 위로.", 3.0)
+	_show_veil_subtitle(VeilDialogue.banded("잠금 하나가 풀렸습니다. 잠긴 문 앞, 발판 위입니다.", "뭔가 풀렸어요. 잠긴 문 앞 발판 위로."), 3.0)
 
 # 잠긴 문 시각 전환 — ACCESS DENIED(빨강 펄스) → ACCESS GRANTED(초록 고정).
 # 사용자: 레버로 열어도 여전히 DENIED로 떠 의도가 안 보였음 → 잠금 해제 피드백으로 전환.
@@ -3204,7 +3206,8 @@ class _RouteLineTriggers extends Node:
 			elif ppos.x < float(d.get("x", 0.0)):
 				continue
 			_fired.append(i)
-			var txt: String = str(d.get("text", ""))
+			# 어투 밴드 스윕(2026-08-21): 기본 = 중립 보고체("text"), warm 밴드는 "text_warm"(있을 때만).
+			var txt: String = VeilDialogue.banded(str(d.get("text", "")), str(d.get("text_warm", "")))
 			var dur: float = float(d.get("dur", 3.2))
 			if bool(d.get("glitch", false)):
 				host.call("_run_glitch", 0.4, 0.3)
@@ -3479,11 +3482,11 @@ func _tick_mid_gate(_delta: float) -> void:
 		# 문구는 화면에 보이는 것의 일상어만 · 설계 용어(격벽·동기) 노출 금지(사용자 2026-08-17).
 		match _mid_gate_mode:
 			"lever":
-				_show_veil_subtitle("게이트가 잠겨 있어요. 근처 동력 레버를 찾으세요.", 3.2)
+				_show_veil_subtitle(VeilDialogue.banded("게이트가 잠겨 있습니다. 근처 동력 레버를 찾으십시오.", "게이트가 잠겨 있어요. 근처 동력 레버를 찾으세요."), 3.2)
 			"clear":
-				_show_veil_subtitle("잠긴 게이트입니다. 바닥에 노란 선으로 칠해 둔 구역, 그 안의 경비만 정리하면 열려요.", 3.6)
+				_show_veil_subtitle(VeilDialogue.banded("잠긴 게이트입니다. 바닥에 노란 선으로 칠한 구역, 그 안의 경비만 정리하면 열립니다.", "잠긴 게이트예요. 바닥에 노란 선으로 칠해 둔 구역, 그 안의 경비만 정리하면 열려요."), 3.6)
 			"beam":
-				_show_veil_subtitle("게이트는 스캔 빔이 지나갈 때만 열려요. 빔을 뒤따라 통과하세요.", 3.6)
+				_show_veil_subtitle(VeilDialogue.banded("게이트는 스캔 빔이 지날 때만 열립니다. 빔 뒤에 붙어 통과하십시오.", "게이트는 스캔 빔이 지나갈 때만 열려요. 빔을 뒤따라 통과하세요."), 3.6)
 	if _mid_gate_mode == "beam" and _sweep_beam_node != null and is_instance_valid(_sweep_beam_node):
 		var bx: float = float(_sweep_beam_node.get("_beam_x"))
 		_set_mid_gate_pass(bx > _mid_gate_x + 40.0 and bx < _mid_gate_x + 940.0)
@@ -6149,7 +6152,7 @@ func _spawn_boss(boss_meta: Dictionary) -> void:
 	# 보스전 진입 안내 — 본편은 인트로 컷씬의 VEIL 대사가 대신한다(중복 방지). 스토리 모드는 인트로가
 	# 없으므로 기존 1회성 안내 유지(피드백: 사격법 혼란).
 	if GameState.story_mode:
-		_show_boss_alert("빨간 불빛이 번뜩이면 그 자리를 비켜요. 신호가 멎은 틈에 쏘면 돼요.", Color(0.95, 0.55, 0.55), 4.0)
+		_show_boss_alert("빨간 불빛이 번뜩이면 그 자리를 비키십시오. 신호가 멎은 틈이 사격 타이밍입니다.", Color(0.95, 0.55, 0.55), 4.0)
 	# §7 복선 — 전투 중 가끔 거짓-렌더 tell과 똑같은 지직거림을 흘린다(1회차엔 못 잡고, reveal 후 재해석).
 	_start_boss_glitch_foreshadow()
 	_play_boss_intro()
@@ -6210,16 +6213,16 @@ func _on_boss_phase_changed(new_phase: int) -> void:
 	_camera_shake(8.0 if new_phase == 2 else 14.0, 0.45)
 	match new_phase:
 		2:
-			_show_boss_alert("패턴이 바뀌었어요. 양쪽 조심해요.", Color(1.0, 0.78, 0.40), 3.0)
+			_show_boss_alert("패턴이 바뀌었습니다. 양쪽 경계.", Color(1.0, 0.78, 0.40), 3.0)
 		3:
-			_show_boss_alert("불안정해졌어요. 거리 두고 빠르게.", Color(1.0, 0.45, 0.45), 3.0)
+			_show_boss_alert("코어가 불안정합니다. 거리 두고, 빠르게.", Color(1.0, 0.45, 0.45), 3.0)
 
 # 첫 과부하 배기 — 무적+김의 "왜"를 한 번은 말로(2026-08-20 사용자 "뭐라도 이해가 되게").
 func _on_boss_vent_started() -> void:
 	if _boss_vent_line_shown:
 		return
 	_boss_vent_line_shown = true
-	_show_veil_subtitle("김을 빼는 동안엔 총알이 안 박힙니다. 대신 쏠수록 배출이 빨라져요. 그 사이 증원도 정리하고요.", 4.2)
+	_show_veil_subtitle(VeilDialogue.banded("김을 빼는 동안엔 총알이 안 박힙니다. 대신 쏠수록 배출이 빨라집니다. 그 사이 증원부터 정리하십시오.", "김을 빼는 동안엔 총알이 안 박힙니다. 대신 쏠수록 배출이 빨라져요. 그 사이 증원도 정리하고요."), 4.2)
 
 # ─── 보스 인트로 컷씬(2026-08-10 사용자 제안) — Violet Signal 빌드업(0~25s)에 맞춘 대사 비트 ───
 # 보스 AI 정지(intro_hold) + 전투 입력 잠금 + 레터박스 + SENTINEL/VEIL 대사. 점프/사격/확인 키로
@@ -6281,7 +6284,7 @@ func _run_boss_intro_beats(bars: CanvasLayer) -> void:
 		skipped = await _boss_intro_wait(5.6)
 	if not skipped:
 		# "커요"만 쓰면 주어 실종(사용자 지적 2026-08-10) — 대상을 명시.
-		_show_veil_subtitle("상대가 커요. 그래도 눈은 제가 돼 드릴게요. 빨간 신호가 멎은 틈에 쏴요.", 5.4)
+		_show_veil_subtitle(VeilDialogue.banded("상대가 큽니다. 눈은 제가 맡습니다. 빨간 신호가 멎은 틈에 쏘십시오.", "상대가 커요. 그래도 눈은 제가 돼 드릴게요. 빨간 신호가 멎은 틈에 쏴요."), 5.4)
 		skipped = await _boss_intro_wait(6.2)
 	if not skipped:
 		_show_boss_alert("제거를 시작한다.", Color(1.0, 0.30, 0.28), 3.0)
@@ -6365,7 +6368,7 @@ func _on_boss_self_destruct_disarmed() -> void:
 	# 위장 자폭 재기동(보스 생존) vs 진짜 사망 — 같은 시그널이라 생존 여부로 가른다.
 	var b: Node = get_tree().get_first_node_in_group("boss")
 	if b != null and is_instance_valid(b) and not bool(b.get("dead")):
-		_show_veil_subtitle("...자폭이 위장이에요. 코어가 다시 점화됩니다. 침착하게, 마무리하세요.", 3.6)
+		_show_veil_subtitle(VeilDialogue.banded("...자폭은 위장입니다. 코어가 다시 점화됩니다. 침착하게, 마무리하십시오.", "...자폭이 위장이에요. 코어가 다시 점화됩니다. 침착하게, 마무리하세요."), 3.6)
 
 func _on_boss_killed(at_position: Vector2) -> void:
 	# Boss는 ARENA enemy_clear에 자연스럽게 잡히도록 wave_idx=-1로 처리하되,
@@ -7002,7 +7005,7 @@ func _rival_intro_veil_line() -> void:
 	if not is_inside_tree() or goal_reached:
 		return
 	# 실물과 단어 일치 원칙(2026-08-14 "기둥" 반려) · 리워크 후 실물 = 상층 데크의 관측 안테나.
-	_show_veil_subtitle("적은 끝이 없습니다. 다 잡을 필요는 없어요. 증원은 위층의 관측 안테나가 부릅니다. 저것부터 부수십시오.", 3.8)
+	_show_veil_subtitle("적은 끝이 없습니다. 다 잡을 생각은 마십시오. 증원은 위층의 관측 안테나가 부릅니다. 저것부터 부수십시오.", 3.8)
 
 func _start_rival_p2() -> void:
 	if _rival_phase != 0 or goal_reached or not is_inside_tree():
@@ -7166,7 +7169,7 @@ func _rival_p2_objective_line() -> void:
 	if not is_inside_tree() or goal_reached or _rival_phase != 1:
 		return
 	# 케이블 시각과 짝 · 장치의 기능(포탑 전원)을 한 번만 말로 짚는다. 단어는 실물(제어 코어)과 일치.
-	_show_veil_subtitle("포탑 전원이 발판의 저 낮은 제어 코어 둘에서 옵니다. 끊는 만큼 조용해져요. 방패는 한쪽뿐입니다.", 3.6)
+	_show_veil_subtitle("포탑 전원은 발판의 저 낮은 제어 코어 둘. 끊는 만큼 조용해집니다. 방패는 한쪽뿐입니다.", 3.6)
 
 # P2 노드 격파 → 그 노드가 전원을 대던 같은 쪽 포탑(하·중층 2기)이 죽는다 · 파괴의 보상 즉시 체감.
 func _on_p2_node_down(_pos: Vector2, side: int) -> void:
@@ -7185,7 +7188,7 @@ func _on_p2_node_down(_pos: Vector2, side: int) -> void:
 		tel.lifetime = 1.1
 		tel.position = Vector2(rx, 1010.0)
 		add_child(tel)
-		_show_veil_subtitle("...같은 자리에 회선이 다시 붙어요. 한 번 더 끊어야 합니다.", 3.2)
+		_show_veil_subtitle("...같은 자리에 회선이 다시 붙습니다. 한 번 더 끊어야 합니다.", 3.2)
 		get_tree().create_timer(1.1, false).timeout.connect(_p2_respawn_node.bind(side, rx))
 	if side < _p2_links.size():
 		var link = _p2_links[side]
@@ -7719,12 +7722,12 @@ func _p3_tell_line() -> void:
 	if not is_inside_tree() or goal_reached:
 		return
 	# 강의식 3문장 → 2문장 압축("작위적" 반려 2026-08-14). 탄 통과 tell은 시각(찢김)이 담당.
-	_show_veil_subtitle("굵은 표식은 제 것이 아닙니다. 저건 몸이 없어요.", 3.0)
+	_show_veil_subtitle("굵은 표식은 제 것이 아닙니다. 저건 몸이 없습니다.", 3.0)
 
 func _p3_unmarked_line() -> void:
 	if not is_inside_tree() or goal_reached or _rival_phase != 2:
 		return
-	_show_veil_subtitle("진짜는 표식 없이 옵니다. 가장자리는 직접 봐요.", 3.0)
+	_show_veil_subtitle("진짜는 표식 없이 옵니다. 가장자리는 직접 보십시오.", 3.0)
 
 # ─── P3 분신전 — 거짓 VEIL(FalseVeil) + 무표시 위협 + 신뢰=지각 보조 ───
 var _false_veil: Node2D = null
@@ -7740,7 +7743,7 @@ func _on_p3_window_capped() -> void:
 		return
 	_p3_cap_spoken = true
 	# "실체화 창"은 설계 용어 · 플레이어에겐 보이는 대로("모습을 드러낼 때"). 2026-08-17.
-	_show_veil_subtitle("깊게는 안 박힙니다. 몸을 물렸어요. 모습을 드러낼 때마다 조금씩, 확실하게.", 3.2)
+	_show_veil_subtitle("깊게는 안 박힙니다. 그래도 몸은 물었습니다. 모습을 드러낼 때마다 조금씩, 확실하게.", 3.2)
 
 # P3 보스 체력바 — SENTINEL 바 문법 재사용. 잠복/실체는 텍스트 라벨 대신 본체의 시각 언어
 # (잠복 = 스캔라인 그림 + 탄 통과 파문 / 실체 = 꽉 찬 몸 + 링)와 바 밝기로만 전달
@@ -7911,7 +7914,7 @@ func _veil_assist_tick() -> void:
 		return
 	if bool(_false_veil.call("erase_one_fake")) and not _p3_assist_spoken:
 		_p3_assist_spoken = true
-		_show_veil_subtitle("제 것이 아닌 표식이 섞였습니다. 걷어낼게요.", 2.6)
+		_show_veil_subtitle("제 것이 아닌 표식이 섞였습니다. 걷어냅니다.", 2.6)
 
 func _on_false_veil_defeated() -> void:
 	if _rival_phase != 2 or goal_reached:
@@ -7982,7 +7985,7 @@ func _reward_shiny_kill(pos: Vector2) -> void:
 	# 폰 경로 — 키보드 없는 기기에서도 코나미 대신 황금 3처치로 숨은 색 잠금 해제.
 	if GameState.shiny_kills >= 3 and not GameState.alt_skin_unlocked:
 		GameState.alt_skin_unlocked = true
-		_show_veil_subtitle("황금을 세 번 알아봤어요. 숨겨둔 색을 드릴게요.", 3.0)
+		_show_veil_subtitle(VeilDialogue.banded("황금 개체, 세 번째 확인입니다. 보관해 둔 색을 하나 드리겠습니다.", "황금을 세 번 알아봤네요. 숨겨둔 색을 드릴게요."), 3.0)
 	GameState.save_settings()
 	SfxPlayer.play_at("bestiary_first_seen", pos)
 
@@ -8038,10 +8041,11 @@ func _show_shiny_toast(pos: Vector2) -> void:
 	tw.parallel().tween_property(lbl, "modulate:a", 0.0, 0.9)
 	tw.tween_callback(lbl.queue_free)
 
-func _spawn_orb(pos: Vector2, static_placement: bool = false, attract_range: float = -1.0, is_gate: bool = false) -> void:
+func _spawn_orb(pos: Vector2, static_placement: bool = false, attract_range: float = -1.0, is_gate: bool = false) -> Node2D:
 	# static_placement=true면 bounce 스킵 — 분기 보상으로 미리 배치된 orb는 그 자리에 그대로 둠.
 	# is_gate=true면 글라이드 게이트 전용 보상 — 일반 오브와 성질이 다름을 모양·색으로 구분하고
 	# 개당 가치를 높인다(글라이드 투자 보상). 흡인은 작게 + 벽/바닥 너머론 안 끌려옴(ExpOrb LoS).
+	# 반환값은 정찰 POI 등록용(_build_rewards) — 다른 호출처는 무시해도 된다.
 	var orb := Node2D.new()
 	orb.set_script(load("res://scripts/ExpOrb.gd"))
 	var sprite := ColorRect.new()
@@ -8093,8 +8097,9 @@ func _spawn_orb(pos: Vector2, static_placement: bool = false, attract_range: flo
 		orb.set("attract_range", 44.0)
 	elif attract_range > 0.0:
 		orb.set("attract_range", attract_range)
+	return orb
 
-func _spawn_hp_orb(pos: Vector2) -> void:
+func _spawn_hp_orb(pos: Vector2) -> Node2D:
 	# 분기 보상으로 미리 배치된 HP 회복 픽업 (적 처치 드롭과 별개).
 	var orb := Node2D.new()
 	orb.set_script(load("res://scripts/HpOrb.gd"))
@@ -8130,19 +8135,22 @@ func _spawn_hp_orb(pos: Vector2) -> void:
 	tw.set_loops()
 	tw.tween_property(halo, "modulate:a", 0.4, 0.7)
 	tw.tween_property(halo, "modulate:a", 1.0, 0.7)
+	return orb
 
 func _build_rewards() -> void:
 	# MapData에 명시된 분기 보상 (XP 다발 + HP 픽업)을 미리 배치.
 	# 적 처치 드롭과 달리 bounce 없이 그 자리에 그대로 떠 있다 (분기 도달 보상이라 위치가 의미).
+	# 미리 배치된 보상은 정찰 POI 그룹에 등록 — 정찰 보상(재정의 2026-08-21) 활성 시 VeilSight가
+	# 청색 표식으로 짚는다. 적 처치 드롭은 제외(숨은 요소가 아님).
 	var rewards: Dictionary = _map_data.get("rewards", {})
 	for pos in rewards.get("xp_orbs", []):
-		_spawn_orb(pos, true)
+		_spawn_orb(pos, true).add_to_group("recon_poi")
 	# 글라이드 게이트 보상 — is_gate로 황금 마름모 + 가치 3 + 흡인 44px + LoS 차단.
 	# 실제 알코브에 삼단점프로 도달해야만 획득 → 게이트 의미 보존(아래/옆 메인 경로에서 안 빨려옴).
 	for pos in rewards.get("gate_orbs", []):
-		_spawn_orb(pos, true, -1.0, true)
+		_spawn_orb(pos, true, -1.0, true).add_to_group("recon_poi")
 	for pos in rewards.get("hp_pickups", []):
-		_spawn_hp_orb(pos)
+		_spawn_hp_orb(pos).add_to_group("recon_poi")
 
 # ─── 레버 퍼즐 — 비밀칸/이스터에그 시스템 ─────────────────────
 # 맵별로 레버를 배치하고 pulled 시그널에 효과를 연결한다.
@@ -8209,12 +8217,15 @@ func _spawn_closed_hatch(pos: Vector2, size: Vector2, hint_color: Color) -> Node
 	lock.size = Vector2(6.0, 6.0)
 	root.add_child(lock)
 	root.set_meta("opened", false)
+	# 비밀 칸(해치)도 정찰 POI — 정찰 보상 활성 시 VeilSight가 위치를 짚는다.
+	root.add_to_group("recon_poi")
 	return root
 
 func _open_hatch(hatch: Node2D) -> void:
 	if hatch.get_meta("opened", false):
 		return
 	hatch.set_meta("opened", true)
+	hatch.remove_from_group("recon_poi")   # 열린 칸은 더 짚을 필요 없음
 	SfxPlayer.play("hatch_open")
 	var tw := hatch.create_tween()
 	tw.set_parallel(true)
@@ -8300,7 +8311,7 @@ func _build_server_hall_secret() -> void:
 		# speaker 비트로 넣어도 종이 위에 그려져 "문서에 적힌 글"로 읽힘(사용자 지적 2026-08-16).
 		doc.finished.connect(func() -> void:
 			get_tree().create_timer(0.8, false).timeout.connect(func() -> void:
-				_show_veil_subtitle("...이 기록, 제가 남긴 게 아니에요.", 4.0))
+				_show_veil_subtitle(VeilDialogue.banded("...이 기록, 제가 남긴 게 아닙니다.", "...이 기록, 제가 남긴 게 아니에요."), 4.0))
 		)
 		doc.show_doc(_server_log_doc_lines())
 	)
@@ -8336,7 +8347,7 @@ func _build_datacenter_secret() -> void:
 	lever.pulled.connect(func(_id: String) -> void:
 		_set_spike_group_active(spike_a, false)
 		_set_spike_group_active(spike_b, false)
-		_show_veil_subtitle("전기가 끊겼어요. 발 밑 가시 무력화.", 3.0)
+		_show_veil_subtitle(VeilDialogue.banded("전원 차단 확인. 발밑 가시 무력화.", "전기가 끊겼어요. 발 밑 가시 무력화."), 3.0)
 	)
 
 # ── back_alley 비밀칸 ─────────────────────────────────────────
@@ -8363,7 +8374,7 @@ func _build_back_alley_secret() -> void:
 			_spawn_orb(p, true)
 		# 첫 레버 튜토리얼: 레버↔해치가 1000px 떨어져 인과가 한 화면에 안 보임 → VEIL이
 		# 무엇을/어디를 열었는지 방향까지 짚어준다(사용자: "뭘 여는 건지 알려주는 기능이 모자람").
-		_show_veil_subtitle("잠긴 칸이 열렸어요. 바로 앞, 위로 올라가 봐요.", 3.2)
+		_show_veil_subtitle("잠긴 칸이 열렸습니다. 바로 앞, 위로 올라가 보십시오.", 3.2)
 	)
 
 # ── cooling 비밀칸 (후반 맵 레버 강화 — back_alley 인과를 한 번 더) ──────────────
@@ -8377,7 +8388,7 @@ func _build_cooling_secret() -> void:
 		var spots: Array = [Vector2(1510.0, 354.0), Vector2(1560.0, 348.0), Vector2(1610.0, 354.0)]
 		for p in spots:
 			_spawn_orb(p, true)
-		_show_veil_subtitle("여기도 잠긴 칸이었네요. 발밑 보급품을 챙겨요.", 3.0)
+		_show_veil_subtitle(VeilDialogue.banded("여기도 잠긴 칸이었습니다. 발밑 보급품을 챙기십시오.", "여기도 잠긴 칸이었네요. 발밑 보급품을 챙겨요."), 3.0)
 	)
 
 # ── rooftops 비밀칸 ───────────────────────────────────────────
@@ -8519,7 +8530,7 @@ func _on_goal_reached(body: Node) -> void:
 	# 도전 방: 실패 상태에선 골 도달해도 보너스 없음 (이미 fail 분기로 처리됨)
 	if challenge_active and not challenge_failed:
 		GameState.add_xp(challenge_xp_on_clear, false)
-		_show_veil_subtitle("혼자 해냈네요, 요원.", 2.5)
+		_show_veil_subtitle(VeilDialogue.banded("도전 완수 확인. 교신도 없이 해내셨습니다.", "혼자 해냈네요, 요원."), 2.5)
 	goal_reached = true
 	GameState.profile_stage_end(_profile_alive_enemies())
 	# 연습장 · 출구 도달 = 세계 정지(설정 조작 중 수위·열차 등 해저드에 죽는 것 방지,
@@ -8586,7 +8597,7 @@ func _on_searchlight_alert(ppos: Vector2) -> void:
 		_searchlight_line_shown = true
 		# "감시등" = 감시탑 탐조등·순찰로 경계등의 상위 일상어(맵 공용 콜아웃).
 		# 위압감 재작업(사용자 2026-08-17 "파밍용 졸개라 오히려 좋아") · 진압 경비 = 무보상 고지.
-		_show_veil_subtitle("감시등에 걸렸어요. 진압 경비가 붙었어요. 잡아도 남는 게 없으니, 빛을 피해요.", 3.8)
+		_show_veil_subtitle(VeilDialogue.banded("감시등 노출. 진압 경비가 붙습니다. 잡아도 남는 게 없으니, 빛부터 피하십시오.", "감시등에 걸렸어요. 진압 경비가 붙어요. 잡아도 남는 건 없으니, 빛부터 피해요."), 3.8)
 	if _searchlight_reinforced >= 2:
 		return
 	_searchlight_reinforced += 1
@@ -8842,7 +8853,7 @@ func _begin_clear_sequence() -> void:
 	if _check_pacifist_clear():
 		GameState.pacifist_line_shown = true
 		delay = maxf(delay, 3.2)   # 대사 읽을 여유
-		_show_veil_subtitle("한 발도 안 쏘고 지나왔네요. 그것도 하나의 답이겠죠.", 3.0)
+		_show_veil_subtitle(VeilDialogue.banded("한 발도 쏘지 않으셨군요. 그런 답도 있습니다.", "한 발도 안 쏘고 지나왔네요. 그것도 하나의 답이겠죠."), 3.0)
 	# 회수 문서 연출(ArcturusDocumentOverlay, layer 25)이 클리어 후 화면을 덮는 맵은 클리어 페이드
 	# (layer 38)가 문서를 가린다 → 페이드 생략(문서 자체 배경으로 어두워짐). ④ 이후 종이 문서는
 	# 스토리 lab 경로에만 남고, core_recovery는 터널 씬으로 전환이라 페이드가 자연스러운 이음새
@@ -9072,7 +9083,7 @@ func _challenge_fail(_reason: String) -> void:
 	get_tree().paused = false
 	GameState.restrict_combat_input = false
 	# VEIL 실패 대사 + 조용히 다음 stage로 (보상 0, 페널티 없음).
-	_show_veil_subtitle("괜찮아요. 다음 구역으로 가요.", 2.5)
+	_show_veil_subtitle(VeilDialogue.banded("괜찮습니다. 다음 구역으로 갑니다.", "괜찮아요. 다음 구역으로 가요."), 2.5)
 	await get_tree().create_timer(2.8).timeout
 	if goal_reached:
 		return
@@ -9180,7 +9191,7 @@ func _tick_trap_warning() -> void:
 				_trap_warned = true
 				# 시야 붕괴(ACT3) 후엔 마커로 못 짚어주니 "잘 안 보인다"는 톤으로.
 				if GameState.veil_degraded:
-					_show_veil_subtitle("앞에 함정이 있는 것 같아요. 잘 안 보여요. 발밑·천장 조심해요.", 3.4)
+					_show_veil_subtitle("전방에 함정 신호. 확신이 없습니다. 발밑과 천장을 직접 살피십시오.", 3.4)
 				else:
 					# 런당 2회까지만 — 함정 맵마다 같은 멘트가 반복돼 지겹다는 피드백(2026-08-11).
 					# 붕괴 경고는 상황성(그 맵의 시야 상태)이라 제한 없이 유지. 어투 = 전술 보고체.
@@ -9204,9 +9215,9 @@ func _tick_avoid_warning() -> void:
 		if player.global_position.distance_to(en.global_position) < 430.0:
 			_avoid_warned = true
 			if GameState.veil_degraded:
-				_show_veil_subtitle("저 위 저격수... 잘 안 보여요. 조준선만 피하든지, 글라이드로 덮쳐요.", 3.6)
+				_show_veil_subtitle("저 위 저격수, 제 쪽에선 흐릿합니다. 조준선을 피하거나, 글라이드로 위에서 덮치십시오.", 3.6)
 			else:
-				_show_veil_subtitle("저 저격수, 정면으론 안 닿아요. 조준선 피해 가거나 글라이드로 위에서 덮쳐요.", 3.6)
+				_show_veil_subtitle("저 저격수는 정면으로 안 닿습니다. 조준선을 피해 가거나, 글라이드로 위에서 덮치십시오.", 3.6)
 			return
 
 # ─── 도전 방(블랙아웃 런) — world_layout §3.2 ───
@@ -9336,7 +9347,7 @@ func _build_challenge_gate() -> void:
 	challenge_plate.global_position = Vector2(gate_x - 70.0, GROUND_Y - 5.0)
 	challenge_plate.stepped.connect(_on_challenge_plate_stepped)
 	# VEIL 사전 경고 — 발판이 뭔지 알려주기.
-	_show_veil_subtitle("이 안은 통신이 끊겨요. 발판 밟으면 시작이에요.\n한 대만 맞아도 끝.", 4.0)
+	_show_veil_subtitle("이 안은 통신이 끊깁니다. 발판을 밟으면 시작입니다.\n한 대만 맞아도 끝.", 4.0)
 
 func _on_challenge_plate_stepped(_id: String) -> void:
 	if not challenge_pending:
@@ -9547,7 +9558,7 @@ func _on_arcturus_lines_done() -> void:
 	GameState.save_settings()
 	GameState.restrict_combat_input = false
 	# VEIL outro — VEIL-1/VEIL-2 시퀀스 직후라 em dash 없이 화자 라벨만(시각 일관성).
-	_show_veil_subtitle("저도 이 파일들 읽은 적 있어요.\n계속 가요, 요원.", 3.2, true)
+	_show_veil_subtitle(VeilDialogue.banded("저도 이 파일들, 읽은 적 있습니다.\n계속 가시죠, 요원.", "저도 이 파일들 읽은 적 있어요.\n계속 가요, 요원."), 3.2, true)
 
 # ARCTURUS 아카이브 문서 — 3 단말기.
 # kind: "title" (큰 헤더) / "speaker" (회색 작은 발화자) / "body" (본문) / "blank" (간격)

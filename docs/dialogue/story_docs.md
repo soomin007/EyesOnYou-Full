@@ -296,7 +296,10 @@ visited_arcturus 영속.
 - 화자: VEIL
 - 맥락: 문서를 닫은 직후 인게임 자막.
 - 코드: `Stage.gd` `_on_arcturus_lines_done`
-- KO:
+- KO(기본):
+  > 저도 이 파일들, 읽은 적 있습니다.
+  > 계속 가시죠, 요원.
+- KO(warm):
   > 저도 이 파일들 읽은 적 있어요.
   > 계속 가요, 요원.
 - EN:
@@ -332,7 +335,9 @@ visited_arcturus 영속.
 - 화자: VEIL
 - 맥락: 서버 로그 문서를 닫고 0.8초 뒤 인게임 자막 1줄.
 - 코드: `Stage.gd` `_build_server_hall_secret` (doc.finished 연결)
-- KO:
+- KO(기본):
+  > ...이 기록, 제가 남긴 게 아닙니다.
+- KO(warm):
   > ...이 기록, 제가 남긴 게 아니에요.
 - EN:
 

@@ -22,6 +22,9 @@ var _prompt: Label  # 근접 시 "공격으로 당기기" 안내 (피드백: 레
 
 func _ready() -> void:
 	add_to_group("lever")
+	# 정찰 POI(보상 재정의 2026-08-21) — 정찰 보상 활성 시 VeilSight가 위치를 청색으로 짚는다.
+	# 당겨진 레버는 try_pull에서 그룹 제거(발견이 끝난 요소는 안 짚음).
+	add_to_group("recon_poi")
 	collision_layer = 0
 	collision_mask = 2  # 플레이어 layer (Player.gd 기준 layer 2)
 	monitoring = true
@@ -104,6 +107,7 @@ func try_pull() -> bool:
 	if active and one_shot:
 		return false
 	active = true
+	remove_from_group("recon_poi")   # 정찰 표식 해제 — 이미 찾은 요소
 	if one_shot:
 		locked = true
 		# 플레이어가 이 레버를 더 이상 참조하지 않도록 정리

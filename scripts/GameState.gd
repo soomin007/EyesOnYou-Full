@@ -155,7 +155,7 @@ var current_segment: int = 0
 var current_route_tags: Array = []
 var current_route_risk: int = 1   # 1~3, 적 수 배율 + 행동 강화에 사용
 # 보상 축 개편(2026-08-19): 클리어 XP = risk. reward_type은 부가 효과 종류
-# ("xp" 경험치 +2 / "record" 기록 1칸 / "recon" 다음 구간 마킹 강화 / "" 없음).
+# ("xp" 경험치 +2 / "record" 기록 1칸 / "recon" 다음 구간 숨은 요소 표시(재정의 08-21) / "" 없음).
 var current_route_reward_type: String = ""
 var current_route_challenge: bool = false  # 도전 맵 여부 — 고비 판정용
 var current_route_hidden: bool = false     # 히든 맵 여부 — 고비 판정용
@@ -559,7 +559,7 @@ func record_route_choice(route: Dictionary, recommended_id: String) -> void:
 	current_route_tags = route.get("tags", [])
 	current_route_risk = int(route.get("risk", 1))
 	current_route_reward_type = str(route.get("reward_type", ""))
-	# 정찰 보상 발동 — 직전 클리어가 recon이면 이번 스테이지 내내 마킹 강화.
+	# 정찰 보상 발동 — 직전 클리어가 recon이면 이번 스테이지 내내 숨은 요소 표시(+관통).
 	veilsight_recon_active = veilsight_recon_next
 	veilsight_recon_next = false
 	recon_note_pending = veilsight_recon_active
@@ -847,7 +847,7 @@ func on_stage_clear() -> bool:
 					leveled = true
 		"recon":
 			veilsight_recon_next = true
-			last_clear_reward_note = "정찰 데이터 확보 · 다음 구간 표시 강화"
+			last_clear_reward_note = "정찰 데이터 확보 · 다음 구간 숨은 요소 표시"
 	# D축 단일 기록 — 이 스테이지를 사망 없이 통과(재시도 포함 전체 창 기준, 덮어쓰기 한도의 당근 짝).
 	last_clear_flawless = deaths_this_stage == 0 and not story_mode and not playground_active
 	if last_clear_flawless:

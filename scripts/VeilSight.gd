@@ -19,10 +19,12 @@ signal veil_calls_threat(text: String)
 var player: Node2D = null
 
 const DETECT_RADIUS: float = 1400.0           # 이 안의 위협을 VEIL이 본다 (≈ 화면 한 칸)
-const RECON_RADIUS_MUL: float = 2.5           # 정찰 보상 탐지 반경 배수
-# 정찰 보상 활성(이 스테이지 한정) — _ready에서 GameState 캡처. 시각 마커에만 적용,
-# 음성 위협 콜은 근접 밴드 규칙(240px) 유지.
+# 정찰 보상 활성(이 스테이지 한정) — _ready에서 GameState 캡처.
+# 재정의(2026-08-21 사용자 승인): 반경 확대(구 2.5배) 폐지 → 숨은 요소 표시("recon_poi" 그룹 =
+# 레버·비밀 칸·미리 놓인 보급품)를 청색 POI 마커로 짚는다. 재밍·간섭·붕괴 관통은 유지
+# (사전 좌표 확보 서사). 음성 위협 콜은 근접 밴드 규칙(240px) 그대로.
 var _recon: bool = false
+const POI: Color = Color(0.55, 0.85, 0.95)    # 정찰 POI — ARCTURUS 청색(레버 hint glow와 통일)
 # 전파 간섭 펄스(중계소 · Interference가 매 틱 세팅) — 0~1, 마커 알파를 깎는다. recon은 관통.
 var interference: float = 0.0
 const CALM: Color = Color(0.42, 0.86, 1.0)    # 평시 — VEIL 시안 (자막 색과 통일감)
@@ -66,7 +68,7 @@ func _ready() -> void:
 	_fit_to_viewport()
 	get_viewport().size_changed.connect(_fit_to_viewport)
 	_build_vignette()
-	# 정찰 보상(reward_type "recon") — 이 스테이지 한정 마킹 강화: 탐지 반경 2.5배 +
+	# 정찰 보상(reward_type "recon") — 이 스테이지 한정: 숨은 요소(POI) 표시 +
 	# 재밍·붕괴 블라인드 관통. GameState 플래그를 _ready에서 캡처(degraded와 동형 패턴).
 	_recon = GameState.veilsight_recon_active
 	# 이전 맵에서 이미 시야가 붕괴했다면 이 맵도 처음부터 어두운 상태로(전환 애니 없이 즉시).
@@ -273,7 +275,11 @@ func _call_threat(spos: Vector2, center: Vector2) -> void:
 		else:
 			line = "위험한 건 제가 먼저 확인하겠습니다. 화면 끝에 띄워둘 테니, 요원은 전방만 보십시오."
 	elif _is_degraded():
-		line = dir_txt + " 어딘가... 저도 잘 안 보여요. 직접 살펴요."
+		# 어투 밴드 스윕(2026-08-21): 기본 = 중립 보고체, warm만 부드럽게.
+		if band == "warm":
+			line = dir_txt + " 어딘가... 저도 잘 안 보여요. 직접 살펴요."
+		else:
+			line = dir_txt + " 어딘가... 저도 잘 안 보입니다. 직접 살피십시오."
 	elif band == "cold":
 		line = dir_txt + ", 표시하겠습니다."
 	else:
@@ -327,7 +333,7 @@ func _draw() -> void:
 		if not is_instance_valid(en) or bool(en.get("dead")):
 			continue
 		var wpos: Vector2 = en.global_position
-		if ppos.distance_to(wpos) > DETECT_RADIUS * (RECON_RADIUS_MUL if _recon else 1.0):
+		if ppos.distance_to(wpos) > DETECT_RADIUS:
 			continue
 		var id: int = en.get_instance_id()
 		alive[id] = true
@@ -392,6 +398,48 @@ func _draw() -> void:
 		for k in _seen.keys():
 			if not alive.has(k):
 				_seen.erase(k)
+	# ── 정찰 POI 마커(보상 재정의 2026-08-21) — 숨은 요소(레버·비밀 칸·미리 놓인 보급품)를
+	# 청색으로 짚는다. 거리 제한 없음(사전 정찰 데이터 서사) + 재밍·간섭 관통(alpha 감쇠 없이).
+	# 화면 밖은 가장자리의 작은 속빈 다이아 점 — 위협 화살표(삼각형)와 문법을 갈라 혼동 방지.
+	if _recon:
+		for p in get_tree().get_nodes_in_group("recon_poi"):
+			if not (p is Node2D) or not is_instance_valid(p):
+				continue
+			var pn: Node2D = p as Node2D
+			if pn.is_in_group("lever") and (pn.get("locked") or pn.get("active")):
+				continue   # 이미 당긴 레버 — 발견이 끝난 요소는 짚지 않는다
+			var pspos: Vector2 = xform * pn.global_position
+			var on_scr: bool = pspos.x >= 0.0 and pspos.x <= view.x and pspos.y >= 0.0 and pspos.y <= view.y
+			if on_scr:
+				_draw_poi_marker(pspos)
+			else:
+				_draw_poi_edge_dot(pspos, view)
+
+# 정찰 POI — 화면 안: 작은 다이아 윤곽 + 중심점 + 느린 맥동(점멸 아님 · 광과민 배려).
+# 위협 마커(20px 시안/주황)보다 작고 차분한 청색 — "위험"이 아니라 "챙길 것"으로 읽히게.
+func _draw_poi_marker(pos: Vector2) -> void:
+	var pulse: float = 0.72 + 0.18 * sin(_t * 2.6)
+	var r: float = 11.0 + 1.5 * sin(_t * 2.6)
+	var col: Color = Color(POI.r, POI.g, POI.b, pulse)
+	var pts := PackedVector2Array([
+		pos + Vector2(0.0, -r), pos + Vector2(r, 0.0),
+		pos + Vector2(0.0, r), pos + Vector2(-r, 0.0), pos + Vector2(0.0, -r),
+	])
+	draw_polyline(pts, col, 1.6)
+	draw_circle(pos, 2.2, Color(POI.r, POI.g, POI.b, pulse * 0.9))
+
+# 정찰 POI — 화면 밖: 가장자리에 작은 속빈 다이아 점(방향만 · 위협 화살표와 구분).
+func _draw_poi_edge_dot(spos: Vector2, view: Vector2) -> void:
+	var edge: Vector2 = Vector2(
+		clamp(spos.x, EDGE_MARGIN, view.x - EDGE_MARGIN),
+		clamp(spos.y, EDGE_MARGIN, view.y - EDGE_MARGIN))
+	var r: float = 5.0
+	var col: Color = Color(POI.r, POI.g, POI.b, 0.75)
+	var pts := PackedVector2Array([
+		edge + Vector2(0.0, -r), edge + Vector2(r, 0.0),
+		edge + Vector2(0.0, r), edge + Vector2(-r, 0.0), edge + Vector2(0.0, -r),
+	])
+	draw_polyline(pts, col, 1.4)
 
 func _draw_reticle(pos: Vector2, col: Color, danger: bool, appear: float) -> void:
 	# 등장 시 살짝 크게 시작해 수축 — 짚어지는 동작감.

@@ -221,7 +221,7 @@ func _setup_trust_gauge() -> void:
 	gauge.name = "TrustGauge"
 	# 신뢰가 무슨 뜻인지 모른다는 피드백 — 게이지 옆에 의미 한 줄 병기. 게이지 = 추천 수용률
 	# (엔딩 신뢰 축과 동일 지표, 2026-08-14 통일)이라 문구도 오르내림을 그대로 말한다.
-	gauge.text = "VEIL 신뢰  " + GameState.veil_trust_gauge_dots() + "   (추천을 따르면 차오르고, 무시하면 내려가요. 결말에 반영돼요)"
+	gauge.text = "VEIL 신뢰  " + GameState.veil_trust_gauge_dots() + "   (추천을 따르면 차오르고, 무시하면 내려갑니다. 결말에 반영됩니다)"
 	gauge.add_theme_font_size_override("font_size", 14)
 	gauge.add_theme_color_override("font_color", GameState.veil_tone_color())
 	header.add_child(gauge)
@@ -477,7 +477,8 @@ func _update_veil_comment() -> void:
 	if is_recommended:
 		msg += "★ 베일 추천\nVEIL   " + recommended_reason
 	else:
-		msg += "VEIL   " + str(route.get("veil_comment", ""))
+		# 어투 밴드 스윕(2026-08-21): 기본 = 중립 보고체, warm 밴드는 _warm 변형(없으면 기본).
+		msg += "VEIL   " + VeilDialogue.banded(str(route.get("veil_comment", "")), str(route.get("veil_comment_warm", "")))
 	# §4 상충 추천 — 라이벌이 미는 카드엔 정체 불명 "?"의 감언이 붙는다. 신뢰 warm이면
 	# 내 VEIL이 즉시 반박(신뢰가 지각을 산다 §4.1) — 아니면 어긋난 정중함을 스스로 읽어야 한다.
 	veil_text.text = msg
@@ -525,7 +526,7 @@ func _update_skill_rec_panel(route: Dictionary) -> void:
 	skill_rec_name.text = str(_SKILL_DISPLAY.get(sid, sid))
 	var fam_col: Color = SkillTreeData.FAMILY_COLORS.get(fam, Color(0.9, 0.93, 0.97))
 	skill_rec_name.add_theme_color_override("font_color", fam_col)
-	skill_rec_reason.text = "%s에 강해요" % str(_ENEMY_DISPLAY.get(en, en))
+	skill_rec_reason.text = "%s에 강함" % str(_ENEMY_DISPLAY.get(en, en))
 	skill_rec_panel.visible = true
 
 func _update_risk_reward_panel(route: Dictionary) -> void:
@@ -541,11 +542,11 @@ func _update_risk_reward_panel(route: Dictionary) -> void:
 	# 보상 축 개편(2026-08-19): 종류별 효과 설명.
 	match str(route.get("reward_type", "")):
 		"xp":
-			lines.append("[보상 · 경험치]\n클리어 경험치가 추가로 붙어요.")
+			lines.append("[보상 · 경험치]\n클리어 경험치가 추가로 붙습니다.")
 		"record":
-			lines.append("[보상 · 기록]\n지나면 기록 1칸을 되찾습니다. 가득하면 경험치로 받아요.")
+			lines.append("[보상 · 기록]\n지나면 기록 1칸을 되찾습니다. 가득하면 경험치로 받습니다.")
 		"recon":
-			lines.append("[보상 · 정찰]\n다음 구간에서 표시가 더 멀리, 방해 너머까지 닿습니다.")
+			lines.append("[보상 · 정찰]\n다음 구간의 숨은 레버·잠긴 칸·보급품이 표시됩니다. 방해 신호도 뚫습니다.")
 	if lines.is_empty():
 		risk_reward_panel.visible = false
 		return

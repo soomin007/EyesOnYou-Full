@@ -177,7 +177,7 @@ static func _rooftops() -> Dictionary:
 		"route_lines": [
 			# 낙하 = 무피해 명시 · "어디부터 낙하 대미지냐" 혼동(사용자 2026-08-17) · 이 게임에
 			# 낙하 피해는 어디에도 없다. 떨어짐 = 오른 만큼 재등반(시간 손실)뿐임을 말로 고정.
-			{"y": 2150.0, "who": "veil", "text": "바람이 붑니다. 몸이 뜨면 옆으로 밀려요. 떨어져도 다치진 않지만, 오른 만큼 다시 올라야 합니다.", "dur": 4.2},
+			{"y": 2150.0, "who": "veil", "text": "바람이 붑니다. 몸이 뜨면 옆으로 밀립니다. 떨어져도 다치지는 않지만, 오른 만큼 다시 올라야 합니다.", "dur": 4.2},
 		],
 		# 저격수가 전부 측면 단독 둥지(회피 전용) — VEIL "못 잡는 적 안내"(_tick_avoid_warning)가 이 플래그로 발화.
 		"nest_snipers": true,
@@ -249,9 +249,9 @@ static func _sewers_inflow() -> Dictionary:
 			"drone":  [Vector2(1300, 430.0)],
 		},
 		"route_lines": [
-			{"x": 240.0, "who": "veil", "text": "펌프가 아직 살아 있습니다. 물이 차오르면 높은 발판으로 오르세요. 잠긴 채 버티면 몸이 상해요.", "dur": 4.0},
+			{"x": 240.0, "who": "veil", "text": "펌프가 아직 살아 있습니다. 물이 차오르면 높은 발판으로 오르십시오. 잠긴 채 버티면 몸이 상합니다.", "dur": 4.0},
 			# 적 방수 설명 · "나만 잠기고 적은 왜 괜찮냐"(사용자 2026-08-17) · 경비 = 밀폐 기계 유닛.
-			{"x": 860.0, "who": "veil", "text": "경비 유닛은 밀폐 설계예요. 물속에서도 멀쩡합니다. 요원은 아니니까, 조심하세요.", "dur": 3.8},
+			{"x": 860.0, "who": "veil", "text": "경비 유닛은 밀폐 설계라 물속에서도 멀쩡합니다. 요원은 아닙니다. 조심하십시오.", "dur": 3.8},
 		],
 		"rewards": {
 			# 바닥 보상 · 수위가 낮을 때만 편하게 줍는다(리듬과 보상의 결합).
@@ -277,7 +277,7 @@ static func _sewers_junction() -> Dictionary:
 		"water_level": {"low_y": 2500.0, "high_y": 1520.0, "rise": 2.6, "hold_high": 5.0,
 			"fall": 2.2, "hold_low": 9.0, "start_delay": 0.5},
 		"route_lines": [
-			{"y_down": 900.0, "who": "veil", "text": "아래는 물이 오르내리는 구간입니다. 빠졌을 때 내려가고, 차오르면 위에서 기다리세요.", "dur": 4.0},
+			{"y_down": 900.0, "who": "veil", "text": "아래는 물이 오르내리는 구간입니다. 빠졌을 때 내려가고, 차오르면 위에서 기다리십시오.", "dur": 4.0},
 		],
 		"platforms": [
 			# 진입 → 상층 (낙하)
@@ -432,8 +432,8 @@ static func _subway_tracks() -> Dictionary:
 			"drone": [], "bomber": [], "shield": [],
 		},
 		"route_lines": [
-			{"x": 260.0, "who": "veil", "text": "선로가 아직 살아 있어요. 신호가 붉어지면 열차가 옵니다. 벽에 파인 홈이나 높은 발판으로 피하세요.", "dur": 4.0},
-			{"x": 1400.0, "who": "veil", "text": "열차는 누구 편도 아니에요. 경비를 선로로 끌어내면 대신 치워 줍니다. 그렇게 치운 건 아무것도 안 남지만요.", "dur": 4.0},
+			{"x": 260.0, "who": "veil", "text": "선로가 아직 살아 있습니다. 신호가 붉어지면 열차가 옵니다. 벽에 파인 홈이나 높은 발판으로 피하십시오.", "dur": 4.0},
+			{"x": 1400.0, "who": "veil", "text": "열차는 누구 편도 아닙니다. 경비를 선로로 끌어내면 대신 치워 줍니다. 다만 그렇게 치운 건 아무것도 남지 않습니다.", "dur": 4.0},
 		],
 		"rewards": {
 			# 위험 보상 · 벽감 사이 선로 위(열차 리스크를 지나야 먹는다).
@@ -536,7 +536,7 @@ static func _cooling_intake() -> Dictionary:
 		"spikes": [],
 		"no_spike_fallback": true,   # 증기 리듬이 시그니처 · 가시 소음 금지
 		"route_lines": [
-			{"x": 320.0, "who": "veil", "text": "흡기 라인이 살아 있어요. 바닥 분출구는 주기가 있으니, 김이 잦아들 때 지나가세요.", "dur": 4.0},
+			{"x": 320.0, "who": "veil", "text": "흡기 라인이 살아 있습니다. 바닥 분출구는 주기가 있으니, 김이 잦아들 때 지나가십시오.", "dur": 4.0},
 		],
 	}
 
@@ -644,7 +644,7 @@ static func _cooling_exhaust() -> Dictionary:
 		"spikes": [],
 		"no_spike_fallback": true,
 		"route_lines": [
-			{"x": 1350.0, "who": "veil", "text": "배기구 문이 닫혀 있어요. 위쪽 배관의 밸브 레버를 당기면 열립니다.", "dur": 3.5},
+			{"x": 1350.0, "who": "veil", "text": "배기구 문이 닫혀 있습니다. 위쪽 배관의 밸브 레버를 당기면 열립니다.", "dur": 3.5},
 		],
 	}
 
@@ -713,7 +713,7 @@ static func _watchtower() -> Dictionary:
 			{"x": 1240.0, "y": 380.0,  "from_deg": 150.0, "to_deg": 206.0, "period": 6.5, "len": 900.0},
 		],
 		"route_lines": [
-			{"y": 2150.0, "who": "veil", "text": "탐조등이 돌고 있어요. 빛이 오면 발판 아래로 숨으세요. 걸리면 경비가 붙습니다.", "dur": 4.0},
+			{"y": 2150.0, "who": "veil", "text": "탐조등이 돌고 있습니다. 빛이 오면 발판 아래로 숨으십시오. 걸리면 경비가 붙습니다.", "dur": 4.0},
 		],
 		# 저격수가 전부 측면 단독 둥지(회피 전용) — VEIL "못 잡는 적 안내"(_tick_avoid_warning)가 이 플래그로 발화.
 		"nest_snipers": true,
@@ -1018,9 +1018,9 @@ static func _escape_extract() -> Dictionary:
 		# 반출 = 드라이브가 위치를 흘려 경비가 미리 아는 길. 초입에 이유를 말하고,
 		# 중반 라이벌 비트(드라이브 = 그의 탈출 티켓 캐논), 게이트 앞 마무리.
 		"route_lines": [
-			{"x": 320.0,  "who": "veil",  "text": "드라이브가 신호를 계속 흘려요. 앞 구간 경비가 우리 위치를 미리 알고 기다립니다. 먼저 쏘면서 뚫어요.", "dur": 4.2},
+			{"x": 320.0,  "who": "veil",  "text": "드라이브가 신호를 계속 흘립니다. 앞 구간 경비가 우리 위치를 미리 알고 기다립니다. 먼저 쏘면서 뚫으십시오.", "dur": 4.2},
 			{"x": 2150.0, "who": "rival", "text": "그 드라이브, 저한테도 꼭 필요한 물건입니다. 내려놓고 가시죠, 요원.", "dur": 3.4},
-			{"x": 3150.0, "who": "veil",  "text": "봉쇄 게이트가 마지막이에요. 뚫으면 끝입니다.", "dur": 3.0},
+			{"x": 3150.0, "who": "veil",  "text": "봉쇄 게이트가 마지막입니다. 뚫으면 끝입니다.", "dur": 3.0},
 		],
 		"rewards": {"xp_orbs": [], "hp_pickups": [Vector2(2200, 460.0)]},
 		"spikes": [],
@@ -1078,7 +1078,7 @@ static func _escape_destroy_shaft() -> Dictionary:
 		"enemies": {"patrol": [], "sniper": [], "drone": [], "bomber": [], "shield": []},
 		"route_lines": [
 			{"y": 1650.0, "who": "rival", "text": "타는 냄새가 여기까지 옵니다. 제가... 타는 냄새가.", "dur": 3.2, "glitch": true},
-			{"y": 900.0,  "who": "veil",  "text": "반쯤 올라왔어요. 이 페이스면 됩니다.", "dur": 3.0},
+			{"y": 900.0,  "who": "veil",  "text": "반쯤 올라왔습니다. 이 페이스면 됩니다.", "dur": 3.0},
 		],
 		"rewards": {
 			"xp_orbs":    [Vector2(540, 1150.0), Vector2(580, 1150.0)],
@@ -1142,8 +1142,8 @@ static func _escape_destroy_surface() -> Dictionary:
 			"sniper": [], "drone": [], "bomber": [], "shield": [],
 		},
 		"route_lines": [
-			{"x": 260.0,  "who": "veil", "text": "...나왔어요. 하늘 보여요. 무너지는 소리는 이제 등 뒤예요.", "dur": 3.4},
-			{"x": 1750.0, "who": "veil", "text": "...신호가 끊겼어요. 저것도, 시설도. 앞만 봐요.", "dur": 3.2},
+			{"x": 260.0,  "who": "veil", "text": "...나왔습니다. 하늘이 보입니다. 무너지는 소리는 이제 등 뒤입니다.", "text_warm": "...나왔어요. 하늘 보여요. 무너지는 소리는 이제 등 뒤예요.", "dur": 3.4},
+			{"x": 1750.0, "who": "veil", "text": "...신호가 끊겼습니다. 저것도, 시설도. 앞만 보십시오.", "text_warm": "...신호가 끊겼어요. 저것도, 시설도. 앞만 봐요.", "dur": 3.2},
 		],
 		"rewards": {"xp_orbs": [], "hp_pickups": []},
 		"spikes": [],
@@ -1175,7 +1175,7 @@ static func _escape_conceal() -> Dictionary:
 			"sniper": [], "drone": [], "bomber": [], "shield": [],
 		},
 		"route_lines": [
-			{"x": 300.0,  "who": "veil",  "text": "수색등이 켜졌어요. 은닉인데, 우리 동선을 알고 움직입니다. ...누가 흘리고 있어요. 벽의 홈으로 피해요.", "dur": 4.4},
+			{"x": 300.0,  "who": "veil",  "text": "수색등이 켜졌습니다. 은닉인데, 우리 동선을 알고 움직입니다. ...누가 흘리고 있습니다. 벽의 홈으로 피하십시오.", "dur": 4.4},
 			{"x": 2450.0, "who": "rival", "text": "어디로 가시는 겁니까, 요원. 그건 제 것이기도 합니다.", "dur": 3.4},
 		],
 		"rewards": {"xp_orbs": [], "hp_pickups": []},
@@ -1213,7 +1213,7 @@ static func _escape_leave() -> Dictionary:
 		"route_lines": [
 			{"x": 900.0,  "who": "rival", "text": "가시는 길은 열어 두었습니다.", "dur": 3.0},
 			{"x": 2200.0, "who": "rival", "text": "두고 가시는군요. ...고맙다는 말은 하지 않겠습니다.", "dur": 3.4},
-			{"x": 3300.0, "who": "veil",  "text": "...끝까지 배웅할 모양이네요. 신경 쓰지 말고 가요.", "dur": 3.2},
+			{"x": 3300.0, "who": "veil",  "text": "...끝까지 배웅할 모양입니다. 신경 쓰지 말고 가십시오.", "text_warm": "...끝까지 배웅할 모양이네요. 신경 쓰지 말고 가요.", "dur": 3.2},
 		],
 		"rewards": {"xp_orbs": [], "hp_pickups": []},
 		"spikes": [],
@@ -1379,7 +1379,7 @@ static func _server_stacks() -> Dictionary:
 		"spikes": [],
 		"no_spike_fallback": true,
 		"route_lines": [
-			{"x": 340.0, "who": "veil", "text": "서버 구역이에요. 랙 위가 유리해요. 위에서 보고, 위에서 쏘세요.", "dur": 3.4},
+			{"x": 340.0, "who": "veil", "text": "서버 구역입니다. 랙 위가 유리합니다. 위에서 보고, 위에서 쏘십시오.", "dur": 3.4},
 		],
 	}
 
@@ -1469,7 +1469,7 @@ static func _server_switchroom() -> Dictionary:
 		"spikes": [],
 		"no_spike_fallback": true,
 		"route_lines": [
-			{"x": 320.0, "who": "veil", "text": "이 안쪽, 제 표시가 다 지워져요. 방해 장치부터 부수세요. 그때까진 요원 눈이 전부예요.", "dur": 4.0},
+			{"x": 320.0, "who": "veil", "text": "이 안쪽은 제 표시가 다 지워집니다. 방해 장치부터 부수십시오. 그때까지는 요원 눈이 전부입니다.", "dur": 4.0},
 		],
 	}
 
@@ -1519,7 +1519,7 @@ static func _parking_lot() -> Dictionary:
 			{"x": 1750.0, "open": 3.0, "closed": 2.8, "phase": 0.5},
 		],
 		"route_lines": [
-			{"x": 300.0, "who": "veil", "text": "차단 셔터가 열렸다 닫혔다 해요. 램프가 붉어지면 멈추고, 열리면 지나가세요.", "dur": 3.8},
+			{"x": 300.0, "who": "veil", "text": "차단 셔터가 열렸다 닫혔다 합니다. 램프가 붉어지면 멈추고, 열리면 지나가십시오.", "dur": 3.8},
 		],
 	}
 
@@ -1564,7 +1564,7 @@ static func _substation_switchyard() -> Dictionary:
 		"spikes": [],
 		"no_spike_fallback": true,
 		"route_lines": [
-			{"x": 320.0, "who": "veil", "text": "바닥 전선이 살아 있어요. 불꽃이 튀면 곧 방전됩니다. 발판 위로 피하세요.", "dur": 3.8},
+			{"x": 320.0, "who": "veil", "text": "바닥 전선이 살아 있습니다. 불꽃이 튀면 곧 방전됩니다. 발판 위로 피하십시오.", "dur": 3.8},
 		],
 	}
 
@@ -1614,7 +1614,7 @@ static func _substation_yard() -> Dictionary:
 			{"x1": 2160.0, "x2": 2400.0, "phase": 0.5},
 		],
 		"route_lines": [
-			{"x": 1150.0, "who": "veil", "text": "경비 유닛은 절연 몸체예요. 방전 위를 태연히 걷더라도, 요원은 따라 하지 마세요.", "dur": 3.8},
+			{"x": 1150.0, "who": "veil", "text": "경비 유닛은 절연 몸체입니다. 방전 위를 태연히 걷더라도, 요원은 따라 하지 마십시오.", "dur": 3.8},
 		],
 	}
 
@@ -1655,7 +1655,7 @@ static func _substation_control() -> Dictionary:
 		"spikes": [],
 		"no_spike_fallback": true,
 		"route_lines": [
-			{"x": 1500.0, "who": "veil", "text": "배전실 문이 닫혀 있어요. 위 발판의 차단기를 내리면 열립니다.", "dur": 3.4},
+			{"x": 1500.0, "who": "veil", "text": "배전실 문이 닫혀 있습니다. 위 발판의 차단기를 내리면 열립니다.", "dur": 3.4},
 		],
 	}
 
@@ -1757,7 +1757,7 @@ static func _demo_street() -> Dictionary:
 			{"x_min": 1800.0, "x_max": 2800.0, "interval": 2.0, "phase": 0.45},
 		],
 		"route_lines": [
-			{"x": 300.0, "who": "veil", "text": "위가 계속 무너집니다. 바닥에 그림자가 지면 그 자리를 비키세요.", "dur": 3.8},
+			{"x": 300.0, "who": "veil", "text": "위가 계속 무너집니다. 바닥에 그림자가 지면 그 자리를 비키십시오.", "dur": 3.8},
 		],
 	}
 
@@ -1900,7 +1900,7 @@ static func _relay_yard() -> Dictionary:
 		"spikes": [],
 		"no_spike_fallback": true,
 		"route_lines": [
-			{"x": 300.0, "who": "veil", "text": "전파가 고르지 않아요. 주기적으로 제 표시가 흐려집니다. 흐려지는 동안은 요원 눈이 우선이에요.", "dur": 4.0},
+			{"x": 300.0, "who": "veil", "text": "전파가 고르지 않습니다. 주기적으로 제 표시가 흐려집니다. 흐려지는 동안은 요원 눈이 우선입니다.", "dur": 4.0},
 		],
 	}
 
@@ -1941,7 +1941,7 @@ static func _relay_hall() -> Dictionary:
 		"spikes": [],
 		"no_spike_fallback": true,
 		"route_lines": [
-			{"x": 2350.0, "who": "veil", "text": "이 방엔 방해 장치도 있어요. 주기 간섭과 달리 저건 부수면 걷힙니다.", "dur": 3.6},
+			{"x": 2350.0, "who": "veil", "text": "이 방엔 방해 장치도 있습니다. 주기 간섭과 달리 저건 부수면 걷힙니다.", "dur": 3.6},
 		],
 	}
 
@@ -1980,7 +1980,7 @@ static func _relay_mast() -> Dictionary:
 		"spikes": [],
 		"no_spike_fallback": true,
 		"route_lines": [
-			{"x": 1250.0, "who": "veil", "text": "앞쪽 송신 차단기를 내리면 간섭이 멎어요. 문도 그 전원에 물려 있습니다.", "dur": 3.8},
+			{"x": 1250.0, "who": "veil", "text": "앞쪽 송신 차단기를 내리면 간섭이 멎습니다. 문도 그 전원에 물려 있습니다.", "dur": 3.8},
 		],
 	}
 
@@ -2026,7 +2026,7 @@ static func _warehouse_dock() -> Dictionary:
 			{"x1": 1750.0, "x2": 2450.0, "dir": 1, "speed": 120.0},
 		],
 		"route_lines": [
-			{"x": 300.0, "who": "veil", "text": "컨베이어가 아직 돌아요. 벨트 방향을 타면 빠르고, 거스르면 느립니다. 발밑 화살표를 보세요.", "dur": 4.0},
+			{"x": 300.0, "who": "veil", "text": "컨베이어가 아직 돕니다. 벨트 방향을 타면 빠르고, 거스르면 느립니다. 발밑 화살표를 보십시오.", "dur": 4.0},
 		],
 	}
 
@@ -2083,7 +2083,7 @@ static func _warehouse_racks() -> Dictionary:
 			{"x1": 3600.0, "x2": 4300.0, "dir": -1, "speed": 140.0},
 		],
 		"route_lines": [
-			{"x": 1550.0, "who": "veil", "text": "여기부터는 벨트가 거꾸로 흘러요. 버티고 서서 쏠 자리를 먼저 잡으세요.", "dur": 3.5},
+			{"x": 1550.0, "who": "veil", "text": "여기부터는 벨트가 거꾸로 흐릅니다. 버티고 서서 쏠 자리를 먼저 잡으십시오.", "dur": 3.5},
 		],
 	}
 
@@ -2126,7 +2126,7 @@ static func _warehouse_shipping() -> Dictionary:
 			{"x1": 1800.0, "x2": 2500.0, "dir": -1, "speed": 130.0},
 		],
 		"route_lines": [
-			{"x": 1250.0, "who": "veil", "text": "출하 게이트 앞에 검수 인원이 몰려 있어요. 정리해야 문이 열립니다.", "dur": 3.5},
+			{"x": 1250.0, "who": "veil", "text": "출하 게이트 앞에 검수 인원이 몰려 있습니다. 정리해야 문이 열립니다.", "dur": 3.5},
 		],
 	}
 
@@ -2227,7 +2227,7 @@ static func _control_anteroom() -> Dictionary:
 		"spikes": [],
 		"no_spike_fallback": true,
 		"route_lines": [
-			{"x": 340.0, "who": "veil", "text": "붉게 지직거리는 경비가 보이면 조심하세요. 겉과 속이 달라요.", "dur": 3.4},
+			{"x": 340.0, "who": "veil", "text": "붉게 지직거리는 경비가 보이면 조심하십시오. 겉과 속이 다릅니다.", "dur": 3.4},
 		],
 	}
 
@@ -2317,7 +2317,7 @@ static func _control_checkgate() -> Dictionary:
 		"spikes": [],
 		"no_spike_fallback": true,
 		"route_lines": [
-			{"x": 1250.0, "who": "veil", "text": "게이트 앞 바닥이 노랗게 칠해져 있죠. 그 선 안에 선 경비만 정리하면 문이 열립니다.", "dur": 3.6},
+			{"x": 1250.0, "who": "veil", "text": "게이트 앞 바닥이 노랗게 칠해져 있습니다. 그 선 안에 선 경비만 정리하면 문이 열립니다.", "dur": 3.6},
 		],
 	}
 
@@ -2402,7 +2402,7 @@ static func _condenser() -> Dictionary:
 			{"x": 2760.0, "interval": 3.0, "phase": 0.85},
 		],
 		"route_lines": [
-			{"x": 300.0, "who": "veil", "text": "천장에서 응축수가 떨어져요. 방울이 맺히면 바닥 표시를 피하세요.", "dur": 3.8},
+			{"x": 300.0, "who": "veil", "text": "천장에서 응축수가 떨어집니다. 방울이 맺히면 바닥 표시를 피하십시오.", "dur": 3.8},
 		],
 		"enemies": {
 			"patrol": [Vector2(820, 600.0), Vector2(2200, 600.0)],
@@ -2459,7 +2459,7 @@ static func _perimeter() -> Dictionary:
 			{"x": 2620.0, "y": 316.0, "from_deg": 55.0, "to_deg": 125.0, "period": 7.5, "len": 560.0, "pole_h": 276.0},
 		],
 		"route_lines": [
-			{"x": 300.0, "who": "veil", "text": "경계등이 바닥을 훑어요. 빛이 오면 발판 아래로 숨으세요. 걸리면 경비가 붙습니다.", "dur": 4.0},
+			{"x": 300.0, "who": "veil", "text": "경계등이 바닥을 훑습니다. 빛이 오면 발판 아래로 숨으십시오. 걸리면 경비가 붙습니다.", "dur": 4.0},
 		],
 	}
 

@@ -23,7 +23,8 @@ func _ready() -> void:
 	full_text = VeilDialogue.get_death_briefing(GameState.death_count, GameState.followed_veil_last_choice)
 	# 첫 사망에만 다회차 hint — 너무 적극적이지 않게, VEIL 톤으로 슬쩍.
 	if GameState.death_count == 1:
-		full_text += "\n\n...요원, 다른 결말도 있을지 몰라요."
+		# 어투 밴드 스윕(2026-08-21): 첫 사망 = 사실상 cold 밴드 — 중립 보고체.
+		full_text += "\n\n...요원, 다른 결말도 있을지 모릅니다."
 	# 덮어쓰기 한도 세리머니 — 소진 사망(기록 오염)은 재개 지점이 달라지므로 반드시 여기서 고지.
 	# 마지막 1회를 쓴 사망에도 다음 실패의 무게를 예고(시스템 브래킷 문법 = 힌트 표기와 통일).
 	if not GameState.story_mode and not GameState.playground_active:
