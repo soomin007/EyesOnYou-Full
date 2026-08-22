@@ -1519,12 +1519,13 @@ func take_damage(amount: int, from_dir: int = 0) -> bool:
 	# from_dir != 0이면 bullet 명중. 폭발/스킬(from_dir == 0)은 자체 SFX 별도.
 	if from_dir != 0:
 		SfxPlayer.play_at("bullet_impact_enemy", global_position)
-	# 상성 명문화(2026-08-21 사용자 "방패병이 폭탄 두 방에 안 죽는다"): 폭발(from_dir 0)은
-	# 방패병에게 +1. 막 진행 HP 상향(막5 방패 = 5)에서 폭탄(2) 2방 = 4로 한 끗 모자라
-	# "폭발물이면 방패째 뚫린다" 문법을 배신하던 것 해소 — 어느 막에서든 2방 안에 잡힌다.
-	# (엘리트 방패는 위 폭발 무효 분기에서 이미 걸러짐.)
+	# 상성 명문화(2026-08-21 "폭탄 두 방에 안 죽는다" → 2026-08-22 "왜 한 방에 죽지"): 폭발
+	# (from_dir 0)은 방패병에게 정확히 2방 계약. +1 보정은 막 진행 상향분(hp > 3)에만 적용 —
+	# 만피 3(막1~2)에 +1을 주면 폭탄(2+1=3) 한 방 즉사가 되어 EXPLOSION_DAMAGE 3→2 너프의
+	# 원 설계("방패병을 한 방에 못 죽이게")를 배신한다. 이 게이트로 어느 막이든 1방 생존·2방 처치:
+	# 막1~2(HP3) 2+2 · 막3(HP4) 3+2 · 막4~5(HP5) 3+3. (엘리트 방패는 위 폭발 무효 분기에서 걸러짐.)
 	var eff: int = amount
-	if enemy_type == EnemyType.SHIELD and from_dir == 0:
+	if enemy_type == EnemyType.SHIELD and from_dir == 0 and hp > 3:
 		eff += 1
 	hp -= eff
 	modulate = Color(1.6, 1.6, 1.6)

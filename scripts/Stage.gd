@@ -3743,13 +3743,20 @@ func _build_cover_niches() -> void:
 			post.size = Vector2(6.0, 210.0)
 			post.z_index = -2
 			add_child(post)
-		# 발밑 세이프 밴드 마킹(시안) — "여기 서면 스캔 사각".
+		# 발밑 세이프 밴드 마킹(시안) — "여기 서면 스캔 사각". 대사가 "파란 띠가 칠해진 대피 칸"을
+		# 가리키므로 실제로 읽히는 밝기로(종전 alpha 0.22는 스크린샷에서 식별 불가, 2026-08-22).
 		var floor_mark := ColorRect.new()
-		floor_mark.color = Color(0.35, 0.85, 0.95, 0.22)
-		floor_mark.position = Vector2(nx - s_half, GROUND_Y - 5.0)
-		floor_mark.size = Vector2(s_half * 2.0, 5.0)
+		floor_mark.color = Color(0.35, 0.85, 0.95, 0.55)
+		floor_mark.position = Vector2(nx - s_half, GROUND_Y - 7.0)
+		floor_mark.size = Vector2(s_half * 2.0, 7.0)
 		floor_mark.z_index = -1
 		add_child(floor_mark)
+		var floor_core := ColorRect.new()
+		floor_core.color = Color(0.62, 0.95, 1.0, 0.75)
+		floor_core.position = Vector2(nx - s_half, GROUND_Y - 7.0)
+		floor_core.size = Vector2(s_half * 2.0, 2.0)
+		floor_core.z_index = -1
+		add_child(floor_core)
 		# 상단 차폐 라벨 아이콘 — 사각(감시 사각) 표식.
 		var cap := ColorRect.new()
 		cap.color = Color(0.30, 0.72, 0.82, 0.5)
@@ -9083,11 +9090,23 @@ func _build_shutters() -> void:
 		sh.setup(entry, GROUND_Y)
 
 # 응축수 낙수(CondensateDrip) · MapData "drips" 키. 응축기 시그니처(확산 8호 · 증기 교체).
+# 착지면 = 낙수점 아래 첫 표면. 발판이 낙수점 x를 덮으면 그 발판 위에서 튀고, 발판 아래는
+# 비 그늘(안전)이 된다 — 물이 발판을 뚫고 지나가지 않는다(사용자 2026-08-22 지적).
 func _build_drips() -> void:
 	for entry in _map_data.get("drips", []):
+		var d: Dictionary = entry
+		var dx: float = float(d.get("x", 0.0))
+		var src: float = float(d.get("src_y", 210.0))
+		var land: float = GROUND_Y
+		for pf in _map_data.get("platforms", []):
+			var p: Dictionary = pf
+			var pos: Vector2 = p.get("pos", Vector2.ZERO)
+			var half: float = float(p.get("w", 220.0)) * 0.5
+			if dx >= pos.x - half and dx <= pos.x + half and pos.y > src and pos.y < land:
+				land = pos.y
 		var dp := CondensateDrip.new()
 		add_child(dp)
-		dp.setup(entry, GROUND_Y)
+		dp.setup(d, land)
 
 # 방 체인 전환(map_identity_rework §2) · RouteMap/Briefing 없이 짧은 문 전환으로 다음 방 로드.
 # XP·HP·성장은 GameState 소유라 유지되고, 스테이지 타이머는 record_route_choice 기준이라 체인

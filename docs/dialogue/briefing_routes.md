@@ -318,8 +318,8 @@
 | | description | 아무도 반출 사실을 모른다. 단 하나, 시설 안의 눈만 빼고. | |
 | | veil_comment | 조용히 나가야 합니다. 들키면 은닉이 아니게 됩니다. | |
 | | veil_comment_warm | 조용히 나가야 해요. 들키면 은닉이 아니게 되죠. | |
-| | entry_comment | 수색이 붙었습니다. 저쪽이 우리 위치를 흘리는 듯합니다. 빛을 피하십시오. | |
-| | entry_comment_warm | 수색이 붙었어요. 저쪽이 우리 위치를 흘리는 것 같아요. 빛을 피해요. | |
+| | entry_comment | 진입했습니다. 낮게, 조용히 갑니다. 아직 아무도 모릅니다. | We're in. Stay low, stay quiet. Nobody knows we're here. |
+| | entry_comment_warm | 진입했어요. 낮게, 조용히 가요. 아직 아무도 몰라요. | |
 | route_escape_leave | name | 무인 회랑 | |
 | | description | 아무것도 가지고 나가지 않는 길. 아무도 막지 않는다. | |
 | | veil_comment | 막는 게 없습니다. ...이상할 만큼. | |
@@ -439,11 +439,11 @@
 | | entry_comment | 코어 방어전입니다. 적이 코어 구역에 들면 코어가 버티지 못합니다. 몰려드는 걸 막고 전부 정리하면 끝납니다. | |
 | | entry_comment_warm | 코어 방어예요. 적이 코어 구역에 들어오면 코어가 버티질 못해요. 몰려드는 걸 막고 다 정리하면 끝나요. | |
 | route_scanner_sweep | name | 감시 회랑 | |
-| | description | 보안 스캔 빔이 통로를 주기적으로 훑는 감시 회랑. 빔이 지날 때 차폐 사각에 숨지 않으면 노출된다. | |
-| | veil_comment | 스캔이 통로를 훑습니다. 빔이 올 때는 차폐 안에. 지나가면 다음으로. 리듬을 타십시오. | |
-| | veil_comment_warm | 스캔이 통로를 훑어요. 빔이 올 때 차폐 안에 있어요. 지나가면 다음으로. 리듬을 타요. | |
-| | entry_comment | 감시 빔이 통로를 훑습니다. 빔이 지날 땐 차폐 사각에 숨으십시오. 지나간 뒤 다음 사각까지 달리는 겁니다. 사각 밖에서 멈추면 그대로 노출입니다. | |
-| | entry_comment_warm | 감시 빔이 통로를 훑습니다. 빔이 지날 땐 차폐 사각에 숨으세요. 지나간 뒤에 다음 사각까지 달리는 겁니다. 사각 밖에서 멈추면 그대로 노출입니다. | |
+| | description | 보안 스캔 빔이 통로를 주기적으로 훑는 감시 회랑. 빔이 지날 때 대피 칸에 숨지 않으면 노출된다. | |
+| | veil_comment | 스캔이 통로를 훑습니다. 빔이 오면 대피 칸으로. 지나가면 다음 칸으로. 리듬을 타십시오. | Scans sweep the corridor. Beam comes, get to a recess. Beam passes, move up. Find the rhythm. |
+| | veil_comment_warm | 스캔이 통로를 훑어요. 빔이 오면 대피 칸으로. 지나가면 다음 칸으로. 리듬을 타요. | |
+| | entry_comment | 감시 빔이 통로를 훑습니다. 빔이 오면 파란 띠가 칠해진 대피 칸에 숨으십시오. 지나가면 다음 칸까지 달립니다. 칸 밖에서 멈추면 그대로 노출입니다. | The beam sweeps left to right. When it comes, get into a marked recess. When it passes, run for the next one. Freeze in the open and you're exposed. |
+| | entry_comment_warm | 감시 빔이 통로를 훑어요. 빔이 오면 파란 띠가 칠해진 대피 칸에 숨으세요. 지나가면 다음 칸까지 달려요. 칸 밖에서 멈추면 그대로 노출이에요. | |
 | route_holdout | name | 저지선 | |
 | | description | 발각된 통제 구역. 부서지는 바리케이드 뒤에서 밀려오는 경비를 저지한다. 바리케이드는 영원하지 않다. | |
 | | veil_comment | 바리케이드 뒤에서 버팁니다. 몸을 내밀어 쏘고, 다시 숨으십시오. 엄폐는 계속 갉히니 부서지기 전에 정리해야 합니다. | |
@@ -580,7 +580,7 @@
 | 봉쇄 게이트 · veil | 드라이브가 신호를 계속 흘립니다. 앞 구간 경비가 우리 위치를 미리 알고 기다립니다. 먼저 쏘면서 뚫으십시오. | |
 | 봉쇄 게이트 · rival | 그 드라이브, 저한테도 꼭 필요한 물건입니다. 내려놓고 가시죠, 요원. | |
 | 봉쇄 게이트 · veil | 봉쇄 게이트가 마지막입니다. 뚫으면 끝입니다. | |
-| 폐쇄 지하철 방2 · veil | 선로가 아직 살아 있습니다. 신호가 붉어지면 열차가 옵니다. 벽에 파인 홈이나 높은 발판으로 피하십시오. | |
+| 폐쇄 지하철 방2 · veil | 선로가 아직 살아 있습니다. 신호가 붉어지면 열차가 옵니다. 파란 띠가 칠해진 대피 칸이나 높은 발판으로 피하십시오. | The track is still live. When the signal turns red, a train is coming. Get into a marked recess or up onto a platform. |
 | 폐쇄 지하철 방2 · veil | 열차는 누구 편도 아닙니다. 경비를 선로로 끌어내면 대신 치워 줍니다. 다만 그렇게 치운 건 아무것도 남지 않습니다. | |
 | 옛 배수로 방1 · veil | 펌프가 아직 살아 있습니다. 물이 차오르면 높은 발판으로 오르십시오. 잠긴 채 버티면 몸이 상합니다. | |
 | 옛 배수로 방1 · veil | 경비 유닛은 밀폐 설계라 물속에서도 멀쩡합니다. 요원은 아닙니다. 조심하십시오. | |
@@ -614,7 +614,8 @@
 | 붕괴 회랑 방3 · veil · warm | ...나왔어요. 하늘 보여요. 무너지는 소리는 이제 등 뒤예요. | |
 | 붕괴 회랑 방3 · veil | ...신호가 끊겼습니다. 저것도, 시설도. 앞만 보십시오. | |
 | 붕괴 회랑 방3 · veil · warm | ...신호가 끊겼어요. 저것도, 시설도. 앞만 봐요. | |
-| 정비 갱도 · veil | 수색등이 켜졌습니다. 은닉인데, 우리 동선을 알고 움직입니다. ...누가 흘리고 있습니다. 벽의 홈으로 피하십시오. | |
+| 정비 갱도 · veil | 수색등이 켜졌습니다. 조용히 나가는 길이었는데... 누가 흘렸습니다. 빔이 오면 파란 띠가 칠해진 대피 칸으로 들어가십시오. | Searchlights, live. This was supposed to be a quiet exit... someone tipped them off. When the beam comes, get into the marked recesses. |
+| 정비 갱도 · rival | 조용히 빠져나갈 생각이셨습니까. 수색대는 제가 불렀습니다. | A quiet exit, was it? I made the call. They're expecting you. |
 | 정비 갱도 · rival | 어디로 가시는 겁니까, 요원. 그건 제 것이기도 합니다. | |
 | 무인 회랑 · rival | 가시는 길은 열어 두었습니다. | |
 | 무인 회랑 · rival | 두고 가시는군요. ...고맙다는 말은 하지 않겠습니다. | |

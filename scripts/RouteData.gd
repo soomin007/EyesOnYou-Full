@@ -225,8 +225,9 @@ const ALL_ROUTES: Array = [
 		"tags": ["은폐", "우회"],
 		"veil_comment": "조용히 나가야 합니다. 들키면 은닉이 아니게 됩니다.",
 		"veil_comment_warm": "조용히 나가야 해요. 들키면 은닉이 아니게 되죠.",
-		"entry_comment": "수색이 붙었습니다. 저쪽이 우리 위치를 흘리는 듯합니다. 빛을 피하십시오.",
-		"entry_comment_warm": "수색이 붙었어요. 저쪽이 우리 위치를 흘리는 것 같아요. 빛을 피해요.",
+		# EN: "We're in. Stay low, stay quiet. Nobody knows we're here."
+		"entry_comment": "진입했습니다. 낮게, 조용히 갑니다. 아직 아무도 모릅니다.",
+		"entry_comment_warm": "진입했어요. 낮게, 조용히 가요. 아직 아무도 몰라요.",
 		"stage_color": Color(0.06, 0.09, 0.13),
 	},
 	{
@@ -578,7 +579,7 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_scanner_sweep",
 		"name": "감시 회랑",
-		"description": "보안 스캔 빔이 통로를 주기적으로 훑는 감시 회랑. 빔이 지날 때 차폐 사각에 숨지 않으면 노출된다.",
+		"description": "보안 스캔 빔이 통로를 주기적으로 훑는 감시 회랑. 빔이 지날 때 대피 칸에 숨지 않으면 노출된다.",
 		"risk": 3,
 		"reward_type": "recon",
 		"hidden": false,
@@ -586,10 +587,13 @@ const ALL_ROUTES: Array = [
 		# 막4 램프 s9-11(act_identity §6): 리듬 스텔스 — risk3이나 적 2뿐(전투 스파이크 아님)이라 s9 허용.
 		"min_stage": 9, "max_stage": 11,
 		"tags": ["이동", "노출"],
-		"veil_comment": "스캔이 통로를 훑습니다. 빔이 올 때는 차폐 안에. 지나가면 다음으로. 리듬을 타십시오.",
-		"veil_comment_warm": "스캔이 통로를 훑어요. 빔이 올 때 차폐 안에 있어요. 지나가면 다음으로. 리듬을 타요.",
-		"entry_comment": "감시 빔이 통로를 훑습니다. 빔이 지날 땐 차폐 사각에 숨으십시오. 지나간 뒤 다음 사각까지 달리는 겁니다. 사각 밖에서 멈추면 그대로 노출입니다.",
-		"entry_comment_warm": "감시 빔이 통로를 훑습니다. 빔이 지날 땐 차폐 사각에 숨으세요. 지나간 뒤에 다음 사각까지 달리는 겁니다. 사각 밖에서 멈추면 그대로 노출입니다.",
+		# EN: "Scans sweep the corridor. Beam comes, get to a recess. Beam passes, move up. Find the rhythm."
+		"veil_comment": "스캔이 통로를 훑습니다. 빔이 오면 대피 칸으로. 지나가면 다음 칸으로. 리듬을 타십시오.",
+		"veil_comment_warm": "스캔이 통로를 훑어요. 빔이 오면 대피 칸으로. 지나가면 다음 칸으로. 리듬을 타요.",
+		# EN: "The beam sweeps left to right. When it comes, get into a marked recess. When it passes,
+		#      run for the next one. Freeze in the open and you're exposed."
+		"entry_comment": "감시 빔이 통로를 훑습니다. 빔이 오면 파란 띠가 칠해진 대피 칸에 숨으십시오. 지나가면 다음 칸까지 달립니다. 칸 밖에서 멈추면 그대로 노출입니다.",
+		"entry_comment_warm": "감시 빔이 통로를 훑어요. 빔이 오면 파란 띠가 칠해진 대피 칸에 숨으세요. 지나가면 다음 칸까지 달려요. 칸 밖에서 멈추면 그대로 노출이에요.",
 		"stage_color": Color(0.12, 0.09, 0.10),
 	},
 	{

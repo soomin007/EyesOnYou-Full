@@ -432,7 +432,9 @@ static func _subway_tracks() -> Dictionary:
 			"drone": [], "bomber": [], "shield": [],
 		},
 		"route_lines": [
-			{"x": 260.0, "who": "veil", "text": "선로가 아직 살아 있습니다. 신호가 붉어지면 열차가 옵니다. 벽에 파인 홈이나 높은 발판으로 피하십시오.", "dur": 4.0},
+			# EN: "The track is still live. When the signal turns red, a train is coming.
+			#      Get into a marked recess or up onto a platform."
+			{"x": 260.0, "who": "veil", "text": "선로가 아직 살아 있습니다. 신호가 붉어지면 열차가 옵니다. 파란 띠가 칠해진 대피 칸이나 높은 발판으로 피하십시오.", "dur": 4.0},
 			{"x": 1400.0, "who": "veil", "text": "열차는 누구 편도 아닙니다. 경비를 선로로 끌어내면 대신 치워 줍니다. 다만 그렇게 치운 건 아무것도 남지 않습니다.", "dur": 4.0},
 		],
 		"rewards": {
@@ -1169,10 +1171,14 @@ static func _escape_conceal() -> Dictionary:
 		"elite_chance": 0.0,
 		# 수색선 구간 제한(사용자 2026-08-17 "왜 맵 끝까지 쫓아오나 · 왜 있나 · 왜 늦나"):
 		# 갱도 본 구간(420~3380)만 훑는다 · 초입은 안전 도입, 출구 앞은 이완(기승전결 결).
-		# 존재 이유(라이벌 밀고)는 초입 라인이 즉시 말한다.
+		# 배신 비트(2026-08-22 "아무도 모르게라면서 왜 모두가 알지"): 시작은 약속대로 조용하다
+		# (수색등 꺼짐) → arm_x 340을 지나면 점등·기동 → VEIL "샜다" → 라이벌 밀고 자백.
+		# "모두가 안다"가 모순이 아니라 이 루트의 사건이 되게 순서를 화면에 배열.
 		"sweep_beam": {
-			"x_start": 420.0, "x_end": 3380.0, "y_top": -120.0, "y_bot": 640.0,
+			# y_top 120 = 카메라 시야 안(HUD 아래) — 레일·헤드가 화면에 보여야 실물 출처가 성립.
+			"x_start": 420.0, "x_end": 3380.0, "y_top": 120.0, "y_bot": 640.0,
 			"speed": 380.0, "rest": 2.0, "telegraph": 0.7, "beam_half": 24.0,
+			"arm_x": 340.0,
 		},
 		"cover_niches": [460.0, 950.0, 1450.0, 1950.0, 2450.0, 2950.0, 3450.0],
 		"niche_half": 90.0,
@@ -1182,7 +1188,11 @@ static func _escape_conceal() -> Dictionary:
 			"sniper": [], "drone": [], "bomber": [], "shield": [],
 		},
 		"route_lines": [
-			{"x": 300.0,  "who": "veil",  "text": "수색등이 켜졌습니다. 은닉인데, 우리 동선을 알고 움직입니다. ...누가 흘리고 있습니다. 벽의 홈으로 피하십시오.", "dur": 4.4},
+			# EN: "Searchlights, live. This was supposed to be a quiet exit... someone tipped them off.
+			#      When the beam comes, get into the marked recesses."
+			{"x": 380.0,  "who": "veil",  "text": "수색등이 켜졌습니다. 조용히 나가는 길이었는데... 누가 흘렸습니다. 빔이 오면 파란 띠가 칠해진 대피 칸으로 들어가십시오.", "dur": 4.4},
+			# EN: "A quiet exit, was it? I made the call. They're expecting you."
+			{"x": 950.0,  "who": "rival", "text": "조용히 빠져나갈 생각이셨습니까. 수색대는 제가 불렀습니다.", "dur": 3.4},
 			{"x": 2450.0, "who": "rival", "text": "어디로 가시는 겁니까, 요원. 그건 제 것이기도 합니다.", "dur": 3.4},
 		],
 		"rewards": {"xp_orbs": [], "hp_pickups": []},
@@ -3129,9 +3139,12 @@ static func _scanner_sweep() -> Dictionary:
 		"goal_pos":     Vector2(6480.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
 		"mid_gate": {"x": 3700.0, "mode": "beam"},
-		# 수직 스캔 빔 — 왼→오 훑기, rest 후 반복. y_bot은 렌더용(판정은 x밴드).
+		# 수직 스캔 빔 — 왼→오 훑기, rest 후 반복. 구간 제한(2026-08-22 "맵 밖까지 따라온다"):
+		# 종전 -60~6660은 맵 양끝 바깥 + 골(6480) 위까지 훑었다. 레일이 화면에 보이는 안(60)에서
+		# 시작해 마지막 니치(6000) 너머 6320에서 멈춘다 — 골 앞은 이완(정비 갱도와 같은 결).
 		"sweep_beam": {
-			"x_start": -60.0, "x_end": 6660.0, "y_top": -120.0, "y_bot": 640.0,
+			# y_top 120 = 카메라 시야 안(HUD 아래) — 레일·헤드가 화면에 보여야 실물 출처가 성립.
+			"x_start": 60.0, "x_end": 6320.0, "y_top": 120.0, "y_bot": 640.0,
 			"speed": 380.0, "rest": 1.8, "telegraph": 0.7, "beam_half": 24.0,
 		},
 		# 차폐 니치(세이프 밴드 중심 x) — 빔이 지날 때 이 x구간(±niche_half)에 있으면 스캔 사각.
