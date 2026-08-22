@@ -371,9 +371,9 @@
 | | veil_comment | 철거 구역입니다. 위에서 잔해가 떨어집니다. 바닥 그림자를 보십시오. | |
 | | entry_comment | 무너진 건물입니다. 머리 위를 조심하고, 잔해 뒤에 붙으십시오. | |
 | route_pump_station | name | 배수 펌프장 | |
-| | description | 외곽 빗물을 퍼올리던 펌프장. 파이프 위에서 조준선이 내려온다. | |
-| | veil_comment | 펌프장입니다. 파이프 위에서 저격이 내려다봅니다. 엄폐를 끊어 가십시오. | |
-| | entry_comment | 펌프 설비입니다. 파이프 위에서 내려다봅니다. 조준선 아래 멈춰 서지 마십시오. | |
+| | description | 외곽 빗물을 퍼내는 펌프장. 방류구가 주기적으로 물을 뿜고, 파이프 위에서 조준선이 내려온다. | |
+| | veil_comment | 펌프장입니다. 방류구가 주기적으로 물을 뿜고, 파이프 위에서 저격이 내려다봅니다. 낮은 곳에 오래 서지 마십시오. | Pump station. The outlets discharge on a cycle, and snipers watch from the pipes. Don't linger on low ground. |
+| | entry_comment | 펌프가 아직 돌고 있습니다. 방류구가 물을 뿜을 때는 물길 밖으로 비키십시오. | The pumps are still running. When the outlets blow, get out of the water line. |
 | route_relay_station | name | 통신 중계소 | |
 | | description | 시설 교신을 중계하는 안테나 구역. 중계기 위 저격과 머리 위 드론이 겹친다. | |
 | | veil_comment | 중계소입니다. 저격과 드론이 동시에 옵니다. 엄폐는 짧게, 빠르게. | |
@@ -627,6 +627,7 @@
 | 화물 리프트 방2 · veil | 여기부터는 리프트를 공중에서 갈아탑니다. 다음 리프트가 들어올 때를 보고 건너뛰십시오. | |
 | 화물 리프트 방3 · veil | 마지막 구간입니다. 리프트 세 대를 이어 타야 합니다. 위 조준선은 갈아타는 순간을 노립니다. | |
 | 차량 엄폐 방2 · veil | 포탑이 양쪽에서 엄폐를 깎고, 육교 위 저격은 낮은 차 너머까지 봅니다. 키 큰 컨테이너 뒤가 그 사각입니다. | |
+| 펌프장 · veil (방류) | 여기부터 방류 구간입니다. 바닥 배관 입구가 덜컹거리면 곧 물을 뿜습니다. 물길에서 비키거나, 발판 위로 오르십시오. | Discharge cycle ahead. When an outlet rattles, it's about to blow. Step out of the water line, or get up on the platforms. |
 | 펌프장 · veil | 저격이 파이프 통로 위에 거치돼 있습니다. 바로 밑은 안 보이는 사각입니다. 올라가서 끊거나, 조준 틈에 지나가십시오. | |
 
 ---

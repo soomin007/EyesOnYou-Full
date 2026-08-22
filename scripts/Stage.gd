@@ -854,6 +854,7 @@ func _build_world() -> void:
 	_build_conveyors()
 	_build_shutters()
 	_build_drips()
+	_build_discharge_jets()
 	_build_mid_gate()
 	_build_route_lines()
 	_build_fake_watchers()
@@ -6420,6 +6421,7 @@ func _spawn_boss(boss_meta: Dictionary) -> void:
 	boss.self_destruct_started.connect(_on_boss_self_destruct_started)
 	boss.self_destruct_disarmed.connect(_on_boss_self_destruct_disarmed)
 	boss.vent_started.connect(_on_boss_vent_started)
+	boss.overheat_stalled.connect(_on_boss_overheat_stalled)
 	_build_boss_hp_bar()
 	# 플레이어 성장 스케일(2026-08-10) — 15스테이지 확장으로 s8 시점 화력이 원 설계(9스테이지)보다
 	# 높아 보스가 너무 빨리 녹는다는 피드백. 공격 계열 티어 합 × 2 HP 가산.
@@ -6473,6 +6475,11 @@ func _refresh_boss_hp_bar() -> void:
 	# 분모는 인스턴스 max_hp — 성장 스케일(apply_hp_bonus)·스토리 축소가 반영된 실제 최대치.
 	var ratio: float = clamp(float(boss.get("hp")) / maxf(float(boss.get("max_hp")), 1.0), 0.0, 1.0)
 	boss_hp_bar_fill.size.x = 400.0 * ratio
+	# 증기 과열 실속 중 — "지금이 보상 창"을 HP바 색으로도(과열 글로우와 같은 금색 계열).
+	var stall_v = boss.get("stall_t")
+	if stall_v != null and float(stall_v) > 0.0:
+		boss_hp_bar_fill.color = Color(0.98, 0.82, 0.30)
+		return
 	# 과부하 배기 중 — "지금은 안 박힌다"를 HP바 색으로도(증기 tell과 같은 청백 계열).
 	var vent_v = boss.get("vent_t")
 	if vent_v != null and float(vent_v) > 0.0:
@@ -6521,11 +6528,14 @@ func _summon_facility_hazards() -> void:
 		htw.tween_property(hatch, "modulate:a", 0.0, 1.2)
 		htw.tween_callback(hatch.queue_free)
 	# 증기 분출구 2기 — 냉각 설비의 회수. 높이 200(중층 피난 발판은 침범 안 함).
+	# plume 560 = 분출 시 옅은 열기둥이 호버 라인(280)까지 닿는다 — 보스를 그 위로 유인하면
+	# 과열 실속(카운터플레이 2026-08-22). 열기둥은 플레이어 무해(짙은 증기만 위험).
 	for entry in [[480.0, 0.0], [1440.0, 0.5]]:
 		var e: Array = entry
 		var vent := SteamVent.new()
 		vent.position = Vector2(float(e[0]), GROUND_Y)
 		vent.height = 200.0
+		vent.plume_height = 560.0
 		vent.phase = float(e[1])
 		add_child(vent)
 		_boss_facility_nodes.append(vent)
@@ -6540,6 +6550,11 @@ func _summon_facility_hazards() -> void:
 	get_tree().create_timer(1.2, false).timeout.connect(func() -> void:
 		if is_inside_tree():
 			_show_veil_subtitle(VeilDialogue.banded("증기와 방전, 지나온 설비들입니다. 리듬은 이미 배우셨습니다. 바닥에 오래 서지 마십시오.", "증기랑 방전, 지나온 설비들이에요. 리듬은 이미 배웠잖아요. 바닥에 오래 서지 말아요."), 4.2))
+	# 카운터플레이 티칭 1회(2026-08-22) — 설비는 보스만의 무기가 아니다.
+	# EN: "That machine runs hot. Herd it over a steam column and it will stall for a moment."
+	get_tree().create_timer(6.2, false).timeout.connect(func() -> void:
+		if is_inside_tree() and boss != null and is_instance_valid(boss):
+			_show_veil_subtitle(VeilDialogue.banded("저 기체는 열이 약점입니다. 증기 기둥 위로 몰아넣으면 잠깐 멎습니다.", "저 기체, 열에 약해요. 증기 기둥 위로 몰아넣으면 잠깐 멎습니다."), 4.0))
 
 func _clear_facility_hazards() -> void:
 	# 즉시 제거 — 노드 바인딩 페이드 트윈이 격파 프레임에서 완주를 보장하지 못했다
@@ -6548,6 +6563,17 @@ func _clear_facility_hazards() -> void:
 		if is_instance_valid(n):
 			(n as Node).queue_free()
 	_boss_facility_nodes.clear()
+
+# 증기 과열 실속(카운터플레이 성공) — 흔들림 + 첫 회에 보상 창을 말로.
+var _boss_stall_line_shown: bool = false
+
+func _on_boss_overheat_stalled() -> void:
+	_camera_shake(9.0, 0.4)
+	if _boss_stall_line_shown:
+		return
+	_boss_stall_line_shown = true
+	# EN: "Steam flooded its intakes. The core is choking. Right now every shot goes in clean."
+	_show_veil_subtitle(VeilDialogue.banded("증기가 흡기구에 들어갔습니다. 코어가 열을 못 이깁니다. 지금은 쏘는 만큼 전부 박힙니다.", "증기를 제대로 먹였습니다. 코어가 멎었어요. 지금은 쏘는 만큼 전부 박힙니다."), 3.6)
 
 # 첫 과부하 배기 — 무적+김의 "왜"를 한 번은 말로(2026-08-20 사용자 "뭐라도 이해가 되게").
 func _on_boss_vent_started() -> void:
@@ -8142,6 +8168,18 @@ var _p3_assist_spoken: bool = false   # 지각 보조 의도 발화 1회(이후 
 var _p3_cap_spoken: bool = false      # 창당 피해 상한 해설 1회(버그가 아니라 룰임을 알린다)
 var _p3_bar_layer: CanvasLayer = null
 
+# 가짜 병사 그림 격파(렌더 부하) · 첫 회에만 룰을 말로 짚는다 — "찢으면 빨리 나온다"의 인과.
+# 개연성은 세계관 재료 그대로: 가짜도 본체의 잠복도 같은 구형 렌더러의 그림이다.
+var _p3_torn_spoken: bool = false
+
+func _on_p3_fake_torn(_total: int) -> void:
+	if _p3_torn_spoken or not is_inside_tree() or goal_reached:
+		return
+	_p3_torn_spoken = true
+	# EN: "Those fakes are its own renders. Tear them faster than it can redraw,
+	#      and it can't keep itself painted out."
+	_show_veil_subtitle("저 가짜들은 저쪽이 직접 그리는 그림입니다. 다시 그리는 속도보다 빨리 찢으면, 자기 몸을 그림으로 못 버팁니다.", 4.2)
+
 # 창당 피해 상한 도달(조기 재잠복) · 첫 회에만 룰을 말로 짚는다. "탄이 안 박힌다"가
 # 버그로 읽히지 않게(2026-08-17 상한 도입과 한 세트).
 func _on_p3_window_capped() -> void:
@@ -8238,6 +8276,7 @@ func _start_rival_p3() -> void:
 	fv.defeated.connect(_on_false_veil_defeated)
 	fv.stage_shifted.connect(_on_p3_stage_shifted)
 	fv.window_capped.connect(_on_p3_window_capped)
+	fv.fake_torn.connect(_on_p3_fake_torn)
 	fv.position = Vector2(1200.0, 600.0)
 	add_child(fv)
 	_false_veil = fv
@@ -9107,6 +9146,15 @@ func _build_drips() -> void:
 		var dp := CondensateDrip.new()
 		add_child(dp)
 		dp.setup(d, land)
+
+# 방류 사이클(DischargeJet) · MapData "discharge_jets" 키. 펌프장 시그니처(2026-08-22) —
+# "물을 퍼내는 시설"의 기믹 실물. 수평 물줄기라 회피 = 발판 위(펌프장 거치대의 존재 이유).
+func _build_discharge_jets() -> void:
+	for entry in _map_data.get("discharge_jets", []):
+		var d: Dictionary = entry
+		var dj := DischargeJet.new()
+		add_child(dj)
+		dj.setup(d, GROUND_Y)
 
 # 방 체인 전환(map_identity_rework §2) · RouteMap/Briefing 없이 짧은 문 전환으로 다음 방 로드.
 # XP·HP·성장은 GameState 소유라 유지되고, 스테이지 타이머는 record_route_choice 기준이라 체인

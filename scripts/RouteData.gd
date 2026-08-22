@@ -385,15 +385,18 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_pump_station",
 		"name": "배수 펌프장",
-		"description": "외곽 빗물을 퍼올리던 펌프장. 파이프 위에서 조준선이 내려온다.",
+		"description": "외곽 빗물을 퍼내는 펌프장. 방류구가 주기적으로 물을 뿜고, 파이프 위에서 조준선이 내려온다.",
 		"risk": 2,
 		"reward_type": "xp",
 		"hidden": false,
 		"unique": false,
 		"min_stage": 1, "max_stage": 2,
 		"tags": ["원거리", "노출", "전투"],
-		"veil_comment": "펌프장입니다. 파이프 위에서 저격이 내려다봅니다. 엄폐를 끊어 가십시오.",
-		"entry_comment": "펌프 설비입니다. 파이프 위에서 내려다봅니다. 조준선 아래 멈춰 서지 마십시오.",
+		# EN: "Pump station. The outlets discharge on a cycle, and snipers watch from the pipes.
+		#      Don't linger on low ground."
+		"veil_comment": "펌프장입니다. 방류구가 주기적으로 물을 뿜고, 파이프 위에서 저격이 내려다봅니다. 낮은 곳에 오래 서지 마십시오.",
+		# EN: "The pumps are still running. When the outlets blow, get out of the water line."
+		"entry_comment": "펌프가 아직 돌고 있습니다. 방류구가 물을 뿜을 때는 물길 밖으로 비키십시오.",
 		"stage_color": Color(0.10, 0.14, 0.16),
 	},
 	{

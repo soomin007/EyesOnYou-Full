@@ -11,6 +11,7 @@ signal phase_changed(new_phase: int)
 signal self_destruct_started
 signal self_destruct_disarmed
 signal vent_started
+signal overheat_stalled
 
 # 리워크(2026-08-22 사용자 확정, sentinel_rework.md): 목표 전투 시간 = 현 최종 보스급(60~90s ·
 # "지금의 최종 보스전 시간이 중간 보스에서 걸리게"). 28→36 + P2 시설 소환(증기·방전, Stage
@@ -42,6 +43,14 @@ const VENT_SUMMON_CAP: int = 4       # 배기 증원 포함 동시 소환수 상
 # 첫 자폭은 진짜처럼 터지지만 코어가 재점화한다. 두 번째 자폭이 진짜(기존 흐름).
 const REIGNITE_HP_RATIO: float = 0.18
 const REIGNITE_SPEED_MUL: float = 1.15
+
+# 증기 과열 실속(2026-08-22 카운터플레이) — P2가 소환한 시설 설비를 플레이어도 되받아친다.
+# 이 기체의 전투 리듬 자체가 열 관리(창 누적 → 달아오름 → 배기)다 · 증기 기둥(분출 중 열기둥
+# 포함)에 걸리면 코어가 열을 못 이겨 잠깐 멎는다 = 실속. 실속 동안은 창당 상한 없이 직결 —
+# "잘하면 빨라지는" 경로(보스를 증기 위로 유인하는 조종 스킬이 전투 시간을 줄인다).
+const STALL_DURATION: float = 2.4
+const STALL_COOLDOWN: float = 9.0     # 연쇄 스턴 방지(분출 주기 3.2s × 분출구 2기)
+const STALL_HALF_X: float = 60.0      # 기둥 x 겹침 판정 반폭(기둥 32 + 몸체 35)
 
 const SELF_DESTRUCT_TIME: float = 3.6
 const SELF_DESTRUCT_INNER: float = 280.0   # 이 안: full 데미지
@@ -106,6 +115,8 @@ var self_destruct_fall_v: float = 0.0  # 자폭 중 추락 속도 누적 (gravit
 var spark_t: float = 0.0  # 파지직 spawn 타이머
 var _window_dmg: int = 0            # 배기 창 누적 피해
 var vent_t: float = 0.0             # >0: 과부하 배기 중(무적)
+var stall_t: float = 0.0            # >0: 증기 과열 실속 중(상한 없이 직결)
+var _stall_cd: float = 0.0
 var _fake_destruct_done: bool = false   # 위장 자폭 소진 여부
 var _speed_mul: float = 1.0         # 재기동 후 이동 배속
 var _vent_summon_kind: int = 2      # 배기 증원 타입 교대(드론↔순찰)
@@ -214,6 +225,26 @@ func _physics_process(delta: float) -> void:
 		velocity = Vector2.ZERO
 		move_and_slide()
 		return
+	_stall_cd = maxf(0.0, _stall_cd - delta)
+	# 증기 과열 실속 — 제어를 잃고 살짝 가라앉는다. 공격 정지 · 피해는 상한 없이 직결(take_damage).
+	if stall_t > 0.0:
+		stall_t -= delta
+		velocity = velocity.move_toward(Vector2(0.0, 55.0), 360.0 * delta)
+		move_and_slide()
+		_emit_sparks(delta)
+		_set_heat(1.0)
+		if visual != null:
+			visual.position = Vector2(randf_range(-2.5, 2.5), randf_range(-2.5, 2.5))
+		if stall_t <= 0.0:
+			_stall_cd = STALL_COOLDOWN
+			_set_heat(0.0)
+			if visual != null:
+				visual.position = Vector2.ZERO
+			if _vent_label != null:
+				_vent_label.visible = false
+				_vent_label.text = "과열 · 열 배출 중"
+				_vent_label.add_theme_color_override("font_color", Color(1.0, 0.72, 0.32))
+		return
 	# 과부하 배기 — 제자리 감속 + 증기 방출. 공격 정지(무방비는 증원이 메운다).
 	if vent_t > 0.0:
 		vent_t -= delta
@@ -231,6 +262,47 @@ func _physics_process(delta: float) -> void:
 	_move(delta)
 	_attacks(delta)
 	_check_touch_player()
+	_check_steam_overheat()
+
+# 증기 기둥 겹침 판정 — 분출 중인 SteamVent(짙은 증기 + 열기둥) 위에 겹치면 실속.
+# 플레이어가 분출구 근처로 유인해 타이밍을 맞추는 조종 플레이(자기도 증기에 맞을 리스크 교환).
+func _check_steam_overheat() -> void:
+	if _stall_cd > 0.0 or phase < 2 or story_simplified:
+		return
+	for v in get_tree().get_nodes_in_group("steam_vent"):
+		if not (v is SteamVent):
+			continue
+		var sv := v as SteamVent
+		if sv.plume_height <= 0.0 or not sv.is_bursting():
+			continue
+		if absf(global_position.x - sv.global_position.x) > STALL_HALF_X:
+			continue
+		var up: float = sv.global_position.y - global_position.y
+		if up >= 0.0 and up <= sv.height + sv.plume_height:
+			_enter_stall()
+			return
+
+func _enter_stall() -> void:
+	if stall_t > 0.0 or vent_t > 0.0 or self_destruct_active or dead or phase_freeze_t > 0.0:
+		return
+	stall_t = STALL_DURATION
+	# 진행 중이던 텔레그래프 취소 — 실속 중 공격 없음.
+	bomb_telegraph_t = 0.0
+	missile_telegraph_t = 0.0
+	if bomb_dot != null:
+		bomb_dot.color.a = 0.0
+	if wing_l != null:
+		wing_l.color.a = 0.0
+	if wing_r != null:
+		wing_r.color.a = 0.0
+	SfxPlayer.play_at("boss_hurt", global_position)
+	SfxPlayer.play_at("hatch_open", global_position, -4.0)
+	_set_heat(1.0)
+	if _vent_label != null:
+		_vent_label.text = "과열 · 제어 불능"
+		_vent_label.add_theme_color_override("font_color", Color(1.0, 0.45, 0.35))
+		_vent_label.visible = true
+	emit_signal("overheat_stalled")
 
 # 자폭 중 보스 거동 — HOVER 라인 유지 대신 천천히 추락하며 플레이어 쪽으로 느슨한 추적.
 func _self_destruct_motion(delta: float) -> void:
@@ -415,7 +487,9 @@ func take_damage(amount: int, _from_dir: int = 0) -> void:
 		SfxPlayer.play_at("bullet_deflect_shield", global_position, -12.0)
 		return
 	# 창당 피해 상한 — 초과분은 흘려보낸다(고화력 즉사 차단 · 시간 하한).
-	if not story_simplified:
+	# 증기 과열 실속 중엔 상한을 안 거친다(직결) — 유인 플레이의 보상 창. 창 누적에도 안 잡혀
+	# 실속이 끝난 뒤의 배기 리듬은 그대로다.
+	if not story_simplified and stall_t <= 0.0:
 		var cap: int = maxi(4, int(ceil(float(max_hp) / VENT_DIVISOR)))
 		var allowed: int = cap - _window_dmg
 		if allowed <= 0:
@@ -449,7 +523,7 @@ func take_damage(amount: int, _from_dir: int = 0) -> void:
 		_die()
 		return
 	# 창 상한 도달 → 과부하 배기(무적 3s + 증기 + 증원 1기). 페이즈 freeze 중이면 그 뒤로.
-	if not story_simplified and _window_dmg >= maxi(4, int(ceil(float(max_hp) / VENT_DIVISOR))) 			and phase_freeze_t <= 0.0:
+	if not story_simplified and stall_t <= 0.0 			and _window_dmg >= maxi(4, int(ceil(float(max_hp) / VENT_DIVISOR))) 			and phase_freeze_t <= 0.0:
 		_enter_vent()
 
 func _flash_hit() -> void:
@@ -620,6 +694,12 @@ func _spawn_minion(kind: int, pos: Vector2, hp_value: int) -> CharacterBody2D:
 func _arm_self_destruct() -> void:
 	self_destruct_active = true
 	self_destruct_t = 0.0
+	# 실속 잔여 정리 — 자폭 시퀀스 뒤(위장 자폭 재기동 포함)에 실속이 되살아나지 않게.
+	stall_t = 0.0
+	if _vent_label != null:
+		_vent_label.visible = false
+		_vent_label.text = "과열 · 열 배출 중"
+		_vent_label.add_theme_color_override("font_color", Color(1.0, 0.72, 0.32))
 	SfxPlayer.play_at("boss_self_destruct_alarm", global_position)
 	# 위험 영역 시각화 — inner(380, 풀뎀) 빨강, outer(1200, 1뎀) 노랑.
 	# outer 너머가 안전 영역. ARENA 1920이라 벽 끝까지 도망가면 outer 너머 도달.

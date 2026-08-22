@@ -18,6 +18,8 @@ signal volley_started
 signal stage_shifted(stage_idx: int)
 # 실체화 창당 피해 상한 도달(조기 재잠복) · Stage가 첫 회에 VEIL 해설 1회를 단다.
 signal window_capped
+# 가짜 병사 그림 격파(렌더 부하) · Stage가 첫 회에 VEIL 해설 1회를 단다. 인자 = 누적 격파 수.
+signal fake_torn(total: int)
 
 enum State { PHASED, TELE, SOLID, DYING }
 
@@ -60,6 +62,13 @@ var _fakes: Array = []                  # 살아있는 _FakeMarker 참조
 # 실체화 창당 피해 누적(상한 = max_hp/8 · 2026-08-19 확대) · 고DPS "첫 창에 끝" 차단.
 var _window_dmg: int = 0
 var _next_phased_scale: float = 1.0     # 상한 도달 직후의 잠복만 짧게(화력의 보상)
+# 렌더 부하(2026-08-22 "잘하면 빨라지는 경로" · 개연성 = 세계관 내 재료만 사용): 가짜 병사도
+# 잠복의 "그림 상태"도 같은 구형 렌더러가 그린다. 그림을 다시 그리는 속도보다 빨리 찢으면
+# (탄 2회 통과 = 격파) 렌더러가 몸의 소거를 못 버텨 잠복 잔여가 당겨진다 = 조기 실체화.
+# 대기 게이트("실체화까지 기다린다")를 실력으로 줄이는 유일한 손잡이. 찢을수록 본체 스캔라인이
+# 흐트러지는 스트레인 연출로 인과를 화면에 보인다.
+var _torn_total: int = 0
+var _strain_t: float = 0.0              # >0: 렌더 스트레인 연출(본체 짜임 흐트러짐)
 # 텔레포트 워프 연출(중반+ 변주) · 이전 자리에 소멸 파문을 남긴다.
 var _warp_from: Vector2 = Vector2.ZERO
 var _warp_t: float = 0.0
@@ -154,8 +163,19 @@ func _spawn_fakes() -> void:
 		var m := _FakeMarker.new()
 		m.position = spot
 		m.lifetime = PHASED_DUR + 1.0
+		m.owner_fv = self
 		parent.add_child(m)
 		_fakes.append(m)
+
+# 가짜 병사 그림이 탄에 찢겨 나갔다(렌더 부하) — 잠복 잔여를 35% 당긴다. 그림 4장을 다
+# 찢으면 잠복이 사실상 끝난다 · 못 찢어도 기존 리듬 그대로(순수 가산 경로).
+func on_fake_torn() -> void:
+	_torn_total += 1
+	_strain_t = 0.6
+	if state == State.PHASED:
+		var total: float = phased_dur * _next_phased_scale
+		_state_t = minf(total, _state_t + total * 0.35)
+	emit_signal("fake_torn", _torn_total)
 
 # 내 VEIL의 지각 보조(§7.2 신뢰=개입 빈도) — 가장 오래된 가짜 하나를 시안 소거로 지운다.
 func erase_one_fake() -> bool:
@@ -175,6 +195,7 @@ func _physics_process(delta: float) -> void:
 	_ripple_t = maxf(0.0, _ripple_t - delta)
 	_ripple_cd = maxf(0.0, _ripple_cd - delta)
 	_warp_t = maxf(0.0, _warp_t - delta)
+	_strain_t = maxf(0.0, _strain_t - delta)
 	# 잠복/응시 중 탄이 몸을 지나가면 파문 — "박히지 않고 통과한다"를 그 자리에서 보여준다.
 	if (state == State.PHASED or state == State.TELE) and _ripple_cd <= 0.0:
 		var btree := get_tree()
@@ -424,6 +445,9 @@ func _draw() -> void:
 		# 실체화(TELE→SOLID)되며 짜임이 걷히고 몸이 꽉 찬다. 텍스트 라벨 없이 상태 전달
 		# ("실체 없음" 라벨 작위적 반려 2026-08-13).
 		if ghost > 0.02:
+			# 렌더 스트레인 — 그림이 찢겨 나간 직후 본체의 짜임이 줄 단위로 밀린다
+			# ("같은 렌더러가 버거워한다"의 시각 인과 · 완만 감쇠, 점멸 없음).
+			var strain: float = _strain_t / 0.6
 			var sy: float = -h + 2.0
 			while sy < h * 0.8 - 1.0:
 				var rel: float = (-sy / h) if sy < 0.0 else (sy / maxf(h * 0.8, 0.001))
@@ -431,7 +455,8 @@ func _draw() -> void:
 				var t0: float = asin(rel) / PI
 				var half_w: float = w * (1.0 - 2.0 * t0)
 				if half_w > 2.0:
-					draw_line(Vector2(-half_w, sy), Vector2(half_w, sy),
+					var s_off: float = 6.0 * strain * (1.0 if fmod(sy, 8.0) < 4.0 else -1.0)
+					draw_line(Vector2(-half_w + s_off, sy), Vector2(half_w + s_off, sy),
 						Color(0.05, 0.03, 0.09, 0.5 * ghost * a), 2.0)
 				sy += 4.0
 	# 실체(피격 가능) 링 — SOLID에서만 완만히 맥동.
@@ -594,6 +619,8 @@ class _FakeMarker extends Node2D:
 	var lifetime: float = 8.0
 	var t: float = 0.0
 	var erasing: bool = false
+	var owner_fv: Node = null        # 렌더 부하 통지 대상(본체) — 탄으로 다 찢으면 알린다
+	var tear_hits: int = 0           # 탄 통과 누적 · 2회면 그림이 못 버티고 흩어진다
 	var _erase_t: float = 0.0
 	var _erase_cyan: bool = false
 	var _slip_burst_t: float = 0.0   # 탄 통과 순간의 찢김(회복되는 약한 tear)
@@ -621,12 +648,19 @@ class _FakeMarker extends Node2D:
 			if arr.size() > 0:
 				_aim_to = (arr[0] as Node2D).global_position - global_position
 			# 탄이 실루엣을 지나가면 렌더가 찢겼다 재조립 — "쏘면 뚫리는 그림"을 즉석에서 학습.
+			# 렌더 부하(2026-08-22): 2회째 통과엔 그림이 재조립을 못 버티고 흩어진다(격파) —
+			# 본체에 통지해 잠복 잔여를 당긴다("빨리 찢으면 조기 실체화"의 실행 지점).
 			if not erasing and _slip_burst_t <= 0.0:
 				for b in tree.get_nodes_in_group("player_bullet"):
 					if b is Node2D:
 						var lp: Vector2 = (b as Node2D).global_position - global_position
 						if absf(lp.x) < 26.0 and lp.y > -60.0 and lp.y < 6.0:
 							_slip_burst_t = 0.32
+							tear_hits += 1
+							if tear_hits >= 2:
+								erase(false)
+								if owner_fv != null and is_instance_valid(owner_fv):
+									owner_fv.call("on_fake_torn")
 							break
 		queue_redraw()
 

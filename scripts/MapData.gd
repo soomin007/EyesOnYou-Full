@@ -1873,7 +1873,19 @@ static func _pump_station() -> Dictionary:
 			# 골 직전 스텝.
 			{"pos": Vector2(5560, 470), "w": 150.0},
 		],
+		# 방류 사이클(2026-08-22 사용자 "펌프장 컨셉을 모르겠다" 3회째) — "물을 퍼내는 시설"의
+		# 기믹 실물(DischargeJet). 지상이 주기적으로 위험해져 상부 거치대가 회피처가 된다 =
+		# 저격 고도와 수직 동선에 기믹 이유가 생김. 시설 유닛은 방수 설계라 무피해(환경 내성 캐논).
+		"discharge_jets": [
+			{"x": 880.0,  "dir": 1,  "len": 480.0, "phase": 0.0},
+			{"x": 2620.0, "dir": -1, "len": 520.0, "phase": 0.5},
+			{"x": 3620.0, "dir": 1,  "len": 500.0, "phase": 0.25},
+			{"x": 5180.0, "dir": -1, "len": 520.0, "phase": 0.65},
+		],
 		"route_lines": [
+			# EN: "Discharge cycle ahead. When an outlet rattles, it's about to blow.
+			#      Step out of the water line, or get up on the platforms."
+			{"x": 560.0, "who": "veil", "text": "여기부터 방류 구간입니다. 바닥 배관 입구가 덜컹거리면 곧 물을 뿜습니다. 물길에서 비키거나, 발판 위로 오르십시오.", "dur": 4.4},
 			{"x": 1050.0, "who": "veil", "text": "저격이 파이프 통로 위에 거치돼 있습니다. 바로 밑은 안 보이는 사각입니다. 올라가서 끊거나, 조준 틈에 지나가십시오.", "dur": 4.4},
 		],
 		"enemies": {

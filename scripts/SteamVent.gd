@@ -17,9 +17,17 @@ const WARN: Color = Color(1.0, 0.55, 0.2)   # 위험 경고색(호박/주황) �
 @export var height: float = 260.0
 @export var phase: float = 0.0   # 0~1 사이클 위상 오프셋 (분출구 엇갈림)
 @export var damage: int = 1
+# >0: 분출 시 증기 위로 이어지는 옅은 열기둥 높이 — 플레이어 피해는 없고(짙은 증기만 위험)
+# 기계 과열 판정(SENTINEL 실속 유인, 2026-08-22 카운터플레이)에만 쓰인다. 판정에 쓰이는 만큼
+# 화면에도 그린다(화면=판정 일치).
+@export var plume_height: float = 0.0
 
 var _t: float = 0.0
 var _hit_this_burst: bool = false
+
+func is_bursting() -> bool:
+	var ct: float = fmod(_t, PERIOD)
+	return ct >= TELEGRAPH and ct < TELEGRAPH + BURST
 
 func _ready() -> void:
 	z_index = 1
@@ -99,3 +107,17 @@ func _draw() -> void:
 		# 노즐 베이스 — 분출구 입구 밝게 + 경고색 핫코어(해로움 신호).
 		draw_rect(Rect2(-WIDTH * 0.5, -10.0, WIDTH, 10.0), COL * Color(1.0, 1.0, 1.0, 0.5 * intensity))
 		draw_rect(Rect2(-WIDTH * 0.42, -7.0, WIDTH * 0.84, 6.0), Color(WARN.r, WARN.g, WARN.b, 0.55 * intensity))
+		# 열기둥 — 짙은 증기 위로 이어지는 옅은 아지랑이(플레이어 무해 · 기계 과열 판정 구간).
+		# 짙은 기둥과 재질이 다르게: 폭 좁고 훨씬 옅으며 위로 갈수록 잦아든다.
+		if plume_height > 0.0:
+			var psteps: int = int(plume_height / 26.0)
+			for i in psteps:
+				var f2: float = float(i) / float(maxi(1, psteps))
+				var yy2: float = -height - f2 * plume_height
+				var jit2: float = sin(_t * 9.0 + f2 * 6.0) * (4.0 + 8.0 * f2)
+				var w2: float = WIDTH * 0.55 * (1.0 - 0.25 * f2)
+				var a2: float = (0.07 + 0.15 * (1.0 - f2)) * intensity
+				draw_rect(Rect2(-w2 * 0.5 + jit2, yy2 - 12.0, w2, 20.0), COL * Color(1.0, 1.0, 1.0, a2))
+			# 열기둥 중심선 — 아지랑이 한 줄기(끝까지 이어져 "닿는 높이"가 읽히게).
+			draw_line(Vector2(0.0, -height), Vector2(sin(_t * 5.0) * 6.0, -height - plume_height),
+				COL * Color(1.0, 1.0, 1.0, 0.14 * intensity), 3.0)

@@ -39,6 +39,7 @@
 | lab 첫 과부하 배기 · warm | 김을 빼는 동안엔 총알이 안 박힙니다. 대신 쏠수록 배출이 빨라져요. 그 사이 증원도 정리하고요. | |
 | 14-1 P2 노드 재접속(`_on_p2_node_down`) | ...같은 자리에 회선이 다시 붙습니다. 한 번 더 끊어야 합니다. | |
 | 14-1 P3 캠핑 감지(`_tick_p3_camp`, 1회) | 한자리에 오래 서 있으면 조준이 고정됩니다. 계속 움직이십시오. | |
+| 14-1 P3 그림 격파(`_on_p3_fake_torn`, 1회 · 2026-08-22) | 저 가짜들은 저쪽이 직접 그리는 그림입니다. 다시 그리는 속도보다 빨리 찢으면, 자기 몸을 그림으로 못 버팁니다. | Those fakes are its own renders. Tear them faster than it can redraw, and it can't keep itself painted out. |
 | beam | 게이트는 스캔 빔이 지날 때만 열립니다. 빔 뒤에 붙어 통과하십시오. | |
 | beam · warm | 게이트는 스캔 빔이 지나갈 때만 열려요. 빔을 뒤따라 통과하세요. | |
 
@@ -315,6 +316,18 @@
 |---|---|---|
 | 기본 | 증기와 방전, 지나온 설비들입니다. 리듬은 이미 배우셨습니다. 바닥에 오래 서지 마십시오. | |
 | warm | 증기랑 방전, 지나온 설비들이에요. 리듬은 이미 배웠잖아요. 바닥에 오래 서지 말아요. | |
+
+#### 카운터플레이 티칭 자막 (`_summon_facility_hazards` +6.2s, 1회 · 2026-08-22)
+| 밴드 | KO | EN |
+|---|---|---|
+| 기본 | 저 기체는 열이 약점입니다. 증기 기둥 위로 몰아넣으면 잠깐 멎습니다. | That machine runs hot. Herd it over a steam column and it will stall for a moment. |
+| warm | 저 기체, 열에 약해요. 증기 기둥 위로 몰아넣으면 잠깐 멎습니다. | |
+
+#### 첫 과열 실속 자막 (`_on_boss_overheat_stalled`, 1회 · 2026-08-22)
+| 밴드 | KO | EN |
+|---|---|---|
+| 기본 | 증기가 흡기구에 들어갔습니다. 코어가 열을 못 이깁니다. 지금은 쏘는 만큼 전부 박힙니다. | Steam flooded its intakes. The core is choking. Right now every shot goes in clean. |
+| warm | 증기를 제대로 먹였습니다. 코어가 멎었어요. 지금은 쏘는 만큼 전부 박힙니다. | |
 
 #### 자폭 회피 안내 라벨 (분류 확인 필요: HUD 라벨이라 ui.md 이동 후보)
 - 화자: 시스템(HUD 라벨) · 맥락: 보스 자폭 시퀀스 중 회피 반경 안내.
