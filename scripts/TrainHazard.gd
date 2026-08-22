@@ -105,6 +105,7 @@ func _physics_process(delta: float) -> void:
 				_t = telegraph
 				_set_lights_red(true)
 				SfxPlayer.play("enemy_sniper_charge")
+				_assign_shelters()
 		S.TELEGRAPH:
 			if _t <= 0.0:
 				_state = S.PASS
@@ -112,6 +113,7 @@ func _physics_process(delta: float) -> void:
 				_hit_enemies.clear()
 				_train_x = x_min if _dir > 0 else x_max
 				SfxPlayer.play("boss_missile_launch")
+				_assign_shelters()
 		S.PASS:
 			_train_x += speed * float(_dir) * delta
 			_check_player_hit()
@@ -123,6 +125,7 @@ func _physics_process(delta: float) -> void:
 				_gap_t = MIN_GAP
 				_dir = -_dir
 				_set_lights_red(false)
+				_clear_shelters()
 				queue_redraw()
 
 func _check_player_hit() -> void:
@@ -137,10 +140,11 @@ func _check_player_hit() -> void:
 	# 선로 대역 밖(단차 위·공중 점프 정점)이면 세이프.
 	if pos.y < ground_y - TRAIN_H:
 		return
-	# 벽감 안이면 세이프.
-	for nx in niches:
-		if absf(pos.x - float(nx)) <= niche_half:
-			return
+	# 벽감 세이프(2026-08-22 능동 숨기로 개정) — 벽감 밴드 안 + 숨기(▼ 홀드)여야 안 치인다.
+	if bool(p.get("hiding")):
+		for nx in niches:
+			if absf(pos.x - float(nx)) <= niche_half:
+				return
 	if absf(pos.x - _train_x) > TRAIN_W * 0.5:
 		return
 	_hit_done = true
@@ -148,6 +152,35 @@ func _check_player_hit() -> void:
 		p.call("apply_knockback", Vector2(KNOCKBACK_X * float(_dir), KNOCKBACK_Y), 0.28)
 	if p.has_method("take_hit"):
 		p.call("take_hit", dmg)
+
+# 대피 지시(2026-08-22 "적들이 다 치여 맵이 텅 빈다") — 예고가 뜨면 선로 대역의 순찰도 가까운
+# 벽감으로 피한다(여기서 일하는 경비는 신호를 안다 · 08-19 "벽감 스폰"이 순찰 이동으로 무효화되던
+# 것의 동적 완성). Enemy 쪽 규칙: ROAMING/FIRING만 대피, 이미 시작한 돌진은 못 멈춤 — 그래서
+# "끌어내면 대신 치워 준다"는 자동 청소가 아니라 돌진을 유도해 성립시키는 전술로 남는다.
+func _assign_shelters() -> void:
+	if niches.is_empty():
+		return
+	for e in get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(e) or not (e is Node2D):
+			continue
+		var en: Node2D = e as Node2D
+		# 보스/더미 가드(enemy_type 없음) — _check_enemy_hits와 동형.
+		if en.get("enemy_type") == null or en.get("shelter_x") == null:
+			continue
+		if en.get("dead"):
+			continue
+		if en.global_position.y < ground_y - TRAIN_H:
+			continue   # 선로 대역 밖(단차 위)은 이미 안전
+		var best: float = float(niches[0])
+		for nx in niches:
+			if absf(float(nx) - en.global_position.x) < absf(best - en.global_position.x):
+				best = float(nx)
+		en.set("shelter_x", best)
+
+func _clear_shelters() -> void:
+	for e in get_tree().get_nodes_in_group("enemy"):
+		if is_instance_valid(e) and e.get("shelter_x") != null:
+			e.set("shelter_x", INF)
 
 # 열차는 누구 편도 아니다(사용자 2026-08-18 "왜 적은 안 치이지") — 선로 대역의 적도 대뎀.
 # 환경 내성 캐논(물·감전 = 시설 유닛 설계 내성)과 구분: 열차는 물리 충돌이라 예외 없음.

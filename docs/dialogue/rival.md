@@ -20,10 +20,12 @@ MapData `route_lines`(rival 화자 포함)는 `briefing_routes.md` 담당.
 - 화자: ?
 - 맥락: 막3 lab에서 SENTINEL(페이크 보스) 처치 직후. 정적 1.2s 뒤 첫 등장. 승리를 승리같지 않게 하는 비트
 - 코드: `Stage.gd` `_play_sentinel_reveal`
-- KO:
-  > 수고했어요, 요원. 방금 이긴 건 시설이 내민 손끝일 뿐이에요.
-  > 몸통은 따로 있어요.
+- KO (재작성 2026-08-23 · "시설이 내민 손끝" 은유 반려):
+  > 수고하셨습니다, 요원. 방금 잡은 건 경비 장비 한 대일 뿐입니다.
+  > 진짜 상대는 아직 나서지도 않았습니다.
 - EN:
+  > Well done, agent. All you took down was one piece of security hardware.
+  > Your real opponent hasn't even stepped in yet.
 
 #### 내 VEIL 동요
 - 화자: VEIL

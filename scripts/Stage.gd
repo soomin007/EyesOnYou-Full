@@ -261,14 +261,20 @@ func _fire_drone_intro() -> void:
 	GameState.drone_intro_seen = true
 	_show_veil_subtitle(_drone_intro_line(), 4.0)
 
+# 재작성(2026-08-22 사용자: "떨어뜨려요"의 목적어 누락 + "위도 같이 봐요"는 요원에게 할 말이
+# 아님) — 전 밴드 보고체 정합: 떨어뜨리는 것 = 폭탄을 명시, 지시는 "확인하십시오/챙기세요".
 func _drone_intro_line() -> String:
 	match GameState.veil_register_band():
 		"cold":
-			return "상공에 부유 유닛. 드론입니다. 폭탄이 위에서 떨어집니다. 이제 위도 보십시오."
+			# EN: "Drone overhead. It drops bombs. Watch the sky."
+			# ("부유 유닛" = 내부 용어 지적 · 무맥락 검수 1차, 2026-08-23)
+			return "머리 위에 드론입니다. 폭탄을 떨어뜨립니다. 위쪽을 경계하십시오."
 		"warm":
-			return "저거 봐요, 드론이에요. 머리 위를 봐요. ...이제 기계도 우릴 봐요."
+			# EN: "Drone overhead. It drops bombs, so keep an eye above you too."
+			return "드론이에요. 폭탄을 머리 위에 떨어뜨립니다. 위쪽도 챙기세요."
 		_:
-			return "저거... 드론이에요. 머리 위에서 떨어뜨려요. 이제 위도 같이 봐요."
+			# EN: "That's a drone. It drops bombs from overhead. Check above you as well."
+			return "드론입니다. 폭탄을 머리 위에 떨어뜨립니다. 위쪽도 확인하십시오."
 
 func _arm_ward_foreshadow_at(trigger_x: float) -> void:
 	var area := Area2D.new()
@@ -3727,15 +3733,24 @@ func _build_cover_niches() -> void:
 	if niches.is_empty():
 		return
 	var s_half: float = float(_map_data.get("niche_half", 90.0))
+	# 숨기 존 등록(2026-08-22 능동 숨기) — _tick_hide_zone이 매 틱 플레이어 밴드 판정에 쓴다.
+	_hide_niche_xs = niches.duplicate()
+	_hide_niche_half = s_half
 	for nx_raw in niches:
 		var nx: float = float(nx_raw)
-		# 뒷벽 차폐 벽감(오목) — 어두운 리세스.
+		# 뒷벽 차폐 벽감(오목) — 어두운 리세스. 안쪽으로 갈수록 어두운 2겹 = "뒤로 숨는 깊이".
 		var recess := ColorRect.new()
 		recess.color = Color(0.08, 0.10, 0.12, 0.92)
 		recess.position = Vector2(nx - s_half, GROUND_Y - 210.0)
 		recess.size = Vector2(s_half * 2.0, 210.0)
 		recess.z_index = -8
 		add_child(recess)
+		var recess_core := ColorRect.new()
+		recess_core.color = Color(0.04, 0.05, 0.07, 0.9)
+		recess_core.position = Vector2(nx - s_half * 0.62, GROUND_Y - 196.0)
+		recess_core.size = Vector2(s_half * 1.24, 196.0)
+		recess_core.z_index = -8
+		add_child(recess_core)
 		# 세이프존 경계 기둥(양옆) — 차폐 프레임.
 		for sx in [nx - s_half, nx + s_half]:
 			var post := ColorRect.new()
@@ -4743,6 +4758,70 @@ func _ambience_subway_transfer() -> void:
 	var w: float = STAGE_LENGTH
 	var rng := RandomNumberGenerator.new()
 	rng.seed = GameState.current_stage * 101 + 13
+	# 정차 차량 실체(2026-08-22 사용자 "방3만 너무 달라 보인다") — "정차 차량 지붕"이라던 발판
+	# (600/1700 · w700 · y220)이 허공에 뜬 일반 발판으로 그려져 지하철 정체성이 사라져 있었다.
+	# 발판 아래에 차체(창·문·대차)를 그리고 밑에 유치선(레일+침목)을 깔아 "세워 둔 열차 위에서
+	# 싸운다"로 만든다. 차체는 방2 주행 열차와 같은 결(어두운 차체 + 따뜻한 창).
+	for ry in [GROUND_Y + 6.0, GROUND_Y + 20.0]:
+		var rail := ColorRect.new()
+		rail.color = Color(0.42, 0.45, 0.52, 0.9)
+		rail.position = Vector2(-200.0, float(ry))
+		rail.size = Vector2(w + 400.0, 4.0)
+		rail.z_index = -4
+		add_child(rail)
+	var tx: float = -100.0
+	while tx < w + 100.0:
+		var tie := ColorRect.new()
+		tie.color = Color(0.16, 0.14, 0.12)
+		tie.position = Vector2(tx, GROUND_Y + 2.0)
+		tie.size = Vector2(16.0, 26.0)
+		tie.z_index = -5
+		add_child(tie)
+		tx += 90.0
+	for cx in [600.0, 1700.0]:
+		var left: float = float(cx) - 350.0
+		# 차체 본체(발판 지붕 바로 아래 ~ 대차 위).
+		var body := ColorRect.new()
+		body.color = Color(0.10, 0.11, 0.14)
+		body.position = Vector2(left, 226.0)
+		body.size = Vector2(700.0, GROUND_Y - 22.0 - 226.0)
+		body.z_index = -4
+		add_child(body)
+		var body_line := ColorRect.new()
+		body_line.color = Color(0.50, 0.53, 0.62, 0.55)
+		body_line.position = Vector2(left, 226.0)
+		body_line.size = Vector2(700.0, 3.0)
+		body_line.z_index = -3
+		add_child(body_line)
+		# 창 열(주행 열차와 같은 따뜻한 불빛) + 출입문 2짝.
+		for i in 4:
+			var win := ColorRect.new()
+			win.color = Color(0.95, 0.82, 0.45, 0.6)
+			win.position = Vector2(left + 60.0 + float(i) * 170.0, 258.0)
+			win.size = Vector2(64.0, 30.0)
+			win.z_index = -3
+			add_child(win)
+		for dxr in [left + 170.0, left + 470.0]:
+			var door := ColorRect.new()
+			door.color = Color(0.16, 0.18, 0.22)
+			door.position = Vector2(float(dxr), 250.0)
+			door.size = Vector2(52.0, GROUND_Y - 22.0 - 250.0)
+			door.z_index = -3
+			add_child(door)
+		# 대차(하부) + 바퀴.
+		var bogie := ColorRect.new()
+		bogie.color = Color(0.07, 0.07, 0.09)
+		bogie.position = Vector2(left + 20.0, GROUND_Y - 22.0)
+		bogie.size = Vector2(660.0, 22.0)
+		bogie.z_index = -4
+		add_child(bogie)
+		for wx in [left + 90.0, left + 210.0, left + 480.0, left + 600.0]:
+			var wheel := ColorRect.new()
+			wheel.color = Color(0.22, 0.24, 0.28)
+			wheel.position = Vector2(float(wx), GROUND_Y - 16.0)
+			wheel.size = Vector2(26.0, 16.0)
+			wheel.z_index = -3
+			add_child(wheel)
 	var x: float = 300.0
 	while x < w:
 		var tube := ColorRect.new()
@@ -6551,10 +6630,11 @@ func _summon_facility_hazards() -> void:
 		if is_inside_tree():
 			_show_veil_subtitle(VeilDialogue.banded("증기와 방전, 지나온 설비들입니다. 리듬은 이미 배우셨습니다. 바닥에 오래 서지 마십시오.", "증기랑 방전, 지나온 설비들이에요. 리듬은 이미 배웠잖아요. 바닥에 오래 서지 말아요."), 4.2))
 	# 카운터플레이 티칭 1회(2026-08-22) — 설비는 보스만의 무기가 아니다.
-	# EN: "That machine runs hot. Herd it over a steam column and it will stall for a moment."
+	# EN: "That machine runs hot. Herd it over a steam column and it will stop for a moment."
+	# ("기체" = 어려운 한자어 + 증기(氣體) 동음 오독 지적 · 무맥락 검수 1차, 2026-08-23)
 	get_tree().create_timer(6.2, false).timeout.connect(func() -> void:
 		if is_inside_tree() and boss != null and is_instance_valid(boss):
-			_show_veil_subtitle(VeilDialogue.banded("저 기체는 열이 약점입니다. 증기 기둥 위로 몰아넣으면 잠깐 멎습니다.", "저 기체, 열에 약해요. 증기 기둥 위로 몰아넣으면 잠깐 멎습니다."), 4.0))
+			_show_veil_subtitle(VeilDialogue.banded("저 기계는 열에 약합니다. 증기 기둥 위로 몰아넣으면 잠깐 멈춥니다.", "저 기계, 열에 약해요. 증기 기둥 위로 몰아넣으면 잠깐 멈춥니다."), 4.0))
 
 func _clear_facility_hazards() -> void:
 	# 즉시 제거 — 노드 바인딩 페이드 트윈이 격파 프레임에서 완주를 보장하지 못했다
@@ -6572,8 +6652,10 @@ func _on_boss_overheat_stalled() -> void:
 	if _boss_stall_line_shown:
 		return
 	_boss_stall_line_shown = true
-	# EN: "Steam flooded its intakes. The core is choking. Right now every shot goes in clean."
-	_show_veil_subtitle(VeilDialogue.banded("증기가 흡기구에 들어갔습니다. 코어가 열을 못 이깁니다. 지금은 쏘는 만큼 전부 박힙니다.", "증기를 제대로 먹였습니다. 코어가 멎었어요. 지금은 쏘는 만큼 전부 박힙니다."), 3.6)
+	# EN: "It took the steam head-on. Overheated, control's gone. Right now every shot goes in clean."
+	# ("흡기구·코어" = 화면에 없는 내부 부품 지적 · 무맥락 검수 1차 — 화면의 라벨(과열·제어 불능)과
+	# 같은 말로 설명한다, 2026-08-23)
+	_show_veil_subtitle(VeilDialogue.banded("증기를 그대로 뒤집어썼습니다. 과열로 제어를 잃었습니다. 지금은 쏘는 만큼 전부 박힙니다.", "증기를 제대로 먹였습니다. 과열로 제어를 잃었어요. 지금은 쏘는 만큼 전부 박힙니다."), 3.6)
 
 # 첫 과부하 배기 — 무적+김의 "왜"를 한 번은 말로(2026-08-20 사용자 "뭐라도 이해가 되게").
 func _on_boss_vent_started() -> void:
@@ -6827,9 +6909,12 @@ func _on_boss_killed(at_position: Vector2) -> void:
 func _play_sentinel_reveal() -> void:
 	# 정적 한 박자 — stage_clear_chime은 lab에서 억제됨(보스 죽는 소리만 여운).
 	await get_tree().create_timer(1.2).timeout
-	# 라이벌 VEIL 첫 발화 — 내 VEIL 어조를 살짝 닮았으나 "얘 누구야?" (대사 플레이스홀더, §7 예시).
-	# "그냥 손" 은유가 안 읽힌다는 지적(2026-08-10) — 손끝/몸통 대비로 명시(SENTINEL=도구, 본체 따로).
-	_show_rival_subtitle("수고했어요, 요원. 방금 이긴 건 시설이 내민 손끝일 뿐이에요.\n몸통은 따로 있어요.", 3.8)
+	# 라이벌 VEIL 첫 발화 — 화자 불명(정체는 14-1에서 공개). 재작성(2026-08-22 사용자 "'시설이
+	# 내민 손끝' 너무 이상함"): 은유 전면 폐기, 잡은 것의 실체(경비 장비)를 그대로 말하고
+	# "진짜 상대"의 존재만 남긴다. 승리를 깎아내리는 첫 목소리라는 비트는 유지.
+	# EN: "Well done, agent. All you took down was one piece of security hardware.
+	#      Your real opponent hasn't even stepped in yet."
+	_show_rival_subtitle("수고하셨습니다, 요원. 방금 잡은 건 경비 장비 한 대일 뿐입니다.\n진짜 상대는 아직 나서지도 않았습니다.", 3.8)
 	await get_tree().create_timer(4.5).timeout
 	# 내 VEIL 동요 — §1 맹점 테마의 첫 실연. 어색한 원문("누가... 저는 못 봤어요") 재작성
 	# (사용자 2026-08-14): 동요는 감정 직진술 대신 말끝 흐림(~는데)으로.
@@ -8177,8 +8262,9 @@ func _on_p3_fake_torn(_total: int) -> void:
 		return
 	_p3_torn_spoken = true
 	# EN: "Those fakes are its own renders. Tear them faster than it can redraw,
-	#      and it can't keep itself painted out."
-	_show_veil_subtitle("저 가짜들은 저쪽이 직접 그리는 그림입니다. 다시 그리는 속도보다 빨리 찢으면, 자기 몸을 그림으로 못 버팁니다.", 4.2)
+	#      and it can't stay a picture either."
+	# ("몸을 그림으로 못 버팁니다" 비입말 결합 지적 · 무맥락 검수 1차, 2026-08-23)
+	_show_veil_subtitle("저 가짜들은 저쪽이 직접 그리는 그림입니다. 다시 그리는 속도보다 빨리 찢으면, 저놈도 그림인 채로는 못 버팁니다.", 4.2)
 
 # 창당 피해 상한 도달(조기 재잠복) · 첫 회에만 룰을 말로 짚는다. "탄이 안 박힌다"가
 # 버그로 읽히지 않게(2026-08-17 상한 도입과 한 세트).
@@ -9614,6 +9700,29 @@ func _process(delta: float) -> void:
 	_tick_avoid_warning()
 	_tick_mid_gate(delta)
 	_tick_p3_camp(delta)
+	_tick_hide_zone()
+
+# ─── 대피 칸 숨기 존(2026-08-22 사용자 안: "뒤로 숨는 공간" + 능동 입력) ───
+# 칠해진 칸 x밴드 안이면 Player.hide_zone을 켠다 — ▼ 홀드로 숨기(판정·연출은 Player).
+# 첫 진입 1회 티칭: 어느 칸에서든 조작을 모른 채 빔/열차를 맞는 일이 없게.
+var _hide_niche_xs: Array = []
+var _hide_niche_half: float = 90.0
+var _hide_hint_shown: bool = false
+
+func _tick_hide_zone() -> void:
+	if _hide_niche_xs.is_empty() or player == null or not is_instance_valid(player):
+		return
+	var px: float = player.global_position.x
+	var inz: bool = false
+	for nx in _hide_niche_xs:
+		if absf(px - float(nx)) <= _hide_niche_half:
+			inz = true
+			break
+	player.set("hide_zone", inz)
+	if inz and not _hide_hint_shown:
+		_hide_hint_shown = true
+		# EN: "That recess is deep enough to hide in. Hold Down inside the marked bay."
+		_show_veil_subtitle("칠해진 칸 안쪽은 몸을 숨길 만큼 깊습니다. 칸 안에서 아래 키를 꾹 누르십시오.", 3.6)
 
 # ─── P3 캠핑 감지(2026-08-20 사용자 "맨 위 발판에서 연사 홀드로 무피해 클리어") ───
 # 판정 3차 개정(2026-08-21 사용자 "발판 하나에서 좌우 와리가리만 하면 유도탄이 영영 안 옴"):

@@ -358,7 +358,7 @@
 | | description | 시설 전력을 받는 옥외 변전 설비. 노출 전선이 주기적으로 방전하고, 변압기 위로 저격선이 깔린다. | |
 | | veil_comment | 변전소입니다. 바닥 방전은 발판 위로 피하십시오. 변압기 위 저격, 머리 위 드론. | |
 | | veil_comment_warm | 변전소예요. 바닥 방전은 발판 위로 피해요. 변압기 위 저격, 머리 위 드론. | |
-| | entry_comment | 변전 설비입니다. 여러 각도에서 쏩니다. 변압기 뒤에 붙으십시오. | |
+| | entry_comment | 변전 설비입니다. 바닥 전선이 한 번씩 방전합니다. 방전이 오면 발판 위로. 위에는 저격수가 있으니 오래 서 있지 마십시오. | Substation. The floor wires discharge every so often - get up on a deck when they do. Snipers hold the high spots, so don't stay up long. |
 | | entry_comment_warm | 변전 설비예요. 여러 각에서 쏴요. 변압기 뒤로 붙어요. | |
 | route_testing_grounds | name | 실험 구역 | |
 | | description | 봉인된 실험 베이가 늘어선 구역. 무엇을 시험했는지 관측창마다 지워져 있다. | |
@@ -580,7 +580,7 @@
 | 봉쇄 게이트 · veil | 드라이브가 신호를 계속 흘립니다. 앞 구간 경비가 우리 위치를 미리 알고 기다립니다. 먼저 쏘면서 뚫으십시오. | |
 | 봉쇄 게이트 · rival | 그 드라이브, 저한테도 꼭 필요한 물건입니다. 내려놓고 가시죠, 요원. | |
 | 봉쇄 게이트 · veil | 봉쇄 게이트가 마지막입니다. 뚫으면 끝입니다. | |
-| 폐쇄 지하철 방2 · veil | 선로가 아직 살아 있습니다. 신호가 붉어지면 열차가 옵니다. 파란 띠가 칠해진 대피 칸이나 높은 발판으로 피하십시오. | The track is still live. When the signal turns red, a train is coming. Get into a marked recess or up onto a platform. |
+| 폐쇄 지하철 방2 · veil | 선로가 아직 살아 있습니다. 신호가 붉어지면 열차가 옵니다. 파란 띠가 칠해진 대피 칸에 들어가 숨거나, 높은 발판으로 오르십시오. | The track is still live. When the signal turns red, a train is coming. Duck into a marked recess and hide, or get up onto a platform. |
 | 폐쇄 지하철 방2 · veil | 열차는 누구 편도 아닙니다. 경비를 선로로 끌어내면 대신 치워 줍니다. 다만 그렇게 치운 건 아무것도 남지 않습니다. | |
 | 옛 배수로 방1 · veil | 펌프가 아직 살아 있습니다. 물이 차오르면 높은 발판으로 오르십시오. 잠긴 채 버티면 몸이 상합니다. | |
 | 옛 배수로 방1 · veil | 경비 유닛은 밀폐 설계라 물속에서도 멀쩡합니다. 요원은 아닙니다. 조심하십시오. | |
@@ -614,7 +614,7 @@
 | 붕괴 회랑 방3 · veil · warm | ...나왔어요. 하늘 보여요. 무너지는 소리는 이제 등 뒤예요. | |
 | 붕괴 회랑 방3 · veil | ...신호가 끊겼습니다. 저것도, 시설도. 앞만 보십시오. | |
 | 붕괴 회랑 방3 · veil · warm | ...신호가 끊겼어요. 저것도, 시설도. 앞만 봐요. | |
-| 정비 갱도 · veil | 수색등이 켜졌습니다. 조용히 나가는 길이었는데... 누가 흘렸습니다. 빔이 오면 파란 띠가 칠해진 대피 칸으로 들어가십시오. | Searchlights, live. This was supposed to be a quiet exit... someone tipped them off. When the beam comes, get into the marked recesses. |
+| 정비 갱도 · veil | 수색등이 켜졌습니다. 조용히 빠져나갈 길이었는데... 누가 우리 위치를 흘렸습니다. 불빛이 오면 파란 띠 대피 칸에 숨으십시오. | Searchlights, live. This was supposed to be a quiet way out... someone leaked our position. When the light comes, hide in a marked recess. |
 | 정비 갱도 · rival | 조용히 빠져나갈 생각이셨습니까. 수색대는 제가 불렀습니다. | A quiet exit, was it? I made the call. They're expecting you. |
 | 정비 갱도 · rival | 어디로 가시는 겁니까, 요원. 그건 제 것이기도 합니다. | |
 | 무인 회랑 · rival | 가시는 길은 열어 두었습니다. | |
@@ -627,7 +627,7 @@
 | 화물 리프트 방2 · veil | 여기부터는 리프트를 공중에서 갈아탑니다. 다음 리프트가 들어올 때를 보고 건너뛰십시오. | |
 | 화물 리프트 방3 · veil | 마지막 구간입니다. 리프트 세 대를 이어 타야 합니다. 위 조준선은 갈아타는 순간을 노립니다. | |
 | 차량 엄폐 방2 · veil | 포탑이 양쪽에서 엄폐를 깎고, 육교 위 저격은 낮은 차 너머까지 봅니다. 키 큰 컨테이너 뒤가 그 사각입니다. | |
-| 펌프장 · veil (방류) | 여기부터 방류 구간입니다. 바닥 배관 입구가 덜컹거리면 곧 물을 뿜습니다. 물길에서 비키거나, 발판 위로 오르십시오. | Discharge cycle ahead. When an outlet rattles, it's about to blow. Step out of the water line, or get up on the platforms. |
+| 펌프장 · veil (방류) | 여기부터 방류 구간입니다. 바닥의 방류구가 덜컹거리면 곧 물을 뿜습니다. 물길에서 비키거나, 발판 위로 오르십시오. | Discharge cycle ahead. When an outlet rattles, it's about to blow. Step out of the water line, or get up on the platforms. |
 | 펌프장 · veil | 저격이 파이프 통로 위에 거치돼 있습니다. 바로 밑은 안 보이는 사각입니다. 올라가서 끊거나, 조준 틈에 지나가십시오. | |
 
 ---

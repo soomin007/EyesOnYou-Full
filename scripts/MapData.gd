@@ -433,8 +433,8 @@ static func _subway_tracks() -> Dictionary:
 		},
 		"route_lines": [
 			# EN: "The track is still live. When the signal turns red, a train is coming.
-			#      Get into a marked recess or up onto a platform."
-			{"x": 260.0, "who": "veil", "text": "선로가 아직 살아 있습니다. 신호가 붉어지면 열차가 옵니다. 파란 띠가 칠해진 대피 칸이나 높은 발판으로 피하십시오.", "dur": 4.0},
+			#      Duck into a marked recess and hide, or get up onto a platform."
+			{"x": 260.0, "who": "veil", "text": "선로가 아직 살아 있습니다. 신호가 붉어지면 열차가 옵니다. 파란 띠가 칠해진 대피 칸에 들어가 숨거나, 높은 발판으로 오르십시오.", "dur": 4.0},
 			{"x": 1400.0, "who": "veil", "text": "열차는 누구 편도 아닙니다. 경비를 선로로 끌어내면 대신 치워 줍니다. 다만 그렇게 치운 건 아무것도 남지 않습니다.", "dur": 4.0},
 		],
 		"rewards": {
@@ -1188,9 +1188,10 @@ static func _escape_conceal() -> Dictionary:
 			"sniper": [], "drone": [], "bomber": [], "shield": [],
 		},
 		"route_lines": [
-			# EN: "Searchlights, live. This was supposed to be a quiet exit... someone tipped them off.
-			#      When the beam comes, get into the marked recesses."
-			{"x": 380.0,  "who": "veil",  "text": "수색등이 켜졌습니다. 조용히 나가는 길이었는데... 누가 흘렸습니다. 빔이 오면 파란 띠가 칠해진 대피 칸으로 들어가십시오.", "dur": 4.4},
+			# EN: "Searchlights, live. This was supposed to be a quiet way out... someone leaked
+			#      our position. When the light comes, hide in a marked recess."
+			# ("누가 흘렸습니다" 목적어 누락 + 수색등→빔 호칭 이탈 지적 · 무맥락 검수 1차, 2026-08-23)
+			{"x": 380.0,  "who": "veil",  "text": "수색등이 켜졌습니다. 조용히 빠져나갈 길이었는데... 누가 우리 위치를 흘렸습니다. 불빛이 오면 파란 띠 대피 칸에 숨으십시오.", "dur": 4.4},
 			# EN: "A quiet exit, was it? I made the call. They're expecting you."
 			{"x": 950.0,  "who": "rival", "text": "조용히 빠져나갈 생각이셨습니까. 수색대는 제가 불렀습니다.", "dur": 3.4},
 			{"x": 2450.0, "who": "rival", "text": "어디로 가시는 겁니까, 요원. 그건 제 것이기도 합니다.", "dur": 3.4},
@@ -1223,8 +1224,12 @@ static func _escape_leave() -> Dictionary:
 		"enemies": {
 			"patrol": [], "sniper": [], "drone": [], "bomber": [], "shield": [],
 		},
+		# 위장 함정 1(§4.1 · 잔류 = 거짓 평온의 마지막 배신 비트). 종전 x2050은 발판(2000·w240)
+		# 아래에 깔려 "맵 밖에 숨은 가시"로 읽혔다(사용자 2026-08-23) — 발판 사이 열린 지상
+		# (2120~2280 갭)으로 옮겨 상시 지직거림 tell이 정면으로 보이게 한다. 라이벌의
+		# "두고 가시는군요"(x2200) 직전 자리 = 말과 함정이 같은 걸음에 겹친다.
 		"deceit_spikes": [
-			{"x": 2050, "w": 110, "dmg": 2},
+			{"x": 2210, "w": 110, "dmg": 2},
 		],
 		"fake_watchers": [Vector2(1250, 636.0), Vector2(2600, 636.0), Vector2(3350, 636.0)],
 		"route_lines": [
@@ -1885,7 +1890,8 @@ static func _pump_station() -> Dictionary:
 		"route_lines": [
 			# EN: "Discharge cycle ahead. When an outlet rattles, it's about to blow.
 			#      Step out of the water line, or get up on the platforms."
-			{"x": 560.0, "who": "veil", "text": "여기부터 방류 구간입니다. 바닥 배관 입구가 덜컹거리면 곧 물을 뿜습니다. 물길에서 비키거나, 발판 위로 오르십시오.", "dur": 4.4},
+			# (호칭 통일 "배관 입구"→"방류구" — 진입 코멘트·브리핑과 한 이름 · 무맥락 검수 1차)
+			{"x": 560.0, "who": "veil", "text": "여기부터 방류 구간입니다. 바닥의 방류구가 덜컹거리면 곧 물을 뿜습니다. 물길에서 비키거나, 발판 위로 오르십시오.", "dur": 4.4},
 			{"x": 1050.0, "who": "veil", "text": "저격이 파이프 통로 위에 거치돼 있습니다. 바로 밑은 안 보이는 사각입니다. 올라가서 끊거나, 조준 틈에 지나가십시오.", "dur": 4.4},
 		],
 		"enemies": {

@@ -39,9 +39,16 @@
 | lab 첫 과부하 배기 · warm | 김을 빼는 동안엔 총알이 안 박힙니다. 대신 쏠수록 배출이 빨라져요. 그 사이 증원도 정리하고요. | |
 | 14-1 P2 노드 재접속(`_on_p2_node_down`) | ...같은 자리에 회선이 다시 붙습니다. 한 번 더 끊어야 합니다. | |
 | 14-1 P3 캠핑 감지(`_tick_p3_camp`, 1회) | 한자리에 오래 서 있으면 조준이 고정됩니다. 계속 움직이십시오. | |
-| 14-1 P3 그림 격파(`_on_p3_fake_torn`, 1회 · 2026-08-22) | 저 가짜들은 저쪽이 직접 그리는 그림입니다. 다시 그리는 속도보다 빨리 찢으면, 자기 몸을 그림으로 못 버팁니다. | Those fakes are its own renders. Tear them faster than it can redraw, and it can't keep itself painted out. |
+| 14-1 P3 그림 격파(`_on_p3_fake_torn`, 1회 · 2026-08-22) | 저 가짜들은 저쪽이 직접 그리는 그림입니다. 다시 그리는 속도보다 빨리 찢으면, 저놈도 그림인 채로는 못 버팁니다. | Those fakes are its own renders. Tear them faster than it can redraw, and it can't stay a picture either. |
 | beam | 게이트는 스캔 빔이 지날 때만 열립니다. 빔 뒤에 붙어 통과하십시오. | |
 | beam · warm | 게이트는 스캔 빔이 지나갈 때만 열려요. 빔을 뒤따라 통과하세요. | |
+
+### 대피 칸 숨기 티칭 (대피 칸 첫 진입, 맵당 1회 · 2026-08-23 능동 숨기)
+- 화자: VEIL · 코드: `Stage.gd` `_tick_hide_zone`
+
+| 밴드 | KO | EN |
+|---|---|---|
+| 공용 | 칠해진 칸 안쪽은 몸을 숨길 만큼 깊습니다. 칸 안에서 아래 키를 꾹 누르십시오. | That recess is deep enough to hide in. Hold Down inside the marked bay. |
 
 ### 감시등 경보 (감시탑 탐조등·순찰로 경계등 공용, 맵당 1회)
 - 화자: VEIL · 맥락: 감시등 노출 0.45s 누적 → 경보 첫 발동 시. 진압 경비(추격 방패병) = 무보상 고지 포함 · 코드: `Stage.gd` `_on_searchlight_alert`
@@ -56,9 +63,9 @@
 
 | 밴드 | KO | EN |
 |---|---|---|
-| cold | 상공에 부유 유닛. 드론입니다. 폭탄이 위에서 떨어집니다. 이제 위도 보십시오. | |
-| thaw | 저거 봐요, 드론이에요. 머리 위를 봐요. ...이제 기계도 우릴 봐요. | |
-| warm | 저거... 드론이에요. 머리 위에서 떨어뜨려요. 이제 위도 같이 봐요. | |
+| cold | 머리 위에 드론입니다. 폭탄을 떨어뜨립니다. 위쪽을 경계하십시오. | Drone overhead. It drops bombs. Watch the sky. |
+| thaw | 드론입니다. 폭탄을 머리 위에 떨어뜨립니다. 위쪽도 확인하십시오. | That's a drone. It drops bombs from overhead. Check above you as well. |
+| warm | 드론이에요. 폭탄을 머리 위에 떨어뜨립니다. 위쪽도 챙기세요. | Drone overhead. It drops bombs, so keep an eye above you too. |
 
 #### 격리 병동 봉인 복선
 - 화자: VEIL
@@ -320,14 +327,14 @@
 #### 카운터플레이 티칭 자막 (`_summon_facility_hazards` +6.2s, 1회 · 2026-08-22)
 | 밴드 | KO | EN |
 |---|---|---|
-| 기본 | 저 기체는 열이 약점입니다. 증기 기둥 위로 몰아넣으면 잠깐 멎습니다. | That machine runs hot. Herd it over a steam column and it will stall for a moment. |
-| warm | 저 기체, 열에 약해요. 증기 기둥 위로 몰아넣으면 잠깐 멎습니다. | |
+| 기본 | 저 기계는 열에 약합니다. 증기 기둥 위로 몰아넣으면 잠깐 멈춥니다. | That machine runs hot. Herd it over a steam column and it will stop for a moment. |
+| warm | 저 기계, 열에 약해요. 증기 기둥 위로 몰아넣으면 잠깐 멈춥니다. | |
 
 #### 첫 과열 실속 자막 (`_on_boss_overheat_stalled`, 1회 · 2026-08-22)
 | 밴드 | KO | EN |
 |---|---|---|
-| 기본 | 증기가 흡기구에 들어갔습니다. 코어가 열을 못 이깁니다. 지금은 쏘는 만큼 전부 박힙니다. | Steam flooded its intakes. The core is choking. Right now every shot goes in clean. |
-| warm | 증기를 제대로 먹였습니다. 코어가 멎었어요. 지금은 쏘는 만큼 전부 박힙니다. | |
+| 기본 | 증기를 그대로 뒤집어썼습니다. 과열로 제어를 잃었습니다. 지금은 쏘는 만큼 전부 박힙니다. | It took the steam head-on. Overheated, control's gone. Right now every shot goes in clean. |
+| warm | 증기를 제대로 먹였습니다. 과열로 제어를 잃었어요. 지금은 쏘는 만큼 전부 박힙니다. | |
 
 #### 자폭 회피 안내 라벨 (분류 확인 필요: HUD 라벨이라 ui.md 이동 후보)
 - 화자: 시스템(HUD 라벨) · 맥락: 보스 자폭 시퀀스 중 회피 반경 안내.

@@ -289,6 +289,8 @@ func fire_suppression(at: Vector2) -> void:
 		get_parent().add_child(m)
 
 # 실체화 순간의 조준 3연탄 — "볼 수 있는 창 = 위험한 창"의 리스크 교환.
+# 미끼 눈도 같은 순간 가짜 탄을 쏜다(2026-08-23 사용자 "공격이 나오는 게 무조건 진짜라 속을
+# 이유가 없다") — 볼리 출처가 공짜 판별이 되지 않게. 가짜 탄은 그림이라 피해 없음(닿으면 찢김).
 func _fire_volley() -> void:
 	var p := _find_player()
 	if p == null:
@@ -301,6 +303,8 @@ func _fire_volley() -> void:
 		b.velocity = base_dir.rotated(float(spread)) * EnemyBullet.BASE_SPEED * 0.9
 		b.global_position = global_position + base_dir * 30.0
 		get_parent().add_child(b)
+	if _decoy != null and is_instance_valid(_decoy):
+		_decoy.fire_phantom_volley()
 
 func take_damage(amount: int, from_dir: int = 0) -> void:
 	if state == State.DYING:
@@ -508,6 +512,28 @@ class _DecoyEye extends Node2D:
 		_erasing = true
 		_erase_t = 0.0
 
+	# 가짜 탄 볼리 — 본체 볼리와 같은 순간·같은 문법으로 쏜다(볼리 출처 = 공짜 판별 차단).
+	# 탄도 이쪽 렌더러의 그림: 피해 없음, 플레이어에 닿으면 찢겨 흩어진다(맞아 본 뒤에야 확인되는
+	# tell — 원거리에선 진짜 탄과 거의 같아 보인다).
+	func fire_phantom_volley() -> void:
+		var tree := get_tree()
+		if tree == null or _erasing:
+			return
+		var arr := tree.get_nodes_in_group("player")
+		if arr.is_empty():
+			return
+		var p: Node2D = arr[0] as Node2D
+		SfxPlayer.play_at("enemy_patrol_fire", global_position, -3.0)
+		var base_dir: Vector2 = (p.global_position + Vector2(0, -24.0) - global_position).normalized()
+		var parent := get_parent()
+		if parent == null:
+			return
+		for spread in [-0.22, 0.0, 0.22]:
+			var b := _PhantomBullet.new()
+			b.velocity = base_dir.rotated(float(spread)) * EnemyBullet.BASE_SPEED * 0.9
+			parent.add_child(b)
+			b.global_position = global_position + base_dir * 30.0
+
 	func _physics_process(delta: float) -> void:
 		if owner_fv == null or not is_instance_valid(owner_fv):
 			queue_free()
@@ -609,6 +635,56 @@ class _DecoyEye extends Node2D:
 		if _ripple_t > 0.0:
 			var rk: float = 1.0 - _ripple_t / 0.35
 			draw_arc(Vector2.ZERO, 30.0 + 42.0 * rk, 0.0, TAU, 36, Color(0.72, 0.42, 1.0, 0.38 * (1.0 - rk)), 2.0, true)
+
+# ═══ 가짜 탄(거짓 렌더) — 미끼 눈이 쏘는 그림 탄 ═══
+# 진짜 탄(EnemyBullet · 주황)과 같은 크기·색·속도로 날아간다. 가까이서만 보이는 tell =
+# 바이올렛 이음선 + 주기 슬립(가짜 병사와 같은 구형 렌더 문법). 콜리전 없음 · 플레이어에
+# 닿으면 피해 없이 찢겨 흩어진다("탄도 그림이었다"를 그 자리에서 학습).
+class _PhantomBullet extends Node2D:
+	var velocity: Vector2 = Vector2.ZERO
+	var _life: float = 2.4
+	var _t: float = 0.0
+	var _burst_t: float = 0.0   # >0: 통과 찢김 재생 중(끝나면 소멸)
+
+	func _ready() -> void:
+		z_index = 5
+		add_to_group("phantom_bullet")
+
+	func _physics_process(delta: float) -> void:
+		_t += delta
+		if _burst_t > 0.0:
+			_burst_t -= delta
+			if _burst_t <= 0.0:
+				queue_free()
+				return
+			queue_redraw()
+			return
+		_life -= delta
+		if _life <= 0.0:
+			queue_free()
+			return
+		global_position += velocity * delta
+		var tree := get_tree()
+		if tree != null:
+			var arr := tree.get_nodes_in_group("player")
+			if arr.size() > 0 and global_position.distance_to((arr[0] as Node2D).global_position) < 22.0:
+				_burst_t = 0.3
+				velocity = Vector2.ZERO
+		queue_redraw()
+
+	func _draw() -> void:
+		if _burst_t > 0.0:
+			# 찢김 — 슬라이스가 흩어지며 바이올렛 결이 드러난다(가짜 병사 소멸과 같은 문법).
+			var k: float = 1.0 - _burst_t / 0.3
+			for i in 4:
+				var off := Vector2(-7.0 + 5.0 * float(i), (-1.0 if i % 2 == 0 else 1.0) * 9.0 * k)
+				draw_rect(Rect2(off, Vector2(5.0, 2.0)), Color(0.82, 0.58, 1.0, 0.8 * (1.0 - k)))
+			return
+		# 진행 탄 — 진짜 탄과 같은 주황 몸체. 주기 슬립(1.1s마다 한순간 1px 밀림) + 몸체를 가르는
+		# 얇은 바이올렛 이음선이 유일한 근거리 tell.
+		var slip: float = 1.5 if fmod(_t, 1.1) < 0.08 else 0.0
+		draw_rect(Rect2(Vector2(-6.0 + slip, -2.0), Vector2(12.0, 4.0)), Color(1.0, 0.65, 0.35, 1.0))
+		draw_rect(Rect2(Vector2(-6.0 + slip, -0.5), Vector2(12.0, 1.0)), Color(0.72, 0.42, 1.0, 0.55))
 
 # ═══ 가짜 적(거짓 렌더) — 구형 렌더 문법의 적 실루엣 ═══
 # "허공에 네모만 떠 있어 뭔지 모르겠다" 반려(2026-08-12) → 마커가 아니라 **적처럼 보이는 것**을

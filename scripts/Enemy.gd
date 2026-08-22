@@ -223,6 +223,12 @@ var shiny: bool = false
 var hunt: bool = false
 const HUNT_HOP_VELOCITY: float = -520.0   # 엄폐 최고 92px < 도약 ~123px
 
+# 열차 대피 지시 x(2026-08-22 "적들이 다 치여 맵이 텅 빈다") — TrainHazard가 예고~통과 동안
+# 선로 대역의 적에게 가까운 벽감 x를 세팅(INF = 없음). 여기서 일하는 경비는 신호를 알고 몸을
+# 피한다는 개연 · 08-19 "벽감 스폰"의 동적 완성. 순찰의 ROAMING/FIRING만 따르고, 이미 시작한
+# 돌진(TELEGRAPH/CHARGING)은 못 멈춘다 — "끌어내면 열차가 대신 치운다" 유인 전술의 손잡이.
+var shelter_x: float = INF
+
 # 혼성 진형 호위(2026-08-20 사용자 "진형을 갖춰서 오면 위협적") — 웨이브 스폰 직후 Stage가
 # 방패병 근처 정찰병에 리더를 배정한다. 호위 정찰병은 방패 뒤(플레이어 반대쪽)를 따라붙어
 # "방패가 막고 사수가 쏘는" 대형이 된다. 리더가 죽으면 평소 행동으로 복귀.
@@ -894,6 +900,13 @@ func _tick_patrol(delta: float) -> void:
 	if escort_leader != null and (not is_instance_valid(escort_leader) or bool(escort_leader.get("dead"))):
 		escort_leader = null
 
+	# 열차 대피 — 예고가 뜨면 조준(FIRING)은 접고 대피부터(살고 봐야 하니까). 돌진 계열은 유지.
+	if is_finite(shelter_x) and patrol_state == PatrolState.FIRING:
+		patrol_state = PatrolState.ROAMING
+		patrol_fire_armed = false
+		if visual != null:
+			visual.modulate = _base_tint
+
 	match patrol_state:
 		PatrolState.ROAMING:
 			if escort_leader != null and p != null and not harmless:
@@ -919,6 +932,16 @@ func _tick_patrol(delta: float) -> void:
 				dir = 1 if p.global_position.x > global_position.x else -1
 				velocity.x = float(dir) * _eff_patrol_speed()
 				_try_hunt_hop()
+			elif is_finite(shelter_x):
+				# 대피 걸음 — 가까운 벽감으로 서둘러 이동, 도착하면 홀드(열차 세이프 밴드 안).
+				var sdx: float = shelter_x - global_position.x
+				if absf(sdx) > 12.0:
+					dir = 1 if sdx > 0.0 else -1
+					velocity.x = float(dir) * _eff_patrol_speed() * 1.3
+					if is_on_floor() and not _has_ground_ahead(dir):
+						velocity.x = 0.0
+				else:
+					velocity.x = 0.0
 			else:
 				velocity.x = float(dir) * _eff_patrol_speed()
 				if global_position.x > origin_x + patrol_range:
@@ -934,7 +957,8 @@ func _tick_patrol(delta: float) -> void:
 					dir = -dir
 					edge_flip_cd = EDGE_FLIP_COOLDOWN
 					velocity.x = float(dir) * _eff_patrol_speed()
-			if not harmless and p != null and _player_in_charge_range(p):
+			# 대피 중엔 새 교전을 안 연다(열차부터) — 이미 걸린 돌진은 위 상태 분기가 이어 간다.
+			if not harmless and p != null and not is_finite(shelter_x) and _player_in_charge_range(p):
 				dir = 1 if p.global_position.x > global_position.x else -1
 				velocity.x = 0.0
 				# 근접이면 돌진, 비슷한 높이의 중거리면 사격. 높이 차가 크면(등반 중) 사격하지 않고 순찰 유지.

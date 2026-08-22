@@ -79,6 +79,13 @@ var dash_timer: float = 0.0
 var dash_cd: float = 0.0
 var skill_cd: float = 0.0
 var invuln: float = 0.0
+# 대피 칸 숨기(2026-08-22 사용자 안: "뒤로 숨는 공간" + 능동 입력) — Stage가 hide_zone을
+# 매 물리틱 세팅(칠해진 칸 x밴드 안), 칸 안에서 ▼ 홀드 + 이동 입력 없음이면 hiding.
+# 몸을 뒤 공간으로 물리는 연출(작아지고 어두워짐)은 _update_visual의 _hide_k 램프가 담당.
+# 빔(SweepBeam)·열차(TrainHazard)의 세이프 판정 조건 = 밴드 안 + hiding.
+var hide_zone: bool = false
+var hiding: bool = false
+var _hide_k: float = 0.0
 # 클리어 연출 보호: 연출 동안 게임이 pause되지 않아 잔여 위협(추격 벽·탄·빔)이 플레이어를
 # 죽일 수 있다(사용자 2026-08-16, 붕괴 회랑 엔딩 멘트 중 사망). invuln과 달리 깜빡임 없음.
 # Stage._begin_clear_sequence가 켜고 씬 전환까지 유지.
@@ -249,6 +256,8 @@ func _tick_timers(delta: float) -> void:
 				skill_cd = get_skill_cd_max()  # 다음 충전 시작
 	if invuln > 0.0:
 		invuln -= delta
+	# 숨기 램프 — 스냅 없이 물러났다 나온다(연속 감쇠).
+	_hide_k = move_toward(_hide_k, 1.0 if hiding else 0.0, delta * 7.0)
 	if muzzle_flash != null and muzzle_flash.visible:
 		muzzle_flash.modulate.a = max(0.0, muzzle_flash.modulate.a - delta * 7.0)
 		if muzzle_flash.modulate.a <= 0.05:
@@ -359,6 +368,9 @@ func _handle_input(delta: float) -> void:
 		else:
 			# 바닥: 원웨이 발판 통과. (공중 ▼는 비어 있음 — 활강은 점프 홀드 방식이라 취소 키 불필요.)
 			_try_drop_through()
+	# 대피 칸 숨기 — 칸 안 + 지상 + ▼ 홀드 + 이동/대시/넉백 없음. 이동 입력이 자연스럽게 푼다.
+	hiding = hide_zone and is_on_floor() and Input.is_action_pressed("move_down") \
+		and dir == 0.0 and dash_timer <= 0.0 and _knockback_t <= 0.0
 
 func _try_drop_through() -> void:
 	if not is_on_floor():
@@ -807,7 +819,15 @@ func _update_visual() -> void:
 		visual.modulate.a = 0.4 if int(invuln * 20.0) % 2 == 0 else 1.0
 	else:
 		visual.modulate.a = 1.0
-	visual.scale.x = -1.0 if facing < 0 else 1.0
+	# 숨기 연출 — 뒤 공간으로 물러난 몸: 약간 작아지고(원근) 어두워진다(칸 그늘).
+	# 플레이어 비주얼의 modulate RGB는 다른 데서 안 써 안전(피격은 invuln 알파 점멸만).
+	var hide_shrink: float = 1.0 - 0.13 * _hide_k
+	visual.scale.x = (-1.0 if facing < 0 else 1.0) * hide_shrink
+	visual.scale.y = hide_shrink
+	var hide_dark: float = 1.0 - 0.38 * _hide_k
+	visual.modulate.r = hide_dark
+	visual.modulate.g = hide_dark
+	visual.modulate.b = hide_dark
 	# 자세 — Torso의 작은 y bob + ArmFront 회전으로 정적 인상 완화.
 	# scale.x로 좌우 반전돼도 child rotation은 시각적으로 자동 미러됨.
 	if torso == null:

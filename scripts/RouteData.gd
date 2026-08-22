@@ -347,8 +347,13 @@ const ALL_ROUTES: Array = [
 		"tags": ["원거리", "드론", "노출", "전투"],
 		"veil_comment": "변전소입니다. 바닥 방전은 발판 위로 피하십시오. 변압기 위 저격, 머리 위 드론.",
 		"veil_comment_warm": "변전소예요. 바닥 방전은 발판 위로 피해요. 변압기 위 저격, 머리 위 드론.",
-		"entry_comment": "변전 설비입니다. 여러 각도에서 쏩니다. 변압기 뒤에 붙으십시오.",
-		"entry_comment_warm": "변전 설비예요. 여러 각에서 쏴요. 변압기 뒤로 붙어요.",
+		# 재작성(2026-08-22 사용자 "변압기가 어딨고 왜 뒤에 붙어야 하는데") — 이 맵에 "뒤에 붙는"
+		# 엄폐 문법은 없다. 실제 문법 = 바닥 방전은 발판 위로, 단 위에는 저격이 있다(체류 비용).
+		# EN: "Substation. The floor wires discharge every so often - get up on a deck when they do.
+		#      Snipers hold the high spots, so don't stay up long."
+		# ("저격이 있으니" 행위명사 주어 = 번역투 지적 · 무맥락 검수 1차, 2026-08-23)
+		"entry_comment": "변전 설비입니다. 바닥 전선이 한 번씩 방전합니다. 방전이 오면 발판 위로. 위에는 저격수가 있으니 오래 서 있지 마십시오.",
+		"entry_comment_warm": "변전 설비예요. 바닥 전선이 한 번씩 방전해요. 방전이 오면 발판 위로. 위에는 저격수가 있으니 오래 서 있진 말고요.",
 		"stage_color": Color(0.16, 0.15, 0.10),
 	},
 	{

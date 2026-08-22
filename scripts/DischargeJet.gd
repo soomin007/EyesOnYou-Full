@@ -77,8 +77,10 @@ func _check_hit() -> void:
 		return
 	var rel: Vector2 = (p as Node2D).global_position - global_position
 	var along: float = rel.x * float(jet_dir)
-	# 물줄기 구간 안 + 지상 높이(발판 위는 안전)만 — 화면=판정 일치.
-	if along >= -10.0 and along <= length and rel.y > -BAND_H and rel.y <= 8.0:
+	# 판정 구간 = 그려진 물줄기 길이(reach)와 동기 — 물이 아직 안 닿은 앞 구간은 안 맞는다
+	# (2026-08-22 "물줄기가 나오기 전에 피격": 뻗어나가는 0.2s 동안 전체 구간 선판정이던 버그).
+	var reach: float = length * minf(1.0, (_t / JET_DUR) * 6.0)
+	if along >= -10.0 and along <= reach and rel.y > -BAND_H and rel.y <= 8.0:
 		if p.has_method("take_hit"):
 			p.call("take_hit", damage)
 			_hit_this_jet = true

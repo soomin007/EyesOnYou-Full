@@ -110,10 +110,12 @@ func _check_hit() -> void:
 	var py: float = (p as Node2D).global_position.y
 	if py < y_top - 24.0 or py > y_bot + 24.0:
 		return
-	# 차폐 사각(니치) 안이면 스캔을 피한다 — x밴드만(높이 무관).
-	for band in safe_bands:
-		if absf(px - float(band)) <= safe_half:
-			return
+	# 대피 칸 세이프(2026-08-22 능동 숨기로 개정) — 칸 x밴드 안 + 숨기(▼ 홀드)여야 안 걸린다.
+	# 칸 앞에 서 있기만 하면 걸린다(빛은 칸 앞을 지나간다) — "들어가서 숨는다"가 판정 그대로.
+	if bool(p.get("hiding")):
+		for band in safe_bands:
+			if absf(px - float(band)) <= safe_half:
+				return
 	if p.has_method("take_hit"):
 		p.call("take_hit", DMG)
 	_dmg_cd = 0.35
