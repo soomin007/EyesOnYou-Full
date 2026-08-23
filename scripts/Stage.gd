@@ -16,7 +16,6 @@ var player: CharacterBody2D
 var camera: Camera2D
 var hud: CanvasLayer
 var hp_label: Label
-var overwrite_label: Label # 현장 기록 덮어쓰기 잔여 핍(●잔여 ○소모 ×라이벌 잠김) — 우상단 점수 아래
 var xp_label: Label
 var xp_bar: ProgressBar   # 레벨업 EXP 진행 바 (피드백: 텍스트보다 바가 한눈에)
 var stage_label: Label
@@ -59,7 +58,7 @@ func _ready() -> void:
 	get_tree().paused = false
 	# 방 체인 중간 방(세그먼트 1+)은 HP 유지 · 체인은 한 스테이지다. 진입 풀 힐은 첫 방만.
 	if GameState.current_segment == 0:
-		GameState.player_hp = GameState.player_max_hp
+		GameState.player_hp = GameState.effective_max_hp()
 	# BGM — 맵별 트랙 선택. ??? 방은 Gravity Static, 보스 맵은 Chrome Grit,
 	# 그 외에는 stage_index 기반으로 Cold Gear(초중반)/Cold Wire(중후반) 분기.
 	# Death 화면에서 set_ducked(true)였다면 stage 재진입에서 원복.
@@ -5755,19 +5754,20 @@ func _build_camera() -> void:
 			player.add_child(camera)
 	camera.make_current()
 
-# --- 덮어쓰기 한도(사망 예산) 연출 — 수치는 GameState가 진실, 여기는 전달만 ---
+# --- 라이벌 최대 HP 잠금 연출(2026-08-23 통일) — 수치는 GameState가 진실, 여기는 전달만 ---
 
-# 14-1 P2/P3 도달 — 라이벌 잠금을 부순다(런 영속, 사망 P1 리셋에도 유지). 부순 칸은 채워서 반환.
+# 14-1 P2/P3 도달 — 라이벌의 최대 HP 잠금을 부순다(런 영속, 사망 P1 리셋에도 유지).
+# 풀린 하트는 채워서 반환(되찾음이 보상으로 체감되게).
 func _break_rival_lock(count: int) -> void:
 	if GameState.story_mode or GameState.rival_locks_broken >= count:
 		return
 	GameState.rival_locks_broken = count
-	GameState.overwrite_left = clampi(GameState.overwrite_left + 1, 0, GameState.overwrite_max())
+	GameState.player_hp = mini(GameState.player_hp + 1, GameState.effective_max_hp())
 	SfxPlayer.play("gate_unlock")
 	_refresh_hud()
 
-# 막4/5 첫 스테이지 — 라이벌이 덮어쓰기 회선을 잠그는 비트(런당 각 1회). 강탈은 보여야
-# 강탈이라 ? 한 줄 + 핍 라벨을 바이올렛으로 잠깐 물들인다. 수치는 overwrite_max()가
+# 막4/5 첫 스테이지 — 라이벌이 최대 HP를 1칸 잠그는 비트(런당 각 1회). 강탈은 보여야
+# 강탈이라 컷씬 + 하트 라벨을 바이올렛으로 잠깐 물들인다. 수치는 rival_locks_active()가
 # 막 함수로 이미 반영하므로 이 비트는 전달 전담(각본 비트 = 죽음 반응형 아님, 공정).
 func _maybe_rival_lock_beat() -> void:
 	if GameState.story_mode or GameState.playground_active:
@@ -5793,21 +5793,27 @@ func _play_rival_lock_beat(act_num: int, tries_left: int = 24) -> void:
 		return
 	_run_glitch(0.5, 0.28)
 	SfxPlayer.play("boss_alert_text")
-	# 잠금 비트 = 컷씬(2026-08-23) — 라이벌 강탈 + VEIL 해설(무엇을 빼앗겼는지, 2026-08-15
-	# 지적 · HUD "기록" 핍과 같은 단어로 실물 일치)을 정지 화면에서 잇는다. 핍 바이올렛
-	# 물들임은 컷씬 종료 후에도 2.6s 남아(타이머가 pause 동안 정지) 해설의 지시 대상이 보인다.
-	if overwrite_label != null and is_instance_valid(overwrite_label):
-		overwrite_label.add_theme_color_override("font_color", Color(0.72, 0.42, 1.0))
-		get_tree().create_timer(2.6, false).timeout.connect(_reset_overwrite_label_color)
+	# 잠금 비트 = 컷씬(2026-08-23 통일) — 라이벌이 최대 HP 1칸을 잠근다(하트 곁 ×). 강탈 +
+	# VEIL 해설(무엇을 빼앗겼는지 · 하트와 같은 단어로 실물 일치)을 정지 화면에서 잇는다.
+	# 하트 바이올렛 물들임은 컷씬 종료 후에도 2.6s 남아 해설의 지시 대상이 보인다.
+	if hp_label != null and is_instance_valid(hp_label):
+		hp_label.add_theme_color_override("font_color", Color(0.72, 0.42, 1.0))
+		get_tree().create_timer(2.6, false).timeout.connect(_reset_hp_label_color)
+	_refresh_hud()
 	if act_num == 4:
+		# EN: "One of those hearts is mine now. You always had more than you needed." /
+		#     "A slot of your max health is locked. The x next to your hearts is that slot.
+		#      Healing will not fill it. One way to take it back: the owner of that voice."
 		_play_story_dialogue([
-			{"who": "rival", "text": "덮어쓰기 회선 하나는 제가 가져갑니다. 요원은 늘 여분이 많았으니까."},
-			{"who": "veil", "text": "방금 덮어쓰기 회선 하나가 잠겼습니다.\n쓰러져도 그 자리에서 다시 서게 해 주던 기록입니다. 남은 건 둘."},
+			{"who": "rival", "text": "체력 한 칸은 제가 잠급니다. 요원은 늘 여분이 많았으니까요."},
+			{"who": "veil", "text": "최대 체력 한 칸이 잠겼습니다. 하트 옆 × 표시가 그 칸입니다.\n회복으로도 안 찹니다. 되찾을 열쇠는 하나, 저 목소리의 주인입니다."},
 		])
 	else:
+		# EN: "One more is mine. Spend what is left carefully in my zone." /
+		#     "Another slot is locked. The hearts you see now are all you have."
 		_play_story_dialogue([
-			{"who": "rival", "text": "이제 한 번입니다. 제 구역에서는 아껴 쓰셔야죠."},
-			{"who": "veil", "text": "하나 더 잠겼습니다. 남은 덮어쓰기는 한 번.\n그다음은 구역 처음부터입니다."},
+			{"who": "rival", "text": "한 칸 더 가져갑니다. 제 구역에서는 아껴 쓰셔야죠."},
+			{"who": "veil", "text": "한 칸 더 잠겼습니다. 지금 보이는 하트가 전부입니다."},
 		])
 
 # 플레이어 주변에 살아 있는 적이 있는가 — 각본 발화의 "조용한 창" 판정.
@@ -5824,9 +5830,9 @@ func _combat_near_player(radius: float) -> bool:
 			return true
 	return false
 
-func _reset_overwrite_label_color() -> void:
-	if overwrite_label != null and is_instance_valid(overwrite_label):
-		overwrite_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
+func _reset_hp_label_color() -> void:
+	if hp_label != null and is_instance_valid(hp_label):
+		hp_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
 
 func _build_hud() -> void:
 	hud = CanvasLayer.new()
@@ -5920,19 +5926,6 @@ func _build_hud() -> void:
 	score_label.size = Vector2(100.0, 14.0)
 	score_label.position = Vector2(-95.0, 90.0)
 	hud.add_child(score_label)
-	# 덮어쓰기 잔여 핍 — 점수 아래(런 자원 클러스터). 체력 곁에 두면 하트와 같은 것의
-	# 중복으로 읽혔다(2026-08-15 지적: "HP와 기록은 뭐가 다른 거야?"). HP=쓰러지기 전
-	# 버티는 피격, 기록=쓰러진 뒤 다시 서는 예산 — 층이 다르니 자리도 뗀다.
-	overwrite_label = Label.new()
-	overwrite_label.add_theme_font_size_override("font_size", 12)
-	overwrite_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
-	overwrite_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
-	overwrite_label.add_theme_constant_override("outline_size", 3)
-	overwrite_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	overwrite_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	overwrite_label.size = Vector2(120.0, 14.0)
-	overwrite_label.position = Vector2(-105.0, 108.0)
-	hud.add_child(overwrite_label)
 
 	var bottom := MarginContainer.new()
 	bottom.add_theme_constant_override("margin_left", 24)
@@ -6034,18 +6027,10 @@ func _update_cd_slot(slot: Control, remaining: float, max_cd: float) -> void:
 		fill.color = accent.darkened(0.45)        # 쿨다운 중 — 같은 색 어둡게(정체성 유지)
 
 func _refresh_hud() -> void:
-	hp_label.text = "HP  %s" % _hearts(GameState.player_hp, GameState.player_max_hp)
-	# 덮어쓰기 잔여 — 우상단 점수 아래. ●잔여 ○소모 ×라이벌 잠김(빼앗김은 사라지지 않고 보인다).
+	# 하트 = 실효 최대(잠금 반영) + 잠긴 칸은 ×로 하트 곁에(빼앗김은 사라지지 않고 보인다).
 	# ×는 U+00D7(곱셈 기호) — U+2715는 Pretendard 서브셋에 없어 웹에서 두부로 깨졌다(2026-08-15).
-	if overwrite_label != null and is_instance_valid(overwrite_label):
-		if GameState.story_mode:
-			overwrite_label.text = ""
-		else:
-			var ow_max: int = GameState.overwrite_max()
-			var ow_left: int = clampi(GameState.overwrite_left, 0, ow_max)
-			var ow_locked: int = GameState.rival_locks_active()
-			overwrite_label.text = "기록  %s%s%s" % [
-				"●".repeat(ow_left), "○".repeat(ow_max - ow_left), "×".repeat(ow_locked)]
+	hp_label.text = "HP  %s%s" % [_hearts(GameState.player_hp, GameState.effective_max_hp()),
+		"×".repeat(GameState.rival_locks_active())]
 	xp_label.text = "LV %d   XP %d/%d" % [GameState.player_level, GameState.player_xp, GameState.xp_to_next()]
 	if score_label != null and is_instance_valid(score_label):
 		score_label.text = "SCORE %d" % GameState.score
@@ -8704,7 +8689,7 @@ func _spawn_shiny_orb(pos: Vector2) -> void:
 	orb.global_position = pos
 	orb.set("value", SHINY_ORB_VALUE)   # 일반 1 → 황금 5 (흡인/충돌은 일반 오브와 동일)
 
-# 클리어 가산 토스트(단일 기록·도전 완수) — 관측 로그 온도의 짧은 확인 도장.
+# 클리어 가산 토스트(도전 완수·보상·수행 보너스) — 관측 로그 온도의 짧은 확인 도장.
 func _show_clear_toast(pos: Vector2, text: String) -> void:
 	var lbl := Label.new()
 	lbl.text = text
@@ -9606,12 +9591,11 @@ func _begin_clear_sequence() -> void:
 	GameState.restrict_combat_input = false
 	var leveled: bool = GameState.on_stage_clear()
 	# 클리어 가산 토스트 — 보상은 눈에 보여야 보상이다(점수만 오르면 침묵 보상).
-	# 도전 완수가 단일 기록보다 우선(도전 클리어는 대개 무사망이라 둘이 겹침 — 한 장만).
+	# ("단일 기록" 토스트는 2026-08-23 통일로 폐지 — 사망=막 리셋 규칙에서 per-스테이지
+	#  무사망이 퇴화. 솜씨 축은 아래 무피격/전원 처치가 담당.)
 	if player != null and is_instance_valid(player):
 		if GameState.last_clear_challenge:
 			_show_clear_toast(player.global_position + Vector2(0.0, -64.0), "도전 완수 · 보상 가산")
-		elif GameState.last_clear_flawless:
-			_show_clear_toast(player.global_position + Vector2(0.0, -64.0), "단일 기록 · 점수 보너스")
 		elif GameState.last_clear_reward_note != "":
 			# 종류 보상(기록·정찰)은 지급 순간이 안 보이면 없는 것과 같다 — 위 두 장이 없을 때 표시.
 			_show_clear_toast(player.global_position + Vector2(0.0, -64.0), GameState.last_clear_reward_note)
@@ -9816,7 +9800,7 @@ func _challenge_fail(_reason: String) -> void:
 	challenge_failed = true
 	SfxPlayer.play("challenge_fail")
 	# 잔여 데미지로 인한 사망 방지: HP 리필 + 긴 invuln (대기 중 죽으면 데스 씬으로 새버림).
-	GameState.player_hp = GameState.player_max_hp
+	GameState.player_hp = GameState.effective_max_hp()
 	if player != null and is_instance_valid(player):
 		player.set("invuln", 5.0)
 	# 안전 처리: paused 상태가 어떤 경로로든 set되어 있으면 풀어줘서 await timer가 진행되게.
@@ -9831,7 +9815,7 @@ func _challenge_fail(_reason: String) -> void:
 	goal_reached = true
 	# 보상/레벨업 없이 stage 카운트만 증가시킨 뒤 다음 씬으로.
 	GameState.current_stage += 1
-	GameState.player_hp = GameState.player_max_hp
+	GameState.player_hp = GameState.effective_max_hp()
 	# transition 직전 한 번 더 안전 reset.
 	get_tree().paused = false
 	GameState.restrict_combat_input = false

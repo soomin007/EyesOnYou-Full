@@ -743,12 +743,13 @@ static func _stage_in_range(route: Dictionary, stage_index: int) -> bool:
 # 새 규칙:
 #   · 클리어 경험치 = 위험도 그대로(r1=1 … r3=3). 위험할수록 항상 더 번다 — 열세 카드가
 #     구조적으로 사라진다(위험 증가에 보상이 자동 동행).
-#   · reward_type = 부가 효과 종류. "xp"(경험치 +2) / "record"(기록 1칸 회복, 가득하면 +2 XP) /
+#   · reward_type = 부가 효과 종류. "xp"(경험치 +2) / "record"(체력 1칸 회복, 가득하면 +2 XP ·
+#     2026-08-23 통일: 종전 "기록 회복"의 HP판. id는 route id 함정과 동형이라 유지, 라벨·효과만) /
 #     "recon"(다음 구간 숨은 요소 표시 · 재정의 2026-08-21) / ""(탈출 종착 = 없음).
 # 지급은 GameState.on_stage_clear, 표시는 RouteMap(카드 한 줄 + 우측 패널).
 const REWARD_TYPE_LABELS: Dictionary = {
 	"xp": "경험치",
-	"record": "기록",
+	"record": "회복",
 	"recon": "정찰",
 	"": "-",
 }
@@ -756,10 +757,10 @@ const REWARD_TYPE_LABELS: Dictionary = {
 static func reward_type_label(t: String) -> String:
 	return str(REWARD_TYPE_LABELS.get(t, "-"))
 
-# VEIL 추천. 플레이어의 실제 수행(GameState.competence_tier)과 현재 필요(기록 소모 여부)에
+# VEIL 추천. 플레이어의 실제 수행(GameState.competence_tier)과 현재 필요(체력 소모 여부)에
 # 반응해 맵을 고르고, 사유는 짧은 대사(REC_REASON)로 돌려준다. 우선순위:
 #   ① first(첫 스테이지) / struggling(고전) → 안전(가장 낮은 risk). 상태가 나쁘면 종류보다 생존.
-#   ② 기록(덮어쓰기)을 소모한 상태 + 풀에 record 루트 존재 → 그 루트(동종 여럿이면 저위험).
+#   ② 체력이 깎인 상태 + 풀에 record(회복) 루트 존재 → 그 루트(동종 여럿이면 저위험).
 #   ③ skilled(능숙) → 최고 risk(= 최대 클리어 경험치. 위험이 곧 보상이라 손해 카드 없음).
 #   ④ steady(무난) → 중간 risk(2 선호, 없으면 저위험).
 # hidden / challenge 루트는 항상 제외. 사유 대사는 종결어미 단조 회피(어투 규칙).
@@ -777,9 +778,9 @@ const REC_REASON: Dictionary = {
 		"이번에는 덜 험한 길입니다.",
 	],
 	"record": [
-		"기록이 비었습니다. 이 길에서 한 칸 되찾을 수 있습니다.",
-		"다음 실수에 대비해 둡니다. 기록을 채울 수 있는 쪽입니다.",
-		"이쪽을 지나면 기록 한 칸이 복구됩니다.",
+		"체력이 깎였습니다. 이 길 끝에서 한 칸 채울 수 있습니다.",
+		"다음 교전에 대비해 둡니다. 체력을 채울 수 있는 쪽입니다.",
+		"이쪽을 지나면 체력이 한 칸 채워집니다.",
 	],
 	"skilled": [
 		"잘 버티고 계십니다. 험한 길일수록 얻는 것도 많습니다.",
@@ -799,9 +800,9 @@ const REC_REASON_WARM: Dictionary = {
 		"이번엔 덜 험한 길을 골랐어요.",
 	],
 	"record": [
-		"기록이 비었죠. 이 길에서 한 칸 되찾을 수 있어요.",
-		"다음 실수에 대비해 두죠. 기록을 채울 수 있는 쪽입니다.",
-		"이쪽을 지나면 기록 한 칸이 복구돼요.",
+		"체력이 깎였죠. 이 길 끝에서 한 칸 채울 수 있어요.",
+		"다음 교전에 대비해 두죠. 체력을 채울 수 있는 쪽입니다.",
+		"이쪽을 지나면 체력이 한 칸 채워져요.",
 	],
 	"skilled": [
 		"잘 버티고 있죠. 험한 길일수록 배우는 것도 많습니다.",
@@ -844,9 +845,9 @@ static func choose_veil_recommendation_with_reason(pool: Array) -> Dictionary:
 	# ① 안전 우선 — 고전 중이거나 첫 판이면 종류를 따지지 않고 가장 수월한 길.
 	if mode == "first" or mode == "struggling":
 		return {"id": _pick_by_risk(candidates, 1).get("id", ""), "reason": _pick_rec_reason(mode)}
-	# ② 필요 기반 — 기록을 소모했고 되찾을 길이 있으면 그쪽. VEIL이 플레이어 상태를 읽고
-	#    권하는 그림(관측 프레임과 정합). 스토리 모드는 기록 시스템이 없어 제외.
-	if not GameState.story_mode and GameState.overwrite_left < GameState.overwrite_max():
+	# ② 필요 기반 — 체력이 깎였고 채울 길이 있으면 그쪽. VEIL이 플레이어 상태를 읽고
+	#    권하는 그림(관측 프레임과 정합).
+	if GameState.player_hp < GameState.effective_max_hp():
 		var rec_routes: Array = []
 		for c in candidates:
 			if str((c as Dictionary).get("reward_type", "")) == "record":

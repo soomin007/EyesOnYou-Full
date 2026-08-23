@@ -100,16 +100,18 @@ MapData `route_lines`(rival 화자 포함)는 `briefing_routes.md` 담당.
 
 ---
 
-## 4.5 덮어쓰기 회선 잠금 (막4·막5 문턱, 런당 각 1회)
+## 4.5 최대 체력 잠금 (막4·막5 문턱, 런당 각 1회 · 2026-08-23 통일 개정)
 
 - 화자: ? · 코드: `Stage.gd` `_play_rival_lock_beat`
-- 맥락: 막4/막5 첫 스테이지 진입 4.2초 뒤, 조용한 창(근접 적 없음, 상한 12s)을 기다려 컷씬으로. 라이벌이 덮어쓰기(사망 재시도) 최대치를
-  1칸 잠그는 각본 비트. HUD 핍이 바이올렛 ×로 바뀌는 연출과 짝. 뒤이어 내 VEIL 해설 1줄(veil_ingame 아님, 같은 컷씬 2번째 줄).
+- 맥락: 막4/막5 첫 스테이지 진입 4.2초 뒤, 조용한 창(근접 적 없음, 상한 12s)을 기다려 컷씬으로. 라이벌이 최대 체력을 1칸 잠그는
+  각본 비트(하트 곁 × · 회복 불가 · 14-1 P2/P3 도달로 해제). 뒤이어 내 VEIL 해설(같은 컷씬 2번째 줄).
 
 | 막 | KO | EN |
 |---|---|---|
-| 막4 | 덮어쓰기 회선 하나는 제가 가져갑니다. 요원은 늘 여분이 많았으니까. | |
-| 막5 | 이제 한 번입니다. 제 구역에서는 아껴 쓰셔야죠. | |
+| 막4 | 체력 한 칸은 제가 잠급니다. 요원은 늘 여분이 많았으니까요. | One of those hearts is mine now. You always had more than you needed. |
+| 막5 | 한 칸 더 가져갑니다. 제 구역에서는 아껴 쓰셔야죠. | One more is mine. Spend what is left carefully in my zone. |
+| 막4 VEIL 해설 | 최대 체력 한 칸이 잠겼습니다. 하트 옆 × 표시가 그 칸입니다.⏎회복으로도 안 찹니다. 되찾을 열쇠는 하나, 저 목소리의 주인입니다. | A slot of your max health is locked. The x next to your hearts is that slot. Healing will not fill it. The one key to take it back: the owner of that voice. |
+| 막5 VEIL 해설 | 한 칸 더 잠겼습니다. 지금 보이는 하트가 전부입니다. | Another slot is locked. The hearts you see now are all you have. |
 
 ---
 

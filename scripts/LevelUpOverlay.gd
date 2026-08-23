@@ -35,7 +35,7 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 			if GameState.has_overflow_hp_room():
 				picks = [{"id": OVERFLOW_PICK_ID, "name": "예비 장갑", "family": "", "tier": 0,
 					"desc": "모든 스킬이 최고 단계예요. 최대 체력이 1 올라요."}]
-			elif GameState.player_hp < GameState.player_max_hp:
+			elif GameState.player_hp < GameState.effective_max_hp():
 				picks = [{"id": OVERFLOW_PICK_ID, "name": "응급 처치", "family": "", "tier": 0,
 					"desc": "모든 스킬이 최고 단계예요. 체력을 %d 회복해요." % GameState.OVERFLOW_HEAL_AMOUNT}]
 			else:

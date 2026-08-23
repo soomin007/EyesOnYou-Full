@@ -348,20 +348,18 @@ func _ready() -> void:
 	if OS.has_feature("editor"):
 		debug_unlocked = true
 
-# --- 현장 기록 덮어쓰기 한도(사망 재시도 예산) — 2026-08-15 확정 설계 ---
-# 죽음 = 현장 기록 1회 덮어쓰기(그 스테이지에서 재개). 한도 소진 후의 사망 = 기록 오염 →
-# 잔존 구간(그 막 첫 스테이지)에서 재개. 성장(XP·스킬)은 유지 — 되감기는 위치·진행뿐.
-# 한도는 막 경계(record_route_choice, 재시도엔 재호출 안 됨)에서 최대치까지 충전.
-# 막4/5 진입 시 라이벌이 최대치를 1칸씩 잠그고(강탈), 14-1 P2/P3 도달로 잠금을 부순다.
-# rival_locks_broken은 런 영속 — 한 번 부순 잠금은 사망(P1 리셋)에도 다시 안 잠긴다
-# (팔림프세스트: 지워도 흔적은 남는다). 스토리 모드·연습장은 시스템 제외.
-const OVERWRITE_BASE: int = 3
-var overwrite_left: int = OVERWRITE_BASE
+# --- 사망 규칙(2026-08-23 통일 · "자원은 HP 하나로") — 덮어쓰기 한도 시스템 폐지 ---
+# 사망 = 그 막 첫 스테이지에서 재개(성장·스킬 유지, 되감기는 위치·진행뿐). 예외 = 14-1
+# 보스전(같은 스테이지 P1부터 · 보스 자체 체크포인트 문법, 08-15 확정 유지). 배경: 사용자
+# 2026-08-23 "HP와 별개의 두 번째 자원은 첫 플레이어가 이해 불가 · 데모식 무페널티 회귀는
+# 반려 · 어차피 깰 사람은 어려워도 깬다" — 자원은 HP 하나, 페널티는 막 되감기로 무겁게.
+# 라이벌 강탈은 최대 HP 잠금으로 이식: 막4/5 진입 시 1칸씩 잠기고(하트 곁 ×), 14-1 P2/P3
+# 도달로 부순다. rival_locks_broken은 런 영속 — 한 번 부순 잠금은 사망(P1 리셋)에도 다시
+# 안 잠긴다(팔림프세스트: 지워도 흔적은 남는다). 스토리 모드·연습장은 시스템 제외.
 var rival_locks_broken: int = 0
-var overwrite_exhausted: bool = false   # 직전 사망이 한도 초과 — Death가 잔존 구간 재개로 분기
 var rival_lock_beat4_shown: bool = false
 var rival_lock_beat5_shown: bool = false
-var last_clear_flawless: bool = false   # 직전 클리어가 무사망(단일 기록) — Stage 토스트용
+var last_clear_flawless: bool = false   # (2026-08-23 통일로 상시 false — 호환 위해 변수만 유지)
 var last_clear_challenge: bool = false  # 직전 클리어가 도전 루트(완수 프리미엄) — Stage 토스트용
 # 스테이지 수행 보너스(2026-08-23 사용자 "노히트·전원 사살에 추가 점수와 VEIL 멘트") —
 # 펌프장 양자택일 구조(무피격 vs 몰살)의 보상판. 판정·가산은 _finalize_stage_metrics.
@@ -410,8 +408,9 @@ func rival_locks_active() -> int:
 		locks += 1
 	return maxi(0, locks - rival_locks_broken)
 
-func overwrite_max() -> int:
-	return OVERWRITE_BASE - rival_locks_active()
+# 잠금 반영 실효 최대 HP — 회복·부활·HUD의 단일 상한(라이벌이 잠근 칸은 안 찬다).
+func effective_max_hp() -> int:
+	return maxi(1, player_max_hp - rival_locks_active())
 
 func reset() -> void:
 	current_stage = 0
@@ -465,9 +464,7 @@ func reset() -> void:
 	reentry_run = false
 	reentry_act = -1
 	reentry_line_pending = false
-	overwrite_left = OVERWRITE_BASE
 	rival_locks_broken = 0
-	overwrite_exhausted = false
 	rival_lock_beat4_shown = false
 	rival_lock_beat5_shown = false
 	last_clear_flawless = false
@@ -535,9 +532,7 @@ func start_main_game() -> void:
 	reentry_run = false
 	reentry_act = -1
 	reentry_line_pending = false
-	overwrite_left = OVERWRITE_BASE
 	rival_locks_broken = 0
-	overwrite_exhausted = false
 	rival_lock_beat4_shown = false
 	rival_lock_beat5_shown = false
 	last_clear_flawless = false
@@ -574,10 +569,6 @@ func record_route_choice(route: Dictionary, recommended_id: String) -> void:
 	recon_note_pending = veilsight_recon_active
 	current_route_challenge = bool(route.get("challenge", false))
 	current_route_hidden = bool(route.get("hidden", false))
-	# 덮어쓰기 한도 — 막 경계에서 최대치까지 충전(잔존 구간 문법). 이 함수는 스테이지 진입
-	# 직전 1회만 불리고 재시도엔 재호출되지 않아, 충전이 사망 반복으로 악용될 수 없다.
-	if not story_mode and is_act_start(current_stage):
-		overwrite_left = overwrite_max()
 	# 비상 탈출로: 시야 붕괴 해제(끌려온 degradation 끔). 탈출=종착이라 이후 맵·엔딩 영향 없음.
 	# 그 외, 보스/탈출 직전 첫 전투 맵(일반 stage>=4 / 스토리 stage2~3, 아직 안 붕괴)은 "진입부터 붕괴"
 	# onset으로: VeilSight가 시작부터 어둡고 진입 시 역전 멘트 1회(Stage가 pending으로 처리). 중간 글리치·
@@ -816,7 +807,8 @@ func damage_player(amount: int) -> void:
 	player_hp = max(0, player_hp - amount)
 
 func heal_player(amount: int) -> void:
-	player_hp = min(player_max_hp, player_hp + amount)
+	# 상한 = 실효 최대(라이벌 잠금 반영) — 잠긴 칸은 회복으로도 안 찬다(잠금이 잠금이려면).
+	player_hp = min(effective_max_hp(), player_hp + amount)
 
 func is_dead() -> bool:
 	return player_hp <= 0
@@ -824,19 +816,15 @@ func is_dead() -> bool:
 func register_death() -> void:
 	death_count += 1
 	current_segment = 0   # 방 체인 · 사망 재개는 체인 첫 방부터(스토리·연습장 포함)
-	# 덮어쓰기 한도 — 사망 = 현장 기록 1회 덮어쓰기. 소진 상태의 사망은 기록 오염:
-	# 여기서 즉시 잔존 구간(그 막 첫 스테이지)으로 후퇴시키고 저장까지 마쳐,
-	# 타이틀 이탈 후 이어하기로도 무를 수 없게 한다(이어하기 무름 방지).
+	# 사망 = 그 막 첫 스테이지로 후퇴(2026-08-23 통일 · 자원은 HP 하나). 여기서 즉시 후퇴·저장을
+	# 마쳐 타이틀 이탈 후 이어하기로도 무를 수 없게 한다(이어하기 무름 방지). 예외 = 14-1
+	# 보스전: 같은 스테이지 P1부터(Death._restart_stage가 rival_phase_reached를 리셋).
 	if story_mode or playground_active:
 		return
-	if overwrite_left > 0:
-		overwrite_left -= 1
-		overwrite_exhausted = false
-	else:
-		overwrite_exhausted = true
+	if current_route_id != "route_core_recovery":
 		current_stage = act_start_stage(act_for_stage(current_stage))
 		rival_phase_reached = 0
-	player_hp = player_max_hp
+	player_hp = effective_max_hp()
 	save_run()
 
 func on_stage_clear() -> bool:
@@ -870,23 +858,22 @@ func on_stage_clear() -> bool:
 			if add_xp(2, false):
 				leveled = true
 		"record":
-			# 기록 1칸 회복(라이벌 잠금 상한 준수). 가득이면 경험치로 환산 — 카드가 약속한
-			# 보상이 조용히 증발하지 않게(정직 산수 규칙).
-			if not story_mode and overwrite_left < overwrite_max():
-				overwrite_left = clampi(overwrite_left + 1, 0, overwrite_max())
-				last_clear_reward_note = "기록 1칸 회복"
+			# 회복 보상(2026-08-23 통일 · 종전 "기록 1칸 회복"의 HP판). 가득이면 경험치로 환산 —
+			# 카드가 약속한 보상이 조용히 증발하지 않게(정직 산수 규칙). id "record"는 유지
+			# (route id 하드코딩 함정과 동형 — 라벨·효과만 바꾼다).
+			if player_hp < effective_max_hp():
+				player_hp = mini(player_hp + 1, effective_max_hp())
+				last_clear_reward_note = "체력 1칸 회복"
 			else:
 				if add_xp(2, false):
 					leveled = true
 		"recon":
 			veilsight_recon_next = true
 			last_clear_reward_note = "정찰 데이터 확보 · 다음 구간 숨은 요소 표시"
-	# D축 단일 기록 — 이 스테이지를 사망 없이 통과(재시도 포함 전체 창 기준, 덮어쓰기 한도의 당근 짝).
-	last_clear_flawless = deaths_this_stage == 0 and not story_mode and not playground_active
-	if last_clear_flawless:
-		score += 50 * current_stage
-		if add_xp(2, false):
-			leveled = true
+	# D축 "단일 기록" 보너스 폐지(2026-08-23 통일) — 사망 = 막 첫 스테이지 재시작 규칙에서는
+	# 클리어한 스테이지가 언제나 그 시도 내 무사망이라 per-스테이지 무사망 보너스가 퇴화한다.
+	# 무사망의 가치는 규칙 자체(막 되감기 회피)가 만들고, 솜씨 축은 무피격/전원 처치 보너스가 담당.
+	last_clear_flawless = false
 	# 도전 루트 완수 프리미엄 — 1히트 실패·시간 제한·VEIL 차단의 기대 보상 보정(2026-08-15 검토:
 	# 종전엔 클리어 XP가 일반 reward3 맵과 동일한데 킬 기회는 없어 이론상 보상 열위였다).
 	last_clear_challenge = current_route_challenge and not story_mode and not playground_active
@@ -1063,7 +1050,6 @@ func _store_run_state(cf: ConfigFile, section: String) -> void:
 	# §9 간파율 축적 — 기존 run.cfg 미저장 필드였음(이어하기 시 소실). 스냅샷 정합을 위해 추가.
 	cf.set_value(section, "rival_lure_shown", rival_lure_shown)
 	cf.set_value(section, "rival_lure_followed", rival_lure_followed)
-	cf.set_value(section, "overwrite_left", overwrite_left)
 	cf.set_value(section, "rival_locks_broken", rival_locks_broken)
 	cf.set_value(section, "kills_total", kills_total)
 	cf.set_value(section, "run_play_secs", run_play_secs)
@@ -1141,12 +1127,6 @@ func _restore_run_state(cf: ConfigFile, section: String) -> void:
 	rival_lure_shown = int(cf.get_value(section, "rival_lure_shown", 0))
 	rival_lure_followed = int(cf.get_value(section, "rival_lure_followed", 0))
 	rival_locks_broken = int(cf.get_value(section, "rival_locks_broken", 0))
-	# 기능 도입 전 저장본(-1)은 현 지점 최대치로 초기화 — current_stage·story_mode가 위에서 복원된 뒤라 안전.
-	overwrite_left = int(cf.get_value(section, "overwrite_left", -1))
-	if overwrite_left < 0:
-		overwrite_left = overwrite_max()
-	overwrite_left = clampi(overwrite_left, 0, OVERWRITE_BASE)
-	overwrite_exhausted = false
 	kills_total = int(cf.get_value(section, "kills_total", 0))
 	run_play_secs = float(cf.get_value(section, "run_play_secs", 0.0))
 	stage_time_log = []

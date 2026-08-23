@@ -544,7 +544,7 @@ func _update_risk_reward_panel(route: Dictionary) -> void:
 		"xp":
 			lines.append("[보상 · 경험치]\n클리어 경험치가 추가로 붙습니다.")
 		"record":
-			lines.append("[보상 · 기록]\n지나면 기록 1칸을 되찾습니다. 가득하면 경험치로 받습니다.")
+			lines.append("[보상 · 회복]\n지나면 체력 1칸을 되찾습니다. 가득하면 경험치로 받습니다.")
 		"recon":
 			lines.append("[보상 · 정찰]\n다음 구간의 숨은 레버·잠긴 칸·보급품이 표시됩니다. 방해 신호도 뚫습니다.")
 	if lines.is_empty():
