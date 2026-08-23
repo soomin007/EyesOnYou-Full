@@ -102,6 +102,10 @@ func show_doc(input_lines: Array) -> void:
 		_kw_color = "#c9a2ff"
 	else:
 		_kw_color = "#0a4a73"
+	# 콘솔 계열 양식은 코딩 폰트(D2Coding, OFL) — 사용자 제안 2026-08-23. 종이는 프리텐다드 유지.
+	var mono: FontFile = null
+	if is_term or is_drive:
+		mono = load("res://assets/fonts/D2Coding.ttf")
 	paper_visual = ColorRect.new()
 	if is_term:
 		paper_visual.color = Color(0.043, 0.055, 0.075, 0.97)
@@ -135,6 +139,8 @@ func show_doc(input_lines: Array) -> void:
 		bar.add_child(dots)
 		var path_l := Label.new()
 		path_l.text = "svr-03 : /var/log/veil.d/recovered.log" if is_term else "drive-A7 : decrypt · read-only"
+		if mono != null:
+			path_l.add_theme_font_override("font", mono)
 		path_l.add_theme_font_size_override("font_size", 13)
 		path_l.add_theme_color_override("font_color", Color(0.48, 0.75, 0.58) if is_term else Color(0.74, 0.58, 0.96))
 		path_l.position = Vector2(0.0, 4.0)
@@ -194,6 +200,8 @@ func show_doc(input_lines: Array) -> void:
 		var lbl := RichTextLabel.new()
 		lbl.bbcode_enabled = true
 		lbl.scroll_active = false
+		if mono != null:
+			lbl.add_theme_font_override("normal_font", mono)
 		lbl.position = Vector2(0.0, y)
 		lbl.size = Vector2(PAPER_WIDTH, _line_height_for(kind))
 		lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
