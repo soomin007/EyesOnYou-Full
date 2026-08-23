@@ -37,6 +37,8 @@ var hp: int = MAX_HP
 var state: State = State.PHASED
 # 다회차 기억 변주 시드(Stage가 setup 전에 세팅) — 가짜 눈 앵커 회전 폭 · 결정타 출처 기록.
 var decoy_shift: int = 1
+# 개시 응시 유예(초 · Stage가 add_child 전에 시드) — 발화가 흐르는 동안 공격 없음(_ready 참조).
+var intro_hold: float = 0.0
 var last_hit_from_dir: int = 0
 # 변주 단계(0 전반/1 중반/2 후반) · take_damage에서 HP 비율로 전이. 후반은 창이 짧고 잦다.
 var fight_stage: int = 0
@@ -101,7 +103,42 @@ func _ready() -> void:
 	_decoy.anchors = d_anchors
 	_decoy.global_position = global_position + Vector2(300.0, 40.0)
 	get_parent().call_deferred("add_child", _decoy)
-	_enter_phased()
+	# 발화 유예(2026-08-23 "대사가 전투와 겹쳐 못 읽는다") — 등장 직후엔 응시만(§7.2 "반 박자
+	# 긴 응시"의 개시판). 자백·판별 안내가 흐르는 동안 공격이 없다. 가짜 그림은 유예 중반에
+	# 깔려 "굵은 표식" 안내가 가리킬 실물이 화면에 먼저 서고, 첫 볼리 신호(무표시 위협 투입)는
+	# 유예가 끝날 때 나간다. 잠복 진행도 유예만큼 늦게 시작(_state_t 음수 시드 — P2 스윕
+	# 온보딩과 같은 기법). 가짜 그림을 즉시 찢으면 진행이 당겨지는 건 그대로(적극 플레이 존중).
+	if intro_hold > 0.0:
+		state = State.PHASED
+		_state_t = -intro_hold
+		_window_dmg = 0
+		_pick_far_anchor()
+		_intro_timer(intro_hold * 0.55, _intro_hold_mid)
+		_intro_timer(intro_hold, _intro_hold_end)
+	else:
+		_enter_phased()
+
+# 유예 타이머는 자식 Timer — 본체가 사라지면 함께 사라진다(freed 콜백 함정 회피).
+func _intro_timer(wait: float, cb: Callable) -> void:
+	var t := Timer.new()
+	t.one_shot = true
+	t.wait_time = maxf(0.05, wait)
+	t.timeout.connect(cb)
+	t.timeout.connect(t.queue_free)
+	add_child(t)
+	t.start()
+
+func _intro_hold_mid() -> void:
+	if state != State.PHASED:
+		return
+	if _decoy != null and is_instance_valid(_decoy):
+		_decoy.cycle_anchor()
+	_spawn_fakes()
+
+func _intro_hold_end() -> void:
+	if state != State.PHASED:
+		return
+	emit_signal("volley_started")
 
 func _enter_phased() -> void:
 	state = State.PHASED

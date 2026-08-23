@@ -5702,8 +5702,14 @@ func _maybe_rival_lock_beat() -> void:
 		GameState.rival_lock_beat5_shown = true
 		get_tree().create_timer(4.2, false).timeout.connect(_play_rival_lock_beat.bind(5))
 
-func _play_rival_lock_beat(act_num: int) -> void:
+func _play_rival_lock_beat(act_num: int, tries_left: int = 24) -> void:
 	if goal_reached or not is_inside_tree():
+		return
+	# 발화 유예(2026-08-23 "대사가 전투와 겹쳐 못 읽는다") — 교전 한복판이면 조용한 창(근접
+	# 520px 내 적 없음)을 0.5s 간격으로 기다렸다 말한다. 상한 12s(각본 비트 유실 방지) —
+	# 이 비트는 라이벌 + VEIL 해설 합쳐 ~8s짜리 각본이라 읽을 자리가 필요하다.
+	if tries_left > 0 and _combat_near_player(520.0):
+		get_tree().create_timer(0.5, false).timeout.connect(_play_rival_lock_beat.bind(act_num, tries_left - 1))
 		return
 	_run_glitch(0.5, 0.28)
 	SfxPlayer.play("boss_alert_text")
@@ -5717,6 +5723,20 @@ func _play_rival_lock_beat(act_num: int) -> void:
 	# 내 VEIL이 뒤이어 *무엇을 빼앗겼는지* 설명 — 라이벌 한 줄만으론 플레이어가 잃은 것을
 	# 모른다(2026-08-15 지적). HUD "기록" 핍과 같은 단어(덮어쓰기)로 실물 일치.
 	get_tree().create_timer(3.9, false).timeout.connect(_veil_lock_explain.bind(act_num))
+
+# 플레이어 주변에 살아 있는 적이 있는가 — 각본 발화의 "조용한 창" 판정.
+# (known_issues 준수: is_instance_valid 선행 · harmless는 truthiness로 — bool(null) 금지.)
+func _combat_near_player(radius: float) -> bool:
+	if player == null or not is_instance_valid(player):
+		return false
+	for e in get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(e) or not (e is Node2D):
+			continue
+		if (e as Node).get("harmless"):
+			continue
+		if (e as Node2D).global_position.distance_to(player.global_position) <= radius:
+			return true
+	return false
 
 func _veil_lock_explain(act_num: int) -> void:
 	if goal_reached or not is_inside_tree():
@@ -7361,7 +7381,7 @@ func _init_rival_boss() -> void:
 		for i in _wave_spawned.size():
 			_wave_spawned[i] = true
 		if GameState.rival_phase_reached >= 2:
-			call_deferred("_start_rival_p3")
+			call_deferred("_start_rival_p3", 3.6)
 			get_tree().create_timer(1.4, false).timeout.connect(_p3_tell_line)   # 판별 tell 재고지
 			get_tree().create_timer(4.8, false).timeout.connect(_p3_unmarked_line)
 		else:
@@ -7391,11 +7411,21 @@ func _init_rival_boss() -> void:
 	_p1_spawn_timer.wait_time = 3.0
 	add_child(_p1_spawn_timer)
 	_p1_spawn_timer.timeout.connect(_p1_trickle_tick)
-	_p1_spawn_timer.start()
-	get_tree().create_timer(1.6, false).timeout.connect(_p1_trickle_tick)   # 첫 투입은 빠르게
+	# 발화 유예(2026-08-23 "대사가 전투와 겹쳐 못 읽는다") — 인트로 두 줄이 흐르는 동안은
+	# 증원이 없다(초기 적 = 정지 재머 2기뿐). 첫 투입 1.6s → 5.6s(라이벌 인사가 끝난 뒤),
+	# 이후 3s 주기 재개. P2 포탑 온보딩 유예와 같은 문법.
+	get_tree().create_timer(5.6, false).timeout.connect(_p1_grace_end)
 	# 입장 비트 — 라이벌 개입 + VEIL 경계 콜아웃. (타이머는 메서드 bind — 람다 freed self 금지.)
 	get_tree().create_timer(1.0, false).timeout.connect(_rival_intro_line)
 	get_tree().create_timer(4.6, false).timeout.connect(_rival_intro_veil_line)
+
+# 발화 유예 종료 — 첫 증원 투입 + 주기 재개. 가드는 _p1_trickle_tick과 동일 기준.
+func _p1_grace_end() -> void:
+	if _rival_phase != 0 or goal_reached or not is_inside_tree():
+		return
+	_p1_trickle_tick()
+	if _p1_spawn_timer != null and is_instance_valid(_p1_spawn_timer):
+		_p1_spawn_timer.start()
 
 func _p1_trickle_tick() -> void:
 	if _rival_phase != 0 or goal_reached or not is_inside_tree():
@@ -7579,10 +7609,11 @@ func _start_rival_p2() -> void:
 		_p2_turrets.append(trap)
 	_traps_present = true
 	# 온보딩 유예(사용자 2026-08-17 "어두워지고 뿅뿅대서 설명 대사를 읽을 수 없다") ·
-	# 포탑은 5.5s 뒤 가동 · 소등 연출과 목표 안내(3.8s)를 읽을 틈을 준다.
+	# 포탑은 7.6s 뒤 가동 — 목표 안내(3.8s 시작 + 3.6s 표시 = 7.4s 종료)까지 읽을 틈을 준다
+	# (5.5s는 안내 꼬리 1.9s가 첫 사격과 겹쳤다, 2026-08-23 재지적 반영).
 	for t2 in _p2_turrets:
 		(t2 as Node).set_process(false)
-	get_tree().create_timer(5.5, false).timeout.connect(_p2_enable_turrets)
+	get_tree().create_timer(7.6, false).timeout.connect(_p2_enable_turrets)
 	# 위장 함정 1개 · 지상 중앙 우측 접근로의 거짓 바닥(§4 문법 재사용, 맵당 1개 준수).
 	if not GameState.story_mode:
 		var parts: Array = _spawn_disguised_spike(1450.0, 1214.0, 110.0, 2)
@@ -8345,7 +8376,9 @@ static func _rotated(arr: Array, n: int) -> Array:
 		out.append(arr[(i + n) % arr.size()])
 	return out
 
-func _start_rival_p3() -> void:
+# hold = 개시 응시 유예(FalseVeil intro_hold) — 첫 흐름 8.5s(자백 + VEIL 안내 3줄을 읽는 창),
+# 체크포인트 재진입 3.6s(재고지 1.4s 한 줄만 덮으면 됨 · 재시도는 빨리 붙게).
+func _start_rival_p3(hold: float = 8.5) -> void:
 	if goal_reached or not is_inside_tree() or _false_veil != null:
 		return
 	_rival_phase = 2
@@ -8359,6 +8392,7 @@ func _start_rival_p3() -> void:
 	# 5~6번을 살아남아야 하는 싸움으로. 전개 재설계는 리워크에서.
 	fv.max_hp = 8 + int(float(GameState.player_level) * 1.5)
 	fv.hp = fv.max_hp
+	fv.intro_hold = hold
 	# 리워크(§2.4) · 복층 무대 좌표: 실체화 3지점(중앙 상/좌상/우상 = 중반 텔레포트 지점 겸용),
 	# 가짜 마커는 지상·중층·데크에 분산. 가짜 눈(동반 미끼)은 FalseVeil이 자체 관리.
 	var p3_anchors: Array = [Vector2(1200.0, 560.0), Vector2(620.0, 640.0), Vector2(1780.0, 640.0)]
