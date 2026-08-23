@@ -20,6 +20,7 @@ const TARGETS: Array = [
 	{"id": "anim_runskid", "route": "route_back_alley", "stage": 1, "setup": "anim_runskid", "anim": 72, "every": 2},
 	{"id": "dash_afterimage", "route": "route_back_alley", "stage": 1, "setup": "dash"},
 	{"id": "lock_cutscene_act4", "route": "route_pump_station", "setup": "cutscene_lock", "act4": true},
+	{"id": "cutscene_rival_eye", "route": "route_pump_station", "setup": "cutscene_lock_revealed", "act4": true},
 	{"id": "hp_lock_hud", "route": "route_pump_station", "setup": "hud_lock", "act4": true},
 	{"id": "server_log_doc", "route": "route_server_hall", "seg": 1, "stage": 7, "setup": "doc"},
 	{"id": "server_room2_wall", "route": "route_server_hall", "seg": 1, "stage": 7, "setup": ""},
@@ -37,11 +38,15 @@ func _ready() -> void:
 	_run.call_deferred()
 
 func _run() -> void:
+	# VERIFY_ONLY=id1,id2 환경 변수로 일부 타깃만 실행(빠른 단건 재검용).
+	var only: String = OS.get_environment("VERIFY_ONLY")
 	for entry in TARGETS:
 		if not is_inside_tree():
 			print("[VERIFY] ABORT: harness left tree")
 			return
 		var d: Dictionary = entry
+		if only != "" and not only.split(",").has(str(d.get("id", ""))):
+			continue
 		await _shot(d)
 	print("[VERIFY] DONE")
 	if is_inside_tree():
@@ -91,6 +96,12 @@ func _shot(d: Dictionary) -> void:
 			for i in 8:
 				await get_tree().process_frame
 		"cutscene_lock":
+			stage.call("_play_rival_lock_beat", 4, 0)
+			for i in 70:
+				await get_tree().process_frame
+		"cutscene_lock_revealed":
+			# 정체 공개 게이트 통과 상태 — 라이벌 초상이 공개판(눈)으로 나온다.
+			GameState.rival_kills = 1
 			stage.call("_play_rival_lock_beat", 4, 0)
 			for i in 70:
 				await get_tree().process_frame

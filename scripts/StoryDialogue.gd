@@ -155,34 +155,61 @@ func _build_line(ln: Dictionary) -> void:
 		sp_color = Color(0.42, 0.86, 1.0)
 		msg_color = Color(0.90, 0.96, 1.0)
 		speaker = "VEIL"
-	# 하데스 구도 — 하단 전폭 패널(이름+본문) + 왼쪽 큰 초상(패널 위로 솟음). 줄마다 재구성.
+	# 하데스 구도(레퍼런스 실물 기준) — 왼쪽 대형 초상이 액자 없이 하단에서 솟고(에셋에
+	# 가장자리 페더 알파 베이크), 대사 패널이 초상 하단을 덮으며, 이름표는 패널 윗변에
+	# 걸치는 별도 판. 줄마다 재구성.
 	_row = Control.new()
 	_row.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_holder.add_child(_row)
+	# 초상을 먼저 추가 — 나중에 추가되는 패널이 위에 그려져 초상 하단을 자연스럽게 덮는다.
+	# 화자색 헤일로(라디얼 글로우)를 초상 뒤에 깔아 페더된 아트가 장면 위에 뜨는 근거를 만든다.
+	var halo := TextureRect.new()
+	var halo_grad := Gradient.new()
+	halo_grad.set_color(0, Color(sp_color.r, sp_color.g, sp_color.b, 0.50))
+	halo_grad.set_color(1, Color(sp_color.r, sp_color.g, sp_color.b, 0.0))
+	var halo_tex := GradientTexture2D.new()
+	halo_tex.gradient = halo_grad
+	halo_tex.fill = GradientTexture2D.FILL_RADIAL
+	halo_tex.fill_from = Vector2(0.5, 0.5)
+	halo_tex.fill_to = Vector2(0.5, 0.0)
+	halo_tex.width = 256
+	halo_tex.height = 256
+	halo.texture = halo_tex
+	halo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	halo.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	halo.offset_left = 8.0
+	halo.offset_right = 508.0
+	halo.offset_top = -556.0
+	halo.offset_bottom = -56.0
+	_row.add_child(halo)
+	var p_tex := TextureRect.new()
+	var p_path: String = PORTRAIT_VEIL
+	if who == "rival":
+		var revealed: bool = GameState.rival_kills >= 1 or GameState.rival_phase_reached >= 2
+		p_path = PORTRAIT_RIVAL_EYE if revealed else PORTRAIT_RIVAL_HIDDEN
+	p_tex.texture = load(p_path)
+	p_tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	p_tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
+	p_tex.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	p_tex.offset_left = 48.0
+	p_tex.offset_right = 468.0
+	p_tex.offset_top = -516.0
+	p_tex.offset_bottom = -96.0
+	_row.add_child(p_tex)
 	var panel := PanelContainer.new()
-	sb.content_margin_left = 272.0
-	sb.content_margin_right = 30.0
-	sb.content_margin_top = 18.0
-	sb.content_margin_bottom = 16.0
+	sb.content_margin_left = 268.0
+	sb.content_margin_right = 34.0
+	sb.content_margin_top = 22.0
+	sb.content_margin_bottom = 18.0
 	sb.set_corner_radius_all(12)
 	panel.add_theme_stylebox_override("panel", sb)
 	panel.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	panel.offset_left = 110.0
-	panel.offset_right = -110.0
-	panel.offset_top = -238.0
-	panel.offset_bottom = -72.0
+	panel.offset_left = 230.0
+	panel.offset_right = -130.0
+	panel.offset_top = -208.0
+	panel.offset_bottom = -64.0
 	_row.add_child(panel)
-	var vb := VBoxContainer.new()
-	vb.add_theme_constant_override("separation", 6)
-	panel.add_child(vb)
-	var name_l := Label.new()
-	name_l.text = speaker
-	name_l.add_theme_font_size_override("font_size", 18)
-	name_l.add_theme_color_override("font_color", sp_color)
-	name_l.add_theme_color_override("font_outline_color", Color(0, 0, 0))
-	name_l.add_theme_constant_override("outline_size", 5)
-	vb.add_child(name_l)
 	_msg_label = Label.new()
 	_msg_label.text = str(ln.get("text", ""))
 	_msg_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -192,31 +219,36 @@ func _build_line(ln: Dictionary) -> void:
 	_msg_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
 	_msg_label.add_theme_constant_override("outline_size", 4)
 	_msg_label.visible_characters = 0
-	vb.add_child(_msg_label)
-	# 큰 초상 — 패널 왼쪽에 걸치고 상단이 패널 위로 솟는다.
-	var p_frame := PanelContainer.new()
-	var p_sb := StyleBoxFlat.new()
-	p_sb.bg_color = Color(0.04, 0.05, 0.08)
-	p_sb.border_color = Color(sp_color.r, sp_color.g, sp_color.b, 0.85)
-	p_sb.set_border_width_all(2)
-	p_sb.set_corner_radius_all(12)
-	p_sb.set_content_margin_all(5.0)
-	p_frame.add_theme_stylebox_override("panel", p_sb)
-	p_frame.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	p_frame.offset_left = 126.0
-	p_frame.offset_right = 126.0 + 236.0
-	p_frame.offset_top = -320.0
-	p_frame.offset_bottom = -84.0
-	var p_tex := TextureRect.new()
-	var p_path: String = PORTRAIT_VEIL
+	panel.add_child(_msg_label)
+	# 이름표 — 패널 윗변에 걸치는 작은 판(하데스 명판 자리: 초상 오른쪽 어깨 높이).
+	var plate := PanelContainer.new()
+	var pl_sb := StyleBoxFlat.new()
 	if who == "rival":
-		var revealed: bool = GameState.rival_kills >= 1 or GameState.rival_phase_reached >= 2
-		p_path = PORTRAIT_RIVAL_EYE if revealed else PORTRAIT_RIVAL_HIDDEN
-	p_tex.texture = load(p_path)
-	p_tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	p_tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	p_frame.add_child(p_tex)
-	_row.add_child(p_frame)
+		pl_sb.bg_color = Color(0.10, 0.04, 0.16, 0.97)
+	else:
+		pl_sb.bg_color = Color(0.04, 0.07, 0.12, 0.97)
+	pl_sb.border_color = Color(sp_color.r, sp_color.g, sp_color.b, 0.85)
+	pl_sb.set_border_width_all(1)
+	pl_sb.set_corner_radius_all(6)
+	pl_sb.content_margin_left = 18.0
+	pl_sb.content_margin_right = 18.0
+	pl_sb.content_margin_top = 5.0
+	pl_sb.content_margin_bottom = 5.0
+	plate.add_theme_stylebox_override("panel", pl_sb)
+	plate.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	plate.offset_left = 486.0
+	plate.offset_right = 566.0
+	plate.offset_top = -226.0
+	plate.offset_bottom = -192.0
+	var name_l := Label.new()
+	name_l.text = speaker
+	name_l.add_theme_font_size_override("font_size", 18)
+	name_l.add_theme_color_override("font_color", sp_color)
+	name_l.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+	name_l.add_theme_constant_override("outline_size", 5)
+	name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	plate.add_child(name_l)
+	_row.add_child(plate)
 	_typing = true
 	_type_t = 0.0
 	SfxPlayer.play("veil_subtitle_in")
