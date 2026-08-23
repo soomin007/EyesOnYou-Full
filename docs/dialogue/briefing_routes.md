@@ -531,7 +531,7 @@
 | `_update_skill_rec_panel()` | %s에 강함 | |
 | `_update_risk_reward_panel()` 고위험 | [고위험] 적이 강한 만큼 클리어 경험치도 큽니다. | |
 | `_update_risk_reward_panel()` 보상·경험치 | [보상 · 경험치] 클리어 경험치가 추가로 붙습니다. | |
-| `_update_risk_reward_panel()` 보상·기록 | [보상 · 회복] 지나면 체력 1칸을 되찾습니다. 가득하면 경험치로 받습니다. | |
+| `_update_risk_reward_panel()` 보상·기록 | [보상 · 회복] 이 구역을 클리어하면 체력이 한 칸 채워집니다. 이미 가득하면 경험치로 받습니다. | |
 | `_update_risk_reward_panel()` 보상·정찰 | [보상 · 정찰] 다음 구간의 숨은 레버·잠긴 칸·보급품이 표시됩니다. 방해 신호도 뚫습니다. | |
 | 카드 보상 라벨(`REWARD_TYPE_LABELS`) | 경험치 / 기록 / 정찰 / - | |
 

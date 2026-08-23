@@ -19,8 +19,8 @@ const TARGETS: Array = [
 	{"id": "anim_debris", "route": "route_demolition_zone", "stage": 1, "setup": "anim_debris", "anim": 90, "every": 3, "preroll": 90},
 	{"id": "anim_runskid", "route": "route_back_alley", "stage": 1, "setup": "anim_runskid", "anim": 72, "every": 2},
 	{"id": "dash_afterimage", "route": "route_back_alley", "stage": 1, "setup": "dash"},
-	{"id": "lock_cutscene_act4", "route": "route_pump_station", "stage": 8, "setup": "cutscene_lock"},
-	{"id": "hp_lock_hud", "route": "route_pump_station", "stage": 8, "setup": "hud_lock"},
+	{"id": "lock_cutscene_act4", "route": "route_pump_station", "setup": "cutscene_lock", "act4": true},
+	{"id": "hp_lock_hud", "route": "route_pump_station", "setup": "hud_lock", "act4": true},
 	{"id": "server_log_doc", "route": "route_server_hall", "seg": 1, "stage": 7, "setup": "doc"},
 	{"id": "server_room2_wall", "route": "route_server_hall", "seg": 1, "stage": 7, "setup": ""},
 	{"id": "cooling_room1_no_lever", "route": "route_cooling", "seg": 0, "stage": 7, "setup": ""},
@@ -58,6 +58,8 @@ func _shot(d: Dictionary) -> void:
 		return
 	GameState.start_main_game()
 	GameState.current_stage = int(d.get("stage", 1))
+	if bool(d.get("act4", false)):
+		GameState.current_stage = GameState.act_start_stage(3)   # 막4 첫 스테이지 = 잠금 1 활성
 	GameState.current_segment = int(d.get("seg", 0))
 	GameState.seen_enemies = ["patrol", "sniper", "drone", "bomber", "shield", "jammer", "elite", "caller"]
 	GameState.player_level = 99   # 레벨업 오버레이 pause 차단(하니스 표준 가드)
@@ -93,7 +95,7 @@ func _shot(d: Dictionary) -> void:
 			for i in 70:
 				await get_tree().process_frame
 		"hud_lock":
-			# 막4 진입 상태 = 잠금 1 — 하트 곁 ×가 보이는 HUD.
+			# 막4 진입 상태 = 잠금 1 — 보라 잠금 하트가 보이는 HUD.
 			stage.call("_refresh_hud")
 			for i in 5:
 				await get_tree().process_frame
@@ -176,6 +178,10 @@ func _shot_anim(d: Dictionary) -> void:
 	# 이후 전 타깃이 무너진다(2026-08-23 실측: 첫 애니메이션 중 사망 → get_tree() null 연쇄).
 	if p != null:
 		p.set("clear_protect", true)
+	# 배속 방지(사용자 "애니메이션이 죄다 배속") — png 저장이 렌더 프레임을 늘리면 물리
+	# 캐치업이 프레임당 여러 틱을 돌아 캡처 간격당 게임 시간이 뻥튀기된다. 1틱 고정.
+	var prev_steps: int = Engine.max_physics_steps_per_frame
+	Engine.max_physics_steps_per_frame = 1
 	_anim_prepare(setup, p, stage)
 	for i in int(d.get("preroll", 0)):
 		await get_tree().process_frame
@@ -187,6 +193,7 @@ func _shot_anim(d: Dictionary) -> void:
 		get_viewport().get_texture().get_image().save_png("user://verify_shots/%s/f%03d.png" % [id, f])
 	Input.action_release("move_right")
 	Input.action_release("move_left")
+	Engine.max_physics_steps_per_frame = prev_steps
 	print("[VERIFY] anim saved ", id, " x", frames)
 	get_tree().paused = false
 	GameState.restrict_combat_input = false

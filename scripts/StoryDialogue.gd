@@ -31,14 +31,13 @@ var _typing: bool = false
 var _type_t: float = 0.0
 var _msg_label: Label = null
 var _pill: PanelContainer = null
-var _row: HBoxContainer = null   # 초상 + pill 한 줄(줄마다 재구성)
+var _row: Control = null   # 초상 + 대사 패널 한 줄(하데스 구도 · 줄마다 재구성)
 var _dots: Label = null
 var _dim: ColorRect = null
 var _bar_top: ColorRect = null
 var _bar_bot: ColorRect = null
 var _hint: Label = null
 var _holder: Control = null
-var _pill_slot: CenterContainer = null
 var _hold_t: float = 0.0
 var _lockout_t: float = ENTER_LOCKOUT
 var _done: bool = false
@@ -77,21 +76,16 @@ func _ready() -> void:
 	_holder.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_holder)
-	# pill 자리 — 하단 중앙(수동 좌표 대신 CenterContainer, 폭이 텍스트마다 달라도 정확히 중앙).
-	_pill_slot = CenterContainer.new()
-	_pill_slot.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	_pill_slot.offset_top = -310.0
-	_pill_slot.offset_bottom = -146.0
-	_pill_slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_holder.add_child(_pill_slot)
+	# 하데스 구도(2026-08-23 사용자 "전혀 하데스스럽지 않다" 반려 반영) — 하단 전폭 대사
+	# 패널 + 그 왼쪽에 큰 초상이 패널 위로 솟는 배치. 줄마다 _build_line이 재구성한다.
 	# 진행 점 + 조작 힌트.
 	_dots = Label.new()
 	_dots.add_theme_font_size_override("font_size", 14)
 	_dots.add_theme_color_override("font_color", Color(0.75, 0.75, 0.8, 0.75))
 	_dots.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_dots.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	_dots.offset_top = -140.0
-	_dots.offset_bottom = -114.0
+	_dots.offset_top = -46.0
+	_dots.offset_bottom = -20.0
 	_holder.add_child(_dots)
 	_hint = Label.new()
 	_hint.add_theme_font_size_override("font_size", 13)
@@ -161,58 +155,68 @@ func _build_line(ln: Dictionary) -> void:
 		sp_color = Color(0.42, 0.86, 1.0)
 		msg_color = Color(0.90, 0.96, 1.0)
 		speaker = "VEIL"
-	# 초상 + pill 한 줄(HBox) — 화자가 줄마다 바뀌므로 통째로 재구성.
-	_row = HBoxContainer.new()
-	_row.add_theme_constant_override("separation", 16)
-	_pill_slot.add_child(_row)
+	# 하데스 구도 — 하단 전폭 패널(이름+본문) + 왼쪽 큰 초상(패널 위로 솟음). 줄마다 재구성.
+	_row = Control.new()
+	_row.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_holder.add_child(_row)
+	var panel := PanelContainer.new()
+	sb.content_margin_left = 272.0
+	sb.content_margin_right = 30.0
+	sb.content_margin_top = 18.0
+	sb.content_margin_bottom = 16.0
+	sb.set_corner_radius_all(12)
+	panel.add_theme_stylebox_override("panel", sb)
+	panel.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	panel.offset_left = 110.0
+	panel.offset_right = -110.0
+	panel.offset_top = -238.0
+	panel.offset_bottom = -72.0
+	_row.add_child(panel)
+	var vb := VBoxContainer.new()
+	vb.add_theme_constant_override("separation", 6)
+	panel.add_child(vb)
+	var name_l := Label.new()
+	name_l.text = speaker
+	name_l.add_theme_font_size_override("font_size", 18)
+	name_l.add_theme_color_override("font_color", sp_color)
+	name_l.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+	name_l.add_theme_constant_override("outline_size", 5)
+	vb.add_child(name_l)
+	_msg_label = Label.new()
+	_msg_label.text = str(ln.get("text", ""))
+	_msg_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_msg_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_msg_label.add_theme_font_size_override("font_size", 23)
+	_msg_label.add_theme_color_override("font_color", msg_color)
+	_msg_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+	_msg_label.add_theme_constant_override("outline_size", 4)
+	_msg_label.visible_characters = 0
+	vb.add_child(_msg_label)
+	# 큰 초상 — 패널 왼쪽에 걸치고 상단이 패널 위로 솟는다.
 	var p_frame := PanelContainer.new()
 	var p_sb := StyleBoxFlat.new()
 	p_sb.bg_color = Color(0.04, 0.05, 0.08)
-	p_sb.border_color = Color(sp_color.r, sp_color.g, sp_color.b, 0.8)
+	p_sb.border_color = Color(sp_color.r, sp_color.g, sp_color.b, 0.85)
 	p_sb.set_border_width_all(2)
-	p_sb.set_corner_radius_all(10)
-	p_sb.set_content_margin_all(4.0)
+	p_sb.set_corner_radius_all(12)
+	p_sb.set_content_margin_all(5.0)
 	p_frame.add_theme_stylebox_override("panel", p_sb)
-	p_frame.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	p_frame.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	p_frame.offset_left = 126.0
+	p_frame.offset_right = 126.0 + 236.0
+	p_frame.offset_top = -320.0
+	p_frame.offset_bottom = -84.0
 	var p_tex := TextureRect.new()
 	var p_path: String = PORTRAIT_VEIL
 	if who == "rival":
 		var revealed: bool = GameState.rival_kills >= 1 or GameState.rival_phase_reached >= 2
 		p_path = PORTRAIT_RIVAL_EYE if revealed else PORTRAIT_RIVAL_HIDDEN
 	p_tex.texture = load(p_path)
-	p_tex.custom_minimum_size = Vector2(136.0, 136.0)
 	p_tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	p_tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	p_frame.add_child(p_tex)
 	_row.add_child(p_frame)
-	_pill = PanelContainer.new()
-	_pill.add_theme_stylebox_override("panel", sb)
-	_pill.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	_row.add_child(_pill)
-	var hb := HBoxContainer.new()
-	hb.add_theme_constant_override("separation", 12)
-	_pill.add_child(hb)
-	var name_l := Label.new()
-	name_l.text = speaker
-	name_l.add_theme_font_size_override("font_size", 22)
-	name_l.add_theme_color_override("font_color", sp_color)
-	name_l.add_theme_color_override("font_outline_color", Color(0, 0, 0))
-	name_l.add_theme_constant_override("outline_size", 6)
-	name_l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	hb.add_child(name_l)
-	var divider := ColorRect.new()
-	divider.color = Color(sp_color.r, sp_color.g, sp_color.b, 0.55)
-	divider.custom_minimum_size = Vector2(2.0, 22.0)
-	divider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	hb.add_child(divider)
-	_msg_label = Label.new()
-	_msg_label.text = str(ln.get("text", ""))
-	_msg_label.add_theme_font_size_override("font_size", 22)
-	_msg_label.add_theme_color_override("font_color", msg_color)
-	_msg_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
-	_msg_label.add_theme_constant_override("outline_size", 4)
-	_msg_label.visible_characters = 0
-	hb.add_child(_msg_label)
 	_typing = true
 	_type_t = 0.0
 	SfxPlayer.play("veil_subtitle_in")

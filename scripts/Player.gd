@@ -272,7 +272,9 @@ func _update_dash_visuals(delta: float) -> void:
 		if is_instance_valid(g):
 			var ci := g as CanvasItem
 			ci.modulate.a = move_toward(ci.modulate.a, target_a, delta * 9.0)
-	if dash_timer > 0.0 and GameState.get_skill_tier("dash_boost") >= 1:
+	# 대시 끝자락(잔여 0.05s 미만)엔 안 남긴다 — 대시 직후 낙하하면 마지막 잔상이 허공에
+	# 걸려 "캐릭터 위에 남는 버그"로 읽혔다(연습장 실플레이 2026-08-23). 페이드도 짧게.
+	if dash_timer > 0.05 and GameState.get_skill_tier("dash_boost") >= 1:
 		_ghost_cd -= delta
 		if _ghost_cd <= 0.0:
 			_ghost_cd = 0.045
@@ -293,9 +295,9 @@ func _spawn_dash_ghost() -> void:
 	stage_parent.add_child(ghost)
 	ghost.global_transform = visual.global_transform
 	ghost.z_index = 1   # 플레이어(2) 뒤 · 배경 위
-	ghost.modulate = Color(0.55, 0.90, 1.0, 0.4)
+	ghost.modulate = Color(0.55, 0.90, 1.0, 0.34)
 	var tw := ghost.create_tween()
-	tw.tween_property(ghost, "modulate:a", 0.0, 0.22)
+	tw.tween_property(ghost, "modulate:a", 0.0, 0.13)
 	tw.tween_callback(ghost.queue_free)
 
 # CharacterArt가 붙인 dash_jet_glow 파트 재수집 — 스킬 부착물 갱신 때마다.

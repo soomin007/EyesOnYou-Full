@@ -19,8 +19,8 @@ const TYPE_INTERVAL: float = 0.035
 const PAPER_WIDTH: float = 880.0
 const MARGIN_TOP: float = 64.0
 const MARGIN_SIDE: float = 44.0
-const LINE_HEIGHT_BODY: float = 40.0
-const LINE_HEIGHT_TITLE: float = 58.0
+const LINE_HEIGHT_BODY: float = 46.0
+const LINE_HEIGHT_TITLE: float = 62.0
 const LINE_HEIGHT_BLANK: float = 20.0
 # 디자인 기준 화면 크기 — show_doc 진입 시 실제 화면(visible_rect)으로 갱신(적응형).
 # const가 아니라 var: 런타임에 현재 해상도/화면비로 덮어쓴다(아래 모든 사용처에 반영).
@@ -105,36 +105,29 @@ func show_doc(input_lines: Array) -> void:
 	for entry in lines_data:
 		var d: Dictionary = entry
 		var kind: String = str(d.get("kind", "body"))
-		var lbl := Label.new()
-		lbl.text = ""
+		# RichTextLabel — [[키워드]]만 진청으로 물들인다(줄 전체 형광펜 밴드는 "책 전체에
+		# 형광펜" 반려로 폐지, 2026-08-23). 타이핑은 visible_characters로(태그 substr 깨짐 방지).
+		var lbl := RichTextLabel.new()
+		lbl.bbcode_enabled = true
+		lbl.scroll_active = false
 		lbl.position = Vector2(0.0, y)
 		lbl.size = Vector2(PAPER_WIDTH, _line_height_for(kind))
 		lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		lbl.modulate.a = 0.0
 		match kind:
 			"title":
-				lbl.add_theme_font_size_override("font_size", 28)
-				lbl.add_theme_color_override("font_color", Color(0.18, 0.20, 0.28))
+				lbl.add_theme_font_size_override("normal_font_size", 30)
+				lbl.add_theme_color_override("default_color", Color(0.18, 0.20, 0.28))
 			"speaker":
-				lbl.add_theme_font_size_override("font_size", 17)
-				lbl.add_theme_color_override("font_color", Color(0.45, 0.45, 0.55))
+				lbl.add_theme_font_size_override("normal_font_size", 18)
+				lbl.add_theme_color_override("default_color", Color(0.45, 0.45, 0.55))
 			"blank":
-				lbl.add_theme_font_size_override("font_size", 16)
+				lbl.add_theme_font_size_override("normal_font_size", 16)
 			_:
-				lbl.add_theme_font_size_override("font_size", 21)
-				lbl.add_theme_color_override("font_color", Color(0.10, 0.12, 0.18))
-		# 핵심 줄 강조 — 형광펜 밴드 + 진청 글자(로어 단서 청색 계열). 라벨의 자식이라
-		# 타이핑 페이드(modulate.a)와 함께 나타난다.
-		if d.get("hl"):
-			lbl.add_theme_color_override("font_color", Color(0.03, 0.24, 0.42))
-			var band := ColorRect.new()
-			band.color = Color(0.55, 0.85, 0.95, 0.30)
-			band.position = Vector2(-10.0, 2.0)
-			band.size = Vector2(PAPER_WIDTH + 20.0, _line_height_for(kind) - 8.0)
-			# z_index -1은 종이(paper_visual)보다도 뒤로 가 안 보인다 — 부모(라벨) 직전에만 그리는
-			# show_behind_parent가 정답(라벨 modulate 페이드도 자동 상속).
-			band.show_behind_parent = true
-			lbl.add_child(band)
+				lbl.add_theme_font_size_override("normal_font_size", 23)
+				lbl.add_theme_color_override("default_color", Color(0.10, 0.12, 0.18))
+		lbl.text = _to_bbcode(str(d.get("text", "")))
+		lbl.visible_characters = 0
 		paper.add_child(lbl)
 		labels.append(lbl)
 		y += _line_height_for(kind)
@@ -147,6 +140,13 @@ func show_doc(input_lines: Array) -> void:
 	tw_paper.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	tw_paper.tween_property(paper, "modulate:a", 1.0, 0.7)
 	tw_paper.tween_callback(_start_typing)
+
+# [[키워드]] -> 진청 색 강조 bbcode. 원문 대괄호는 [lb]로 이스케이프해 그대로 보이게.
+func _to_bbcode(raw: String) -> String:
+	var out: String = raw.replace("[[", "").replace("]]", "")
+	out = out.replace("[", "[lb]")
+	out = out.replace("", "[color=#0a4a73]").replace("", "[/color]")
+	return out
 
 func _calc_paper_height() -> float:
 	var h: float = 0.0
@@ -197,15 +197,15 @@ func _process(delta: float) -> void:
 			t = 0.0
 			revealed += 1
 			var line: Dictionary = lines_data[current_line]
-			var full: String = str(line.get("text", ""))
-			var label: Label = labels[current_line]
-			if revealed >= full.length():
-				revealed = full.length()
-				label.text = full
+			var label: RichTextLabel = labels[current_line]
+			var total: int = label.get_total_character_count()
+			if revealed >= total:
+				revealed = total
+				label.visible_characters = -1
 				typing = false
 				pause_after_line = float(line.get("delay", 0.4))
 			else:
-				label.text = full.substr(0, revealed)
+				label.visible_characters = revealed
 				SfxPlayer.play("terminal_typewrite")
 		_update_scroll_target()
 		return
@@ -323,9 +323,9 @@ func _input(event: InputEvent) -> void:
 		return
 	if typing:
 		# 현재 줄 즉시 완성
-		var full: String = str(lines_data[current_line].get("text", ""))
-		labels[current_line].text = full
-		revealed = full.length()
+		var rl: RichTextLabel = labels[current_line]
+		rl.visible_characters = -1
+		revealed = rl.get_total_character_count()
 		typing = false
 		pause_after_line = 0.0
 	else:

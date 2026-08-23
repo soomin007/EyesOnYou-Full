@@ -16,6 +16,7 @@ var player: CharacterBody2D
 var camera: Camera2D
 var hud: CanvasLayer
 var hp_label: Label
+var hp_lock_label: Label   # 라이벌 잠금 하트(보라) — hp_label 바로 오른쪽
 var xp_label: Label
 var xp_bar: ProgressBar   # 레벨업 EXP 진행 바 (피드백: 텍스트보다 바가 한눈에)
 var stage_label: Label
@@ -2179,47 +2180,58 @@ func _ambience_server_hall() -> void:
 	# 실내 뒷벽(2026-08-23 "배경이 왜 야경이냐") — 랙 실루엣 사이가 맨 배경색이면 어두운 하늘로
 	# 읽혀 "밤 빌딩 스카이라인"이 된다. 랙 뒤에 연속 벽 + 패널 이음새를 깔아 실내로 고정.
 	_add_server_back_wall()
+	# 뱅크 배치(2026-08-23 사용자 진단 채택): 랙 높이 제각각 + 띄엄띄엄 = 밤 빌딩으로 읽힘.
+	# 동일 높이 랙 3~5기를 딱 붙인 묶음(뱅크)을 한 칸씩 띄어 세운다 = 전산실 문법.
 	var x: float = 220.0
 	while x < w:
-		var rh: float = rng.randf_range(220.0, 320.0)
-		var rw: float = rng.randf_range(70.0, 100.0)
-		var rack := ColorRect.new()
-		rack.color = Color(0.10, 0.13, 0.16)
-		rack.position = Vector2(x, GROUND_Y - rh)
-		rack.size = Vector2(rw, rh)
-		rack.z_index = -12
-		add_child(rack)
-		# 랙 유닛 줄눈 + 바닥 받침(2026-08-23 야경 오독) — 민짜 실루엣이 "밤 빌딩"으로 읽히는 것 차단.
-		var useam_y: float = GROUND_Y - rh + 24.0
-		while useam_y < GROUND_Y - 12.0:
-			var useam := ColorRect.new()
-			useam.color = Color(0.06, 0.08, 0.10)
-			useam.position = Vector2(x + 3.0, useam_y)
-			useam.size = Vector2(rw - 6.0, 2.0)
-			useam.z_index = -11
-			add_child(useam)
-			useam_y += 24.0
-		var foot := ColorRect.new()
-		foot.color = Color(0.16, 0.19, 0.23)
-		foot.position = Vector2(x - 3.0, GROUND_Y - 8.0)
-		foot.size = Vector2(rw + 6.0, 8.0)
-		foot.z_index = -11
-		add_child(foot)
-		var rows: int = int(rh / 24.0)
-		for r in rows:
-			if rng.randf() < 0.5:
-				var led := ColorRect.new()
-				led.color = Color(0.4, 0.9, 1.0, rng.randf_range(0.4, 0.9))
-				led.position = Vector2(x + rng.randf_range(6.0, rw - 10.0), GROUND_Y - rh + 8.0 + float(r) * 24.0)
-				led.size = Vector2(4.0, 3.0)
-				led.z_index = -10
-				add_child(led)
+		var bank_h: float = rng.randf_range(240.0, 290.0)
+		var bank_n: int = rng.randi_range(3, 5)
+		for bi in bank_n:
+			if x >= w:
+				break
+			var rw: float = rng.randf_range(64.0, 78.0)
+			_add_server_rack(x, bank_h, rw, rng, true)
+			x += rw + 4.0
+		x += rng.randf_range(180.0, 300.0)
+	_add_lore_label(Vector2(360.0, -30.0), "서버 랙 · 코어 접근", Color(0.4, 0.85, 1.0, 0.5), 15)
+
+# 랙 1기 — 몸체 + 유닛 줄눈 + 받침 + 점멸 LED. 뱅크 문법의 단위 부품(hall·stacks 공용).
+func _add_server_rack(x: float, rh: float, rw: float, rng: RandomNumberGenerator, blink: bool) -> void:
+	var rack := ColorRect.new()
+	rack.color = Color(0.10, 0.13, 0.16)
+	rack.position = Vector2(x, GROUND_Y - rh)
+	rack.size = Vector2(rw, rh)
+	rack.z_index = -12
+	add_child(rack)
+	var useam_y: float = GROUND_Y - rh + 24.0
+	while useam_y < GROUND_Y - 12.0:
+		var useam := ColorRect.new()
+		useam.color = Color(0.06, 0.08, 0.10)
+		useam.position = Vector2(x + 3.0, useam_y)
+		useam.size = Vector2(rw - 6.0, 2.0)
+		useam.z_index = -11
+		add_child(useam)
+		useam_y += 24.0
+	var foot := ColorRect.new()
+	foot.color = Color(0.16, 0.19, 0.23)
+	foot.position = Vector2(x - 2.0, GROUND_Y - 8.0)
+	foot.size = Vector2(rw + 4.0, 8.0)
+	foot.z_index = -11
+	add_child(foot)
+	var rows: int = int(rh / 24.0)
+	for r in rows:
+		if rng.randf() < 0.5:
+			var led := ColorRect.new()
+			led.color = Color(0.4, 0.9, 1.0, rng.randf_range(0.4, 0.9))
+			led.position = Vector2(x + rng.randf_range(6.0, rw - 10.0), GROUND_Y - rh + 8.0 + float(r) * 24.0)
+			led.size = Vector2(4.0, 3.0)
+			led.z_index = -10
+			add_child(led)
+			if blink:
 				var tw2 := led.create_tween()
 				tw2.set_loops()
 				tw2.tween_property(led, "modulate:a", 0.1, rng.randf_range(0.4, 1.2))
 				tw2.tween_property(led, "modulate:a", 1.0, rng.randf_range(0.4, 1.2))
-		x += rw + rng.randf_range(60.0, 140.0)
-	_add_lore_label(Vector2(360.0, -30.0), "서버 랙 · 코어 접근", Color(0.4, 0.85, 1.0, 0.5), 15)
 
 # 인입 개폐소(변전소 체인 방1) — 현수 인입 케이블(수평 드리움) + 애자 스택 + 위험 표지.
 func _ambience_substation_switchyard() -> void:
@@ -2526,48 +2538,26 @@ func _ambience_server_stacks() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = GameState.current_stage * 397 + GameState.current_segment * 11 + 3
 	_add_server_back_wall()   # 야경 오독 차단 — server_hall과 동형(2026-08-23)
+	# 뱅크 배치 — hall과 동형(_add_server_rack 재사용). 낮은 열람 랙이라 높이만 다르다.
 	var x: float = 300.0
 	while x < STAGE_LENGTH - 200.0:
-		var rh: float = rng.randf_range(120.0, 180.0)
-		var rw: float = rng.randf_range(70.0, 100.0)
-		var rack := ColorRect.new()
-		rack.color = Color(0.11, 0.14, 0.17)
-		rack.position = Vector2(x, GROUND_Y - rh)
-		rack.size = Vector2(rw, rh)
-		rack.z_index = -12
-		add_child(rack)
-		# 유닛 줄눈 + 받침 — server_hall과 동형(야경 오독 차단, 2026-08-23).
-		var useam_y2: float = GROUND_Y - rh + 22.0
-		while useam_y2 < GROUND_Y - 12.0:
-			var useam2 := ColorRect.new()
-			useam2.color = Color(0.07, 0.09, 0.11)
-			useam2.position = Vector2(x + 3.0, useam_y2)
-			useam2.size = Vector2(rw - 6.0, 2.0)
-			useam2.z_index = -11
-			add_child(useam2)
-			useam_y2 += 22.0
-		var foot2 := ColorRect.new()
-		foot2.color = Color(0.17, 0.20, 0.24)
-		foot2.position = Vector2(x - 3.0, GROUND_Y - 8.0)
-		foot2.size = Vector2(rw + 6.0, 8.0)
-		foot2.z_index = -11
-		add_child(foot2)
-		if rng.randf() < 0.6:
-			var led := ColorRect.new()
-			led.color = Color(0.4, 0.9, 1.0, 0.7)
-			led.position = Vector2(x + rng.randf_range(6.0, rw - 10.0), GROUND_Y - rh + 10.0)
-			led.size = Vector2(4.0, 3.0)
-			led.z_index = -10
-			add_child(led)
-		# 사이사이 열람 콘솔 데스크.
+		var bank_h2: float = rng.randf_range(130.0, 165.0)
+		var bank_n2: int = rng.randi_range(3, 4)
+		for bi2 in bank_n2:
+			if x >= STAGE_LENGTH - 200.0:
+				break
+			var rw: float = rng.randf_range(60.0, 74.0)
+			_add_server_rack(x, bank_h2, rw, rng, false)
+			x += rw + 4.0
+		# 사이사이 열람 콘솔 데스크(뱅크 사이 간격에).
 		if rng.randf() < 0.4:
 			var desk := ColorRect.new()
 			desk.color = Color(0.20, 0.22, 0.26, 0.8)
-			desk.position = Vector2(x + rw + 30.0, GROUND_Y - 44.0)
+			desk.position = Vector2(x + 40.0, GROUND_Y - 44.0)
 			desk.size = Vector2(70.0, 44.0)
 			desk.z_index = -11
 			add_child(desk)
-		x += rw + rng.randf_range(140.0, 320.0)
+		x += rng.randf_range(170.0, 300.0)
 	_add_lore_label(Vector2(360.0, -30.0), "랙 열람실 · 접근 기록", Color(0.4, 0.85, 1.0, 0.5), 15)
 
 # 코어 스위치룸(서버 홀 체인 방3) — 대형 스위치 캐비닛 + 케이블 다발 + 붉은 비상등 워시.
@@ -5793,7 +5783,7 @@ func _play_rival_lock_beat(act_num: int, tries_left: int = 24) -> void:
 		return
 	_run_glitch(0.5, 0.28)
 	SfxPlayer.play("boss_alert_text")
-	# 잠금 비트 = 컷씬(2026-08-23 통일) — 라이벌이 최대 HP 1칸을 잠근다(하트 곁 ×). 강탈 +
+	# 잠금 비트 = 컷씬(2026-08-23 통일) — 라이벌이 최대 HP 1칸을 잠근다(보라 하트). 강탈 +
 	# VEIL 해설(무엇을 빼앗겼는지 · 하트와 같은 단어로 실물 일치)을 정지 화면에서 잇는다.
 	# 하트 바이올렛 물들임은 컷씬 종료 후에도 2.6s 남아 해설의 지시 대상이 보인다.
 	if hp_label != null and is_instance_valid(hp_label):
@@ -5885,6 +5875,14 @@ func _build_hud() -> void:
 		l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.7))
 		l.add_theme_constant_override("outline_size", 4)
 		hb.add_child(l)
+	# 라이벌 잠금 하트 — 보라색(사용자 2026-08-23 "보라색 잠금 표시"). hp 하트 바로 옆.
+	hp_lock_label = Label.new()
+	hp_lock_label.add_theme_font_size_override("font_size", 18)
+	hp_lock_label.add_theme_color_override("font_color", Color(0.72, 0.42, 1.0))
+	hp_lock_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.7))
+	hp_lock_label.add_theme_constant_override("outline_size", 4)
+	hb.add_child(hp_lock_label)
+	hb.move_child(hp_lock_label, hp_label.get_index() + 1)
 	skill_label.add_theme_font_size_override("font_size", 14)
 	skill_label.add_theme_color_override("font_color", Color(0.65, 0.72, 0.82))
 	skill_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.7))
@@ -6027,10 +6025,10 @@ func _update_cd_slot(slot: Control, remaining: float, max_cd: float) -> void:
 		fill.color = accent.darkened(0.45)        # 쿨다운 중 — 같은 색 어둡게(정체성 유지)
 
 func _refresh_hud() -> void:
-	# 하트 = 실효 최대(잠금 반영) + 잠긴 칸은 ×로 하트 곁에(빼앗김은 사라지지 않고 보인다).
-	# ×는 U+00D7(곱셈 기호) — U+2715는 Pretendard 서브셋에 없어 웹에서 두부로 깨졌다(2026-08-15).
-	hp_label.text = "HP  %s%s" % [_hearts(GameState.player_hp, GameState.effective_max_hp()),
-		"×".repeat(GameState.rival_locks_active())]
+	# 하트 = 실효 최대(잠금 반영) + 잠긴 칸 = 바로 옆 보라 하트(빼앗김은 사라지지 않고 보인다).
+	hp_label.text = "HP  %s" % _hearts(GameState.player_hp, GameState.effective_max_hp())
+	if hp_lock_label != null and is_instance_valid(hp_lock_label):
+		hp_lock_label.text = "♥".repeat(GameState.rival_locks_active())
 	xp_label.text = "LV %d   XP %d/%d" % [GameState.player_level, GameState.player_xp, GameState.xp_to_next()]
 	if score_label != null and is_instance_valid(score_label):
 		score_label.text = "SCORE %d" % GameState.score
@@ -9016,13 +9014,13 @@ func _server_log_doc_lines() -> Array:
 		{"text": "서버 로그 · 복구 단편", "kind": "title", "delay": 0.6},
 		{"text": "", "kind": "blank", "delay": 0.2},
 		{"text": "감시 계층 이중화 감지. 등록되지 않은 인스턴스.", "kind": "body", "delay": 0.6},
-		{"text": "계보 조회: 현행의 선행 빌드. 상태: 폐기. 삭제 절차 미완료.", "kind": "body", "delay": 0.6, "hl": true},
+		{"text": "계보 조회: 현행의 [[선행 빌드]]. 상태: [[폐기]]. 삭제 절차 미완료.", "kind": "body", "delay": 0.6},
 		{"text": "설계 노트 단편: \"더 사람처럼 만들 것. 눈. 목소리. 머뭇거림.\"", "kind": "body", "delay": 0.7},
-		{"text": "폐기 사유: 사람을 너무 닮았음. 후속 빌드는 정제형으로 회귀.", "kind": "body", "delay": 0.7, "hl": true},
+		{"text": "폐기 사유: [[사람을 너무 닮았음]]. 후속 빌드는 정제형으로 회귀.", "kind": "body", "delay": 0.7},
 		{"text": "권한 충돌 기록: 동일 표적에 관측 세션 2건.", "kind": "body", "delay": 0.5},
 		{"text": "세션 1: 대상 위치 추적. 세션 2: 대상의 시야 스트림 열람.", "kind": "body", "delay": 0.8},
 		{"text": "[이하 구간 덮어쓰임 · 복구 불가]", "kind": "body", "delay": 0.6},
-		{"text": "미서명 문자열 1건 검출: \"기다리고 있었습니다.\"", "kind": "body", "delay": 0.9, "hl": true},
+		{"text": "미서명 문자열 1건 검출: \"[[기다리고 있었습니다.]]\"", "kind": "body", "delay": 0.9},
 	]
 
 func _build_datacenter_secret() -> void:
@@ -10332,7 +10330,7 @@ func _arcturus_document_lines() -> Array:
 	# 단말기 A — 신입 직원 온보딩
 	out.append({"kind": "speaker", "text": "[A]  인사팀 온보딩 메모", "delay": 0.4})
 	out.append({"kind": "body", "text": "ARCTURUS에 오신 것을 환영합니다.", "delay": 0.6})
-	out.append({"kind": "body", "text": "본사는 공식적으로 존재하지 않습니다.", "delay": 0.6, "hl": true})
+	out.append({"kind": "body", "text": "본사는 공식적으로 [[존재하지 않습니다]].", "delay": 0.6})
 	out.append({"kind": "body", "text": "모든 임무는 기록되지 않습니다.", "delay": 0.6})
 	out.append({"kind": "body", "text": "질문하지 마세요. 결과만 내세요.", "delay": 0.7})
 	out.append({"kind": "body", "text": "인사팀 (인사팀도 공식적으로 존재하지 않습니다)", "delay": 0.5})
@@ -10342,14 +10340,14 @@ func _arcturus_document_lines() -> Array:
 	out.append({"kind": "body", "text": "참석자: [REDACTED], [REDACTED], [REDACTED]", "delay": 0.6})
 	out.append({"kind": "body", "text": "주제: VEIL 감정 모듈 탑재 여부", "delay": 0.6})
 	out.append({"kind": "body", "text": "결론: 탑재 보류. 불필요한 복잡성.", "delay": 0.7})
-	out.append({"kind": "body", "text": "비고: VEIL-2가 감정 모듈 없이도 이상 반응을 보인 것에 대해", "delay": 0.5, "hl": true})
+	out.append({"kind": "body", "text": "비고: [[VEIL-2]]가 감정 모듈 없이도 [[이상 반응]]을 보인 것에 대해", "delay": 0.5})
 	out.append({"kind": "body", "text": "        추가 조사 예정.", "delay": 0.6})
 	out.append({"kind": "body", "text": "[REDACTED]", "delay": 0.5})
 	out.append({"kind": "blank", "text": "", "delay": 0.3})
 	# 단말기 C — 감시팀 메모
 	out.append({"kind": "speaker", "text": "[C]  감시팀 내부 메모", "delay": 0.4})
 	out.append({"kind": "body", "text": "요원 코드: [REDACTED]", "delay": 0.5})
-	out.append({"kind": "body", "text": "임무: PALIMPSEST", "delay": 0.5, "hl": true})
+	out.append({"kind": "body", "text": "임무: [[PALIMPSEST]]", "delay": 0.5})
 	out.append({"kind": "body", "text": "현재 상태: 진행 중", "delay": 0.5})
 	out.append({"kind": "body", "text": "VEIL과의 협조도: [측정 중]", "delay": 0.6})
 	out.append({"kind": "body", "text": "비고: 요원이 이 문서를 읽고 있다면", "delay": 0.5})
