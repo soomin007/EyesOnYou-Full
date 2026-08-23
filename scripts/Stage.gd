@@ -41,10 +41,15 @@ class LockHearts extends Control:
 				pts.append(c + Vector2(hx, hy) * 0.82)
 			draw_polyline(pts, Color(0, 0, 0, 0.7), 4.5, true)   # 검정 테두리(밝은 배경 가독)
 			draw_polyline(pts, COL, 2.2, true)
-			# 자물쇠 — 위 고리 + 몸통. 하트 가운데.
-			var lc := c + Vector2(0.0, -1.0)
-			draw_arc(lc + Vector2(0.0, -3.0), 3.6, PI, TAU, 12, COL, 2.0, true)
-			draw_rect(Rect2(lc + Vector2(-4.8, -3.0), Vector2(9.6, 8.0)), COL, true)
+			# 자물쇠 — 3차 피드백 "자물쇠로 안 읽힘" 재작업: 밝은 몸통 + 굵은 고리 +
+			# 어두운 열쇠 구멍(원+홈)으로 아이콘 문법을 그대로.
+			var lc := c + Vector2(0.0, 0.5)
+			var bright := Color(0.88, 0.76, 1.0)
+			var dark := Color(0.12, 0.06, 0.20)
+			draw_arc(lc + Vector2(0.0, -4.2), 4.2, PI, TAU, 14, bright, 2.6, true)   # 고리
+			draw_rect(Rect2(lc + Vector2(-5.6, -4.2), Vector2(11.2, 9.0)), bright, true)   # 몸통
+			draw_circle(lc + Vector2(0.0, -1.2), 1.8, dark)                          # 열쇠 구멍
+			draw_rect(Rect2(lc + Vector2(-0.9, -1.2), Vector2(1.8, 4.2)), dark, true)  # 구멍 홈
 var xp_label: Label
 var xp_bar: ProgressBar   # 레벨업 EXP 진행 바 (피드백: 텍스트보다 바가 한눈에)
 var stage_label: Label
@@ -5880,7 +5885,7 @@ func _build_hud() -> void:
 	var hb_xp := HBoxContainer.new()
 	top_v.add_child(hb_xp)
 	xp_bar = ProgressBar.new()
-	xp_bar.custom_minimum_size = Vector2(184.0, 7.0)
+	xp_bar.custom_minimum_size = Vector2(224.0, 8.0)
 	xp_bar.show_percentage = false
 	xp_bar.max_value = float(GameState.xp_to_next())
 	var _xp_bg := StyleBoxFlat.new()
@@ -5903,8 +5908,9 @@ func _build_hud() -> void:
 	map_label = Label.new()
 	trust_label = Label.new()
 	skill_label = Label.new()
+	# HUD 전체 확대(3차 피드백 "좌상단 텍스트·우상단 베일 표식·점수 다 너무 작다") — 18→22.
 	for l in [stage_label, map_label, hp_label, xp_label, trust_label]:
-		l.add_theme_font_size_override("font_size", 18)
+		l.add_theme_font_size_override("font_size", 22)
 		l.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
 		# 검정 아웃라인 — 밝은 플랫폼 위에서도 또렷하게(가독성/선명도).
 		l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.7))
@@ -5921,7 +5927,7 @@ func _build_hud() -> void:
 	hp_row.add_child(hp_lock_hearts)
 	hb.add_child(xp_label)
 	hb.add_child(trust_label)
-	skill_label.add_theme_font_size_override("font_size", 14)
+	skill_label.add_theme_font_size_override("font_size", 17)
 	skill_label.add_theme_color_override("font_color", Color(0.65, 0.72, 0.82))
 	skill_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.7))
 	skill_label.add_theme_constant_override("outline_size", 3)
@@ -5935,32 +5941,32 @@ func _build_hud() -> void:
 	eye.set_script(load("res://scripts/BriefingVisual.gd"))
 	# 우상단 앵커 — 어떤 화면비/해상도에서도 우측 위 모서리에 고정 (offset은 우측 기준 음수).
 	eye.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	eye.size = Vector2(54.0, 54.0)
-	eye.position = Vector2(-54.0 - 18.0, 14.0)
+	eye.size = Vector2(72.0, 72.0)
+	eye.position = Vector2(-72.0 - 18.0, 14.0)
 	eye.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hud.add_child(eye)
 	var eye_cap := Label.new()
 	eye_cap.text = "VEIL"
-	eye_cap.add_theme_font_size_override("font_size", 10)
+	eye_cap.add_theme_font_size_override("font_size", 13)
 	eye_cap.add_theme_color_override("font_color", Color(0.46, 0.86, 1.0, 0.8))
 	eye_cap.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
 	eye_cap.add_theme_constant_override("outline_size", 3)
 	eye_cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	eye_cap.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	eye_cap.size = Vector2(54.0, 14.0)
-	eye_cap.position = Vector2(-54.0 - 18.0, 70.0)
+	eye_cap.size = Vector2(72.0, 18.0)
+	eye_cap.position = Vector2(-72.0 - 18.0, 90.0)
 	hud.add_child(eye_cap)
 	# 점수 — VEIL 눈 아래 상시 표시. 스테이지 클리어 가산·만렙 오버플로 '전술 기록'이 어디에도
 	# 안 보여 빈 보상으로 읽히던 문제(2026-08-11 피드백).
 	score_label = Label.new()
-	score_label.add_theme_font_size_override("font_size", 12)
+	score_label.add_theme_font_size_override("font_size", 16)
 	score_label.add_theme_color_override("font_color", Color(0.75, 0.80, 0.88, 0.9))
 	score_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
 	score_label.add_theme_constant_override("outline_size", 3)
 	score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	score_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	score_label.size = Vector2(100.0, 14.0)
-	score_label.position = Vector2(-95.0, 90.0)
+	score_label.size = Vector2(128.0, 18.0)
+	score_label.position = Vector2(-118.0, 112.0)
 	hud.add_child(score_label)
 
 	var bottom := MarginContainer.new()
@@ -9724,6 +9730,7 @@ func _transition_after_clear() -> void:
 func _play_lab_recovery_and_disposal() -> void:
 	GameState.restrict_combat_input = true
 	var doc := ArcturusDocumentOverlay.new()
+	doc.style = "drive"   # 회수 드라이브 복호화 뷰어 양식(3차 피드백: 문서별 양식 분화)
 	add_child(doc)
 	doc.finished.connect(_on_lab_recovery_doc_done)
 	doc.show_doc(_lab_recovery_doc_lines())

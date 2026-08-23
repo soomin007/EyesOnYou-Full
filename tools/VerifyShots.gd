@@ -23,6 +23,8 @@ const TARGETS: Array = [
 	{"id": "cutscene_rival_eye", "route": "route_pump_station", "setup": "cutscene_lock_revealed", "act4": true},
 	{"id": "hp_lock_hud", "route": "route_pump_station", "setup": "hud_lock", "act4": true},
 	{"id": "server_log_doc", "route": "route_server_hall", "seg": 1, "stage": 7, "setup": "doc"},
+	{"id": "arcturus_doc_paper", "route": "route_back_alley", "stage": 1, "setup": "doc_paper"},
+	{"id": "recovery_doc_drive", "route": "route_back_alley", "stage": 1, "setup": "doc_drive"},
 	{"id": "server_room2_wall", "route": "route_server_hall", "seg": 1, "stage": 7, "setup": ""},
 	{"id": "cooling_room1_no_lever", "route": "route_cooling", "seg": 0, "stage": 7, "setup": ""},
 	{"id": "demolition_turret_gap", "route": "route_demolition_zone", "seg": 0, "stage": 1, "setup": "cam_1190"},
@@ -115,6 +117,19 @@ func _shot(d: Dictionary) -> void:
 			doc.style = "terminal"   # 실제 서버 로그 트리거와 동일 스타일
 			stage.add_child(doc)
 			doc.show_doc(stage.call("_server_log_doc_lines"))
+			for i in 1050:
+				await get_tree().process_frame
+		"doc_paper":
+			var doc_p := ArcturusDocumentOverlay.new()
+			stage.add_child(doc_p)
+			doc_p.show_doc(stage.call("_arcturus_document_lines"))
+			for i in 1050:
+				await get_tree().process_frame
+		"doc_drive":
+			var doc_d := ArcturusDocumentOverlay.new()
+			doc_d.style = "drive"
+			stage.add_child(doc_d)
+			doc_d.show_doc(stage.call("_lab_recovery_doc_lines"))
 			for i in 1050:
 				await get_tree().process_frame
 		"cam_1190":

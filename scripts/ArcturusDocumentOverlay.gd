@@ -92,11 +92,23 @@ func show_doc(input_lines: Array) -> void:
 	# lerp되어 페이드인 0.7s 동안 paper가 화면 위로 빠져나가서 제목이 안 보이고
 	# 본문(A 온보딩 등)이 먼저 등장하는 것처럼 보임 (사용자 보고).
 	paper_target_y = MARGIN_TOP
+	# 문서별 양식(3차 피드백 "각 양식에 맞는 그래픽") — paper: 크림 종이+레터헤드+스탬프 /
+	# terminal: 서버 콘솔 / drive: 회수 드라이브 복호화 뷰어(어두운 보라).
 	var is_term: bool = style == "terminal"
-	_kw_color = "#ffc857" if is_term else "#0a4a73"
-	# 본체 — paper: 옅은 크림 종이 / terminal: 어두운 콘솔 창.
+	var is_drive: bool = style == "drive"
+	if is_term:
+		_kw_color = "#ffc857"
+	elif is_drive:
+		_kw_color = "#c9a2ff"
+	else:
+		_kw_color = "#0a4a73"
 	paper_visual = ColorRect.new()
-	paper_visual.color = Color(0.043, 0.055, 0.075, 0.97) if is_term else Color(0.92, 0.90, 0.84, 0.96)
+	if is_term:
+		paper_visual.color = Color(0.043, 0.055, 0.075, 0.97)
+	elif is_drive:
+		paper_visual.color = Color(0.055, 0.042, 0.085, 0.97)
+	else:
+		paper_visual.color = Color(0.92, 0.90, 0.84, 0.96)
 	paper_visual.position = Vector2(-MARGIN_SIDE, -40.0)
 	paper_visual.size = paper.size + Vector2(MARGIN_SIDE * 2.0, 80.0)
 	paper.add_child(paper_visual)
@@ -107,11 +119,11 @@ func show_doc(input_lines: Array) -> void:
 	shadow.size = paper_visual.size
 	shadow.z_index = -1
 	paper.add_child(shadow)
-	if is_term:
-		# 콘솔 타이틀 바 — 창 점 3개 + 세션 경로. 화면 밖 스크롤을 따라가지 않게 paper가 아니라
-		# layer(화면 고정)에 붙인다. 텍스트는 기술 표기(영문 경로)라 대사 검수 대상 아님.
+	if is_term or is_drive:
+		# 콘솔/뷰어 타이틀 바 — 창 점 3개 + 세션 경로. 화면 밖 스크롤을 따라가지 않게 paper가
+		# 아니라 layer(화면 고정)에 붙인다. 텍스트는 기술 표기(영문 경로)라 대사 검수 대상 아님.
 		var bar := ColorRect.new()
-		bar.color = Color(0.075, 0.095, 0.125, 1.0)
+		bar.color = Color(0.075, 0.095, 0.125, 1.0) if is_term else Color(0.105, 0.075, 0.165, 1.0)
 		bar.position = Vector2((VIEWPORT_W - PAPER_WIDTH) * 0.5 - MARGIN_SIDE, 0.0)
 		bar.size = Vector2(PAPER_WIDTH + MARGIN_SIDE * 2.0, 30.0)
 		layer.add_child(bar)
@@ -122,9 +134,9 @@ func show_doc(input_lines: Array) -> void:
 		dots.position = Vector2(14.0, 7.0)
 		bar.add_child(dots)
 		var path_l := Label.new()
-		path_l.text = "svr-03 : /var/log/veil.d/recovered.log"
+		path_l.text = "svr-03 : /var/log/veil.d/recovered.log" if is_term else "drive-A7 : decrypt · read-only"
 		path_l.add_theme_font_size_override("font_size", 13)
-		path_l.add_theme_color_override("font_color", Color(0.48, 0.75, 0.58))
+		path_l.add_theme_color_override("font_color", Color(0.48, 0.75, 0.58) if is_term else Color(0.74, 0.58, 0.96))
 		path_l.position = Vector2(0.0, 4.0)
 		path_l.size = Vector2(bar.size.x, 22.0)
 		path_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -136,6 +148,42 @@ func show_doc(input_lines: Array) -> void:
 		scan.size = paper_visual.size
 		scan.material = _make_scanline_material()
 		paper.add_child(scan)
+	else:
+		# 종이 양식 — 레터헤드(기관명 + 이중 괘선) + 붉은 분류 스탬프. 인사 아카이브 컨셉.
+		var lh := Label.new()
+		lh.text = "ARCTURUS · PERSONNEL ARCHIVE"
+		lh.add_theme_font_size_override("font_size", 13)
+		lh.add_theme_color_override("font_color", Color(0.35, 0.38, 0.50, 0.85))
+		lh.position = Vector2(0.0, -34.0)
+		paper.add_child(lh)
+		var rule := ColorRect.new()
+		rule.color = Color(0.30, 0.33, 0.45, 0.55)
+		rule.position = Vector2(0.0, -13.0)
+		rule.size = Vector2(PAPER_WIDTH, 2.0)
+		paper.add_child(rule)
+		var rule2 := ColorRect.new()
+		rule2.color = Color(0.30, 0.33, 0.45, 0.35)
+		rule2.position = Vector2(0.0, -9.0)
+		rule2.size = Vector2(PAPER_WIDTH, 1.0)
+		paper.add_child(rule2)
+		var stamp := PanelContainer.new()
+		var st_sb := StyleBoxFlat.new()
+		st_sb.bg_color = Color(0, 0, 0, 0)
+		st_sb.border_color = Color(0.72, 0.18, 0.16, 0.70)
+		st_sb.set_border_width_all(2)
+		st_sb.content_margin_left = 10.0
+		st_sb.content_margin_right = 10.0
+		st_sb.content_margin_top = 2.0
+		st_sb.content_margin_bottom = 2.0
+		stamp.add_theme_stylebox_override("panel", st_sb)
+		stamp.position = Vector2(PAPER_WIDTH - 168.0, -36.0)
+		stamp.rotation = -0.045
+		var st_l := Label.new()
+		st_l.text = "RESTRICTED"
+		st_l.add_theme_font_size_override("font_size", 15)
+		st_l.add_theme_color_override("font_color", Color(0.72, 0.18, 0.16, 0.78))
+		stamp.add_child(st_l)
+		paper.add_child(stamp)
 	# 줄들 미리 배치 (alpha=0)
 	var y: float = 0.0
 	for entry in lines_data:
@@ -153,15 +201,30 @@ func show_doc(input_lines: Array) -> void:
 		match kind:
 			"title":
 				lbl.add_theme_font_size_override("normal_font_size", 30)
-				lbl.add_theme_color_override("default_color", Color(0.45, 0.85, 0.58) if is_term else Color(0.18, 0.20, 0.28))
+				var tc := Color(0.18, 0.20, 0.28)
+				if is_term:
+					tc = Color(0.45, 0.85, 0.58)
+				elif is_drive:
+					tc = Color(0.75, 0.55, 1.0)
+				lbl.add_theme_color_override("default_color", tc)
 			"speaker":
 				lbl.add_theme_font_size_override("normal_font_size", 18)
-				lbl.add_theme_color_override("default_color", Color(0.42, 0.58, 0.50) if is_term else Color(0.45, 0.45, 0.55))
+				var sc := Color(0.45, 0.45, 0.55)
+				if is_term:
+					sc = Color(0.42, 0.58, 0.50)
+				elif is_drive:
+					sc = Color(0.56, 0.48, 0.70)
+				lbl.add_theme_color_override("default_color", sc)
 			"blank":
 				lbl.add_theme_font_size_override("normal_font_size", 16)
 			_:
 				lbl.add_theme_font_size_override("normal_font_size", 23)
-				lbl.add_theme_color_override("default_color", Color(0.72, 0.80, 0.78) if is_term else Color(0.10, 0.12, 0.18))
+				var bc := Color(0.10, 0.12, 0.18)
+				if is_term:
+					bc = Color(0.72, 0.80, 0.78)
+				elif is_drive:
+					bc = Color(0.80, 0.75, 0.90)
+				lbl.add_theme_color_override("default_color", bc)
 		lbl.text = _to_bbcode(str(d.get("text", "")))
 		lbl.visible_characters = 0
 		paper.add_child(lbl)
