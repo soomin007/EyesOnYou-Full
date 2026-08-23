@@ -7169,6 +7169,11 @@ func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1, disguise_kind: in
 	return e
 
 func _on_enemy_killed(at_position: Vector2, wave_idx: int = -1, shiny: bool = false, elite: bool = false, no_reward: bool = false) -> void:
+	# 처치 파편(그래픽 패키지 1차) — 보상 여부와 무관한 그림(환경 처치도 부서지는 건 같다).
+	# 엘리트·황금은 짧은 히트스톱까지(일반 처치는 빈도가 높아 제외 · 피로 방지).
+	Fx.death_burst(self, at_position, elite, shiny)
+	if elite or shiny:
+		Fx.kill_hitstop(get_tree())
 	# 무보상 경로 2종 · 점수도 XP도 없음. ⓐ 경보 진압 경비 — "들키면 파밍 이득"을 원천 차단
 	# (사용자 2026-08-17 "오히려 좋아 느낌, 위압감이 없다") ⓑ 환경 처치(열차 등) — 해저드에
 	# 밀어 넣어 얻는 것은 안전이지 경험치가 아니다(사용자 2026-08-19).

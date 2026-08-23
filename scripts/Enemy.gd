@@ -1552,6 +1552,8 @@ func take_damage(amount: int, from_dir: int = 0) -> bool:
 	if enemy_type == EnemyType.SHIELD and from_dir == 0 and hp > 3:
 		eff += 1
 	hp -= eff
+	# 타격 스파크(그래픽 패키지 1차) — 명중이 "박히는" 순간을 그림으로.
+	Fx.hit_sparks(get_parent(), global_position + Vector2(0, -14.0), from_dir)
 	modulate = Color(1.6, 1.6, 1.6)
 	create_tween().tween_property(self, "modulate", Color(1, 1, 1), 0.15)
 	if hp <= 0:

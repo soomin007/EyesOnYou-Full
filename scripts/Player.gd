@@ -80,6 +80,7 @@ var dash_timer: float = 0.0
 # 글로우는 움직일 때만(속도 비례·대시 만개), dash_boost 보유 대시엔 실제 잔상 고스트를 남긴다.
 var _dash_glow_nodes: Array = []   # CharacterArt "dash_jet_glow" 그룹 캐시(스킬 갱신 시 재수집)
 var _ghost_cd: float = 0.0
+var _skid_cd: float = 0.0          # 스키드 먼지 재발화 방지(그래픽 패키지 1차)
 var dash_cd: float = 0.0
 var skill_cd: float = 0.0
 var invuln: float = 0.0
@@ -212,15 +213,29 @@ const _STEP_INTERVAL: float = 0.32
 var _step_t: float = 0.0
 
 func _physics_process(delta: float) -> void:
+	# 지난 프레임의 최종 수평 속도 — 스키드(급정지) 감지는 입력 처리 "전" 값이어야 한다
+	# (이동이 입력 직결이라 입력을 끊는 프레임엔 velocity.x가 이미 0).
+	var prev_vx: float = velocity.x
 	_tick_timers(delta)
 	_handle_input(delta)
 	_apply_gravity(delta)
+	var fall_v: float = velocity.y   # 착지 먼지용 — move_and_slide가 지우기 전의 낙하 속도
 	move_and_slide()
 	var on_floor_now: bool = is_on_floor()
 	# 착지 SFX — 공중에서 지면으로 전이된 순간 한 번. 짧은 hop은 step과 비슷해서
 	# 발이 떴던 시간이 있을 때만(=jumps_used > 0 또는 _was_on_floor false) 의미.
 	if on_floor_now and not _was_on_floor:
 		SfxPlayer.play("player_land")
+		# 착지 먼지(그래픽 패키지 1차) — 낙하 속도 비례. 잔걸음 hop(느린 착지)은 무먼지.
+		if fall_v > 380.0:
+			Fx.land_dust(get_parent(), global_position, clampf((fall_v - 380.0) / 620.0, 0.25, 1.0))
+	# 스키드 먼지 — 달리다 입력을 끊으면 속도가 즉시 0이라(입력 직결 이동) 그 프레임이 급정지.
+	if on_floor_now and _was_on_floor and absf(prev_vx) > 190.0 and absf(velocity.x) < 40.0 \
+			and dash_timer <= 0.0 and _skid_cd <= 0.0:
+		_skid_cd = 0.3
+		Fx.skid_dust(get_parent(), global_position, 1 if prev_vx > 0.0 else -1)
+	if _skid_cd > 0.0:
+		_skid_cd -= delta
 	_was_on_floor = on_floor_now
 	if on_floor_now:
 		jumps_used = 0
@@ -783,6 +798,8 @@ func take_hit(amount: int) -> void:
 		emit_signal("damaged")  # 화면 플래시·shake 트리거 (시각 피드백 유지)
 		return
 	GameState.damage_player(amount)
+	# 피격 스파크(그래픽 패키지 1차) — 붉은 계열로 적 타격과 구분.
+	Fx.hit_sparks(get_parent(), global_position + Vector2(0, -24.0), 0, Fx.PLAYER_HURT)
 	SfxPlayer.play("player_hurt")
 	# hp T2 = 피격 후 1s 무적 (기본 0.8보다 길게).
 	# hp T3 = 추가로 짧은 슬로모션 (Engine.time_scale 감속).
@@ -905,6 +922,11 @@ func _update_visual() -> void:
 	elif moving:
 		bob = sin(anim_t * 14.0) * 1.4
 		arm_rot = sin(anim_t * 14.0) * 0.10
+		# 달리기 전경 기울임(그래픽 패키지 1차) — 속도 비례 앞쏠림, 대시는 더 깊게.
+		# scale.x 반전으로 좌우 자동 미러(위 주석과 동일 원리).
+		lean = 0.07 * clampf(absf(velocity.x) / SPEED, 0.0, 1.0)
+		if dash_timer > 0.0:
+			lean = 0.14
 	else:
 		bob = sin(anim_t * 3.0) * 0.6
 		arm_rot = sin(anim_t * 3.0) * 0.03
