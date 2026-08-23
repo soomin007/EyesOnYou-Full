@@ -13,13 +13,15 @@ extends Node
 
 signal finished
 
+# 가독 리워크(2026-08-23 사용자 "글씨는 작고 여백만 잔뜩 · 읽기 싫게 생겼다") — 종이 폭·폰트
+# 확대 + 핵심 줄 형광펜 강조("hl": true — 대충 봐도 스토리 흐름이 잡히게).
 const TYPE_INTERVAL: float = 0.035
-const PAPER_WIDTH: float = 720.0
-const MARGIN_TOP: float = 80.0
-const MARGIN_SIDE: float = 36.0
-const LINE_HEIGHT_BODY: float = 32.0
-const LINE_HEIGHT_TITLE: float = 48.0
-const LINE_HEIGHT_BLANK: float = 18.0
+const PAPER_WIDTH: float = 880.0
+const MARGIN_TOP: float = 64.0
+const MARGIN_SIDE: float = 44.0
+const LINE_HEIGHT_BODY: float = 40.0
+const LINE_HEIGHT_TITLE: float = 58.0
+const LINE_HEIGHT_BLANK: float = 20.0
 # 디자인 기준 화면 크기 — show_doc 진입 시 실제 화면(visible_rect)으로 갱신(적응형).
 # const가 아니라 var: 런타임에 현재 해상도/화면비로 덮어쓴다(아래 모든 사용처에 반영).
 var VIEWPORT_W: float = 1280.0
@@ -111,16 +113,28 @@ func show_doc(input_lines: Array) -> void:
 		lbl.modulate.a = 0.0
 		match kind:
 			"title":
-				lbl.add_theme_font_size_override("font_size", 22)
+				lbl.add_theme_font_size_override("font_size", 28)
 				lbl.add_theme_color_override("font_color", Color(0.18, 0.20, 0.28))
 			"speaker":
-				lbl.add_theme_font_size_override("font_size", 14)
+				lbl.add_theme_font_size_override("font_size", 17)
 				lbl.add_theme_color_override("font_color", Color(0.45, 0.45, 0.55))
 			"blank":
-				lbl.add_theme_font_size_override("font_size", 14)
+				lbl.add_theme_font_size_override("font_size", 16)
 			_:
-				lbl.add_theme_font_size_override("font_size", 17)
+				lbl.add_theme_font_size_override("font_size", 21)
 				lbl.add_theme_color_override("font_color", Color(0.10, 0.12, 0.18))
+		# 핵심 줄 강조 — 형광펜 밴드 + 진청 글자(로어 단서 청색 계열). 라벨의 자식이라
+		# 타이핑 페이드(modulate.a)와 함께 나타난다.
+		if d.get("hl"):
+			lbl.add_theme_color_override("font_color", Color(0.03, 0.24, 0.42))
+			var band := ColorRect.new()
+			band.color = Color(0.55, 0.85, 0.95, 0.30)
+			band.position = Vector2(-10.0, 2.0)
+			band.size = Vector2(PAPER_WIDTH + 20.0, _line_height_for(kind) - 8.0)
+			# z_index -1은 종이(paper_visual)보다도 뒤로 가 안 보인다 — 부모(라벨) 직전에만 그리는
+			# show_behind_parent가 정답(라벨 modulate 페이드도 자동 상속).
+			band.show_behind_parent = true
+			lbl.add_child(band)
 		paper.add_child(lbl)
 		labels.append(lbl)
 		y += _line_height_for(kind)

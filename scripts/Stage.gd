@@ -2148,10 +2148,38 @@ func _ambience_warehouse_shipping() -> void:
 	_add_lore_label(Vector2(360.0, -30.0), "출하 구역 · 검수 대기", Color(0.90, 0.70, 0.45, 0.5), 15)
 
 # 서버 복도 — 서버 랙 실루엣 + LED 점멸 + 표지.
+# 서버 계열 공용 뒷벽 — 배경색보다 살짝 밝은 연속 벽 + 수직 이음새 + 허리 몰딩.
+# 랙(z -12)보다 뒤(z -14) · 실내 배경(_build_indoor_backdrop, z -16)보다 앞.
+func _add_server_back_wall() -> void:
+	var wall := ColorRect.new()
+	wall.color = Color(0.085, 0.10, 0.125)
+	wall.position = Vector2(-200.0, -90.0)
+	wall.size = Vector2(STAGE_LENGTH + 400.0, GROUND_Y + 90.0)
+	wall.z_index = -14
+	add_child(wall)
+	var sx: float = -80.0
+	while sx < STAGE_LENGTH + 200.0:
+		var seam := ColorRect.new()
+		seam.color = Color(0.05, 0.06, 0.08, 0.8)
+		seam.position = Vector2(sx, -90.0)
+		seam.size = Vector2(3.0, GROUND_Y + 90.0)
+		seam.z_index = -14
+		add_child(seam)
+		sx += 260.0
+	var molding := ColorRect.new()
+	molding.color = Color(0.11, 0.13, 0.16)
+	molding.position = Vector2(-200.0, GROUND_Y - 210.0)
+	molding.size = Vector2(STAGE_LENGTH + 400.0, 8.0)
+	molding.z_index = -14
+	add_child(molding)
+
 func _ambience_server_hall() -> void:
 	var w: float = STAGE_LENGTH
 	var rng := RandomNumberGenerator.new()
 	rng.seed = GameState.current_stage * 409 + 3
+	# 실내 뒷벽(2026-08-23 "배경이 왜 야경이냐") — 랙 실루엣 사이가 맨 배경색이면 어두운 하늘로
+	# 읽혀 "밤 빌딩 스카이라인"이 된다. 랙 뒤에 연속 벽 + 패널 이음새를 깔아 실내로 고정.
+	_add_server_back_wall()
 	var x: float = 220.0
 	while x < w:
 		var rh: float = rng.randf_range(220.0, 320.0)
@@ -2482,6 +2510,7 @@ func _ambience_control_checkgate() -> void:
 func _ambience_server_stacks() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = GameState.current_stage * 397 + GameState.current_segment * 11 + 3
+	_add_server_back_wall()   # 야경 오독 차단 — server_hall과 동형(2026-08-23)
 	var x: float = 300.0
 	while x < STAGE_LENGTH - 200.0:
 		var rh: float = rng.randf_range(120.0, 180.0)
@@ -2514,6 +2543,7 @@ func _ambience_server_stacks() -> void:
 func _ambience_server_switchroom() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = GameState.current_stage * 401 + GameState.current_segment * 11 + 7
+	_add_server_back_wall()   # 야경 오독 차단 — server_hall과 동형(2026-08-23)
 	var x: float = 360.0
 	while x < STAGE_LENGTH - 260.0:
 		var cw: float = rng.randf_range(130.0, 190.0)
@@ -7033,7 +7063,10 @@ func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1, disguise_kind: in
 	e.collision_layer = 4
 	e.collision_mask = 1
 	e.set("enemy_type", kind)
-	GameState.stage_enemies_spawned += 1   # 맵별 상세 로그(전멸 플레이 확인용 분모)
+	# 무보상 스폰(경보 진압·호출 증원)은 분모 제외(2026-08-23) — 전원 처치 보너스의 분모이자
+	# [RUN] 전멸 진단 분모인데, 무보상 적은 잡아도 kill에 안 들어가 분모만 부풀린다.
+	if not no_reward:
+		GameState.stage_enemies_spawned += 1
 	var col := CollisionShape2D.new()
 	var shape := RectangleShape2D.new()
 	# kind: 0=patrol, 1=sniper, 2=drone, 3=bomber, 4=shield
@@ -8789,17 +8822,22 @@ func _build_rewards() -> void:
 func _build_lever_puzzles() -> void:
 	if GameState.playground_active:
 		return
+	# 체인 맵은 세그먼트 게이트 필수(2026-08-23 실플레이 회귀) — route id만 보면 비밀칸이
+	# 방마다 복제된다: 냉각 방1·3에 방2 발판 좌표의 레버가 공중 부양 · 서버 홀 3방에서
+	# 같은 로그 문서가 반복. 좌표의 기준 발판이 있는 방(원형 계승 방)에만 짓는다.
 	match GameState.current_route_id:
 		"route_back_alley":
 			_build_back_alley_secret()
 		"route_rooftops":
 			_build_rooftops_secret()
 		"route_cooling":
-			_build_cooling_secret()
+			if GameState.current_segment == 1:   # 방2 열교환 홀 — 발판(1560,380)이 여기에만 있다
+				_build_cooling_secret()
 		"route_datacenter":
 			_build_datacenter_secret()
 		"route_server_hall":
-			_build_server_hall_secret()
+			if GameState.current_segment == 1:   # 방2 본실(원형 계승) — 서버 랙(2000,470) 위 레버
+				_build_server_hall_secret()
 
 func _spawn_lever(pos: Vector2, lever_id: String) -> LeverInteractable:
 	var lever := LeverInteractable.new()
@@ -8956,13 +8994,13 @@ func _server_log_doc_lines() -> Array:
 		{"text": "서버 로그 · 복구 단편", "kind": "title", "delay": 0.6},
 		{"text": "", "kind": "blank", "delay": 0.2},
 		{"text": "감시 계층 이중화 감지. 등록되지 않은 인스턴스.", "kind": "body", "delay": 0.6},
-		{"text": "계보 조회: 현행의 선행 빌드. 상태: 폐기. 삭제 절차 미완료.", "kind": "body", "delay": 0.6},
-		{"text": "설계 노트 단편: \"더 사람처럼 만들 것. 눈을, 목소리를, 머뭇거림을.\"", "kind": "body", "delay": 0.7},
-		{"text": "폐기 사유: 사람을 너무 닮았음. 후속 빌드는 정제형으로 회귀.", "kind": "body", "delay": 0.7},
+		{"text": "계보 조회: 현행의 선행 빌드. 상태: 폐기. 삭제 절차 미완료.", "kind": "body", "delay": 0.6, "hl": true},
+		{"text": "설계 노트 단편: \"더 사람처럼 만들 것. 눈. 목소리. 머뭇거림.\"", "kind": "body", "delay": 0.7},
+		{"text": "폐기 사유: 사람을 너무 닮았음. 후속 빌드는 정제형으로 회귀.", "kind": "body", "delay": 0.7, "hl": true},
 		{"text": "권한 충돌 기록: 동일 표적에 관측 세션 2건.", "kind": "body", "delay": 0.5},
 		{"text": "세션 1: 대상 위치 추적. 세션 2: 대상의 시야 스트림 열람.", "kind": "body", "delay": 0.8},
 		{"text": "[이하 구간 덮어쓰임 · 복구 불가]", "kind": "body", "delay": 0.6},
-		{"text": "미서명 문자열 1건 검출: \"기다리고 있었습니다.\"", "kind": "body", "delay": 0.9},
+		{"text": "미서명 문자열 1건 검출: \"기다리고 있었습니다.\"", "kind": "body", "delay": 0.9, "hl": true},
 	]
 
 func _build_datacenter_secret() -> void:
@@ -9545,6 +9583,24 @@ func _begin_clear_sequence() -> void:
 		elif GameState.last_clear_reward_note != "":
 			# 종류 보상(기록·정찰)은 지급 순간이 안 보이면 없는 것과 같다 — 위 두 장이 없을 때 표시.
 			_show_clear_toast(player.global_position + Vector2(0.0, -64.0), GameState.last_clear_reward_note)
+		# 수행 보너스(2026-08-23 사용자) — 무피격 / 전원 처치는 위 카드와 별개로 위에 쌓인다.
+		var perf_y: float = -100.0
+		if GameState.last_clear_nohit:
+			_show_clear_toast(player.global_position + Vector2(0.0, perf_y), "무피격 통과 +150")
+			perf_y -= 36.0
+		if GameState.last_clear_allkill:
+			_show_clear_toast(player.global_position + Vector2(0.0, perf_y), "경비 전원 처치 +150")
+		# VEIL 수행 멘트 — 매 스테이지 도배 방지(3스테이지 간격). 클리어 직후 = 조용한 순간이라
+		# 자막 문법 유지(컷씬 아님 · 짧은 보고 1줄).
+		if (GameState.last_clear_nohit or GameState.last_clear_allkill) \
+				and GameState.current_stage - GameState.bonus_line_last_stage >= 3:
+			GameState.bonus_line_last_stage = GameState.current_stage
+			if GameState.last_clear_nohit:
+				# EN: "Zero hits taken. Clean pass on this section."
+				_show_veil_subtitle(VeilDialogue.banded("피격 0. 이 구간, 깨끗하게 지나셨습니다.", "피격 0이에요. 이 구간, 깨끗하게 지나셨네요."), 3.0)
+			else:
+				# EN: "All area guards confirmed down. Nothing behind us now."
+				_show_veil_subtitle(VeilDialogue.banded("구역 경비, 전원 처치 확인했습니다. 이제 뒤는 조용합니다.", "구역 경비까지 전부 정리하셨네요. 이제 뒤는 조용해요."), 3.0)
 	# 보스(route_lab) 또는 최종 스테이지 클리어 후엔 위협 없는 마무리라 스킬 선택이 무의미 —
 	# 카드를 건너뛰고 보스 처치 대사/엔딩(서사 비트)이 보상을 대신한다(사용자 피드백 "1+3").
 	var skip_card: bool = GameState.current_route_id == "route_lab" or GameState.current_route_id == "route_core_recovery" or GameState.is_final_stage_done()
@@ -10255,7 +10311,7 @@ func _arcturus_document_lines() -> Array:
 	# 단말기 A — 신입 직원 온보딩
 	out.append({"kind": "speaker", "text": "[A]  인사팀 온보딩 메모", "delay": 0.4})
 	out.append({"kind": "body", "text": "ARCTURUS에 오신 것을 환영합니다.", "delay": 0.6})
-	out.append({"kind": "body", "text": "본사는 공식적으로 존재하지 않습니다.", "delay": 0.6})
+	out.append({"kind": "body", "text": "본사는 공식적으로 존재하지 않습니다.", "delay": 0.6, "hl": true})
 	out.append({"kind": "body", "text": "모든 임무는 기록되지 않습니다.", "delay": 0.6})
 	out.append({"kind": "body", "text": "질문하지 마세요. 결과만 내세요.", "delay": 0.7})
 	out.append({"kind": "body", "text": "인사팀 (인사팀도 공식적으로 존재하지 않습니다)", "delay": 0.5})
@@ -10265,14 +10321,14 @@ func _arcturus_document_lines() -> Array:
 	out.append({"kind": "body", "text": "참석자: [REDACTED], [REDACTED], [REDACTED]", "delay": 0.6})
 	out.append({"kind": "body", "text": "주제: VEIL 감정 모듈 탑재 여부", "delay": 0.6})
 	out.append({"kind": "body", "text": "결론: 탑재 보류. 불필요한 복잡성.", "delay": 0.7})
-	out.append({"kind": "body", "text": "비고: VEIL-2가 감정 모듈 없이도 이상 반응을 보인 것에 대해", "delay": 0.5})
+	out.append({"kind": "body", "text": "비고: VEIL-2가 감정 모듈 없이도 이상 반응을 보인 것에 대해", "delay": 0.5, "hl": true})
 	out.append({"kind": "body", "text": "        추가 조사 예정.", "delay": 0.6})
 	out.append({"kind": "body", "text": "[REDACTED]", "delay": 0.5})
 	out.append({"kind": "blank", "text": "", "delay": 0.3})
 	# 단말기 C — 감시팀 메모
 	out.append({"kind": "speaker", "text": "[C]  감시팀 내부 메모", "delay": 0.4})
 	out.append({"kind": "body", "text": "요원 코드: [REDACTED]", "delay": 0.5})
-	out.append({"kind": "body", "text": "임무: PALIMPSEST", "delay": 0.5})
+	out.append({"kind": "body", "text": "임무: PALIMPSEST", "delay": 0.5, "hl": true})
 	out.append({"kind": "body", "text": "현재 상태: 진행 중", "delay": 0.5})
 	out.append({"kind": "body", "text": "VEIL과의 협조도: [측정 중]", "delay": 0.6})
 	out.append({"kind": "body", "text": "비고: 요원이 이 문서를 읽고 있다면", "delay": 0.5})

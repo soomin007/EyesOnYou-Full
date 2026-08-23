@@ -10,8 +10,9 @@ extends Node2D
 # 2026-08-20 확장(사용자 "기믹 활용 없음"):
 #  - 적도 맞는다(ENEMY_DAMAGE 3) — 유인 처치 전술 성립. 환경 처치 규약(env_killed = XP·점수
 #    없음)은 열차(TrainHazard)와 동형.
-#  - 발판 높이 예고 — 낙하선이 지나는 발판 표면에도 그림자 마커를 그린다(상단 캠퍼에게도
-#    회피 정보 제공 · 공정성 문법). Stage가 맵 platforms에서 자동 파생해 넘긴다.
+#  - 발판 착지(2026-08-23 개정 · "관통이 맞아?" 반려): 덩이는 낙하선 위 최상단 발판에서
+#    부서진다(관통 폐지). 발판 위 캠퍼는 여전히 위협, 발판 아래는 엄폐처. 마커도 착지면에만.
+#    Stage가 맵 platforms에서 자동 파생해 넘긴다(mark_platforms = 착지면 후보).
 #
 # 사용: MapData "debris_zones" = [{x_min, x_max, interval?, phase?, dmg?}].
 
@@ -36,6 +37,7 @@ var _state: int = S.IDLE
 var _t: float = 0.0
 var _drop_x: float = 0.0
 var _chunk_y: float = 0.0
+var _land_y: float = 600.0          # 이번 낙하의 착지면 — 낙하선 위 최상단 발판 or 지면
 var _hit_done: bool = false
 var _hit_enemies: Dictionary = {}   # 이번 낙하에 이미 맞은 적(instance_id) — 중복 타격 방지
 
@@ -69,7 +71,15 @@ func _physics_process(delta: float) -> void:
 					var px: float = (p as Node2D).global_position.x
 					if px > x_min and px < x_max and randf() < 0.5:
 						_drop_x = clampf(px + randf_range(-90.0, 90.0), x_min, x_max)
-				SfxPlayer.play_at("drop_platform_descend", Vector2(_drop_x, ground_y), -10.0)
+				# 착지면 = 낙하선 위 최상단 발판(없으면 지면) — 발판 관통 폐지(2026-08-23 사용자
+				# "관통이 맞아?"). 덩이는 첫 표면에서 부서진다: 발판 위 = 여전히 위협(캠핑 대책
+				# 유지), 발판 아래 = 엄폐처("발판은 짧은 회피 고지" 맵 설계와 정합).
+				_land_y = ground_y
+				for pe in mark_platforms:
+					var pd: Dictionary = pe
+					if _drop_x >= float(pd.get("x_min", 0.0)) and _drop_x <= float(pd.get("x_max", 0.0)):
+						_land_y = minf(_land_y, float(pd.get("y", ground_y)))
+				SfxPlayer.play_at("drop_platform_descend", Vector2(_drop_x, _land_y), -10.0)
 		S.TELE:
 			if _t >= TELE_DUR:
 				_state = S.FALL
@@ -79,10 +89,10 @@ func _physics_process(delta: float) -> void:
 			_chunk_y += FALL_SPEED * delta
 			_check_hit()
 			_check_enemy_hits()
-			if _chunk_y >= ground_y - 8.0:
+			if _chunk_y >= _land_y - 8.0:
 				_state = S.IMPACT
 				_t = 0.0
-				SfxPlayer.play_at("bullet_impact_wall", Vector2(_drop_x, ground_y), -2.0)
+				SfxPlayer.play_at("bullet_impact_wall", Vector2(_drop_x, _land_y), -2.0)
 		S.IMPACT:
 			if _t >= IMPACT_DUR:
 				_state = S.IDLE
@@ -132,21 +142,12 @@ func _draw() -> void:
 	match _state:
 		S.TELE:
 			var k: float = _t / TELE_DUR
-			# 바닥 그림자 마커 · 낙하점이 점점 진해진다(회피 정보의 본체).
-			draw_set_transform(Vector2(_drop_x, ground_y - 3.0), 0.0, Vector2(1.0, 0.30))
+			# 착지면 그림자 마커 · 낙하점이 점점 진해진다(회피 정보의 본체). 관통 폐지 후 마커는
+			# 실제 착지면(최상단 발판 or 지면) 한 곳 — 그 아래는 안전이라 경고도 없다(정직한 예고).
+			draw_set_transform(Vector2(_drop_x, _land_y - 3.0), 0.0, Vector2(1.0, 0.30))
 			draw_circle(Vector2.ZERO, 26.0, Color(0.0, 0.0, 0.0, 0.15 + 0.30 * k))
 			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-			draw_arc(Vector2(_drop_x, ground_y - 4.0), 24.0, PI, TAU, 16, Color(1.0, 0.6, 0.25, 0.3 + 0.5 * k), 2.0, true)
-			# 낙하선이 지나는 발판 표면에도 예고 — 상단에 있는 플레이어에게도 같은 정보(공정성).
-			for pe in mark_platforms:
-				var pd: Dictionary = pe
-				if _drop_x < float(pd.get("x_min", 0.0)) or _drop_x > float(pd.get("x_max", 0.0)):
-					continue
-				var py: float = float(pd.get("y", 0.0))
-				draw_set_transform(Vector2(_drop_x, py - 3.0), 0.0, Vector2(1.0, 0.30))
-				draw_circle(Vector2.ZERO, 22.0, Color(0.0, 0.0, 0.0, 0.13 + 0.26 * k))
-				draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-				draw_arc(Vector2(_drop_x, py - 4.0), 20.0, PI, TAU, 14, Color(1.0, 0.6, 0.25, 0.25 + 0.4 * k), 2.0, true)
+			draw_arc(Vector2(_drop_x, _land_y - 4.0), 24.0, PI, TAU, 16, Color(1.0, 0.6, 0.25, 0.3 + 0.5 * k), 2.0, true)
 			# 천장 먼지 · 위에서 부스러기가 먼저 흘러내린다.
 			for i in 3:
 				var dy: float = top_y + 30.0 + fmod(_t * 260.0 + float(i) * 47.0, 130.0)
@@ -162,12 +163,12 @@ func _draw() -> void:
 			draw_polyline(pts, Color(0.28, 0.26, 0.23), 2.0, true)
 		S.IMPACT:
 			var k2: float = 1.0 - _t / IMPACT_DUR
-			# 잔해 더미 + 먼지 퍼프(페이드).
+			# 잔해 더미 + 먼지 퍼프(페이드) — 착지면 위에.
 			var rp := PackedVector2Array([
-				Vector2(_drop_x - 24.0, ground_y), Vector2(_drop_x - 8.0, ground_y - 14.0),
-				Vector2(_drop_x + 10.0, ground_y - 10.0), Vector2(_drop_x + 24.0, ground_y)])
+				Vector2(_drop_x - 24.0, _land_y), Vector2(_drop_x - 8.0, _land_y - 14.0),
+				Vector2(_drop_x + 10.0, _land_y - 10.0), Vector2(_drop_x + 24.0, _land_y)])
 			draw_polygon(rp, PackedColorArray([Color(0.42, 0.39, 0.35, 0.5 + 0.4 * k2)]))
 			for i in 4:
 				var a2: float = float(i) * 1.7
-				draw_circle(Vector2(_drop_x + cos(a2) * (18.0 + 26.0 * (1.0 - k2)), ground_y - 8.0 - sin(a2) * 14.0 * (1.0 - k2)),
+				draw_circle(Vector2(_drop_x + cos(a2) * (18.0 + 26.0 * (1.0 - k2)), _land_y - 8.0 - sin(a2) * 14.0 * (1.0 - k2)),
 					5.0 * k2 + 2.0, Color(0.6, 0.55, 0.5, 0.3 * k2))

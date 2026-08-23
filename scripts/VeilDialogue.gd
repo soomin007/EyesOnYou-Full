@@ -246,7 +246,7 @@ static func get_recovery_doc_lines() -> Array:
 		{"text": "", "kind": "blank", "delay": 0.2},
 		{"text": "회수 대상: 핵심 데이터 드라이브 (확보)", "kind": "body", "delay": 0.6},
 		{"text": "드라이브 내용물: 단일 실행 이미지", "kind": "body", "delay": 0.6},
-		{"text": "빌드 서명: VEIL", "kind": "body", "delay": 0.9},
+		{"text": "빌드 서명: VEIL", "kind": "body", "delay": 0.9, "hl": true},
 	]
 
 # 리드아웃 직후 VEIL의 고백 — truth_seen(???에서 이미 본 회차)이면 "이미 안다" 톤. {text, dur}.

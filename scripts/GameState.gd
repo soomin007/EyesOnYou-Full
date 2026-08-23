@@ -363,6 +363,11 @@ var rival_lock_beat4_shown: bool = false
 var rival_lock_beat5_shown: bool = false
 var last_clear_flawless: bool = false   # 직전 클리어가 무사망(단일 기록) — Stage 토스트용
 var last_clear_challenge: bool = false  # 직전 클리어가 도전 루트(완수 프리미엄) — Stage 토스트용
+# 스테이지 수행 보너스(2026-08-23 사용자 "노히트·전원 사살에 추가 점수와 VEIL 멘트") —
+# 펌프장 양자택일 구조(무피격 vs 몰살)의 보상판. 판정·가산은 _finalize_stage_metrics.
+var last_clear_nohit: bool = false      # 그 스테이지 피격 0
+var last_clear_allkill: bool = false    # 스폰된 경비 전원 직접 처치(환경 처치 제외 · 스폰 0 맵 제외)
+var bonus_line_last_stage: int = -9     # VEIL 수행 멘트 최근 발화 스테이지(도배 방지 간격용)
 
 # --- 런 정산 통계(2026-08-15 사용자 제안) — 엔딩 정산 화면 + 페이싱 진단용 ---
 var kills_total: int = 0        # 런 누적 처치
@@ -375,6 +380,8 @@ var _stage_seg_times: Array = []
 var stage_enemies_spawned: int = 0
 var _stage_kills_base: int = 0
 var _stage_xp_gained: int = 0
+# risk 보너스 분수 캐리(add_xp) — 가치 1 오브의 +50%가 반올림으로 +100%가 되던 것 방지. 런 단위.
+var _xp_risk_frac: float = 0.0
 
 # 방 체인 전환에서 Stage가 호출 — 방별 스플릿 기록.
 func note_segment_split() -> void:
@@ -434,6 +441,7 @@ func reset() -> void:
 	player_hp = 3
 	player_xp = 0
 	player_level = 1
+	_xp_risk_frac = 0.0
 	overflow_hp_bonus = 0
 	map_extension_seen = false
 	boss_intro_seen_run = false
@@ -503,6 +511,7 @@ func start_main_game() -> void:
 	player_hp = player_max_hp
 	player_xp = 0
 	player_level = 1
+	_xp_risk_frac = 0.0
 	overflow_hp_bonus = 0
 	map_extension_seen = false
 	boss_intro_seen_run = false
@@ -630,6 +639,17 @@ func _finalize_stage_metrics() -> void:
 	stage_time_log.append("%d|%s|%.1f%s|kill:%d/%d|hit:%d|xp:%d" % [
 		current_stage + 1, current_route_id, last_stage_secs, segs_txt,
 		kills_total - _stage_kills_base, stage_enemies_spawned, hits, _stage_xp_gained])
+	# 수행 보너스 판정(2026-08-23) — 무피격 / 전원 직접 처치(kills_total은 환경 처치 미포함이라
+	# 열차·낙석 킬은 자동 제외). 본편 런만(연습장·스토리 모드 점수 무의미).
+	last_clear_nohit = false
+	last_clear_allkill = false
+	if not story_mode and not playground_active:
+		if hits == 0:
+			last_clear_nohit = true
+			score += 150
+		if stage_enemies_spawned > 0 and kills_total - _stage_kills_base >= stage_enemies_spawned:
+			last_clear_allkill = true
+			score += 150
 	recent_stage_hits.append(hits)
 	recent_stage_deaths.append(deaths)
 	if recent_stage_hits.size() > 2:
@@ -735,17 +755,25 @@ func enemy_count_multiplier() -> float:
 		3: return 1.5
 	return 1.1
 
-# 레벨업 필요 XP — 8 + 레벨×3/4(2026-08-11 2차 상향: 레벨÷2로도 "여전히 빠르다" 실플레이 피드백).
-# L1=8(튜토리얼 레벨업 스텝 보존), L2=9, L4=11, L6=12, L8=14, L10=15, L12=17, L16=20 ...
-# 초반은 원곡선과 같고 중후반이 무거워져 만렙(24픽)·오버플로 도달이 확 밀린다. 보스 HP 캡 16과 짝.
+# 레벨업 필요 XP — 8 + 레벨×2(2026-08-23 3차 상향 · XP 재캘리브레이션).
+# 배경: 방 체인 확산 + 웨이브 3→6으로 런당 공급이 ~508 XP(08-22 [RUN] 실측)까지 불어
+# 만렙(총 ~405)이 s12 전에 닿았다(사용자 보고). 새 곡선 만렙 총량 = 24×8 + 2×Σ(1..24) = 792.
+# 공급 ~470(risk 반올림 수정 반영)이면 풀런 종료 ~L18 = "풀런에 절반만 T3"(08-18 결정) 밴드.
+# L1=10(튜토리얼 스텝 보존), L5=18, L10=28, L15=38, L20=48, L24=56. 보스 HP 레벨 스케일은
+# 도달 레벨이 낮아지는 만큼 자연 완화(봇 기준선 재계측은 balance_framework §13 트랙).
 func xp_to_next() -> int:
-	return XP_PER_LEVEL + player_level * 3 / 4
+	return XP_PER_LEVEL + player_level * 2
 
 func add_xp(amount: int, apply_risk_bonus: bool = true) -> bool:
 	# high-risk 루트(risk=3)에서 적 처치 XP +50% (스테이지 클리어 보상은 apply_risk_bonus=false로 호출).
+	# 반올림 함정 수정(2026-08-23): 가치 1 오브에 round(1.5)=2로 +100%가 되던 것을 분수 캐리로 —
+	# 기대값 정확히 +50%(2개당 1 추가). 사용자 "버블이 2씩 오르는 것 같다"의 정체.
 	var gain: int = amount
 	if apply_risk_bonus and current_route_risk >= 3:
-		gain = int(round(float(amount) * 1.5))
+		var bonus: float = float(amount) * 0.5 + _xp_risk_frac
+		var bonus_i: int = int(floor(bonus))
+		_xp_risk_frac = bonus - float(bonus_i)
+		gain = amount + bonus_i
 	player_xp += gain
 	_stage_xp_gained += gain   # 맵별 상세 로그(XP 경제 캘리브레이션 실측)
 	var need: int = xp_to_next()
