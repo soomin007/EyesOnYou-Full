@@ -10,7 +10,14 @@ extends Node
 
 const STAGE_SCENE: String = "res://scenes/stage.tscn"
 
+# anim 항목: {"anim": 캡처 프레임 수, "every": 물리 프레임 간격, "preroll": 사전 진행 프레임}
+# → user://verify_shots/anim_<id>/f%03d.png 연사 저장. 인코딩(ffmpeg → 움직이는 webp)은 세션이 담당.
 const TARGETS: Array = [
+	{"id": "anim_dash", "route": "route_back_alley", "stage": 1, "setup": "anim_dash", "anim": 64, "every": 2},
+	{"id": "anim_kill", "route": "route_back_alley", "stage": 1, "setup": "anim_kill", "anim": 44, "every": 2},
+	{"id": "anim_land", "route": "route_back_alley", "stage": 1, "setup": "anim_land", "anim": 52, "every": 2},
+	{"id": "anim_debris", "route": "route_demolition_zone", "stage": 1, "setup": "anim_debris", "anim": 90, "every": 3, "preroll": 90},
+	{"id": "anim_runskid", "route": "route_back_alley", "stage": 1, "setup": "anim_runskid", "anim": 72, "every": 2},
 	{"id": "dash_afterimage", "route": "route_back_alley", "stage": 1, "setup": "dash"},
 	{"id": "lock_cutscene_act4", "route": "route_pump_station", "stage": 8, "setup": "cutscene_lock"},
 	{"id": "hp_lock_hud", "route": "route_pump_station", "stage": 8, "setup": "hud_lock"},
@@ -31,16 +38,23 @@ func _ready() -> void:
 
 func _run() -> void:
 	for entry in TARGETS:
+		if not is_inside_tree():
+			print("[VERIFY] ABORT: harness left tree")
+			return
 		var d: Dictionary = entry
 		await _shot(d)
 	print("[VERIFY] DONE")
-	get_tree().quit()
+	if is_inside_tree():
+		get_tree().quit()
 
 func _shot(d: Dictionary) -> void:
 	var id: String = str(d.get("id", "shot"))
 	var setup: String = str(d.get("setup", ""))
 	if setup == "routemap":
 		await _shot_routemap(id)
+		return
+	if int(d.get("anim", 0)) > 0:
+		await _shot_anim(d)
 		return
 	GameState.start_main_game()
 	GameState.current_stage = int(d.get("stage", 1))
@@ -63,6 +77,8 @@ func _shot(d: Dictionary) -> void:
 	for i in 40:
 		await get_tree().process_frame
 	var p: Node = get_tree().get_first_node_in_group("player")
+	if p != null:
+		p.set("clear_protect", true)   # 캡처 중 사망 = 씬 전환 = 하니스 소멸 방지(anim과 동일 가드)
 	match setup:
 		"dash":
 			GameState.skills["dash_boost"] = 2
@@ -126,6 +142,107 @@ func _shot(d: Dictionary) -> void:
 	stage.queue_free()
 	await get_tree().process_frame
 	await get_tree().process_frame
+
+# 애니메이션 캡처 — 스테이지를 부팅하고 매 every 물리 프레임마다 뷰포트를 저장하며,
+# 캡처 프레임 인덱스에 맞춰 _anim_tick이 조작(대시·처치·낙하·달리기)을 주입한다.
+func _shot_anim(d: Dictionary) -> void:
+	var id: String = str(d.get("id", "anim"))
+	var setup: String = str(d.get("setup", ""))
+	var frames: int = int(d.get("anim", 40))
+	var every: int = maxi(1, int(d.get("every", 2)))
+	DirAccess.make_dir_recursive_absolute("user://verify_shots/%s" % id)
+	GameState.start_main_game()
+	GameState.current_stage = int(d.get("stage", 1))
+	GameState.current_segment = int(d.get("seg", 0))
+	GameState.seen_enemies = ["patrol", "sniper", "drone", "bomber", "shield", "jammer", "elite", "caller"]
+	GameState.player_level = 99
+	var route: Dictionary = {}
+	for r in RouteData.ALL_ROUTES:
+		var rd: Dictionary = r
+		if str(rd.get("id", "")) == str(d.get("route", "")):
+			route = rd
+			break
+	if route.is_empty():
+		print("[VERIFY] skip(no route): ", id)
+		return
+	GameState.record_route_choice(route, "")
+	GameState.current_segment = int(d.get("seg", 0))
+	var stage: Node = (load(STAGE_SCENE) as PackedScene).instantiate()
+	add_child(stage)
+	for i in 40:
+		await get_tree().process_frame
+	var p: Node = get_tree().get_first_node_in_group("player")
+	# 캡처 중 사망 금지 — 플레이어가 죽으면 Death 씬 전환이 현재 씬(=이 하니스)을 제거해
+	# 이후 전 타깃이 무너진다(2026-08-23 실측: 첫 애니메이션 중 사망 → get_tree() null 연쇄).
+	if p != null:
+		p.set("clear_protect", true)
+	_anim_prepare(setup, p, stage)
+	for i in int(d.get("preroll", 0)):
+		await get_tree().process_frame
+	for f in frames:
+		_anim_tick(setup, f, p)
+		for e in every:
+			await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png("user://verify_shots/%s/f%03d.png" % [id, f])
+	Input.action_release("move_right")
+	Input.action_release("move_left")
+	print("[VERIFY] anim saved ", id, " x", frames)
+	get_tree().paused = false
+	GameState.restrict_combat_input = false
+	Engine.time_scale = 1.0
+	stage.queue_free()
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+func _anim_prepare(setup: String, p: Node, stage: Node) -> void:
+	match setup:
+		"anim_dash", "anim_runskid":
+			GameState.skills["dash_boost"] = 2
+			if p != null:
+				p.call("_on_skills_changed")
+		"anim_kill":
+			var best: Node2D = null
+			for e in get_tree().get_nodes_in_group("enemy"):
+				if is_instance_valid(e) and e is Node2D and e.get("enemy_type") != null:
+					best = e as Node2D
+					break
+			if best != null and p is Node2D:
+				(p as Node2D).global_position = best.global_position + Vector2(-170.0, 0.0)
+		"anim_debris":
+			# 발판(1040,450 w180) 위로만 떨어지는 전용 낙석 — 착지·발판 아래 엄폐를 확정 재현.
+			if p is Node2D:
+				(p as Node2D).global_position = Vector2(1040.0, 585.0)
+			var fd := FallingDebris.new()
+			stage.add_child(fd)
+			fd.setup({"x_min": 995.0, "x_max": 1085.0, "interval": 0.9},
+				600.0, stage.call("_debris_mark_platforms"))
+
+func _anim_tick(setup: String, f: int, p: Node) -> void:
+	match setup:
+		"anim_dash":
+			if p != null and (f == 12 or f == 44):
+				p.set("facing", 1)
+				p.set("dash_timer", 0.18)
+		"anim_kill":
+			if f == 8:
+				for e in get_tree().get_nodes_in_group("enemy"):
+					if is_instance_valid(e) and e is Node2D and e.get("enemy_type") != null:
+						(e as Node).call("take_damage", 99, 1)
+						break
+		"anim_land":
+			if f == 6 and p is Node2D:
+				(p as Node2D).global_position += Vector2(0.0, -260.0)
+				p.set("velocity", Vector2(0.0, 900.0))
+		"anim_runskid":
+			if f == 2:
+				Input.action_press("move_right")
+			elif f == 28:
+				Input.action_release("move_right")
+			elif f == 42:
+				Input.action_press("move_left")
+			elif f == 64:
+				Input.action_release("move_left")
 
 func _shot_routemap(id: String) -> void:
 	GameState.start_main_game()
