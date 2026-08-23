@@ -567,6 +567,7 @@ class _DecoyEye extends Node2D:
 			b.velocity = base_dir.rotated(float(spread)) * EnemyBullet.BASE_SPEED * 0.9
 			parent.add_child(b)
 			b.global_position = global_position + base_dir * 30.0
+			b.reset_physics_interpolation()
 
 	func _physics_process(delta: float) -> void:
 		if owner_fv == null or not is_instance_valid(owner_fv):

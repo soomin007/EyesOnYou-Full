@@ -217,6 +217,7 @@ func _build_levelup_section() -> void:
 	var arena := ColorRect.new()
 	arena.color = Color(0.30, 0.55, 0.85, 0.10)
 	arena.position = Vector2(2200.0, GROUND_Y - 80.0)
+	arena.reset_physics_interpolation()
 	arena.size = Vector2(440.0, 80.0)
 	arena.z_index = -5
 	add_child(arena)
@@ -700,6 +701,7 @@ func _build_player() -> void:
 	player.add_child(col)
 	add_child(player)
 	player.global_position = PLAYER_START
+	player.reset_physics_interpolation()
 
 func _build_camera() -> void:
 	camera = Camera2D.new()
@@ -754,6 +756,7 @@ func _build_attack_dummy() -> void:
 	attack_dummy = TutorialDummy.new()
 	add_child(attack_dummy)
 	attack_dummy.global_position = ATTACK_DUMMY
+	attack_dummy.reset_physics_interpolation()
 	attack_dummy.killed.connect(_on_attack_dummy_killed)
 
 func _on_attack_dummy_killed(_pos: Vector2) -> void:
@@ -767,6 +770,7 @@ func _spawn_levelup_dummies() -> void:
 		var d := TutorialDummy.new()
 		add_child(d)
 		d.global_position = pos
+		d.reset_physics_interpolation()
 		d.killed.connect(_on_levelup_dummy_killed)
 		levelup_dummies.append(d)
 
@@ -785,6 +789,7 @@ func _spawn_orb(pos: Vector2) -> void:
 	orb.add_child(sprite)
 	add_child(orb)
 	orb.global_position = pos
+	orb.reset_physics_interpolation()
 
 func _build_spike_zone() -> void:
 	# 가시 — Stage._build_spike와 동일 스타일(미니 플랫폼 베이스 + 모서리 캡 + 그림자 절반).
@@ -1051,6 +1056,7 @@ func _spawn_skill_dummies() -> void:
 		d.skill_only = true
 		add_child(d)
 		d.global_position = pos
+		d.reset_physics_interpolation()
 		d.killed.connect(_on_skill_dummy_killed)
 		d.bullet_deflected.connect(_on_skill_dummy_bullet_deflected)
 		skill_dummies.append(d)

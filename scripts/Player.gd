@@ -294,6 +294,8 @@ func _spawn_dash_ghost() -> void:
 		return
 	stage_parent.add_child(ghost)
 	ghost.global_transform = visual.global_transform
+	# 물리 보간이 켜져 있어 리셋 없이는 첫 프레임이 진입 좌표(원점)에서 보간돼 공중에 그려진다.
+	ghost.reset_physics_interpolation()
 	ghost.z_index = 1   # 플레이어(2) 뒤 · 배경 위
 	ghost.modulate = Color(0.55, 0.90, 1.0, 0.34)
 	var tw := ghost.create_tween()
@@ -639,6 +641,7 @@ func _throw_grenade() -> void:
 	g.max_hits = MAX_EXPLOSION_HITS
 	get_parent().add_child(g)
 	g.global_position = _grenade_origin()
+	g.reset_physics_interpolation()
 
 func _grenade_origin() -> Vector2:
 	return global_position + Vector2(float(facing) * 14.0, -30.0)
@@ -665,6 +668,7 @@ func _ensure_aim_preview() -> void:
 	ap.z_index = 5
 	get_parent().add_child(ap)
 	ap.position = Vector2.ZERO  # 월드 좌표로 그리기(원점)
+	ap.reset_physics_interpolation()
 	_aim_preview = ap
 
 func _clear_aim_preview() -> void:

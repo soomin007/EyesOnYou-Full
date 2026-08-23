@@ -84,6 +84,7 @@ func _fire_one() -> void:
 	b.damage = damage
 	host.add_child(b)
 	b.global_position = global_position + direction * 14.0
+	b.reset_physics_interpolation()
 	SfxPlayer.play_at("enemy_patrol_fire", global_position)
 
 # 충전/경고 강도 0~1.

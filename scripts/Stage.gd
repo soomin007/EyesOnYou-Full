@@ -981,6 +981,7 @@ func _build_locked_door() -> void:
 	arcturus_plate.hint_color = Color(0.55, 0.85, 0.95)
 	add_child(arcturus_plate)
 	arcturus_plate.global_position = Vector2(x, GROUND_Y - 4.0)
+	arcturus_plate.reset_physics_interpolation()
 	arcturus_plate.stepped.connect(_on_arcturus_plate_stepped)
 
 	# 멀리 떨어진 상층 플랫폼 위 레버 — 맵 끝쪽 (x=2900) 위에 배치.
@@ -3394,6 +3395,7 @@ func _build_destructible_covers() -> void:
 		var cover := DestructibleCover.new()
 		add_child(cover)
 		cover.position = d.get("pos", Vector2.ZERO)
+		cover.reset_physics_interpolation()
 		cover.z_index = -1  # 배우(플레이어/적) 뒤 — 항상 플레이어가 보이게
 		cover.setup(float(d.get("w", 96.0)), float(d.get("h", 72.0)), int(d.get("hp", 3)),
 			str(d.get("style", "car")))
@@ -3539,6 +3541,7 @@ func _build_defense_core() -> void:
 	var core := DefenseCore.new()
 	add_child(core)
 	core.position = cfg.get("pos", Vector2(960.0, 820.0))
+	core.reset_physics_interpolation()
 	core.setup(float(cfg.get("hp", 14.0)), float(cfg.get("radius", 360.0)), float(cfg.get("interval", 1.5)))
 	core.breached.connect(_on_core_breached)
 	_defense_core = core
@@ -4101,6 +4104,7 @@ func _spawn_disguised_spike(sx: float, sy: float, sw: float, sd: int) -> Array:
 	var ds := DisguisedSpike.new()
 	add_child(ds)
 	ds.position = Vector2(sx, sy)   # Stage는 원점이라 position=global
+	ds.reset_physics_interpolation()
 	ds.setup(visuals, sw)
 	# 밟는 순간 정체 노출 — zone에 컨트롤러 참조.
 	if zone != null:
@@ -5684,6 +5688,7 @@ func _build_player() -> void:
 	player.add_child(col)
 	add_child(player)
 	player.global_position = PLAYER_START
+	player.reset_physics_interpolation()
 	player.died.connect(_on_player_died)
 	player.damaged.connect(_on_player_damaged)
 	player.revived.connect(_on_player_revived)
@@ -5727,6 +5732,7 @@ func _build_camera() -> void:
 			camera.zoom = Vector2(zoom_fit, zoom_fit)
 			add_child(camera)
 			camera.global_position = _world_size * 0.5
+			camera.reset_physics_interpolation()
 		"ARENA_FOLLOW":
 			# 복층 아레나(14-1 리워크 §2.1) · 양 축 완만 추적 + 기본 살짝 줌 아웃(무대 스케일 체감).
 			camera.limit_left = 0
@@ -8690,6 +8696,7 @@ func _spawn_shiny_orb(pos: Vector2) -> void:
 	orb.add_child(sprite)
 	add_child(orb)
 	orb.global_position = pos
+	orb.reset_physics_interpolation()
 	orb.set("value", SHINY_ORB_VALUE)   # 일반 1 → 황금 5 (흡인/충돌은 일반 오브와 동일)
 
 # 클리어 가산 토스트(도전 완수·보상·수행 보너스) — 관측 로그 온도의 짧은 확인 도장.
@@ -8703,6 +8710,7 @@ func _show_clear_toast(pos: Vector2, text: String) -> void:
 	lbl.z_index = 40
 	add_child(lbl)
 	lbl.global_position = pos + Vector2(-64.0, 0.0)
+	lbl.reset_physics_interpolation()
 	var tw := lbl.create_tween()
 	tw.tween_property(lbl, "global_position:y", lbl.global_position.y - 26.0, 1.1)
 	tw.parallel().tween_property(lbl, "modulate:a", 0.0, 1.1)
@@ -8718,6 +8726,7 @@ func _show_shiny_toast(pos: Vector2) -> void:
 	lbl.z_index = 40
 	add_child(lbl)
 	lbl.global_position = pos + Vector2(-24.0, -40.0)
+	lbl.reset_physics_interpolation()
 	var tw := lbl.create_tween()
 	tw.tween_property(lbl, "global_position:y", lbl.global_position.y - 26.0, 0.9)
 	tw.parallel().tween_property(lbl, "modulate:a", 0.0, 0.9)
@@ -8763,6 +8772,7 @@ func _spawn_orb(pos: Vector2, static_placement: bool = false, attract_range: flo
 	orb.add_child(sprite)
 	add_child(orb)
 	orb.global_position = pos
+	orb.reset_physics_interpolation()
 	# 숨쉬기 · 느린 스케일 맥동(점멸 아님).
 	var breathe := orb.create_tween()
 	breathe.set_loops()
@@ -8812,6 +8822,7 @@ func _spawn_hp_orb(pos: Vector2) -> Node2D:
 	orb.add_child(halo)
 	add_child(orb)
 	orb.global_position = pos
+	orb.reset_physics_interpolation()
 	# 깜빡임 (시선 끌기)
 	var tw := halo.create_tween()
 	tw.set_loops()
@@ -8864,6 +8875,7 @@ func _spawn_lever(pos: Vector2, lever_id: String) -> LeverInteractable:
 	lever.lever_id = lever_id
 	add_child(lever)
 	lever.global_position = pos
+	lever.reset_physics_interpolation()
 	return lever
 
 # 닫힌 해치 — 시각 패널. 레버 풀리면 fade out + 콜리전 disable.
@@ -10105,6 +10117,7 @@ func _build_challenge_gate() -> void:
 	challenge_plate.hint_color = Color(0.95, 0.55, 0.30)  # 도전 톤 — 주황 경고
 	add_child(challenge_plate)
 	challenge_plate.global_position = Vector2(gate_x - 70.0, GROUND_Y - 5.0)
+	challenge_plate.reset_physics_interpolation()
 	challenge_plate.stepped.connect(_on_challenge_plate_stepped)
 	# VEIL 사전 경고 — 발판이 뭔지 알려주기.
 	_show_veil_subtitle("이 안은 통신이 끊깁니다. 발판을 밟으면 시작입니다.\n한 대만 맞아도 끝.", 4.0)

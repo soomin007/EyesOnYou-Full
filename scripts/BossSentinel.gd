@@ -689,6 +689,7 @@ func _spawn_minion(kind: int, pos: Vector2, hp_value: int) -> CharacterBody2D:
 	e.add_child(col)
 	parent.add_child(e)
 	e.global_position = pos
+	e.reset_physics_interpolation()
 	return e
 
 func _arm_self_destruct() -> void:
