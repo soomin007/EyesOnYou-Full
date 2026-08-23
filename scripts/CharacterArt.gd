@@ -653,12 +653,16 @@ static func _attach_ankle_jet(torso: Node2D, pos: Vector2, tier: int) -> void:
 	_filled(j, Color(0.26, 0.50, 0.60), PackedVector2Array([
 		Vector2(-nl, -3.5), Vector2(-2, -3.5), Vector2(-2, 2.5), Vector2(-nl, 2.5),
 	]))
-	# 청록 분사 글로우 (티어별 길이·밝기, stroke 없음)
+	# 청록 분사 글로우 (티어별 길이·밝기, stroke 없음) — 정지 상태엔 숨김(2026-08-23 사용자
+	# "가만히 있는데 잔상 같은 그림이 이상하다"). 시작 알파 0, Player가 매 프레임 속도/대시로
+	# 구동(dash_jet_glow 그룹) — 진짜 분사처럼 움직일 때만 뿜는다.
 	var glow := Polygon2D.new()
 	var gl_len: float = 12.0 if tier >= 3 else (8.5 if tier >= 2 else 5.0)
 	var gl_a: float = 0.85 if tier >= 3 else 0.62
 	glow.color = Color(0.55, 0.90, 1.0, gl_a)
 	glow.polygon = PackedVector2Array([Vector2(-nl, -1.6), Vector2(-nl - gl_len, 0), Vector2(-nl, 1.6)])
+	glow.add_to_group("dash_jet_glow")
+	glow.modulate.a = 0.0
 	j.add_child(glow)
 
 static func _attach_revive_module(torso: Node2D, tier: int) -> void:

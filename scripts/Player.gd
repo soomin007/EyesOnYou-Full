@@ -76,6 +76,10 @@ var _jump_buffer_t: float = 0.0  # 착지 직전 누른 점프 입력을 기억�
 # attack 입력이 사격 대신 레버 당기기로 흡수된다.
 var nearby_lever: Node = null
 var dash_timer: float = 0.0
+# 대시 분사·잔상(2026-08-23 사용자 "정지 상태의 파란 선이 잔상 같아 이상하다") — 발목 노즐
+# 글로우는 움직일 때만(속도 비례·대시 만개), dash_boost 보유 대시엔 실제 잔상 고스트를 남긴다.
+var _dash_glow_nodes: Array = []   # CharacterArt "dash_jet_glow" 그룹 캐시(스킬 갱신 시 재수집)
+var _ghost_cd: float = 0.0
 var dash_cd: float = 0.0
 var skill_cd: float = 0.0
 var invuln: float = 0.0
@@ -165,6 +169,7 @@ func _ready() -> void:
 	_refresh_skill_charges()
 	# 스킬 부착물(파우치·윙 등) — 초기 1회 + 스킬 변경 시 갱신(성장 가시화).
 	CharacterArt.attach_player_skill_parts(torso, GameState.skills)
+	_collect_dash_glows()
 	if not GameState.skills_changed.is_connected(_on_skills_changed):
 		GameState.skills_changed.connect(_on_skills_changed)
 	muzzle_flash = ColorRect.new()
@@ -238,6 +243,56 @@ func _physics_process(delta: float) -> void:
 	anim_t += delta
 	_update_visual()
 
+# 대시 시각(2026-08-23) — ① 발목 노즐 글로우: 정지 0 · 이동 속도 비례 은은 · 대시 만개
+# ② 잔상 고스트: dash_boost 보유 대시 동안 0.045s 간격으로 몸 실루엣이 시안으로 남았다 흩어짐.
+func _update_dash_visuals(delta: float) -> void:
+	var target_a: float = 0.0
+	if dash_timer > 0.0:
+		target_a = 1.0
+	else:
+		var spd: float = velocity.length()
+		if spd > 60.0:
+			target_a = clampf((spd - 60.0) / (SPEED - 60.0), 0.0, 1.0) * 0.4
+	for g in _dash_glow_nodes:
+		if is_instance_valid(g):
+			var ci := g as CanvasItem
+			ci.modulate.a = move_toward(ci.modulate.a, target_a, delta * 9.0)
+	if dash_timer > 0.0 and GameState.get_skill_tier("dash_boost") >= 1:
+		_ghost_cd -= delta
+		if _ghost_cd <= 0.0:
+			_ghost_cd = 0.045
+			_spawn_dash_ghost()
+	else:
+		_ghost_cd = 0.0
+
+func _spawn_dash_ghost() -> void:
+	if visual == null or not is_instance_valid(visual) or not is_inside_tree():
+		return
+	var stage_parent := get_parent()
+	if stage_parent == null:
+		return
+	# duplicate(0) = 스크립트·그룹·시그널 없이 순수 그림만 — dash_jet_glow 그룹 오염 방지.
+	var ghost := visual.duplicate(0) as Node2D
+	if ghost == null:
+		return
+	stage_parent.add_child(ghost)
+	ghost.global_transform = visual.global_transform
+	ghost.z_index = 1   # 플레이어(2) 뒤 · 배경 위
+	ghost.modulate = Color(0.55, 0.90, 1.0, 0.4)
+	var tw := ghost.create_tween()
+	tw.tween_property(ghost, "modulate:a", 0.0, 0.22)
+	tw.tween_callback(ghost.queue_free)
+
+# CharacterArt가 붙인 dash_jet_glow 파트 재수집 — 스킬 부착물 갱신 때마다.
+func _collect_dash_glows() -> void:
+	_dash_glow_nodes.clear()
+	var tree := get_tree()
+	if tree == null:
+		return
+	for n in tree.get_nodes_in_group("dash_jet_glow"):
+		if is_instance_valid(n):
+			_dash_glow_nodes.append(n)
+
 func _tick_timers(delta: float) -> void:
 	if attack_cd > 0.0:
 		attack_cd -= delta
@@ -245,6 +300,7 @@ func _tick_timers(delta: float) -> void:
 		fire_slow_t -= delta
 	if dash_timer > 0.0:
 		dash_timer -= delta
+	_update_dash_visuals(delta)
 	if dash_cd > 0.0:
 		dash_cd -= delta
 	if skill_cd > 0.0:
@@ -650,6 +706,7 @@ func _on_skills_changed() -> void:
 	_refresh_skill_charges()
 	if torso != null:
 		CharacterArt.attach_player_skill_parts(torso, GameState.skills)
+		_collect_dash_glows()
 		_play_skill_acquire_flash()
 
 # 스킬 획득/티어업 순간을 눈에 띄게 — 캐릭터에 밝은 확산 링 + 본체 섬광.
