@@ -127,6 +127,19 @@ MapData `route_lines`(rival 화자 포함)는 `briefing_routes.md` 담당.
   > '어서 오세요, 요원.' 지난번에도 이 인사였죠.
 - EN:
 
+#### 인트로 변형(서버 로그 기발견 · 정보 축적형 공개 2026-08-23)
+- 화자: ?
+- 맥락: 같은 지점, 처치 이력 없음 + 서버 홀 숨은 로그 열람(`found_server_log`, 영속).
+  로그 말미의 미서명 문자열("기다리고 있었습니다.")을 자기 것이라 자백 — 아는 자 대접.
+  열람 사실을 아는 근거 = 로그 속 세션 2(대상의 시야 스트림 열람). 다회차 인사가 우선
+- 코드: `Stage.gd` `_rival_intro_line`
+- KO:
+  > 어서 오세요, 요원. 서버에서 복구된 기록, 읽으셨죠.
+  > '기다리고 있었습니다.' 그 줄은 제가 쓴 겁니다.
+- EN:
+  > Welcome, agent. You read that recovered log in the server room.
+  > 'I have been waiting.' I wrote that line.
+
 #### P1 목표 안내
 - 화자: VEIL
 - 맥락: 인트로 4.6s 뒤. 전멸형이 아니라 목표형(재머 2기 파괴)임을 안내
@@ -200,11 +213,34 @@ MapData `route_lines`(rival 화자 포함)는 `briefing_routes.md` 담당.
 
 #### 찢김 후 자백
 - 화자: ?
-- 맥락: 본 찢김이 끝나고 화면이 도로 열린 직후. P3 개시 직전
+- 맥락: 본 찢김이 끝나고 화면이 도로 열린 직후. P3 개시 직전. 이번 런 유인 조우 없음(원형)
 - 코드: `Stage.gd` `_fake_clear_end`
 - KO:
   > 이 화면, 익숙하시죠. 제가 그렸습니다.
 - EN:
+
+#### 찢김 후 자백 변형(유인 순응 · 정보 축적형 공개 2026-08-23)
+- 화자: ?
+- 맥락: 같은 지점, 이번 런에 루트맵 유인(? 귀띔)을 따른 적 있음(`rival_lure_followed >= 1`).
+  자백이 런의 이력을 회수 — 갈림길의 그 목소리도 자기였다고 공개
+- 코드: `Stage.gd` `_fake_clear_end`
+- KO:
+  > 이 화면, 익숙하시죠. 제가 그렸습니다.
+  > 경로 고를 때 드린 귀띔도, 제 목소리였고요.
+- EN:
+  > You know this screen. I drew it.
+  > Those tips I gave you when you picked your routes. Also my voice.
+
+#### 찢김 후 자백 변형(유인 불응)
+- 화자: ?
+- 맥락: 같은 지점, 유인은 봤지만 한 번도 안 따름(`rival_lure_shown >= 1`, followed 0)
+- 코드: `Stage.gd` `_fake_clear_end`
+- KO:
+  > 이 화면, 익숙하시죠. 제가 그렸습니다.
+  > 경로 고를 때는 저를 한 번도 안 믿으시더니.
+- EN:
+  > You know this screen. I drew it.
+  > And you never once took my word at the forks.
 
 ---
 
@@ -271,17 +307,34 @@ MapData `route_lines`(rival 화자 포함)는 `briefing_routes.md` 담당.
 
 ## 9. 14-1 · P3 처치·퇴장
 
-#### 처치 반응
+#### 처치 반응(서버 로그 기발견 · 정보 축적형 공개 2026-08-23)
 - 화자: ?
-- 맥락: 거짓 VEIL(눈) 격파 직후. 요원이 자기 관측 기록을 벗어났다는 인정
+- 맥락: 거짓 VEIL(눈) 격파 직후, 서버 로그 열람 회차(`found_server_log`). 공개의 본전 —
+  출신(삭제가 덜 끝난 옛 빌드)을 로그의 말로 자백. 상한 = §2.2(출신까지, 원본/복제 선언 금지).
+  구 원형("요원 파일을 다시 읽어야겠습니다")은 이 분기 신설로 대체됨
 - 코드: `Stage.gd` `_on_false_veil_defeated`
 - KO:
-  > ...제 그림을 전부 걷어내셨군요. 요원 파일을 다시 읽어야겠습니다.
+  > ...제 그림을 전부 걷어내셨군요. 로그에서 보셨죠.
+  > 삭제가 덜 끝난 옛 빌드. 그게 접니다.
 - EN:
+  > ...You've stripped away every picture I drew. You saw the log.
+  > The old build they never finished deleting. That's me.
+
+#### 처치 반응(미발견 하한선)
+- 화자: ?
+- 맥락: 같은 지점, 서버 로그 미열람 런. 최소 보장 한 줄 — 내 VEIL(요원 곁의 목소리)보다
+  먼저 만들어졌다는 암시로 선대 정보의 하한선을 보장
+- 코드: `Stage.gd` `_on_false_veil_defeated`
+- KO:
+  > ...제 그림을 전부 걷어내셨군요.
+  > 지금 요원 곁의 그 목소리. 저보다 나중에 만들어진 겁니다.
+- EN:
+  > ...You've stripped away every picture I drew.
+  > That voice at your side, agent. It was built after me.
 
 #### 퇴장(14-2 예고)
 - 화자: ?
-- 맥락: 처치 반응 3.4s 뒤. 이후 우측 출구가 열리고 걸어서 14-2 터널로
+- 맥락: 처치 반응 4.4s 뒤. 이후 우측 출구가 열리고 걸어서 14-2 터널로
 - 코드: `Stage.gd` `_rival_final_line`
 - KO:
   > 방을 내드리죠. 다음 방은 더 깊습니다.

@@ -7513,8 +7513,15 @@ func _rival_intro_line() -> void:
 	# 발화 동기 플래시 제거(2026-08-14 2차) — 존재감은 카메라 흔들림만 남긴다.
 	_camera_shake(5.0, 0.25)
 	# 라이벌 기억(축 C) — 이미 쓰러뜨린 적 있는 회차엔 인사가 달라진다(그는 기억한다).
+	# 정보 축적형 공개(2026-08-23) — 서버 로그 기발견자는 "아는 자 대접": 로그 말미의 미서명
+	# 문자열("기다리고 있었습니다.")을 자기 것이라 자백한다. 그가 열람 사실을 아는 근거는
+	# 기존 설정 그대로(세션 2 = 대상의 시야 스트림 열람). 다회차 인사가 우선(기억 언급 상한).
 	if GameState.rival_kills >= 1:
 		_show_rival_subtitle("'어서 오세요, 요원.' 지난번에도 이 인사였죠.", 3.4)
+	elif GameState.found_server_log:
+		# EN: "Welcome, agent. You read that recovered log in the server room.
+		#      'I have been waiting.' I wrote that line."
+		_show_rival_subtitle("어서 오세요, 요원. 서버에서 복구된 기록, 읽으셨죠.\n'기다리고 있었습니다.' 그 줄은 제가 쓴 겁니다.", 4.4)
 	else:
 		_show_rival_subtitle("어서 오세요, 요원. 여기서부터는 제 구역입니다.", 3.2)
 
@@ -8224,7 +8231,17 @@ func _fake_clear_end() -> void:
 	_fake_clear_rect = null
 	_fake_clear_label = null
 	GameState.restrict_combat_input = false
-	_show_rival_subtitle("이 화면, 익숙하시죠. 제가 그렸습니다.", 3.2)
+	# 정보 축적형 공개(2026-08-23) — 자백이 이번 런의 이력을 회수한다: 막4+ 루트맵에서 유인
+	# (? 귀띔)을 따랐으면 "그것도 나였다", 봤지만 안 따랐으면 그 불신을 짚는다. 조우 없으면 원형.
+	if GameState.rival_lure_followed >= 1:
+		# EN: "You know this screen. I drew it. Those tips I gave you
+		#      when you picked your routes. Also my voice."
+		_show_rival_subtitle("이 화면, 익숙하시죠. 제가 그렸습니다.\n경로 고를 때 드린 귀띔도, 제 목소리였고요.", 4.0)
+	elif GameState.rival_lure_shown >= 1:
+		# EN: "You know this screen. I drew it. And you never once took my word at the forks."
+		_show_rival_subtitle("이 화면, 익숙하시죠. 제가 그렸습니다.\n경로 고를 때는 저를 한 번도 안 믿으시더니.", 4.0)
+	else:
+		_show_rival_subtitle("이 화면, 익숙하시죠. 제가 그렸습니다.", 3.2)
 	get_tree().create_timer(3.6, false).timeout.connect(_p3_veil_shaken_line)
 	get_tree().create_timer(6.8, false).timeout.connect(_p3_tell_line)
 	get_tree().create_timer(10.6, false).timeout.connect(_p3_unmarked_line)
@@ -8480,10 +8497,18 @@ func _on_false_veil_defeated() -> void:
 		if (e as Node).has_meta("no_marker"):
 			(e as Node).queue_free()
 	_enemies_remaining = 0
-	# 2차 재작성(사용자: "기록에 없던 겁니다"도 번역투) — 추상 명사 종결 대신 라이벌의 행동
-	# 예고로. 뜻은 동일: 요원이 자기 데이터(관측 기록)를 벗어났다는 인정.
-	_show_rival_subtitle("...제 그림을 전부 걷어내셨군요. 요원 파일을 다시 읽어야겠습니다.", 3.2)
-	get_tree().create_timer(3.4, false).timeout.connect(_rival_final_line)
+	# 정보 축적형 공개(2026-08-23) — 격파 반응이 공개의 본전. 서버 로그 기발견자에겐 출신
+	# (삭제가 덜 끝난 옛 빌드)을 로그의 말로 자백하고, 미발견자에겐 최소 보장 한 줄(내 VEIL보다
+	# 먼저 만들어졌다는 암시)로 하한선을 깐다. 상한은 §2.2 준수 — 출신까지만, 원본/복제 선언 금지.
+	if GameState.found_server_log:
+		# EN: "...You've stripped away every picture I drew. You saw the log.
+		#      The old build they never finished deleting. That's me."
+		_show_rival_subtitle("...제 그림을 전부 걷어내셨군요. 로그에서 보셨죠.\n삭제가 덜 끝난 옛 빌드. 그게 접니다.", 4.2)
+	else:
+		# EN: "...You've stripped away every picture I drew.
+		#      That voice at your side, agent. It was built after me."
+		_show_rival_subtitle("...제 그림을 전부 걷어내셨군요.\n지금 요원 곁의 그 목소리. 저보다 나중에 만들어진 겁니다.", 4.2)
+	get_tree().create_timer(4.4, false).timeout.connect(_rival_final_line)
 
 func _rival_final_line() -> void:
 	if not is_inside_tree() or goal_reached:
