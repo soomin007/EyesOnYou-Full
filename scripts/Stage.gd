@@ -16,7 +16,35 @@ var player: CharacterBody2D
 var camera: Camera2D
 var hud: CanvasLayer
 var hp_label: Label
-var hp_lock_label: Label   # 라이벌 잠금 하트(보라) — hp_label 바로 오른쪽
+var hp_lock_hearts: Control = null   # 라이벌 잠금 하트(보라 자물쇠) — hp_label 바로 오른쪽
+
+# 라이벌 잠금 하트 — 빈 보라 하트 윤곽 안에 자물쇠를 그린다.
+# 2차 피드백: 차있는 "♥" 글리프는 여분 HP가 생긴 걸로 오인됨 + 하트보다 커야 함.
+class LockHearts extends Control:
+	const COL: Color = Color(0.72, 0.42, 1.0)
+	const STEP: float = 32.0
+	var count: int = 0:
+		set(v):
+			count = maxi(0, v)
+			custom_minimum_size = Vector2(STEP * count, 30.0)
+			visible = count > 0
+			queue_redraw()
+	func _draw() -> void:
+		var cy: float = size.y * 0.5
+		for i in count:
+			var c := Vector2(STEP * float(i) + STEP * 0.5, cy)
+			var pts := PackedVector2Array()
+			for k in 41:
+				var t: float = TAU * float(k) / 40.0
+				var hx: float = 16.0 * pow(sin(t), 3.0)
+				var hy: float = -(13.0 * cos(t) - 5.0 * cos(2.0 * t) - 2.0 * cos(3.0 * t) - cos(4.0 * t))
+				pts.append(c + Vector2(hx, hy) * 0.82)
+			draw_polyline(pts, Color(0, 0, 0, 0.7), 4.5, true)   # 검정 테두리(밝은 배경 가독)
+			draw_polyline(pts, COL, 2.2, true)
+			# 자물쇠 — 위 고리 + 몸통. 하트 가운데.
+			var lc := c + Vector2(0.0, -1.0)
+			draw_arc(lc + Vector2(0.0, -3.0), 3.6, PI, TAU, 12, COL, 2.0, true)
+			draw_rect(Rect2(lc + Vector2(-4.8, -3.0), Vector2(9.6, 8.0)), COL, true)
 var xp_label: Label
 var xp_bar: ProgressBar   # 레벨업 EXP 진행 바 (피드백: 텍스트보다 바가 한눈에)
 var stage_label: Label
@@ -5798,11 +5826,12 @@ func _play_rival_lock_beat(act_num: int, tries_left: int = 24) -> void:
 	_refresh_hud()
 	if act_num == 4:
 		# EN: "One of those hearts is mine now. You always had more than you needed." /
-		#     "A slot of your max health is locked. The x next to your hearts is that slot.
-		#      Healing will not fill it. One way to take it back: the owner of that voice."
+		#     "A slot of your max health is locked. The violet heart with the padlock,
+		#      right next to yours, is that slot. Healing will not fill it.
+		#      The one key to take it back: the owner of that voice."
 		_play_story_dialogue([
 			{"who": "rival", "text": "체력 한 칸은 제가 잠급니다. 요원은 늘 여분이 많았으니까요."},
-			{"who": "veil", "text": "최대 체력 한 칸이 잠겼습니다. 하트 옆 × 표시가 그 칸입니다.\n회복으로도 안 찹니다. 되찾을 열쇠는 하나, 저 목소리의 주인입니다."},
+			{"who": "veil", "text": "최대 체력 한 칸이 잠겼습니다. 하트 옆, 자물쇠가 걸린 보라색 하트가 그 칸입니다.\n회복으로도 안 찹니다. 되찾을 열쇠는 하나, 저 목소리의 주인입니다."},
 		])
 	else:
 		# EN: "One more is mine. Spend what is left carefully in my zone." /
@@ -5880,15 +5909,18 @@ func _build_hud() -> void:
 		# 검정 아웃라인 — 밝은 플랫폼 위에서도 또렷하게(가독성/선명도).
 		l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.7))
 		l.add_theme_constant_override("outline_size", 4)
-		hb.add_child(l)
-	# 라이벌 잠금 하트 — 보라색(사용자 2026-08-23 "보라색 잠금 표시"). hp 하트 바로 옆.
-	hp_lock_label = Label.new()
-	hp_lock_label.add_theme_font_size_override("font_size", 18)
-	hp_lock_label.add_theme_color_override("font_color", Color(0.72, 0.42, 1.0))
-	hp_lock_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.7))
-	hp_lock_label.add_theme_constant_override("outline_size", 4)
-	hb.add_child(hp_lock_label)
-	hb.move_child(hp_lock_label, hp_label.get_index() + 1)
+	hb.add_child(stage_label)
+	hb.add_child(map_label)
+	# HP 하트 + 잠금 하트를 한 묶음으로 — 떨어져 있으면 별개 하트가 하나 더 생긴 걸로
+	# 오인된다(2차 피드백). 자물쇠 하트는 커스텀 드로우(LockHearts).
+	var hp_row := HBoxContainer.new()
+	hp_row.add_theme_constant_override("separation", 8)
+	hb.add_child(hp_row)
+	hp_row.add_child(hp_label)
+	hp_lock_hearts = LockHearts.new()
+	hp_row.add_child(hp_lock_hearts)
+	hb.add_child(xp_label)
+	hb.add_child(trust_label)
 	skill_label.add_theme_font_size_override("font_size", 14)
 	skill_label.add_theme_color_override("font_color", Color(0.65, 0.72, 0.82))
 	skill_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.7))
@@ -6031,10 +6063,10 @@ func _update_cd_slot(slot: Control, remaining: float, max_cd: float) -> void:
 		fill.color = accent.darkened(0.45)        # 쿨다운 중 — 같은 색 어둡게(정체성 유지)
 
 func _refresh_hud() -> void:
-	# 하트 = 실효 최대(잠금 반영) + 잠긴 칸 = 바로 옆 보라 하트(빼앗김은 사라지지 않고 보인다).
+	# 하트 = 실효 최대(잠금 반영) + 잠긴 칸 = 바로 옆 자물쇠 걸린 보라 하트(빼앗김은 사라지지 않고 보인다).
 	hp_label.text = "HP  %s" % _hearts(GameState.player_hp, GameState.effective_max_hp())
-	if hp_lock_label != null and is_instance_valid(hp_lock_label):
-		hp_lock_label.text = "♥".repeat(GameState.rival_locks_active())
+	if hp_lock_hearts != null and is_instance_valid(hp_lock_hearts):
+		hp_lock_hearts.set("count", GameState.rival_locks_active())
 	xp_label.text = "LV %d   XP %d/%d" % [GameState.player_level, GameState.player_xp, GameState.xp_to_next()]
 	if score_label != null and is_instance_valid(score_label):
 		score_label.text = "SCORE %d" % GameState.score
@@ -9005,6 +9037,7 @@ func _build_server_hall_secret() -> void:
 		GameState.found_server_log = true
 		GameState.save_settings()
 		var doc := ArcturusDocumentOverlay.new()
+		doc.style = "terminal"   # 서버 로그 = 콘솔 화면(2차 피드백: 종이+파란 형광은 로그로 안 읽힘)
 		add_child(doc)
 		# VEIL의 실황 반응은 문서(복구 기록) 안이 아니라 문서를 닫은 뒤 통신 자막으로.
 		# speaker 비트로 넣어도 종이 위에 그려져 "문서에 적힌 글"로 읽힘(사용자 지적 2026-08-16).

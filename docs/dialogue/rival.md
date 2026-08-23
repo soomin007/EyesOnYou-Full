@@ -110,7 +110,7 @@ MapData `route_lines`(rival 화자 포함)는 `briefing_routes.md` 담당.
 |---|---|---|
 | 막4 | 체력 한 칸은 제가 잠급니다. 요원은 늘 여분이 많았으니까요. | One of those hearts is mine now. You always had more than you needed. |
 | 막5 | 한 칸 더 가져갑니다. 제 구역에서는 아껴 쓰셔야죠. | One more is mine. Spend what is left carefully in my zone. |
-| 막4 VEIL 해설 | 최대 체력 한 칸이 잠겼습니다. 하트 옆에 새로 나타난 보라색 하트가 그 칸입니다.⏎회복으로도 안 찹니다. 되찾을 열쇠는 하나, 저 목소리의 주인입니다. | A slot of your max health is locked. The violet heart that just appeared next to yours is that slot. Healing will not fill it. The one key to take it back: the owner of that voice. |
+| 막4 VEIL 해설 | 최대 체력 한 칸이 잠겼습니다. 하트 옆, 자물쇠가 걸린 보라색 하트가 그 칸입니다.⏎회복으로도 안 찹니다. 되찾을 열쇠는 하나, 저 목소리의 주인입니다. | A slot of your max health is locked. The violet heart with the padlock, right next to yours, is that slot. Healing will not fill it. The one key to take it back: the owner of that voice. |
 | 막5 VEIL 해설 | 한 칸 더 잠겼습니다. 지금 보이는 하트가 전부입니다. | Another slot is locked. The hearts you see now are all you have. |
 
 ---

@@ -112,6 +112,7 @@ func _shot(d: Dictionary) -> void:
 				await get_tree().process_frame
 		"doc":
 			var doc := ArcturusDocumentOverlay.new()
+			doc.style = "terminal"   # 실제 서버 로그 트리거와 동일 스타일
 			stage.add_child(doc)
 			doc.show_doc(stage.call("_server_log_doc_lines"))
 			for i in 1050:

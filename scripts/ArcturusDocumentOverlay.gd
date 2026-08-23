@@ -56,6 +56,11 @@ var started: bool = false
 # _start_typing 콜백 후에도 짧게 더 무시.
 const ENTER_LOCKOUT: float = 0.4
 var enter_lockout_t: float = 0.0
+# 문서 스타일 — "paper"(크림 종이, 기본) / "terminal"(어두운 서버 콘솔 · 2차 피드백:
+# 서버 로그가 종이 위 파란 형광으로는 로그처럼 안 읽힘 → 터미널 화면을 옮긴 느낌으로).
+# show_doc 호출 전에 세팅한다.
+var style: String = "paper"
+var _kw_color: String = "#0a4a73"   # [[키워드]] 강조색 — 스타일별로 show_doc에서 결정
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -87,9 +92,11 @@ func show_doc(input_lines: Array) -> void:
 	# lerp되어 페이드인 0.7s 동안 paper가 화면 위로 빠져나가서 제목이 안 보이고
 	# 본문(A 온보딩 등)이 먼저 등장하는 것처럼 보임 (사용자 보고).
 	paper_target_y = MARGIN_TOP
-	# 종이 본체 — 옅은 크림색
+	var is_term: bool = style == "terminal"
+	_kw_color = "#ffc857" if is_term else "#0a4a73"
+	# 본체 — paper: 옅은 크림 종이 / terminal: 어두운 콘솔 창.
 	paper_visual = ColorRect.new()
-	paper_visual.color = Color(0.92, 0.90, 0.84, 0.96)
+	paper_visual.color = Color(0.043, 0.055, 0.075, 0.97) if is_term else Color(0.92, 0.90, 0.84, 0.96)
 	paper_visual.position = Vector2(-MARGIN_SIDE, -40.0)
 	paper_visual.size = paper.size + Vector2(MARGIN_SIDE * 2.0, 80.0)
 	paper.add_child(paper_visual)
@@ -100,6 +107,35 @@ func show_doc(input_lines: Array) -> void:
 	shadow.size = paper_visual.size
 	shadow.z_index = -1
 	paper.add_child(shadow)
+	if is_term:
+		# 콘솔 타이틀 바 — 창 점 3개 + 세션 경로. 화면 밖 스크롤을 따라가지 않게 paper가 아니라
+		# layer(화면 고정)에 붙인다. 텍스트는 기술 표기(영문 경로)라 대사 검수 대상 아님.
+		var bar := ColorRect.new()
+		bar.color = Color(0.075, 0.095, 0.125, 1.0)
+		bar.position = Vector2((VIEWPORT_W - PAPER_WIDTH) * 0.5 - MARGIN_SIDE, 0.0)
+		bar.size = Vector2(PAPER_WIDTH + MARGIN_SIDE * 2.0, 30.0)
+		layer.add_child(bar)
+		var dots := Label.new()
+		dots.text = "● ● ●"
+		dots.add_theme_font_size_override("font_size", 9)
+		dots.add_theme_color_override("font_color", Color(0.45, 0.55, 0.60))
+		dots.position = Vector2(14.0, 7.0)
+		bar.add_child(dots)
+		var path_l := Label.new()
+		path_l.text = "svr-03 : /var/log/veil.d/recovered.log"
+		path_l.add_theme_font_size_override("font_size", 13)
+		path_l.add_theme_color_override("font_color", Color(0.48, 0.75, 0.58))
+		path_l.position = Vector2(0.0, 4.0)
+		path_l.size = Vector2(bar.size.x, 22.0)
+		path_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		bar.add_child(path_l)
+		# 은은한 스캔라인 — 4px 간격 수평선(수직 줄무늬 금지 규칙과 별개, CRT 문법은 수평).
+		var scan := ColorRect.new()
+		scan.color = Color(1, 1, 1, 1)
+		scan.position = paper_visual.position
+		scan.size = paper_visual.size
+		scan.material = _make_scanline_material()
+		paper.add_child(scan)
 	# 줄들 미리 배치 (alpha=0)
 	var y: float = 0.0
 	for entry in lines_data:
@@ -117,15 +153,15 @@ func show_doc(input_lines: Array) -> void:
 		match kind:
 			"title":
 				lbl.add_theme_font_size_override("normal_font_size", 30)
-				lbl.add_theme_color_override("default_color", Color(0.18, 0.20, 0.28))
+				lbl.add_theme_color_override("default_color", Color(0.45, 0.85, 0.58) if is_term else Color(0.18, 0.20, 0.28))
 			"speaker":
 				lbl.add_theme_font_size_override("normal_font_size", 18)
-				lbl.add_theme_color_override("default_color", Color(0.45, 0.45, 0.55))
+				lbl.add_theme_color_override("default_color", Color(0.42, 0.58, 0.50) if is_term else Color(0.45, 0.45, 0.55))
 			"blank":
 				lbl.add_theme_font_size_override("normal_font_size", 16)
 			_:
 				lbl.add_theme_font_size_override("normal_font_size", 23)
-				lbl.add_theme_color_override("default_color", Color(0.10, 0.12, 0.18))
+				lbl.add_theme_color_override("default_color", Color(0.72, 0.80, 0.78) if is_term else Color(0.10, 0.12, 0.18))
 		lbl.text = _to_bbcode(str(d.get("text", "")))
 		lbl.visible_characters = 0
 		paper.add_child(lbl)
@@ -145,7 +181,7 @@ func show_doc(input_lines: Array) -> void:
 func _to_bbcode(raw: String) -> String:
 	var out: String = raw.replace("[[", "").replace("]]", "")
 	out = out.replace("[", "[lb]")
-	out = out.replace("", "[color=#0a4a73]").replace("", "[/color]")
+	out = out.replace("", "[color=%s]" % _kw_color).replace("", "[/color]")
 	return out
 
 func _calc_paper_height() -> float:
@@ -370,3 +406,16 @@ func _exit_tree() -> void:
 	var tree := get_tree()
 	if tree != null:
 		tree.paused = false
+
+# 터미널 스캔라인 — 4px 주기의 은은한 수평선(CRT 문법). 콘솔 창 위에만 깔린다.
+func _make_scanline_material() -> ShaderMaterial:
+	var sh := Shader.new()
+	sh.code = "shader_type canvas_item;
+void fragment() {
+	float ln = mod(FRAGCOORD.y, 4.0) < 1.0 ? 0.09 : 0.0;
+	COLOR = vec4(0.0, 0.0, 0.0, ln);
+}
+"
+	var mat := ShaderMaterial.new()
+	mat.shader = sh
+	return mat
