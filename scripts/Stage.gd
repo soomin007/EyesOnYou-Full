@@ -2190,6 +2190,22 @@ func _ambience_server_hall() -> void:
 		rack.size = Vector2(rw, rh)
 		rack.z_index = -12
 		add_child(rack)
+		# 랙 유닛 줄눈 + 바닥 받침(2026-08-23 야경 오독) — 민짜 실루엣이 "밤 빌딩"으로 읽히는 것 차단.
+		var useam_y: float = GROUND_Y - rh + 24.0
+		while useam_y < GROUND_Y - 12.0:
+			var useam := ColorRect.new()
+			useam.color = Color(0.06, 0.08, 0.10)
+			useam.position = Vector2(x + 3.0, useam_y)
+			useam.size = Vector2(rw - 6.0, 2.0)
+			useam.z_index = -11
+			add_child(useam)
+			useam_y += 24.0
+		var foot := ColorRect.new()
+		foot.color = Color(0.16, 0.19, 0.23)
+		foot.position = Vector2(x - 3.0, GROUND_Y - 8.0)
+		foot.size = Vector2(rw + 6.0, 8.0)
+		foot.z_index = -11
+		add_child(foot)
 		var rows: int = int(rh / 24.0)
 		for r in rows:
 			if rng.randf() < 0.5:
@@ -2521,6 +2537,22 @@ func _ambience_server_stacks() -> void:
 		rack.size = Vector2(rw, rh)
 		rack.z_index = -12
 		add_child(rack)
+		# 유닛 줄눈 + 받침 — server_hall과 동형(야경 오독 차단, 2026-08-23).
+		var useam_y2: float = GROUND_Y - rh + 22.0
+		while useam_y2 < GROUND_Y - 12.0:
+			var useam2 := ColorRect.new()
+			useam2.color = Color(0.07, 0.09, 0.11)
+			useam2.position = Vector2(x + 3.0, useam_y2)
+			useam2.size = Vector2(rw - 6.0, 2.0)
+			useam2.z_index = -11
+			add_child(useam2)
+			useam_y2 += 22.0
+		var foot2 := ColorRect.new()
+		foot2.color = Color(0.17, 0.20, 0.24)
+		foot2.position = Vector2(x - 3.0, GROUND_Y - 8.0)
+		foot2.size = Vector2(rw + 6.0, 8.0)
+		foot2.z_index = -11
+		add_child(foot2)
 		if rng.randf() < 0.6:
 			var led := ColorRect.new()
 			led.color = Color(0.4, 0.9, 1.0, 0.7)

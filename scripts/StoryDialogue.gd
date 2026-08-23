@@ -17,6 +17,13 @@ const TYPE_SEC_PER_CHAR: float = 0.022   # Stage._subtitle_type_time과 같은 �
 const HOLD_SKIP_SEC: float = 0.55
 const ENTER_LOCKOUT: float = 0.3
 
+# 화자 초상(하데스식 액자 · 2026-08-23 사용자 제공 아트) — 아트가 어두운 배경까지 한 장이라
+# 투명화 대신 프레임에 담는다(글리치판은 배경과 본체 분리 불가 · 사용자 후처리 지침).
+# 라이벌은 정체 공개 전(첫 격파 전 + P3 도달 전)엔 글리치 은닉판.
+const PORTRAIT_VEIL: String = "res://assets/portraits/veil.webp"
+const PORTRAIT_RIVAL_HIDDEN: String = "res://assets/portraits/rival_hidden.webp"
+const PORTRAIT_RIVAL_EYE: String = "res://assets/portraits/rival_eye.webp"
+
 # 줄 서식: {who: "rival"/"veil", text: String}
 var _lines: Array = []
 var _idx: int = -1
@@ -24,6 +31,7 @@ var _typing: bool = false
 var _type_t: float = 0.0
 var _msg_label: Label = null
 var _pill: PanelContainer = null
+var _row: HBoxContainer = null   # 초상 + pill 한 줄(줄마다 재구성)
 var _dots: Label = null
 var _dim: ColorRect = null
 var _bar_top: ColorRect = null
@@ -72,8 +80,8 @@ func _ready() -> void:
 	# pill 자리 — 하단 중앙(수동 좌표 대신 CenterContainer, 폭이 텍스트마다 달라도 정확히 중앙).
 	_pill_slot = CenterContainer.new()
 	_pill_slot.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	_pill_slot.offset_top = -282.0
-	_pill_slot.offset_bottom = -150.0
+	_pill_slot.offset_top = -310.0
+	_pill_slot.offset_bottom = -146.0
 	_pill_slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_holder.add_child(_pill_slot)
 	# 진행 점 + 조작 힌트.
@@ -129,8 +137,8 @@ func _make_bar(top: bool) -> ColorRect:
 
 # 현재 줄 pill 재구성 — Stage 자막 pill과 같은 화자 문법(? 바이올렛 / VEIL 시안), 폰트만 큼.
 func _build_line(ln: Dictionary) -> void:
-	if _pill != null and is_instance_valid(_pill):
-		_pill.queue_free()
+	if _row != null and is_instance_valid(_row):
+		_row.queue_free()
 	var who: String = str(ln.get("who", "veil"))
 	var sb := StyleBoxFlat.new()
 	sb.set_corner_radius_all(8)
@@ -153,9 +161,34 @@ func _build_line(ln: Dictionary) -> void:
 		sp_color = Color(0.42, 0.86, 1.0)
 		msg_color = Color(0.90, 0.96, 1.0)
 		speaker = "VEIL"
+	# 초상 + pill 한 줄(HBox) — 화자가 줄마다 바뀌므로 통째로 재구성.
+	_row = HBoxContainer.new()
+	_row.add_theme_constant_override("separation", 16)
+	_pill_slot.add_child(_row)
+	var p_frame := PanelContainer.new()
+	var p_sb := StyleBoxFlat.new()
+	p_sb.bg_color = Color(0.04, 0.05, 0.08)
+	p_sb.border_color = Color(sp_color.r, sp_color.g, sp_color.b, 0.8)
+	p_sb.set_border_width_all(2)
+	p_sb.set_corner_radius_all(10)
+	p_sb.set_content_margin_all(4.0)
+	p_frame.add_theme_stylebox_override("panel", p_sb)
+	p_frame.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var p_tex := TextureRect.new()
+	var p_path: String = PORTRAIT_VEIL
+	if who == "rival":
+		var revealed: bool = GameState.rival_kills >= 1 or GameState.rival_phase_reached >= 2
+		p_path = PORTRAIT_RIVAL_EYE if revealed else PORTRAIT_RIVAL_HIDDEN
+	p_tex.texture = load(p_path)
+	p_tex.custom_minimum_size = Vector2(136.0, 136.0)
+	p_tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	p_tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	p_frame.add_child(p_tex)
+	_row.add_child(p_frame)
 	_pill = PanelContainer.new()
 	_pill.add_theme_stylebox_override("panel", sb)
-	_pill_slot.add_child(_pill)
+	_pill.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_row.add_child(_pill)
 	var hb := HBoxContainer.new()
 	hb.add_theme_constant_override("separation", 12)
 	_pill.add_child(hb)
