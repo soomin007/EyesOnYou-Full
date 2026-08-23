@@ -103,37 +103,34 @@ func _ready() -> void:
 	_decoy.anchors = d_anchors
 	_decoy.global_position = global_position + Vector2(300.0, 40.0)
 	get_parent().call_deferred("add_child", _decoy)
-	# 발화 유예(2026-08-23 "대사가 전투와 겹쳐 못 읽는다") — 등장 직후엔 응시만(§7.2 "반 박자
-	# 긴 응시"의 개시판). 자백·판별 안내가 흐르는 동안 공격이 없다. 가짜 그림은 유예 중반에
-	# 깔려 "굵은 표식" 안내가 가리킬 실물이 화면에 먼저 서고, 첫 볼리 신호(무표시 위협 투입)는
-	# 유예가 끝날 때 나간다. 잠복 진행도 유예만큼 늦게 시작(_state_t 음수 시드 — P2 스윕
-	# 온보딩과 같은 기법). 가짜 그림을 즉시 찢으면 진행이 당겨지는 건 그대로(적극 플레이 존중).
+	# 개시 응시 유예(2026-08-23 · 컷씬 개정) — 등장 직후엔 응시만(§7.2 "반 박자 긴 응시"의
+	# 개시판). 가짜 그림은 즉시 깔린다(Stage의 오프닝 컷씬 정지 화면에 실물이 서서 "굵은 표식"
+	# 안내가 가리킬 대상이 됨) — 위협은 아니다(그림 자체는 무피해). 첫 볼리 신호(무표시 위협
+	# 투입)만 유예 끝에 나간다. 잠복 진행도 유예만큼 늦게 시작(_state_t 음수 시드 — P2 스윕
+	# 온보딩과 같은 기법). 유예 타이머는 자식 Timer(본체와 함께 사라짐 · pause 동안 정지 =
+	# 컷씬이 떠 있는 동안은 유예가 흐르지 않는다). 그림 즉시 찢기 가속은 그대로(적극 플레이 존중).
 	if intro_hold > 0.0:
 		state = State.PHASED
 		_state_t = -intro_hold
 		_window_dmg = 0
 		_pick_far_anchor()
-		_intro_timer(intro_hold * 0.55, _intro_hold_mid)
-		_intro_timer(intro_hold, _intro_hold_end)
+		if _decoy != null and is_instance_valid(_decoy):
+			_decoy.cycle_anchor()
+		_spawn_fakes()
+		# 첫 배치는 유예만큼 수명 연장 — 잠복 진행이 늦게 시작하므로 그대로면 첫 실체화 전에
+		# 그림이 다 걷혀 판별 안내의 대상이 사라진다.
+		for m in _fakes:
+			if is_instance_valid(m):
+				m.lifetime += intro_hold
+		var t := Timer.new()
+		t.one_shot = true
+		t.wait_time = maxf(0.05, intro_hold)
+		t.timeout.connect(_intro_hold_end)
+		t.timeout.connect(t.queue_free)
+		add_child(t)
+		t.start()
 	else:
 		_enter_phased()
-
-# 유예 타이머는 자식 Timer — 본체가 사라지면 함께 사라진다(freed 콜백 함정 회피).
-func _intro_timer(wait: float, cb: Callable) -> void:
-	var t := Timer.new()
-	t.one_shot = true
-	t.wait_time = maxf(0.05, wait)
-	t.timeout.connect(cb)
-	t.timeout.connect(t.queue_free)
-	add_child(t)
-	t.start()
-
-func _intro_hold_mid() -> void:
-	if state != State.PHASED:
-		return
-	if _decoy != null and is_instance_valid(_decoy):
-		_decoy.cycle_anchor()
-	_spawn_fakes()
 
 func _intro_hold_end() -> void:
 	if state != State.PHASED:

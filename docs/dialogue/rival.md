@@ -7,6 +7,10 @@
 화자 표기: `?` = 라이벌 VEIL(바이올렛, 화자 불명 표기) · `VEIL` = 내 VEIL(시안) ·
 `SYS` = 시스템 텍스트. 라이벌 말투 = A(결이 어긋난 정중함).
 
+**컷씬(2026-08-23)**: 구조/스토리 비트(막3 reveal · 회선 잠금 · 14-1 오프닝/자백/격파)는
+`StoryDialogue` 컷씬(세계 정지 · 한 줄씩 진행 · 스페이스 다음 / ESC·길게 누르기 건너뛰기)으로
+나온다. 전투 중 콜아웃·조언·route_lines는 기존 자막 유지.
+
 이 파일의 범위: 라이벌이 등장·개입하는 모든 비트(막3 reveal, 막4+ 유인/문턱, 14-1 보스전
 전 페이즈, 가짜 클리어, 다회차 변형)와 그 비트 안에서 짝으로 나오는 내 VEIL 대사.
 14-2 터널·회수 문서는 `story_docs.md`, 일반 인게임 VEIL 자막은 `veil_ingame.md`,
@@ -18,7 +22,7 @@ MapData `route_lines`(rival 화자 포함)는 `briefing_routes.md` 담당.
 
 #### 라이벌 첫 발화
 - 화자: ?
-- 맥락: 막3 lab에서 SENTINEL(페이크 보스) 처치 직후. 정적 1.2s 뒤 첫 등장. 승리를 승리같지 않게 하는 비트
+- 맥락: 막3 lab에서 SENTINEL(페이크 보스) 처치 직후. 정적 1.2s 뒤 컷씬(세계 정지) 1번째 줄. 승리를 승리같지 않게 하는 비트
 - 코드: `Stage.gd` `_play_sentinel_reveal`
 - KO (재작성 2026-08-23 · "시설이 내민 손끝" 은유 반려):
   > 수고하셨습니다, 요원. 방금 잡은 건 경비 장비 한 대일 뿐입니다.
@@ -29,7 +33,7 @@ MapData `route_lines`(rival 화자 포함)는 `briefing_routes.md` 담당.
 
 #### 내 VEIL 동요
 - 화자: VEIL
-- 맥락: 라이벌 첫 발화 4.5s 뒤. §1 맹점 테마의 첫 실연(같은 회선에 있었는데 못 봄)
+- 맥락: 같은 컷씬 2번째 줄. §1 맹점 테마의 첫 실연(같은 회선에 있었는데 못 봄)
 - 코드: `Stage.gd` `_play_sentinel_reveal`
 - KO:
   > ...방금 그 목소리, 제 채널이 아닙니다.
@@ -99,8 +103,8 @@ MapData `route_lines`(rival 화자 포함)는 `briefing_routes.md` 담당.
 ## 4.5 덮어쓰기 회선 잠금 (막4·막5 문턱, 런당 각 1회)
 
 - 화자: ? · 코드: `Stage.gd` `_play_rival_lock_beat`
-- 맥락: 막4/막5 첫 스테이지 진입 4.2초 뒤. 라이벌이 덮어쓰기(사망 재시도) 최대치를
-  1칸 잠그는 각본 비트. HUD 핍이 바이올렛 ×로 바뀌는 연출과 짝. 뒤이어 내 VEIL 해설 1줄(veil_ingame 아님, Stage `_veil_lock_explain`).
+- 맥락: 막4/막5 첫 스테이지 진입 4.2초 뒤, 조용한 창(근접 적 없음, 상한 12s)을 기다려 컷씬으로. 라이벌이 덮어쓰기(사망 재시도) 최대치를
+  1칸 잠그는 각본 비트. HUD 핍이 바이올렛 ×로 바뀌는 연출과 짝. 뒤이어 내 VEIL 해설 1줄(veil_ingame 아님, 같은 컷씬 2번째 줄).
 
 | 막 | KO | EN |
 |---|---|---|
@@ -113,8 +117,8 @@ MapData `route_lines`(rival 화자 포함)는 `briefing_routes.md` 담당.
 
 #### 인트로(첫 대면)
 - 화자: ?
-- 맥락: 14-1 진입 1.0s 뒤. 라이벌 처치 이력 없음(`rival_kills == 0`)
-- 코드: `Stage.gd` `_rival_intro_line`
+- 맥락: 14-1 진입 1.0s 뒤 컷씬 1번째 줄. 라이벌 처치 이력 없음(`rival_kills == 0`)
+- 코드: `Stage.gd` `_rival_intro_cutscene`
 - KO:
   > 어서 오세요, 요원. 여기서부터는 제 구역입니다.
 - EN:
@@ -122,7 +126,7 @@ MapData `route_lines`(rival 화자 포함)는 `briefing_routes.md` 담당.
 #### 인트로 변형(재대면, 축 C)
 - 화자: ?
 - 맥락: 같은 지점, 라이벌을 한 번이라도 쓰러뜨린 회차(`rival_kills >= 1`)
-- 코드: `Stage.gd` `_rival_intro_line`
+- 코드: `Stage.gd` `_rival_intro_cutscene`
 - KO:
   > '어서 오세요, 요원.' 지난번에도 이 인사였죠.
 - EN:
@@ -132,7 +136,7 @@ MapData `route_lines`(rival 화자 포함)는 `briefing_routes.md` 담당.
 - 맥락: 같은 지점, 처치 이력 없음 + 서버 홀 숨은 로그 열람(`found_server_log`, 영속).
   로그 말미의 미서명 문자열("기다리고 있었습니다.")을 자기 것이라 자백 — 아는 자 대접.
   열람 사실을 아는 근거 = 로그 속 세션 2(대상의 시야 스트림 열람). 다회차 인사가 우선
-- 코드: `Stage.gd` `_rival_intro_line`
+- 코드: `Stage.gd` `_rival_intro_cutscene`
 - KO:
   > 어서 오세요, 요원. 서버에서 복구된 기록, 읽으셨죠.
   > '기다리고 있었습니다.' 그 줄은 제가 쓴 겁니다.
@@ -142,8 +146,8 @@ MapData `route_lines`(rival 화자 포함)는 `briefing_routes.md` 담당.
 
 #### P1 목표 안내
 - 화자: VEIL
-- 맥락: 인트로 4.6s 뒤. 전멸형이 아니라 목표형(재머 2기 파괴)임을 안내
-- 코드: `Stage.gd` `_rival_intro_veil_line`
+- 맥락: 인트로 컷씬 2번째 줄. 전멸형이 아니라 목표형(재머 2기 파괴)임을 안내
+- 코드: `Stage.gd` `_rival_intro_cutscene`
 - KO:
   > 적은 끝이 없습니다. 다 잡을 생각은 마십시오. 증원은 위층의 관측 안테나가 부릅니다. 저것부터 부수십시오.
 - EN:
@@ -155,7 +159,7 @@ MapData `route_lines`(rival 화자 포함)는 `briefing_routes.md` 담당.
 #### P2 전환
 - 화자: ?
 - 맥락: P1 재머 2기 전파괴 → 페이즈 전환 비트(글리치+소등)와 함께
-- 코드: `Stage.gd` `_start_rival_p2`
+- 코드: `Stage.gd` `_rival_p2_cutscene`
 - KO:
   > 병사들이 아깝네요. 그럼, 방하고 싸워 보시죠.
 - EN:
@@ -164,7 +168,7 @@ MapData `route_lines`(rival 화자 포함)는 `briefing_routes.md` 담당.
 - 화자: ?
 - 맥락: 격파 이력 + 지난 격파에서 먼저 부순 노드 기억(rival_boss_first_side)이 있을 때
   기본 P2 전환 라인을 대체. 첫 스윕이 실제로 그 방향에서 들어온다(대사=기믹 일치).
-- 코드: `Stage.gd` `_start_rival_p2` (rival_kills >= 1 분기)
+- 코드: `Stage.gd` `_rival_p2_cutscene` (rival_kills >= 1 분기)
 - KO:
   > 지난번에는 왼쪽 회선부터 끊으셨죠. 배선은 바꿔 뒀습니다.
   (좌/우는 기억에 따라 "왼쪽"/"오른쪽")
@@ -172,8 +176,8 @@ MapData `route_lines`(rival 화자 포함)는 `briefing_routes.md` 담당.
 
 #### P2 목표 안내
 - 화자: VEIL
-- 맥락: P2 전환 3.8s 뒤. 제어 노드(제어 코어)와 벽 포탑의 전원 관계를 한 번만 설명
-- 코드: `Stage.gd` `_rival_p2_objective_line`
+- 맥락: P2 컷씬(전환 1.35s 뒤, 제어 코어 실스폰 후) 2번째 줄. 제어 노드와 벽 포탑의 전원 관계를 한 번만 설명
+- 코드: `Stage.gd` `_rival_p2_cutscene`
 - KO:
   > 포탑 전원은 발판의 저 낮은 제어 코어 둘. 끊는 만큼 조용해집니다. 방패는 한쪽뿐입니다.
 - EN:
@@ -214,7 +218,7 @@ MapData `route_lines`(rival 화자 포함)는 `briefing_routes.md` 담당.
 #### 찢김 후 자백
 - 화자: ?
 - 맥락: 본 찢김이 끝나고 화면이 도로 열린 직후. P3 개시 직전. 이번 런 유인 조우 없음(원형)
-- 코드: `Stage.gd` `_fake_clear_end`
+- 코드: `Stage.gd` `_p3_opening_cutscene`
 - KO:
   > 이 화면, 익숙하시죠. 제가 그렸습니다.
 - EN:
@@ -223,7 +227,7 @@ MapData `route_lines`(rival 화자 포함)는 `briefing_routes.md` 담당.
 - 화자: ?
 - 맥락: 같은 지점, 이번 런에 루트맵 유인(? 귀띔)을 따른 적 있음(`rival_lure_followed >= 1`).
   자백이 런의 이력을 회수 — 갈림길의 그 목소리도 자기였다고 공개
-- 코드: `Stage.gd` `_fake_clear_end`
+- 코드: `Stage.gd` `_p3_opening_cutscene`
 - KO:
   > 이 화면, 익숙하시죠. 제가 그렸습니다.
   > 경로 고를 때 드린 귀띔도, 제 목소리였고요.
@@ -234,7 +238,7 @@ MapData `route_lines`(rival 화자 포함)는 `briefing_routes.md` 담당.
 #### 찢김 후 자백 변형(유인 불응)
 - 화자: ?
 - 맥락: 같은 지점, 유인은 봤지만 한 번도 안 따름(`rival_lure_shown >= 1`, followed 0)
-- 코드: `Stage.gd` `_fake_clear_end`
+- 코드: `Stage.gd` `_p3_opening_cutscene`
 - KO:
   > 이 화면, 익숙하시죠. 제가 그렸습니다.
   > 경로 고를 때는 저를 한 번도 안 믿으시더니.
@@ -248,15 +252,15 @@ MapData `route_lines`(rival 화자 포함)는 `briefing_routes.md` 담당.
 
 #### 내 VEIL 동요
 - 화자: VEIL
-- 맥락: 찢김 3.6s 뒤. 가짜 클리어 신호가 자기 것이 아님을 밝힘
-- 코드: `Stage.gd` `_p3_veil_shaken_line`
+- 맥락: P3 오프닝 컷씬 2번째 줄. 가짜 클리어 신호가 자기 것이 아님을 밝힘
+- 코드: `Stage.gd` `_p3_opening_cutscene`
 - KO:
   > 방금 그 신호, 제가 보낸 게 아닙니다.
 - EN:
 
 #### 판별 tell 안내
 - 화자: VEIL
-- 맥락: 찢김 6.8s 뒤(재시도 진입 시엔 1.4s 뒤 재고지). 가짜 마커(굵은 표식) 판별법
+- 맥락: P3 오프닝 컷씬 3번째 줄(재시도 진입 시엔 자막으로 1.4s 뒤 재고지, `_p3_tell_line`). 가짜 마커(굵은 표식) 판별법
 - 코드: `Stage.gd` `_p3_tell_line`
 - KO:
   > 굵은 표식은 제 것이 아닙니다. 저건 몸이 없습니다.
@@ -264,7 +268,7 @@ MapData `route_lines`(rival 화자 포함)는 `briefing_routes.md` 담당.
 
 #### 무표시 위협 경고
 - 화자: VEIL
-- 맥락: 찢김 10.6s 뒤(재시도 시 4.8s). 진짜 위협은 마커 없이 온다는 경고
+- 맥락: P3 오프닝 컷씬 4번째 줄(재시도 시 자막으로 4.8s 뒤, `_p3_unmarked_line`). 진짜 위협은 마커 없이 온다는 경고
 - 코드: `Stage.gd` `_p3_unmarked_line`
 - KO:
   > 진짜는 표식 없이 옵니다. 가장자리는 직접 보십시오.
@@ -312,7 +316,7 @@ MapData `route_lines`(rival 화자 포함)는 `briefing_routes.md` 담당.
 - 맥락: 거짓 VEIL(눈) 격파 직후, 서버 로그 열람 회차(`found_server_log`). 공개의 본전 —
   출신(삭제가 덜 끝난 옛 빌드)을 로그의 말로 자백. 상한 = §2.2(출신까지, 원본/복제 선언 금지).
   구 원형("요원 파일을 다시 읽어야겠습니다")은 이 분기 신설로 대체됨
-- 코드: `Stage.gd` `_on_false_veil_defeated`
+- 코드: `Stage.gd` `_rival_defeat_cutscene`
 - KO:
   > ...제 그림을 전부 걷어내셨군요. 로그에서 보셨죠.
   > 삭제가 덜 끝난 옛 빌드. 그게 접니다.
@@ -324,7 +328,7 @@ MapData `route_lines`(rival 화자 포함)는 `briefing_routes.md` 담당.
 - 화자: ?
 - 맥락: 같은 지점, 서버 로그 미열람 런. 최소 보장 한 줄 — 내 VEIL(요원 곁의 목소리)보다
   먼저 만들어졌다는 암시로 선대 정보의 하한선을 보장
-- 코드: `Stage.gd` `_on_false_veil_defeated`
+- 코드: `Stage.gd` `_rival_defeat_cutscene`
 - KO:
   > ...제 그림을 전부 걷어내셨군요.
   > 지금 요원 곁의 그 목소리. 저보다 나중에 만들어진 겁니다.
@@ -334,8 +338,8 @@ MapData `route_lines`(rival 화자 포함)는 `briefing_routes.md` 담당.
 
 #### 퇴장(14-2 예고)
 - 화자: ?
-- 맥락: 처치 반응 4.4s 뒤. 이후 우측 출구가 열리고 걸어서 14-2 터널로
-- 코드: `Stage.gd` `_rival_final_line`
+- 맥락: 격파 컷씬 2번째 줄. 컷씬이 끝나면 우측 출구가 열리고 걸어서 14-2 터널로
+- 코드: `Stage.gd` `_rival_defeat_cutscene`
 - KO:
   > 방을 내드리죠. 다음 방은 더 깊습니다.
 - EN:

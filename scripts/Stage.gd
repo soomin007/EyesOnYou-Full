@@ -1172,6 +1172,24 @@ func _purge_subtitles() -> void:
 	_subtitle_stack_layer = null
 	_subtitle_stack_box = null
 
+# 컷씬 대사(2026-08-23 사용자: "스토리용 대사는 온전히 집중할 환경") — 세계 일시정지 +
+# 한 줄씩 진행 + 건너뛰기. 구조/스토리 비트 전용(전투 중 콜아웃·조언은 기존 자막 유지).
+# lines = [{who: "rival"/"veil", text}]. 이미 컷씬이 떠 있으면 그 뒤에 줄을 잇는다(중복 정지 방지).
+func _play_story_dialogue(lines: Array, on_done: Callable = Callable()) -> void:
+	if not is_inside_tree():
+		return
+	if StoryDialogue.active != null and is_instance_valid(StoryDialogue.active):
+		StoryDialogue.active.append_lines(lines)
+		if on_done.is_valid():
+			StoryDialogue.active.finished.connect(on_done, CONNECT_ONE_SHOT)
+		return
+	_purge_subtitles()   # 떠 있던 전투 자막이 컷씬 위에 겹치지 않게
+	var dlg := StoryDialogue.new()
+	dlg.open(lines)
+	if on_done.is_valid():
+		dlg.finished.connect(on_done, CONNECT_ONE_SHOT)
+	add_child(dlg)
+
 # 보스전 전용 강조 자막 — 일반 _show_veil_subtitle보다 큰 폰트 + 어두운 박스 배경 +
 # 색상으로 위험도 차등화. 화면 중앙 위쪽에 배치해 폭발 효과/총알 위에서도 인지 가능.
 func _show_boss_alert(message: String, color: Color, duration: float) -> void:
@@ -5713,16 +5731,22 @@ func _play_rival_lock_beat(act_num: int, tries_left: int = 24) -> void:
 		return
 	_run_glitch(0.5, 0.28)
 	SfxPlayer.play("boss_alert_text")
-	if act_num == 4:
-		_show_rival_subtitle("덮어쓰기 회선 하나는 제가 가져갑니다. 요원은 늘 여분이 많았으니까.", 3.4)
-	else:
-		_show_rival_subtitle("이제 한 번입니다. 제 구역에서는 아껴 쓰셔야죠.", 3.4)
+	# 잠금 비트 = 컷씬(2026-08-23) — 라이벌 강탈 + VEIL 해설(무엇을 빼앗겼는지, 2026-08-15
+	# 지적 · HUD "기록" 핍과 같은 단어로 실물 일치)을 정지 화면에서 잇는다. 핍 바이올렛
+	# 물들임은 컷씬 종료 후에도 2.6s 남아(타이머가 pause 동안 정지) 해설의 지시 대상이 보인다.
 	if overwrite_label != null and is_instance_valid(overwrite_label):
 		overwrite_label.add_theme_color_override("font_color", Color(0.72, 0.42, 1.0))
 		get_tree().create_timer(2.6, false).timeout.connect(_reset_overwrite_label_color)
-	# 내 VEIL이 뒤이어 *무엇을 빼앗겼는지* 설명 — 라이벌 한 줄만으론 플레이어가 잃은 것을
-	# 모른다(2026-08-15 지적). HUD "기록" 핍과 같은 단어(덮어쓰기)로 실물 일치.
-	get_tree().create_timer(3.9, false).timeout.connect(_veil_lock_explain.bind(act_num))
+	if act_num == 4:
+		_play_story_dialogue([
+			{"who": "rival", "text": "덮어쓰기 회선 하나는 제가 가져갑니다. 요원은 늘 여분이 많았으니까."},
+			{"who": "veil", "text": "방금 덮어쓰기 회선 하나가 잠겼습니다.\n쓰러져도 그 자리에서 다시 서게 해 주던 기록입니다. 남은 건 둘."},
+		])
+	else:
+		_play_story_dialogue([
+			{"who": "rival", "text": "이제 한 번입니다. 제 구역에서는 아껴 쓰셔야죠."},
+			{"who": "veil", "text": "하나 더 잠겼습니다. 남은 덮어쓰기는 한 번.\n그다음은 구역 처음부터입니다."},
+		])
 
 # 플레이어 주변에 살아 있는 적이 있는가 — 각본 발화의 "조용한 창" 판정.
 # (known_issues 준수: is_instance_valid 선행 · harmless는 truthiness로 — bool(null) 금지.)
@@ -5737,14 +5761,6 @@ func _combat_near_player(radius: float) -> bool:
 		if (e as Node2D).global_position.distance_to(player.global_position) <= radius:
 			return true
 	return false
-
-func _veil_lock_explain(act_num: int) -> void:
-	if goal_reached or not is_inside_tree():
-		return
-	if act_num == 4:
-		_show_veil_subtitle("방금 덮어쓰기 회선 하나가 잠겼습니다. 쓰러져도 그 자리에서 다시 서게 해 주던 기록입니다. 남은 건 둘.", 4.2)
-	else:
-		_show_veil_subtitle("하나 더 잠겼습니다. 남은 덮어쓰기는 한 번. 그다음은 구역 처음부터입니다.", 4.0)
 
 func _reset_overwrite_label_color() -> void:
 	if overwrite_label != null and is_instance_valid(overwrite_label):
@@ -6929,17 +6945,19 @@ func _on_boss_killed(at_position: Vector2) -> void:
 func _play_sentinel_reveal() -> void:
 	# 정적 한 박자 — stage_clear_chime은 lab에서 억제됨(보스 죽는 소리만 여운).
 	await get_tree().create_timer(1.2).timeout
-	# 라이벌 VEIL 첫 발화 — 화자 불명(정체는 14-1에서 공개). 재작성(2026-08-22 사용자 "'시설이
+	# reveal = 컷씬(2026-08-23) — 정지 화면(쓰러진 SENTINEL) 위에서 두 줄을 읽는다.
+	# 라이벌 첫 발화 — 화자 불명(정체는 14-1에서 공개). 재작성(2026-08-22 사용자 "'시설이
 	# 내민 손끝' 너무 이상함"): 은유 전면 폐기, 잡은 것의 실체(경비 장비)를 그대로 말하고
 	# "진짜 상대"의 존재만 남긴다. 승리를 깎아내리는 첫 목소리라는 비트는 유지.
 	# EN: "Well done, agent. All you took down was one piece of security hardware.
 	#      Your real opponent hasn't even stepped in yet."
-	_show_rival_subtitle("수고하셨습니다, 요원. 방금 잡은 건 경비 장비 한 대일 뿐입니다.\n진짜 상대는 아직 나서지도 않았습니다.", 3.8)
-	await get_tree().create_timer(4.5).timeout
-	# 내 VEIL 동요 — §1 맹점 테마의 첫 실연. 어색한 원문("누가... 저는 못 봤어요") 재작성
-	# (사용자 2026-08-14): 동요는 감정 직진술 대신 말끝 흐림(~는데)으로.
-	_show_veil_subtitle("...방금 그 목소리, 제 채널이 아닙니다.\n같은 회선에 있었는데 저는 못 봤어요. 이런 적 없었는데.", 3.6)
-	await get_tree().create_timer(4.0).timeout
+	# 내 VEIL 동요 — §1 맹점 테마의 첫 실연(2026-08-14: 감정 직진술 대신 말끝 흐림).
+	_play_story_dialogue([
+		{"who": "rival", "text": "수고하셨습니다, 요원. 방금 잡은 건 경비 장비 한 대일 뿐입니다.\n진짜 상대는 아직 나서지도 않았습니다."},
+		{"who": "veil", "text": "...방금 그 목소리, 제 채널이 아닙니다.\n같은 회선에 있었는데 저는 못 봤어요. 이런 적 없었는데."},
+	], _finish_sentinel_reveal)
+
+func _finish_sentinel_reveal() -> void:
 	_sentinel_reveal_done = true
 
 # §7 복선 — 보스전 중 가끔(랜덤 간격) 거짓-렌더 tell과 같은 붉은-바이올렛 지직거림을 보스에 흘린다.
@@ -7411,13 +7429,10 @@ func _init_rival_boss() -> void:
 	_p1_spawn_timer.wait_time = 3.0
 	add_child(_p1_spawn_timer)
 	_p1_spawn_timer.timeout.connect(_p1_trickle_tick)
-	# 발화 유예(2026-08-23 "대사가 전투와 겹쳐 못 읽는다") — 인트로 두 줄이 흐르는 동안은
-	# 증원이 없다(초기 적 = 정지 재머 2기뿐). 첫 투입 1.6s → 5.6s(라이벌 인사가 끝난 뒤),
-	# 이후 3s 주기 재개. P2 포탑 온보딩 유예와 같은 문법.
-	get_tree().create_timer(5.6, false).timeout.connect(_p1_grace_end)
-	# 입장 비트 — 라이벌 개입 + VEIL 경계 콜아웃. (타이머는 메서드 bind — 람다 freed self 금지.)
-	get_tree().create_timer(1.0, false).timeout.connect(_rival_intro_line)
-	get_tree().create_timer(4.6, false).timeout.connect(_rival_intro_veil_line)
+	# 인트로 = 컷씬(2026-08-23 사용자 "스토리용 대사는 컷씬으로") — 1.0s 뒤 세계를 멈추고
+	# 두 줄을 읽게 한다. 증원 타이머(2.6s)는 pause 동안 멈추므로 첫 투입은 컷씬 종료 ~1.6s 뒤.
+	get_tree().create_timer(2.6, false).timeout.connect(_p1_grace_end)
+	get_tree().create_timer(1.0, false).timeout.connect(_rival_intro_cutscene)
 
 # 발화 유예 종료 — 첫 증원 투입 + 주기 재개. 가드는 _p1_trickle_tick과 동일 기준.
 func _p1_grace_end() -> void:
@@ -7537,7 +7552,8 @@ class _GlitchRunner extends Node:
 		mat.set_shader_parameter("intensity", peak * env * jitter)
 		mat.set_shader_parameter("seed", floor(_t * 24.0) * 0.371)
 
-func _rival_intro_line() -> void:
+# 인트로 컷씬 — 라이벌 인사(변형 3종) + VEIL 목표 안내를 정지 화면에서 읽는다.
+func _rival_intro_cutscene() -> void:
 	if not is_inside_tree() or goal_reached:
 		return
 	# 발화 동기 플래시 제거(2026-08-14 2차) — 존재감은 카메라 흔들림만 남긴다.
@@ -7546,20 +7562,20 @@ func _rival_intro_line() -> void:
 	# 정보 축적형 공개(2026-08-23) — 서버 로그 기발견자는 "아는 자 대접": 로그 말미의 미서명
 	# 문자열("기다리고 있었습니다.")을 자기 것이라 자백한다. 그가 열람 사실을 아는 근거는
 	# 기존 설정 그대로(세션 2 = 대상의 시야 스트림 열람). 다회차 인사가 우선(기억 언급 상한).
+	var first: String
 	if GameState.rival_kills >= 1:
-		_show_rival_subtitle("'어서 오세요, 요원.' 지난번에도 이 인사였죠.", 3.4)
+		first = "'어서 오세요, 요원.' 지난번에도 이 인사였죠."
 	elif GameState.found_server_log:
 		# EN: "Welcome, agent. You read that recovered log in the server room.
 		#      'I have been waiting.' I wrote that line."
-		_show_rival_subtitle("어서 오세요, 요원. 서버에서 복구된 기록, 읽으셨죠.\n'기다리고 있었습니다.' 그 줄은 제가 쓴 겁니다.", 4.4)
+		first = "어서 오세요, 요원. 서버에서 복구된 기록, 읽으셨죠.\n'기다리고 있었습니다.' 그 줄은 제가 쓴 겁니다."
 	else:
-		_show_rival_subtitle("어서 오세요, 요원. 여기서부터는 제 구역입니다.", 3.2)
-
-func _rival_intro_veil_line() -> void:
-	if not is_inside_tree() or goal_reached:
-		return
-	# 실물과 단어 일치 원칙(2026-08-14 "기둥" 반려) · 리워크 후 실물 = 상층 데크의 관측 안테나.
-	_show_veil_subtitle("적은 끝이 없습니다. 다 잡을 생각은 마십시오. 증원은 위층의 관측 안테나가 부릅니다. 저것부터 부수십시오.", 3.8)
+		first = "어서 오세요, 요원. 여기서부터는 제 구역입니다."
+	# VEIL 목표 안내 — 실물과 단어 일치 원칙(2026-08-14 "기둥" 반려) · 실물 = 상층 데크의 관측 안테나.
+	_play_story_dialogue([
+		{"who": "rival", "text": first},
+		{"who": "veil", "text": "적은 끝이 없습니다. 다 잡을 생각은 마십시오.\n증원은 위층의 관측 안테나가 부릅니다. 저것부터 부수십시오."},
+	])
 
 func _start_rival_p2() -> void:
 	if _rival_phase != 0 or goal_reached or not is_inside_tree():
@@ -7574,14 +7590,9 @@ func _start_rival_p2() -> void:
 	_run_glitch(0.7, 0.38)
 	_rival_beat_flash()
 	_camera_shake(10.0, 0.4)
-	# 다회차 기억 변형 대사 — 기존 라인 "대체"(발화 수 증가 없음 · 기억 언급 런당 1~2회 상한 준수).
-	# 기억의 대상은 플레이어가 아니라 이전 작전 기록(4번째 벽 금지, replay_support_plan §4.3).
-	if GameState.rival_kills >= 1 and GameState.rival_boss_first_side >= 0:
-		var side_word: String = "왼쪽" if GameState.rival_boss_first_side == 0 else "오른쪽"
-		_show_rival_subtitle("지난번에는 %s 회선부터 끊으셨죠. 배선은 바꿔 뒀습니다." % side_word, 3.4)
-	else:
-		_show_rival_subtitle("병사들이 아깝네요. 그럼, 방하고 싸워 보시죠.", 3.4)
-	get_tree().create_timer(3.8, false).timeout.connect(_rival_p2_objective_line)
+	# P2 오프닝 = 컷씬(2026-08-23) — 소등이 깔리고 제어 노드가 실스폰된 다음 박자(1.35s)에
+	# 세계를 멈추고 두 줄을 읽는다(목표 안내의 지시 대상 = 제어 코어가 화면에 선 뒤).
+	get_tree().create_timer(1.35, false).timeout.connect(_rival_p2_cutscene)
 	# 소등 — 완만한 감광(고대비 점멸 금지, known_issues 광과민성 기준).
 	_rival_cast = CanvasModulate.new()
 	_rival_cast.color = Color(1, 1, 1)
@@ -7609,11 +7620,11 @@ func _start_rival_p2() -> void:
 		_p2_turrets.append(trap)
 	_traps_present = true
 	# 온보딩 유예(사용자 2026-08-17 "어두워지고 뿅뿅대서 설명 대사를 읽을 수 없다") ·
-	# 포탑은 7.6s 뒤 가동 — 목표 안내(3.8s 시작 + 3.6s 표시 = 7.4s 종료)까지 읽을 틈을 준다
-	# (5.5s는 안내 꼬리 1.9s가 첫 사격과 겹쳤다, 2026-08-23 재지적 반영).
+	# 포탑은 5.5s 뒤 가동. 대사 읽기는 이제 컷씬(1.35s 개시, pause 동안 이 타이머도 정지)이
+	# 담당하므로 이 유예는 소등·노드 시각 온보딩 전담 — 컷씬 종료 뒤 ~4.15s.
 	for t2 in _p2_turrets:
 		(t2 as Node).set_process(false)
-	get_tree().create_timer(7.6, false).timeout.connect(_p2_enable_turrets)
+	get_tree().create_timer(5.5, false).timeout.connect(_p2_enable_turrets)
 	# 위장 함정 1개 · 지상 중앙 우측 접근로의 거짓 바닥(§4 문법 재사용, 맵당 1개 준수).
 	if not GameState.story_mode:
 		var parts: Array = _spawn_disguised_spike(1450.0, 1214.0, 110.0, 2)
@@ -7720,11 +7731,23 @@ func _p2_enable_turrets() -> void:
 		if t2 != null and is_instance_valid(t2) and not (t2 as Node).has_meta("powered_off"):
 			(t2 as Node).set_process(true)
 
-func _rival_p2_objective_line() -> void:
+# P2 오프닝 컷씬 — 라이벌(기억 변형 포함) + VEIL 목표 안내.
+func _rival_p2_cutscene() -> void:
 	if not is_inside_tree() or goal_reached or _rival_phase != 1:
 		return
+	# 다회차 기억 변형 대사 — 기존 라인 "대체"(발화 수 증가 없음 · 기억 언급 런당 1~2회 상한 준수).
+	# 기억의 대상은 플레이어가 아니라 이전 작전 기록(4번째 벽 금지, replay_support_plan §4.3).
+	var first: String
+	if GameState.rival_kills >= 1 and GameState.rival_boss_first_side >= 0:
+		var side_word: String = "왼쪽" if GameState.rival_boss_first_side == 0 else "오른쪽"
+		first = "지난번에는 %s 회선부터 끊으셨죠. 배선은 바꿔 뒀습니다." % side_word
+	else:
+		first = "병사들이 아깝네요. 그럼, 방하고 싸워 보시죠."
 	# 케이블 시각과 짝 · 장치의 기능(포탑 전원)을 한 번만 말로 짚는다. 단어는 실물(제어 코어)과 일치.
-	_show_veil_subtitle("포탑 전원은 발판의 저 낮은 제어 코어 둘. 끊는 만큼 조용해집니다. 방패는 한쪽뿐입니다.", 3.6)
+	_play_story_dialogue([
+		{"who": "rival", "text": first},
+		{"who": "veil", "text": "포탑 전원은 발판의 저 낮은 제어 코어 둘.\n끊는 만큼 조용해집니다. 방패는 한쪽뿐입니다."},
+	])
 
 # P2 노드 격파 → 그 노드가 전원을 대던 같은 쪽 포탑(하·중층 2기)이 죽는다 · 파괴의 보상 즉시 체감.
 func _on_p2_node_down(_pos: Vector2, side: int) -> void:
@@ -8262,26 +8285,35 @@ func _fake_clear_end() -> void:
 	_fake_clear_rect = null
 	_fake_clear_label = null
 	GameState.restrict_combat_input = false
+	# P3 오프닝 = 컷씬(2026-08-23) — 눈이 먼저 등장해 응시하고(가짜 그림 포함 정지 화면),
+	# 다음 프레임에 세계를 멈춰 자백 + VEIL 안내 3줄을 읽는다. 컷씬 종료 후 응시 유예 3.0s가
+	# 마저 흐른 뒤 첫 볼리. VEIL 줄이 온전히 나오는 건 억압 연출의 예외 — 판별 정보는 컷씬이
+	# 전달하고, 억압(1.4s 끊김)은 전투 중 보조 자막이 담당한다(사용자 2026-08-23 가독 우선).
+	_start_rival_p3(3.0)
+	call_deferred("_p3_opening_cutscene")
+
+# P3 오프닝 컷씬 — 자백(이번 런 이력 변형 3종) + VEIL 동요·판별 안내.
+func _p3_opening_cutscene() -> void:
+	if not is_inside_tree() or goal_reached or _rival_phase != 2:
+		return
 	# 정보 축적형 공개(2026-08-23) — 자백이 이번 런의 이력을 회수한다: 막4+ 루트맵에서 유인
 	# (? 귀띔)을 따랐으면 "그것도 나였다", 봤지만 안 따랐으면 그 불신을 짚는다. 조우 없으면 원형.
+	var confession: String
 	if GameState.rival_lure_followed >= 1:
 		# EN: "You know this screen. I drew it. Those tips I gave you
 		#      when you picked your routes. Also my voice."
-		_show_rival_subtitle("이 화면, 익숙하시죠. 제가 그렸습니다.\n경로 고를 때 드린 귀띔도, 제 목소리였고요.", 4.0)
+		confession = "이 화면, 익숙하시죠. 제가 그렸습니다.\n경로 고를 때 드린 귀띔도, 제 목소리였고요."
 	elif GameState.rival_lure_shown >= 1:
 		# EN: "You know this screen. I drew it. And you never once took my word at the forks."
-		_show_rival_subtitle("이 화면, 익숙하시죠. 제가 그렸습니다.\n경로 고를 때는 저를 한 번도 안 믿으시더니.", 4.0)
+		confession = "이 화면, 익숙하시죠. 제가 그렸습니다.\n경로 고를 때는 저를 한 번도 안 믿으시더니."
 	else:
-		_show_rival_subtitle("이 화면, 익숙하시죠. 제가 그렸습니다.", 3.2)
-	get_tree().create_timer(3.6, false).timeout.connect(_p3_veil_shaken_line)
-	get_tree().create_timer(6.8, false).timeout.connect(_p3_tell_line)
-	get_tree().create_timer(10.6, false).timeout.connect(_p3_unmarked_line)
-	_start_rival_p3()
-
-func _p3_veil_shaken_line() -> void:
-	if not is_inside_tree() or goal_reached:
-		return
-	_show_veil_subtitle("방금 그 신호, 제가 보낸 게 아닙니다.", 3.0)
+		confession = "이 화면, 익숙하시죠. 제가 그렸습니다."
+	_play_story_dialogue([
+		{"who": "rival", "text": confession},
+		{"who": "veil", "text": "방금 그 신호, 제가 보낸 게 아닙니다."},
+		{"who": "veil", "text": "굵은 표식은 제 것이 아닙니다. 저건 몸이 없습니다."},
+		{"who": "veil", "text": "진짜는 표식 없이 옵니다. 가장자리는 직접 보십시오."},
+	])
 
 func _p3_tell_line() -> void:
 	if not is_inside_tree() or goal_reached:
@@ -8376,9 +8408,10 @@ static func _rotated(arr: Array, n: int) -> Array:
 		out.append(arr[(i + n) % arr.size()])
 	return out
 
-# hold = 개시 응시 유예(FalseVeil intro_hold) — 첫 흐름 8.5s(자백 + VEIL 안내 3줄을 읽는 창),
-# 체크포인트 재진입 3.6s(재고지 1.4s 한 줄만 덮으면 됨 · 재시도는 빨리 붙게).
-func _start_rival_p3(hold: float = 8.5) -> void:
+# hold = 개시 응시 유예(FalseVeil intro_hold) — 컷씬 개정(2026-08-23) 후 읽기는 컷씬이 담당,
+# 유예는 응시 비트 전담. 첫 흐름 3.0s(컷씬 종료 후 눈맞춤 한 박자 뒤 첫 볼리) ·
+# 체크포인트 재진입 3.6s(컷씬 없음 · 재고지 자막 1.4s를 덮는 최소 창).
+func _start_rival_p3(hold: float = 3.0) -> void:
 	if goal_reached or not is_inside_tree() or _false_veil != null:
 		return
 	_rival_phase = 2
@@ -8531,24 +8564,30 @@ func _on_false_veil_defeated() -> void:
 		if (e as Node).has_meta("no_marker"):
 			(e as Node).queue_free()
 	_enemies_remaining = 0
-	# 정보 축적형 공개(2026-08-23) — 격파 반응이 공개의 본전. 서버 로그 기발견자에겐 출신
-	# (삭제가 덜 끝난 옛 빌드)을 로그의 말로 자백하고, 미발견자에겐 최소 보장 한 줄(내 VEIL보다
-	# 먼저 만들어졌다는 암시)로 하한선을 깐다. 상한은 §2.2 준수 — 출신까지만, 원본/복제 선언 금지.
+	# 격파 비트 = 컷씬(2026-08-23) — 슬로우 비트와 눈 감김이 한 박자(1.3s) 흐른 뒤 세계를
+	# 멈추고 두 줄을 읽는다(정지 화면 = 소멸 중인 눈). 종료 시 출구 개방.
+	get_tree().create_timer(1.3, false).timeout.connect(_rival_defeat_cutscene)
+
+# 격파 컷씬 — 처치 반응(정보 축적형 공개 2026-08-23: 공개의 본전) + 퇴장 예고.
+# 서버 로그 기발견자에겐 출신(삭제가 덜 끝난 옛 빌드)을 로그의 말로 자백하고, 미발견자에겐
+# 최소 보장 한 줄(내 VEIL보다 먼저 만들어졌다는 암시)로 하한선을 깐다. 상한은 §2.2 준수 —
+# 출신까지만, 원본/복제 선언 금지.
+func _rival_defeat_cutscene() -> void:
+	if not is_inside_tree() or goal_reached:
+		return
+	var first: String
 	if GameState.found_server_log:
 		# EN: "...You've stripped away every picture I drew. You saw the log.
 		#      The old build they never finished deleting. That's me."
-		_show_rival_subtitle("...제 그림을 전부 걷어내셨군요. 로그에서 보셨죠.\n삭제가 덜 끝난 옛 빌드. 그게 접니다.", 4.2)
+		first = "...제 그림을 전부 걷어내셨군요. 로그에서 보셨죠.\n삭제가 덜 끝난 옛 빌드. 그게 접니다."
 	else:
 		# EN: "...You've stripped away every picture I drew.
 		#      That voice at your side, agent. It was built after me."
-		_show_rival_subtitle("...제 그림을 전부 걷어내셨군요.\n지금 요원 곁의 그 목소리. 저보다 나중에 만들어진 겁니다.", 4.2)
-	get_tree().create_timer(4.4, false).timeout.connect(_rival_final_line)
-
-func _rival_final_line() -> void:
-	if not is_inside_tree() or goal_reached:
-		return
-	_show_rival_subtitle("방을 내드리죠. 다음 방은 더 깊습니다.", 3.0)
-	get_tree().create_timer(2.4, false).timeout.connect(_rival_boss_release)
+		first = "...제 그림을 전부 걷어내셨군요.\n지금 요원 곁의 그 목소리. 저보다 나중에 만들어진 겁니다."
+	_play_story_dialogue([
+		{"who": "rival", "text": first},
+		{"who": "rival", "text": "방을 내드리죠. 다음 방은 더 깊습니다."},
+	], _rival_boss_release)
 
 func _rival_boss_release() -> void:
 	if not is_inside_tree() or goal_reached:
@@ -9490,7 +9529,10 @@ func _begin_clear_sequence() -> void:
 		var reveal_guard: float = 0.0
 		while not _sentinel_reveal_done and reveal_guard < 14.0:
 			await get_tree().process_frame
-			reveal_guard += get_process_delta_time()
+			# 컷씬(StoryDialogue)이 떠 있는 동안은 상한을 세지 않는다 — 천천히 읽는 플레이어에게
+			# 14s가 차서 회수 단계가 컷씬 밑으로 진행되는 사고 방지(process_frame은 pause 무시).
+			if StoryDialogue.active == null:
+				reveal_guard += get_process_delta_time()
 	GameState.restrict_combat_input = false
 	var leveled: bool = GameState.on_stage_clear()
 	# 클리어 가산 토스트 — 보상은 눈에 보여야 보상이다(점수만 오르면 침묵 보상).
