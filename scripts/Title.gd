@@ -257,6 +257,12 @@ func _set_state(new_state: int) -> void:
 			var b_feedback := _make_button("피드백 보내기")
 			b_feedback.pressed.connect(_on_feedback_pressed)
 			buttons_box.add_child(b_feedback)
+			# 검증 갤러리(개발용 · 2026-08-23 사용자 요청) — 실플레이 QA 큐 아티팩트로 바로 이동.
+			# 디버그 빌드에서만 노출: 배포(release/웹 배포) 빌드에는 버튼 자체가 없다.
+			if OS.is_debug_build():
+				var b_verify := _make_button("검증 갤러리")
+				b_verify.pressed.connect(_on_verify_gallery_pressed)
+				buttons_box.add_child(b_verify)
 			# 웹(브라우저)에선 get_tree().quit()이 탭을 못 닫고 페이지만 멈춤(브라우저 보안: 스크립트가
 			# 사용자가 직접 연 탭을 못 닫음) → 종료 버튼을 숨긴다(탭은 사용자가 닫음). 데스크톱만 종료 제공.
 			if not OS.has_feature("web"):
@@ -549,6 +555,16 @@ func _on_settings_closed() -> void:
 
 func _on_feedback_pressed() -> void:
 	GameState.open_feedback()
+
+# 검증 갤러리(개발용) — 세션이 관리하는 QA 큐 아티팩트. URL이 바뀌면 여기와
+# 메모리 verify-gallery-routine을 함께 갱신한다.
+const VERIFY_GALLERY_URL: String = "https://claude.ai/code/artifact/54f220b5-974e-404e-b270-98750e6b69d4"
+
+func _on_verify_gallery_pressed() -> void:
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("window.open('%s', '_blank')" % VERIFY_GALLERY_URL, true)
+	else:
+		OS.shell_open(VERIFY_GALLERY_URL)
 
 func _on_quit_pressed() -> void:
 	get_tree().quit()
