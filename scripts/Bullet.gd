@@ -94,7 +94,7 @@ func _process(delta: float) -> void:
 	if lifetime <= 0.0:
 		queue_free()
 
-func _apply_tracking(_delta: float) -> void:
+func _apply_tracking(delta: float) -> void:
 	# 가장 가까운 적을 찾아 진행 방향을 살짝 그쪽으로 기울인다.
 	# bullet의 진행은 (cos(angle)*dir, sin(angle)). 진행이 dir 부호를 따라가니까
 	# x 축 부호 자체는 보존하고 y 성분(angle)만 천천히 조정한다.
@@ -109,7 +109,11 @@ func _apply_tracking(_delta: float) -> void:
 	# 새 angle 계산: 진행 방향(+dir 쪽)에서 dy/dx 비율로 기울기.
 	var target_angle: float = atan2(dy, abs(dx))
 	target_angle = clamp(target_angle, -tracking_max_angle, tracking_max_angle)
-	angle = lerp(angle, target_angle, tracking_blend)
+	# 프레임 보정 지수 블렌드 — 상수 비율을 프레임마다 곱하면 수렴 속도가 렌더 fps에 비례한다
+	# (144Hz 모니터에서 유도가 60Hz 대비 ~2.4배 강해지던 실결함, 2026-08-25).
+	# 60fps 기준 tracking_blend와 같은 체감을 임의 fps에서 유지.
+	var blend: float = 1.0 - pow(1.0 - tracking_blend, delta * 60.0)
+	angle = lerp(angle, target_angle, blend)
 
 func _find_nearest_enemy() -> Node2D:
 	# "enemy" + "boss_hittable"(그룹 밖 보스체, 14-1 거짓 VEIL 실체 등) 둘 다 추적 대상.

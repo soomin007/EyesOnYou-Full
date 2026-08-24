@@ -532,8 +532,11 @@ func _make_display_section() -> Control:
 	size_l.add_theme_font_size_override("font_size", 14)
 	size_l.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
 	v.add_child(size_l)
-	var size_row := HBoxContainer.new()
-	size_row.add_theme_constant_override("separation", 10)
+	# 6종으로 늘어 한 줄이 패널 폭을 넘는다 — 3열 그리드로.
+	var size_row := GridContainer.new()
+	size_row.columns = 3
+	size_row.add_theme_constant_override("h_separation", 10)
+	size_row.add_theme_constant_override("v_separation", 8)
 	v.add_child(size_row)
 	_size_buttons.clear()
 	for i in GameState.WINDOW_SIZES.size():
@@ -558,11 +561,14 @@ func _make_display_section() -> Control:
 # 창 크기 버튼 라벨·색·활성 상태 갱신. 선택=● 강조, 전체화면이면 전체 비활성(창 크기 무의미).
 func _refresh_size_buttons() -> void:
 	var fs: bool = GameState.fullscreen
+	# 현재 모니터 해상도보다 큰 창 크기는 목록에서 숨긴다(사용자 2026-08-25).
+	var screen: Vector2i = DisplayServer.screen_get_size(DisplayServer.window_get_current_screen())
 	for i in _size_buttons.size():
 		var btn: Button = _size_buttons[i] as Button
 		if btn == null:
 			continue
 		var sz: Vector2i = GameState.WINDOW_SIZES[i]
+		btn.visible = sz.x <= screen.x and sz.y <= screen.y
 		var selected: bool = (i == GameState.window_size_index)
 		btn.text = "%s  %d × %d" % ["●" if selected else "○", sz.x, sz.y]
 		btn.disabled = fs

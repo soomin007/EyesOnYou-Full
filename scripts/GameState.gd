@@ -205,8 +205,19 @@ var fullscreen: bool = false
 # 입력이 들어오면 자동으로 전체화면 전환(모바일 웹에서 브라우저 UI로 화면이 잘리는 것 완화).
 # OrientationGuard._input이 이 값을 보고 입력마다(전체화면 아닐 때) 재시도. 기본 켜짐, 토글로 끔.
 var auto_fullscreen: bool = true
-var window_size_index: int = 0       # WINDOW_SIZES 인덱스 (창모드일 때만)
+var window_size_index: int = 1       # WINDOW_SIZES 인덱스 (창모드일 때만) · 기본 1280×720
+# 전부 16:9(stretch aspect=keep와 한 세트 — 초광폭 시야 이득 차단, 사용자 2026-08-25).
+# Settings가 현재 모니터보다 큰 항목은 숨긴다.
 const WINDOW_SIZES: Array[Vector2i] = [
+	Vector2i(960, 540),
+	Vector2i(1280, 720),
+	Vector2i(1600, 900),
+	Vector2i(1920, 1080),
+	Vector2i(2560, 1440),
+	Vector2i(3840, 2160),
+]
+# 구 cfg(2026-08-25 이전)의 window_size_index가 가리키던 3종 — 로드 시 새 배열로 이전.
+const _LEGACY_WINDOW_SIZES: Array[Vector2i] = [
 	Vector2i(1280, 720),
 	Vector2i(1600, 900),
 	Vector2i(1920, 1080),
@@ -1329,7 +1340,15 @@ func load_settings() -> void:
 	screen_fx_enabled = bool(cf.get_value("access", "screen_fx", true))
 	fullscreen = bool(cf.get_value("display", "fullscreen", false))
 	auto_fullscreen = bool(cf.get_value("display", "auto_fullscreen", true))
-	window_size_index = clampi(int(cf.get_value("display", "window_size_index", 0)), 0, WINDOW_SIZES.size() - 1)
+	# 창 크기 — 신형 "가로x세로" 문자열 우선. 구형 인덱스 cfg는 legacy 3종 표를 거쳐
+	# 새 배열 인덱스로 이전(배열 확장·재정렬에도 저장된 크기가 보존되게, 2026-08-25).
+	var wsz_str: String = str(cf.get_value("display", "window_size", ""))
+	if wsz_str != "":
+		window_size_index = _window_size_index_from_string(wsz_str)
+	else:
+		var legacy_i: int = int(cf.get_value("display", "window_size_index", -1))
+		if legacy_i >= 0 and legacy_i < _LEGACY_WINDOW_SIZES.size():
+			window_size_index = maxi(WINDOW_SIZES.find(_LEGACY_WINDOW_SIZES[legacy_i]), 1)
 	if version < SETTINGS_VERSION:
 		# 구 스키마 — 키바인드 폐기, project.godot + Main.gd 기본값 유지
 		return
@@ -1394,7 +1413,8 @@ func save_settings() -> void:
 	cf.set_value("access", "screen_fx", screen_fx_enabled)
 	cf.set_value("display", "fullscreen", fullscreen)
 	cf.set_value("display", "auto_fullscreen", auto_fullscreen)
-	cf.set_value("display", "window_size_index", window_size_index)
+	var wsz: Vector2i = WINDOW_SIZES[clampi(window_size_index, 0, WINDOW_SIZES.size() - 1)]
+	cf.set_value("display", "window_size", "%dx%d" % [wsz.x, wsz.y])
 	cf.set_value("audio", "bgm", bgm_volume)
 	cf.set_value("audio", "sfx", sfx_volume)
 	for action in KEYBIND_ACTIONS:
@@ -1420,6 +1440,15 @@ func save_settings() -> void:
 # 디스플레이 설정(전체화면/창 크기)을 DisplayServer에 즉시 반영.
 # Main.gd가 load_settings 직후 호출, Settings에서 값 바꿀 때도 호출.
 # 웹: 창 크기는 브라우저 캔버스가 정하므로 무시 — 전체화면만 적용(버튼 입력=사용자 제스처라 허용됨).
+# "1280x720" 형식 문자열 → WINDOW_SIZES 인덱스. 목록에 없는 값은 기본(1280×720)으로.
+func _window_size_index_from_string(s: String) -> int:
+	var parts: PackedStringArray = s.split("x")
+	if parts.size() == 2:
+		var idx: int = WINDOW_SIZES.find(Vector2i(int(parts[0]), int(parts[1])))
+		if idx >= 0:
+			return idx
+	return 1
+
 func apply_display_settings() -> void:
 	if fullscreen:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
