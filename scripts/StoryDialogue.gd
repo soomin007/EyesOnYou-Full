@@ -50,6 +50,13 @@ var _lockout_t: float = ENTER_LOCKOUT
 var _done: bool = false
 var _prev_paused: bool = false
 
+# 초상 경계 월경 글리치(2026-08-25 사용자 안) — 초상을 대사 판 위로 올리고, 패널 윗변을
+# 넘어온 부분을 셰이더가 잇는다. 상시 저강도 + 줄 시작 버스트 엔벨로프를 _process가 구동.
+const PORTRAIT_GLITCH: Shader = preload("res://assets/shaders/portrait_glitch.gdshader")
+var _portrait_mat: ShaderMaterial = null
+var _glitch_tick_t: float = 0.0
+var _glitch_burst: float = 0.0
+
 static var active: StoryDialogue = null
 
 # 패널 모서리 브래킷 — 오른쪽 위/아래 모서리에 화자색 ㄱ자 틱(전술 콘솔 문법).
@@ -246,7 +253,8 @@ func _build_line(ln: Dictionary) -> void:
 	p_tex.offset_right = 468.0
 	p_tex.offset_top = -516.0
 	p_tex.offset_bottom = -96.0
-	_row.add_child(p_tex)
+	# add_child는 패널·림·브래킷 뒤로 미룬다 — 초상이 대사 판 *위에* 그려져 경계를 넘어온
+	# 구도(2026-08-25 사용자 안). 텍스트 영역(x498~)과는 안 겹친다(초상 우변 468).
 	var panel := PanelContainer.new()
 	sb.content_margin_left = 268.0
 	sb.content_margin_right = 34.0
@@ -279,6 +287,20 @@ func _build_line(ln: Dictionary) -> void:
 	trim.offset_top = -214.0
 	trim.offset_bottom = -58.0
 	_row.add_child(trim)
+	# 초상을 패널 위에 얹고, 월경부는 셰이더 글리치가 잇는다(명명 연출=셰이더급 규칙).
+	# edge_y = (초상 상단 516 - 패널 윗변 208) / 초상 높이 420 — 초상 에셋이 정사각이라
+	# KEEP_ASPECT로 렉트에 꽉 찬다(스크린샷 실측 확인).
+	_portrait_mat = null
+	if GameState.screen_fx_enabled:
+		var pm := ShaderMaterial.new()
+		pm.shader = PORTRAIT_GLITCH
+		pm.set_shader_parameter("edge_y", (516.0 - 208.0) / 420.0)
+		pm.set_shader_parameter("block_tint",
+			Vector3(0.55, 0.30, 0.85) if who == "rival" else Vector3(0.30, 0.75, 1.0))
+		p_tex.material = pm
+		_portrait_mat = pm
+		_glitch_burst = 1.0   # 줄 시작 버스트 — 경계를 뚫고 들어오는 순간감, _process에서 감쇠
+	_row.add_child(p_tex)
 	_msg_label = Label.new()
 	_msg_label.text = str(ln.get("text", ""))
 	_msg_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -385,6 +407,15 @@ func _exit_tree() -> void:
 func _process(delta: float) -> void:
 	if _done:
 		return
+	# 초상 글리치 구동 — 0.09s 간격 시드 재추첨(연속 갱신은 스트로브처럼 번져 11Hz 이산 틱) +
+	# 버스트 감쇠. lockout 중에도 진행(진입 순간이 곧 버스트 구간).
+	if _portrait_mat != null:
+		_glitch_tick_t += delta
+		if _glitch_tick_t >= 0.09:
+			_glitch_tick_t = 0.0
+			_portrait_mat.set_shader_parameter("seed", randf() * 113.0)
+		_glitch_burst = maxf(0.0, _glitch_burst - delta * 2.4)
+		_portrait_mat.set_shader_parameter("intensity", 0.22 + 0.55 * _glitch_burst)
 	if _lockout_t > 0.0:
 		_lockout_t -= delta
 		return
