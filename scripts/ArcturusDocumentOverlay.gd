@@ -113,13 +113,15 @@ func show_doc(input_lines: Array) -> void:
 		paper_visual.color = Color(0.055, 0.042, 0.085, 0.97)
 	else:
 		paper_visual.color = Color(0.92, 0.90, 0.84, 0.96)
-	paper_visual.position = Vector2(-MARGIN_SIDE, -40.0)
-	paper_visual.size = paper.size + Vector2(MARGIN_SIDE * 2.0, 80.0)
+	# 종이 양식은 레터헤드·스탬프 확대(4차 피드백 "더 커도 될 것 같다")로 머리 여백을 더 쓴다.
+	var head_room: float = 40.0 if (is_term or is_drive) else 68.0
+	paper_visual.position = Vector2(-MARGIN_SIDE, -head_room)
+	paper_visual.size = paper.size + Vector2(MARGIN_SIDE * 2.0, head_room + 40.0)
 	paper.add_child(paper_visual)
 	# 종이 옆 가는 그림자 라인 (저격 같은 디테일)
 	var shadow := ColorRect.new()
 	shadow.color = Color(0.0, 0.0, 0.0, 0.18)
-	shadow.position = Vector2(-MARGIN_SIDE - 6.0, -40.0 + 6.0)
+	shadow.position = Vector2(-MARGIN_SIDE - 6.0, -head_room + 6.0)
 	shadow.size = paper_visual.size
 	shadow.z_index = -1
 	paper.add_child(shadow)
@@ -154,39 +156,83 @@ func show_doc(input_lines: Array) -> void:
 		scan.size = paper_visual.size
 		scan.material = _make_scanline_material()
 		paper.add_child(scan)
+		# 콘솔 창 프레임 — 가장자리 1px 라인(4차 피드백 "더 꾸밀 요소"). 스크롤을 따라간다.
+		var frame := Panel.new()
+		var fr_sb := StyleBoxFlat.new()
+		fr_sb.bg_color = Color(0, 0, 0, 0)
+		fr_sb.border_color = Color(0.30, 0.55, 0.42, 0.55) if is_term else Color(0.48, 0.36, 0.72, 0.55)
+		fr_sb.set_border_width_all(1)
+		frame.add_theme_stylebox_override("panel", fr_sb)
+		frame.position = paper_visual.position
+		frame.size = paper_visual.size
+		frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		paper.add_child(frame)
+		# 하단 상태 바 — 세션 정보 + 깜빡이는 블록 커서(터미널 문법). 타이틀 바처럼 화면 고정.
+		# 텍스트는 기술 표기(영문)라 대사 검수 대상 아님.
+		var foot := ColorRect.new()
+		foot.color = bar.color
+		foot.position = Vector2(bar.position.x, VIEWPORT_H - 26.0)
+		foot.size = Vector2(bar.size.x, 26.0)
+		layer.add_child(foot)
+		var foot_l := Label.new()
+		if is_term:
+			foot_l.text = "svr-03 · READ-ONLY · %d LINES RECOVERED" % lines_data.size()
+		else:
+			foot_l.text = "drive-A7 · DECRYPT OK · %d ENTRIES" % lines_data.size()
+		if mono != null:
+			foot_l.add_theme_font_override("font", mono)
+		foot_l.add_theme_font_size_override("font_size", 12)
+		foot_l.add_theme_color_override("font_color", Color(0.42, 0.62, 0.50) if is_term else Color(0.62, 0.50, 0.82))
+		foot_l.position = Vector2(14.0, 4.0)
+		foot_l.size = Vector2(foot.size.x - 48.0, 18.0)
+		foot.add_child(foot_l)
+		var cur := Label.new()
+		cur.text = "▮"
+		if mono != null:
+			cur.add_theme_font_override("font", mono)
+		cur.add_theme_font_size_override("font_size", 13)
+		cur.add_theme_color_override("font_color", Color(0.45, 0.85, 0.58) if is_term else Color(0.75, 0.55, 1.0))
+		cur.position = Vector2(foot.size.x - 26.0, 3.0)
+		foot.add_child(cur)
+		var ctw := cur.create_tween()
+		ctw.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+		ctw.set_loops()
+		ctw.tween_property(cur, "modulate:a", 0.12, 0.5)
+		ctw.tween_property(cur, "modulate:a", 1.0, 0.5)
 	else:
 		# 종이 양식 — 레터헤드(기관명 + 이중 괘선) + 붉은 분류 스탬프. 인사 아카이브 컨셉.
+		# 4차 피드백 "레터헤드와 스탬프가 좀 더 커도 될 것 같다" — 19px/20px로 확대.
 		var lh := Label.new()
 		lh.text = "ARCTURUS · PERSONNEL ARCHIVE"
-		lh.add_theme_font_size_override("font_size", 13)
-		lh.add_theme_color_override("font_color", Color(0.35, 0.38, 0.50, 0.85))
-		lh.position = Vector2(0.0, -34.0)
+		lh.add_theme_font_size_override("font_size", 19)
+		lh.add_theme_color_override("font_color", Color(0.33, 0.36, 0.48, 0.9))
+		lh.position = Vector2(0.0, -60.0)
 		paper.add_child(lh)
 		var rule := ColorRect.new()
 		rule.color = Color(0.30, 0.33, 0.45, 0.55)
-		rule.position = Vector2(0.0, -13.0)
+		rule.position = Vector2(0.0, -28.0)
 		rule.size = Vector2(PAPER_WIDTH, 2.0)
 		paper.add_child(rule)
 		var rule2 := ColorRect.new()
 		rule2.color = Color(0.30, 0.33, 0.45, 0.35)
-		rule2.position = Vector2(0.0, -9.0)
+		rule2.position = Vector2(0.0, -24.0)
 		rule2.size = Vector2(PAPER_WIDTH, 1.0)
 		paper.add_child(rule2)
 		var stamp := PanelContainer.new()
 		var st_sb := StyleBoxFlat.new()
 		st_sb.bg_color = Color(0, 0, 0, 0)
 		st_sb.border_color = Color(0.72, 0.18, 0.16, 0.70)
-		st_sb.set_border_width_all(2)
-		st_sb.content_margin_left = 10.0
-		st_sb.content_margin_right = 10.0
-		st_sb.content_margin_top = 2.0
-		st_sb.content_margin_bottom = 2.0
+		st_sb.set_border_width_all(3)
+		st_sb.content_margin_left = 14.0
+		st_sb.content_margin_right = 14.0
+		st_sb.content_margin_top = 3.0
+		st_sb.content_margin_bottom = 3.0
 		stamp.add_theme_stylebox_override("panel", st_sb)
-		stamp.position = Vector2(PAPER_WIDTH - 168.0, -36.0)
+		stamp.position = Vector2(PAPER_WIDTH - 225.0, -64.0)
 		stamp.rotation = -0.045
 		var st_l := Label.new()
 		st_l.text = "RESTRICTED"
-		st_l.add_theme_font_size_override("font_size", 15)
+		st_l.add_theme_font_size_override("font_size", 20)
 		st_l.add_theme_color_override("font_color", Color(0.72, 0.18, 0.16, 0.78))
 		stamp.add_child(st_l)
 		paper.add_child(stamp)

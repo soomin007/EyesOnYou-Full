@@ -24,8 +24,15 @@ const PORTRAIT_VEIL: String = "res://assets/portraits/veil.webp"
 const PORTRAIT_RIVAL_HIDDEN: String = "res://assets/portraits/rival_hidden.webp"
 const PORTRAIT_RIVAL_EYE: String = "res://assets/portraits/rival_eye.webp"
 
-# 줄 서식: {who: "rival"/"veil", text: String}
+# 줄 서식: {who: "rival"/"veil", text: String, portrait?: "hidden"}
+#  - portrait "hidden": 라이벌 공개 게이트를 무시하고 은닉판 강제 — 실체가 그 자리에 없는
+#    무전 목소리 비트(막4/5 잠금)용. 다회차 런에서 거대 눈이 뜨던 문제(4차 피드백)도 막는다.
 var _lines: Array = []
+
+# 쇼케이스 — 대사가 가리키는 실물(예: 잠금 하트 줄)을 컷씬 화면 상단 중앙에 띄운다.
+# HUD가 레터박스·딤에 가려 지시 대상이 화면에 없어지는 문제(4차 피드백)의 해소 장치.
+# add_child 전에 세팅한다. 컷씬이 소유(종료 페이드·해제 포함).
+var showcase: Control = null
 var _idx: int = -1
 var _typing: bool = false
 var _type_t: float = 0.0
@@ -44,6 +51,20 @@ var _done: bool = false
 var _prev_paused: bool = false
 
 static var active: StoryDialogue = null
+
+# 패널 모서리 브래킷 — 오른쪽 위/아래 모서리에 화자색 ㄱ자 틱(전술 콘솔 문법).
+# 왼쪽 모서리는 초상이 덮으므로 생략. 서식 리뉴얼(4차 피드백 "기본 생성 틀 같다").
+class _PanelTrim extends Control:
+	var col: Color = Color.WHITE
+	func _draw() -> void:
+		var w: float = size.x
+		var h: float = size.y
+		var arm: float = 16.0
+		var th: float = 2.0
+		draw_rect(Rect2(w - arm, 0.0, arm, th), col, true)
+		draw_rect(Rect2(w - th, 0.0, th, arm), col, true)
+		draw_rect(Rect2(w - arm, h - th, arm, th), col, true)
+		draw_rect(Rect2(w - th, h - arm, th, arm), col, true)
 
 func open(lines: Array) -> void:
 	_lines = lines.duplicate()
@@ -76,6 +97,21 @@ func _ready() -> void:
 	_holder.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_holder)
+	# 쇼케이스 — 상단 레터박스 바로 아래 중앙. 딤 위 레이어라 정지 화면보다 밝게 선다.
+	if showcase != null:
+		showcase.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var sc_wrap := CenterContainer.new()
+		sc_wrap.set_anchors_preset(Control.PRESET_TOP_WIDE)
+		sc_wrap.offset_top = 84.0
+		sc_wrap.offset_bottom = 196.0
+		sc_wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		sc_wrap.add_child(showcase)
+		sc_wrap.modulate.a = 0.0
+		_holder.add_child(sc_wrap)
+		var stw := sc_wrap.create_tween()
+		stw.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+		stw.tween_interval(0.25)
+		stw.tween_property(sc_wrap, "modulate:a", 1.0, 0.35)
 	# 하데스 구도(2026-08-23 사용자 "전혀 하데스스럽지 않다" 반려 반영) — 하단 전폭 대사
 	# 패널 + 그 왼쪽에 큰 초상이 패널 위로 솟는 배치. 줄마다 _build_line이 재구성한다.
 	# 진행 점 + 조작 힌트.
@@ -121,6 +157,17 @@ func _make_bar(top: bool) -> ColorRect:
 		bar.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 		bar.offset_top = 0.0
 	add_child(bar)
+	# 안쪽 가장자리 헤어라인 — 검은 바가 그냥 잘린 화면이 아니라 프레임으로 읽히게(서식 리뉴얼).
+	var edge := ColorRect.new()
+	edge.color = Color(0.45, 0.62, 0.78, 0.30)
+	edge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if top:
+		edge.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+		edge.offset_top = -1.0
+	else:
+		edge.set_anchors_preset(Control.PRESET_TOP_WIDE)
+		edge.offset_bottom = 1.0
+	bar.add_child(edge)
 	var tw := bar.create_tween()
 	tw.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	if top:
@@ -135,26 +182,27 @@ func _build_line(ln: Dictionary) -> void:
 		_row.queue_free()
 	var who: String = str(ln.get("who", "veil"))
 	var sb := StyleBoxFlat.new()
-	sb.set_corner_radius_all(8)
-	sb.content_margin_left = 24.0
-	sb.content_margin_right = 24.0
-	sb.content_margin_top = 12.0
-	sb.content_margin_bottom = 12.0
 	var sp_color: Color
 	var msg_color: Color
 	var speaker: String
 	if who == "rival":
-		sb.bg_color = Color(0.07, 0.02, 0.11, 0.9)
-		sb.border_color = Color(0.55, 0.30, 0.95, 0.85)
-		sb.set_border_width_all(1)
+		sb.bg_color = Color(0.07, 0.02, 0.11, 0.92)
 		sp_color = Color(0.85, 0.50, 1.0)
 		msg_color = Color(0.92, 0.84, 1.0)
 		speaker = "?"
 	else:
-		sb.bg_color = Color(0.03, 0.05, 0.09, 0.9)
+		sb.bg_color = Color(0.03, 0.05, 0.09, 0.92)
 		sp_color = Color(0.42, 0.86, 1.0)
 		msg_color = Color(0.90, 0.96, 1.0)
 		speaker = "VEIL"
+	# 서식 리뉴얼(4차 피드백 "AI 기본 생성 틀 같다") — 둥근 말풍선 대신 전술 콘솔 판:
+	# 모서리를 세우고, 화자색 1px 테두리 + 아래 그림자로 정지 화면에서 판을 띄운다.
+	sb.set_corner_radius_all(3)
+	sb.border_color = Color(sp_color.r, sp_color.g, sp_color.b, 0.55)
+	sb.set_border_width_all(1)
+	sb.shadow_color = Color(0, 0, 0, 0.5)
+	sb.shadow_size = 14
+	sb.shadow_offset = Vector2(0.0, 6.0)
 	# 하데스 구도(레퍼런스 실물 기준) — 왼쪽 대형 초상이 액자 없이 하단에서 솟고(에셋에
 	# 가장자리 페더 알파 베이크), 대사 패널이 초상 하단을 덮으며, 이름표는 패널 윗변에
 	# 걸치는 별도 판. 줄마다 재구성.
@@ -188,6 +236,8 @@ func _build_line(ln: Dictionary) -> void:
 	if who == "rival":
 		var revealed: bool = GameState.rival_kills >= 1 or GameState.rival_phase_reached >= 2
 		p_path = PORTRAIT_RIVAL_EYE if revealed else PORTRAIT_RIVAL_HIDDEN
+		if str(ln.get("portrait", "")) == "hidden":
+			p_path = PORTRAIT_RIVAL_HIDDEN   # 실체 없는 무전 비트 — 공개 게이트보다 우선
 	p_tex.texture = load(p_path)
 	p_tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	p_tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
@@ -202,7 +252,6 @@ func _build_line(ln: Dictionary) -> void:
 	sb.content_margin_right = 34.0
 	sb.content_margin_top = 22.0
 	sb.content_margin_bottom = 18.0
-	sb.set_corner_radius_all(12)
 	panel.add_theme_stylebox_override("panel", sb)
 	panel.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	panel.offset_left = 230.0
@@ -210,6 +259,26 @@ func _build_line(ln: Dictionary) -> void:
 	panel.offset_top = -208.0
 	panel.offset_bottom = -64.0
 	_row.add_child(panel)
+	# 윗변 림 — 초상 오른쪽부터 패널 오른끝까지 화자색 라인(이름표가 걸터앉는 레일).
+	var rim := ColorRect.new()
+	rim.color = Color(sp_color.r, sp_color.g, sp_color.b, 0.8)
+	rim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rim.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	rim.offset_left = 476.0
+	rim.offset_right = -138.0
+	rim.offset_top = -209.0
+	rim.offset_bottom = -207.0
+	_row.add_child(rim)
+	# 모서리 브래킷 — 패널보다 6px 바깥에 화자색 ㄱ자 틱.
+	var trim := _PanelTrim.new()
+	trim.col = Color(sp_color.r, sp_color.g, sp_color.b, 0.75)
+	trim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	trim.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	trim.offset_left = 224.0
+	trim.offset_right = -124.0
+	trim.offset_top = -214.0
+	trim.offset_bottom = -58.0
+	_row.add_child(trim)
 	_msg_label = Label.new()
 	_msg_label.text = str(ln.get("text", ""))
 	_msg_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -220,24 +289,28 @@ func _build_line(ln: Dictionary) -> void:
 	_msg_label.add_theme_constant_override("outline_size", 4)
 	_msg_label.visible_characters = 0
 	panel.add_child(_msg_label)
-	# 이름표 — 패널 윗변에 걸치는 작은 판(하데스 명판 자리: 초상 오른쪽 어깨 높이).
+	# 이름표 — 패널 윗변 림에 걸터앉는 기운 판(하데스 명판 자리: 초상 오른쪽 어깨 높이).
+	# 서식 리뉴얼: 사각 칩 대신 평행사변형(skew) + 화자색 테두리 — 콘솔 탭 문법.
 	var plate := PanelContainer.new()
 	var pl_sb := StyleBoxFlat.new()
 	if who == "rival":
 		pl_sb.bg_color = Color(0.10, 0.04, 0.16, 0.97)
 	else:
 		pl_sb.bg_color = Color(0.04, 0.07, 0.12, 0.97)
-	pl_sb.border_color = Color(sp_color.r, sp_color.g, sp_color.b, 0.85)
+	pl_sb.border_color = Color(sp_color.r, sp_color.g, sp_color.b, 0.9)
 	pl_sb.set_border_width_all(1)
-	pl_sb.set_corner_radius_all(6)
-	pl_sb.content_margin_left = 18.0
-	pl_sb.content_margin_right = 18.0
+	pl_sb.set_corner_radius_all(3)
+	pl_sb.skew = Vector2(0.18, 0.0)
+	pl_sb.shadow_color = Color(0, 0, 0, 0.4)
+	pl_sb.shadow_size = 6
+	pl_sb.content_margin_left = 20.0
+	pl_sb.content_margin_right = 20.0
 	pl_sb.content_margin_top = 5.0
 	pl_sb.content_margin_bottom = 5.0
 	plate.add_theme_stylebox_override("panel", pl_sb)
 	plate.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	plate.offset_left = 486.0
-	plate.offset_right = 566.0
+	plate.offset_right = 586.0
 	plate.offset_top = -226.0
 	plate.offset_bottom = -192.0
 	var name_l := Label.new()

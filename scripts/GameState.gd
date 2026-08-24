@@ -794,9 +794,10 @@ func add_skill(id: String) -> void:
 	match id:
 		"hp":
 			# T1: max_hp +1, T2: 추가 +1 (총 +2), T3: max_hp 변화 없음 (슬로모만)
+			# 즉시 회복 상한은 effective_max_hp — 잠금 활성 중 잠긴 칸 너머로 차지 않게.
 			if new_tier == 1 or new_tier == 2:
 				player_max_hp += 1
-				player_hp = min(player_hp + 1, player_max_hp)
+				player_hp = min(player_hp + 1, effective_max_hp())
 	emit_signal("skills_changed")
 
 func damage_player(amount: int) -> void:
@@ -935,12 +936,14 @@ func displayed_total_stages() -> int:
 # 만렙 이후 레벨업 보상 지급 — LevelUpOverlay 오버플로 카드에서 호출. 반환: 지급 종류("hp"|"heal"|"score").
 # 우선순위: 최대 체력(상한까지) → 응급 처치(회복 여지 있으면) → 점수(가득일 때만 폴백).
 func grant_overflow_reward() -> String:
+	# 상한은 항상 effective_max_hp(잠금 반영) — player_max_hp를 쓰면 잠금 활성 중
+	# 잠긴 칸 너머로 채우거나(hp), 채울 수 없는데 회복을 지급했다고 알리는(heal) 오보가 난다.
 	if overflow_hp_bonus < OVERFLOW_HP_CAP:
 		overflow_hp_bonus += 1
 		player_max_hp += 1
-		player_hp = min(player_hp + 1, player_max_hp)
+		player_hp = min(player_hp + 1, effective_max_hp())
 		return "hp"
-	if player_hp < player_max_hp:
+	if player_hp < effective_max_hp():
 		heal_player(OVERFLOW_HEAL_AMOUNT)
 		return "heal"
 	score += OVERFLOW_SCORE_BONUS

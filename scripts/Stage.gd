@@ -16,40 +16,69 @@ var player: CharacterBody2D
 var camera: Camera2D
 var hud: CanvasLayer
 var hp_label: Label
-var hp_lock_hearts: Control = null   # 라이벌 잠금 하트(보라 자물쇠) — hp_label 바로 오른쪽
+var hp_hearts: Control = null   # HP 하트 줄(채움·빈·잠금 통합 드로우) — hp_label 바로 오른쪽
 
-# 라이벌 잠금 하트 — 빈 보라 하트 윤곽 안에 자물쇠를 그린다.
-# 2차 피드백: 차있는 "♥" 글리프는 여분 HP가 생긴 걸로 오인됨 + 하트보다 커야 함.
-class LockHearts extends Control:
-	const COL: Color = Color(0.72, 0.42, 1.0)
-	const STEP: float = 32.0
-	var count: int = 0:
-		set(v):
-			count = maxi(0, v)
-			custom_minimum_size = Vector2(STEP * count, 30.0)
-			visible = count > 0
+# HP 하트 줄 — 채움/빈/잠금 하트를 전부 같은 윤곽·크기로 그린다.
+# 4차 피드백 "잠금 하트만 모양·크기가 달라 이상함" → ♥ 글리프 표기를 폐지하고 한 드로우로 통일.
+# 잠금 컷씬 쇼케이스도 같은 클래스를 draw_scale만 키워 재사용(하트 실물이 화면 기준으로 일치).
+class HeartRow extends Control:
+	const LOCK_COL: Color = Color(0.72, 0.42, 1.0)
+	const FULL_COL: Color = Color(0.93, 0.93, 0.96)
+	const EMPTY_COL: Color = Color(0.60, 0.64, 0.70, 0.95)
+	const BASE_STEP: float = 32.0
+	const BASE_SCALE: float = 0.82
+	var hp: int = 0
+	var max_hp: int = 0
+	var locks: int = 0
+	var draw_scale: float = BASE_SCALE
+	var pulse_locks: bool = false   # 잠금 컷씬 쇼케이스 — 잠긴 하트가 맥동(새로 뺏긴 칸 지시)
+	var _pulse_t: float = 0.0
+	func set_state(p_hp: int, p_max: int, p_locks: int) -> void:
+		hp = maxi(0, p_hp)
+		max_hp = maxi(0, p_max)
+		locks = maxi(0, p_locks)
+		var k: float = draw_scale / BASE_SCALE
+		custom_minimum_size = Vector2(BASE_STEP * k * float(max_hp + locks), 30.0 * k)
+		queue_redraw()
+	func _process(delta: float) -> void:
+		if pulse_locks:
+			_pulse_t += delta
 			queue_redraw()
+	static func heart_points(c: Vector2, s: float) -> PackedVector2Array:
+		var pts := PackedVector2Array()
+		for k in 41:
+			var t: float = TAU * float(k) / 40.0
+			var hx: float = 16.0 * pow(sin(t), 3.0)
+			var hy: float = -(13.0 * cos(t) - 5.0 * cos(2.0 * t) - 2.0 * cos(3.0 * t) - cos(4.0 * t))
+			pts.append(c + Vector2(hx, hy) * s)
+		return pts
 	func _draw() -> void:
+		var k: float = draw_scale / BASE_SCALE
+		var step: float = BASE_STEP * k
 		var cy: float = size.y * 0.5
-		for i in count:
-			var c := Vector2(STEP * float(i) + STEP * 0.5, cy)
-			var pts := PackedVector2Array()
-			for k in 41:
-				var t: float = TAU * float(k) / 40.0
-				var hx: float = 16.0 * pow(sin(t), 3.0)
-				var hy: float = -(13.0 * cos(t) - 5.0 * cos(2.0 * t) - 2.0 * cos(3.0 * t) - cos(4.0 * t))
-				pts.append(c + Vector2(hx, hy) * 0.82)
-			draw_polyline(pts, Color(0, 0, 0, 0.7), 4.5, true)   # 검정 테두리(밝은 배경 가독)
-			draw_polyline(pts, COL, 2.2, true)
-			# 자물쇠 — 3차 피드백 "자물쇠로 안 읽힘" 재작업: 밝은 몸통 + 굵은 고리 +
-			# 어두운 열쇠 구멍(원+홈)으로 아이콘 문법을 그대로.
-			var lc := c + Vector2(0.0, 0.5)
-			var bright := Color(0.88, 0.76, 1.0)
+		for i in max_hp + locks:
+			var c := Vector2(step * (float(i) + 0.5), cy)
+			var pts := heart_points(c, draw_scale)
+			if i < max_hp:
+				draw_polyline(pts, Color(0, 0, 0, 0.7), 4.5 * k, true)   # 검정 테두리(밝은 배경 가독)
+				if i < hp:
+					draw_colored_polygon(pts, FULL_COL)
+				else:
+					draw_polyline(pts, EMPTY_COL, 2.2 * k, true)
+				continue
+			# 잠금 하트 — 같은 윤곽, 보라 선 + 자물쇠(밝은 몸통·굵은 고리·어두운 열쇠 구멍).
+			var lock_col: Color = LOCK_COL
+			if pulse_locks:
+				lock_col.a = 0.62 + 0.38 * (0.5 + 0.5 * sin(_pulse_t * 5.2))
+			draw_polyline(pts, Color(0, 0, 0, 0.7), 4.5 * k, true)
+			draw_polyline(pts, lock_col, 2.2 * k, true)
+			var lc := c + Vector2(0.0, 0.5 * k)
+			var bright := Color(0.88, 0.76, 1.0, lock_col.a)
 			var dark := Color(0.12, 0.06, 0.20)
-			draw_arc(lc + Vector2(0.0, -4.2), 4.2, PI, TAU, 14, bright, 2.6, true)   # 고리
-			draw_rect(Rect2(lc + Vector2(-5.6, -4.2), Vector2(11.2, 9.0)), bright, true)   # 몸통
-			draw_circle(lc + Vector2(0.0, -1.2), 1.8, dark)                          # 열쇠 구멍
-			draw_rect(Rect2(lc + Vector2(-0.9, -1.2), Vector2(1.8, 4.2)), dark, true)  # 구멍 홈
+			draw_arc(lc + Vector2(0.0, -4.2 * k), 4.2 * k, PI, TAU, 14, bright, 2.6 * k, true)   # 고리
+			draw_rect(Rect2(lc + Vector2(-5.6, -4.2) * k, Vector2(11.2, 9.0) * k), bright, true)   # 몸통
+			draw_circle(lc + Vector2(0.0, -1.2 * k), 1.8 * k, dark)                          # 열쇠 구멍
+			draw_rect(Rect2(lc + Vector2(-0.9, -1.2) * k, Vector2(1.8, 4.2) * k), dark, true)  # 구멍 홈
 var xp_label: Label
 var xp_bar: ProgressBar   # 레벨업 EXP 진행 바 (피드백: 텍스트보다 바가 한눈에)
 var stage_label: Label
@@ -90,9 +119,17 @@ func _ready() -> void:
 	# 안전망: 이전 scene에서 paused=true 상태가 carry되어 새 stage가 freeze되는 패턴 차단
 	# (LevelUpOverlay/도전방 fail 등에서 paused 해제 누락 시 빈 화면).
 	get_tree().paused = false
-	# 방 체인 중간 방(세그먼트 1+)은 HP 유지 · 체인은 한 스테이지다. 진입 풀 힐은 첫 방만.
+	# 진입 회복 = 막 단위(2026-08-24 회복 보상 구조 개편 — 4차 피드백 "회복 보상이 필요 없다"의
+	# 근본 원인이 매 스테이지 풀 힐이었다). 막 첫 스테이지(사망 복귀 포함)에서만 가득 채우고,
+	# 막 안에서는 체력이 스테이지를 넘어 이월된다 — 회복(record) 루트·바닥 회복 픽업이 실보상이 된다.
+	# 스토리 모드·연습장은 종전대로 항상 가득(서사/실험 공간에 압력을 주지 않는다).
+	# 방 체인 중간 방(세그먼트 1+)은 어느 규칙에서든 HP 유지 · 체인은 한 스테이지다.
 	if GameState.current_segment == 0:
-		GameState.player_hp = GameState.effective_max_hp()
+		if GameState.story_mode or GameState.playground_active or GameState.is_act_start(GameState.current_stage):
+			GameState.player_hp = GameState.effective_max_hp()
+		else:
+			# 막 중간 이월 — 잠금 활성 등으로 실효 최대가 줄었을 때를 대비한 클램프만.
+			GameState.player_hp = mini(GameState.player_hp, GameState.effective_max_hp())
 	# BGM — 맵별 트랙 선택. ??? 방은 Gravity Static, 보스 맵은 Chrome Grit,
 	# 그 외에는 stage_index 기반으로 Cold Gear(초중반)/Cold Wire(중후반) 분기.
 	# Death 화면에서 set_ducked(true)였다면 stage 재진입에서 원복.
@@ -1209,17 +1246,22 @@ func _purge_subtitles() -> void:
 # 컷씬 대사(2026-08-23 사용자: "스토리용 대사는 온전히 집중할 환경") — 세계 일시정지 +
 # 한 줄씩 진행 + 건너뛰기. 구조/스토리 비트 전용(전투 중 콜아웃·조언은 기존 자막 유지).
 # lines = [{who: "rival"/"veil", text}]. 이미 컷씬이 떠 있으면 그 뒤에 줄을 잇는다(중복 정지 방지).
-func _play_story_dialogue(lines: Array, on_done: Callable = Callable()) -> void:
+func _play_story_dialogue(lines: Array, on_done: Callable = Callable(), showcase: Control = null) -> void:
 	if not is_inside_tree():
+		if showcase != null:
+			showcase.queue_free()
 		return
 	if StoryDialogue.active != null and is_instance_valid(StoryDialogue.active):
 		StoryDialogue.active.append_lines(lines)
 		if on_done.is_valid():
 			StoryDialogue.active.finished.connect(on_done, CONNECT_ONE_SHOT)
+		if showcase != null:
+			showcase.queue_free()   # 이미 열린 컷씬에 합류 — 쇼케이스는 첫 개설자만
 		return
 	_purge_subtitles()   # 떠 있던 전투 자막이 컷씬 위에 겹치지 않게
 	var dlg := StoryDialogue.new()
 	dlg.open(lines)
+	dlg.showcase = showcase
 	if on_done.is_valid():
 		dlg.finished.connect(on_done, CONNECT_ONE_SHOT)
 	add_child(dlg)
@@ -5829,22 +5871,31 @@ func _play_rival_lock_beat(act_num: int, tries_left: int = 24) -> void:
 		hp_label.add_theme_color_override("font_color", Color(0.72, 0.42, 1.0))
 		get_tree().create_timer(2.6, false).timeout.connect(_reset_hp_label_color)
 	_refresh_hud()
+	# 하트 쇼케이스 — 컷씬은 HUD를 레터박스·딤으로 가리므로, 대사가 가리키는 하트 실물을
+	# 컷씬 화면 안에 크게 띄운다(4차 피드백 "보라색 하트 문구가 이미지에 안 보임").
+	# 잠긴 하트만 맥동해 "새로 뺏긴 칸"을 지시한다. HUD와 같은 HeartRow 드로우 = 표기 일치.
+	var showcase := HeartRow.new()
+	showcase.draw_scale = 1.9
+	showcase.pulse_locks = true
+	showcase.call("set_state", GameState.player_hp, GameState.effective_max_hp(), GameState.rival_locks_active())
+	# 라이벌 초상은 은닉판 고정 — 이 비트의 라이벌은 실체 없는 무전 목소리다(정체 공개는 14-1).
+	# 다회차(공개 게이트 통과) 런에서 거대 눈이 뜨던 것도 함께 막는다(4차 피드백 "징그럽다").
 	if act_num == 4:
 		# EN: "One of those hearts is mine now. You always had more than you needed." /
 		#     "A slot of your max health is locked. The violet heart with the padlock,
 		#      right next to yours, is that slot. Healing will not fill it.
 		#      The one key to take it back: the owner of that voice."
 		_play_story_dialogue([
-			{"who": "rival", "text": "체력 한 칸은 제가 잠급니다. 요원은 늘 여분이 많았으니까요."},
+			{"who": "rival", "portrait": "hidden", "text": "체력 한 칸은 제가 잠급니다. 요원은 늘 여분이 많았으니까요."},
 			{"who": "veil", "text": "최대 체력 한 칸이 잠겼습니다. 하트 옆, 자물쇠가 걸린 보라색 하트가 그 칸입니다.\n회복으로도 안 찹니다. 되찾을 열쇠는 하나, 저 목소리의 주인입니다."},
-		])
+		], Callable(), showcase)
 	else:
 		# EN: "One more is mine. Spend what is left carefully in my zone." /
 		#     "Another slot is locked. The hearts you see now are all you have."
 		_play_story_dialogue([
-			{"who": "rival", "text": "한 칸 더 가져갑니다. 제 구역에서는 아껴 쓰셔야죠."},
+			{"who": "rival", "portrait": "hidden", "text": "한 칸 더 가져갑니다. 제 구역에서는 아껴 쓰셔야죠."},
 			{"who": "veil", "text": "한 칸 더 잠겼습니다. 지금 보이는 하트가 전부입니다."},
-		])
+		], Callable(), showcase)
 
 # 플레이어 주변에 살아 있는 적이 있는가 — 각본 발화의 "조용한 창" 판정.
 # (known_issues 준수: is_instance_valid 선행 · harmless는 truthiness로 — bool(null) 금지.)
@@ -5917,14 +5968,14 @@ func _build_hud() -> void:
 		l.add_theme_constant_override("outline_size", 4)
 	hb.add_child(stage_label)
 	hb.add_child(map_label)
-	# HP 하트 + 잠금 하트를 한 묶음으로 — 떨어져 있으면 별개 하트가 하나 더 생긴 걸로
-	# 오인된다(2차 피드백). 자물쇠 하트는 커스텀 드로우(LockHearts).
+	# HP 라벨 + 하트 줄을 한 묶음으로 — 채움·빈·잠금 하트가 전부 HeartRow 한 드로우라
+	# 모양·크기가 항상 같다(4차 피드백: 잠금 하트만 달라 보이는 문제의 근본 해소).
 	var hp_row := HBoxContainer.new()
 	hp_row.add_theme_constant_override("separation", 8)
 	hb.add_child(hp_row)
 	hp_row.add_child(hp_label)
-	hp_lock_hearts = LockHearts.new()
-	hp_row.add_child(hp_lock_hearts)
+	hp_hearts = HeartRow.new()
+	hp_row.add_child(hp_hearts)
 	hb.add_child(xp_label)
 	hb.add_child(trust_label)
 	skill_label.add_theme_font_size_override("font_size", 17)
@@ -6070,9 +6121,9 @@ func _update_cd_slot(slot: Control, remaining: float, max_cd: float) -> void:
 
 func _refresh_hud() -> void:
 	# 하트 = 실효 최대(잠금 반영) + 잠긴 칸 = 바로 옆 자물쇠 걸린 보라 하트(빼앗김은 사라지지 않고 보인다).
-	hp_label.text = "HP  %s" % _hearts(GameState.player_hp, GameState.effective_max_hp())
-	if hp_lock_hearts != null and is_instance_valid(hp_lock_hearts):
-		hp_lock_hearts.set("count", GameState.rival_locks_active())
+	hp_label.text = "HP"
+	if hp_hearts != null and is_instance_valid(hp_hearts):
+		hp_hearts.call("set_state", GameState.player_hp, GameState.effective_max_hp(), GameState.rival_locks_active())
 	xp_label.text = "LV %d   XP %d/%d" % [GameState.player_level, GameState.player_xp, GameState.xp_to_next()]
 	if score_label != null and is_instance_valid(score_label):
 		score_label.text = "SCORE %d" % GameState.score
@@ -6263,12 +6314,6 @@ func _update_skill_charges() -> void:
 		else:
 			# 충전 중(비활성)
 			dot.color = Color(0.30, 0.32, 0.36)
-
-func _hearts(hp: int, max_hp: int) -> String:
-	var s: String = ""
-	for i in max_hp:
-		s += "♥" if i < hp else "♡"
-	return s
 
 func _spawn_enemies() -> void:
 	# 보스 모드 (lab 등): boss 필드가 있으면 보스만 spawn (일반 적 + 웨이브 무시).

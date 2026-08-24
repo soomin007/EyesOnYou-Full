@@ -123,7 +123,23 @@ func _shot(d: Dictionary) -> void:
 			var doc_p := ArcturusDocumentOverlay.new()
 			stage.add_child(doc_p)
 			doc_p.show_doc(stage.call("_arcturus_document_lines"))
-			for i in 1050:
+			# 타이핑을 사용자 스킵과 같은 경로로 강제 완료 — 완료 전엔 _update_scroll_target이
+			# 스크롤을 계속 덮어써 되감기가 무효가 된다(1050프레임 고정 대기는 문서가 길면 미완).
+			for i in 900:
+				if bool(doc_p.get("reading_done")):
+					break
+				if bool(doc_p.get("started")) and bool(doc_p.get("typing")):
+					var lbls: Array = doc_p.get("labels")
+					var cl: int = int(doc_p.get("current_line"))
+					if cl < lbls.size():
+						(lbls[cl] as RichTextLabel).visible_characters = -1
+						doc_p.set("revealed", (lbls[cl] as RichTextLabel).get_total_character_count())
+					doc_p.set("typing", false)
+					doc_p.set("pause_after_line", 0.0)
+				await get_tree().process_frame
+			# 종이 머리(레터헤드·스탬프)가 카드의 검증 대상 — 끝까지 읽혀 내려간 종이를 되감는다.
+			doc_p.call("_scroll_paper", 99999.0)
+			for i in 90:
 				await get_tree().process_frame
 		"doc_drive":
 			var doc_d := ArcturusDocumentOverlay.new()
