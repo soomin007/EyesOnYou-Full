@@ -612,7 +612,7 @@ static func _cooling_exhaust() -> Dictionary:
 		"ambience":     "cooling_exhaust",
 		"indoor_env":   "water",
 		# 레버 y = 발판 top(440) - 22(레버 받침 바닥 오프셋) — 공중 부양 금지(사용자 2026-08-18).
-		"mid_gate": {"x": 2840.0, "mode": "lever", "lever": Vector2(2560.0, 418.0)},
+		"mid_gate": {"x": 2840.0, "mode": "lever", "lever": Vector2(2560.0, 418.0), "own_hint": true},
 		"platforms": [
 			{"pos": Vector2(620, 460),  "w": 180.0},
 			{"pos": Vector2(1150, 440), "w": 180.0},
@@ -1659,7 +1659,7 @@ static func _substation_control() -> Dictionary:
 		"camera_mode":  "HORIZONTAL",
 		"ambience":     "substation_control",
 		"indoor_env":   "electrical",
-		"mid_gate": {"x": 2440.0, "mode": "lever", "lever": Vector2(2140.0, 418.0)},
+		"mid_gate": {"x": 2440.0, "mode": "lever", "lever": Vector2(2140.0, 418.0), "own_hint": true},
 		"platforms": [
 			{"pos": Vector2(620, 460),  "w": 180.0},
 			{"pos": Vector2(1150, 450), "w": 170.0},
@@ -2021,7 +2021,7 @@ static func _relay_mast() -> Dictionary:
 		"ambience":     "relay_mast",
 		"indoor_env":   "electrical",
 		"interference": {"period": 7.0, "blur": 2.8, "lever_stops": true},
-		"mid_gate": {"x": 2620.0, "mode": "lever", "lever": Vector2(2340.0, 418.0)},
+		"mid_gate": {"x": 2620.0, "mode": "lever", "lever": Vector2(2340.0, 418.0), "own_hint": true},
 		"platforms": [
 			{"pos": Vector2(600, 470),  "w": 180.0},
 			{"pos": Vector2(1500, 440), "w": 200.0},
@@ -2161,7 +2161,7 @@ static func _warehouse_shipping() -> Dictionary:
 		"goal_pos":     Vector2(3080.0, 540.0),
 		"camera_mode":  "HORIZONTAL",
 		"ambience":     "warehouse_shipping",
-		"mid_gate": {"x": 2950.0, "mode": "clear", "zone": [2300.0, 2900.0]},
+		"mid_gate": {"x": 2950.0, "mode": "clear", "zone": [2300.0, 2900.0], "own_hint": true},
 		"platforms": [
 			{"pos": Vector2(700, 460),  "w": 200.0},
 			{"pos": Vector2(1300, 440), "w": 160.0},
@@ -2189,7 +2189,9 @@ static func _warehouse_shipping() -> Dictionary:
 			{"x1": 1800.0, "x2": 2500.0, "dir": -1, "speed": 130.0},
 		],
 		"route_lines": [
-			{"x": 1250.0, "who": "veil", "text": "출하 게이트 앞에 검수 인원이 몰려 있습니다. 정리해야 문이 열립니다.", "dur": 3.5},
+			# own_hint로 공통 게이트 힌트를 껐으므로, 거기에만 있던 "노란 선" 시각 안내를 이 줄이 흡수.
+			# "검수 인원" → "경비": 구역 라벨("남은 경비 N")과 호칭 통일(무맥락 검수 FAIL① 수정, 2026-08-24).
+			{"x": 1250.0, "who": "veil", "text": "출하 게이트 앞에 경비가 몰려 있습니다. 바닥 노란 선 안쪽 인원만 정리하면 문이 열립니다.", "dur": 3.6},
 		],
 	}
 
@@ -2357,7 +2359,7 @@ static func _control_checkgate() -> Dictionary:
 		"camera_mode":  "HORIZONTAL",
 		"ambience":     "control_checkgate",
 		"indoor_env":   "interior",
-		"mid_gate": {"x": 2560.0, "mode": "clear", "zone": [2000.0, 2500.0]},
+		"mid_gate": {"x": 2560.0, "mode": "clear", "zone": [2000.0, 2500.0], "own_hint": true},
 		"platforms": [
 			{"pos": Vector2(700, 470),  "w": 200.0},
 			{"pos": Vector2(1400, 460), "w": 180.0},
@@ -2548,7 +2550,7 @@ static func _condenser_basin() -> Dictionary:
 		"indoor_env":   "water",
 		"no_spike_fallback": true,
 		# 레버 y = 발판 top(440) - 22 · Δ160(더블점프 직행) · 상공 드론 초기 배치 금지 규칙 준수.
-		"mid_gate": {"x": 2700.0, "mode": "lever", "lever": Vector2(2380.0, 418.0)},
+		"mid_gate": {"x": 2700.0, "mode": "lever", "lever": Vector2(2380.0, 418.0), "own_hint": true},
 		"platforms": [
 			{"pos": Vector2(600, 460),  "w": 180.0},
 			{"pos": Vector2(1150, 440), "w": 160.0},
@@ -2711,8 +2713,10 @@ static func _gauntlet_main() -> Dictionary:
 		"traps": [
 			{"x": 1060, "y": 458.0, "dir": "down", "interval": 1.7, "phase": 0.0},
 			{"x": 2060, "y": 458.0, "dir": "down", "interval": 1.7, "phase": 0.5},
+			# 상향 쌍(gt1)은 발판 2060(스팬 1970~2150)을 좌우에서 포위 — 구 2000은 발판 정하방이라
+			# 탄이 122px 만에 슬래브에 먹혔다(트랩 스윕 2026-08-24, 발판이 탄 먹는 배치 금지).
 			{"x": 1820, "y": 588.0, "dir": "up", "mode": "triggered", "trigger_id": "gt1", "burst": 3},
-			{"x": 2000, "y": 588.0, "dir": "up", "mode": "triggered", "trigger_id": "gt1", "burst": 3},
+			{"x": 2180, "y": 588.0, "dir": "up", "mode": "triggered", "trigger_id": "gt1", "burst": 3},
 		],
 		"tripwires": [
 			{"x": 1620, "y": 540.0, "dir": "up", "len": 200.0, "trigger_id": "gt1", "cooldown": 2.6},
@@ -2733,7 +2737,7 @@ static func _gauntlet_grid() -> Dictionary:
 		"indoor_env":   "interior",
 		"no_spike_fallback": true,
 		# 레버 y = 발판 top(440) - 22 · Δ160 · 상공 드론 없음(규칙 준수).
-		"mid_gate": {"x": 2600.0, "mode": "lever", "lever": Vector2(2300.0, 418.0)},
+		"mid_gate": {"x": 2600.0, "mode": "lever", "lever": Vector2(2300.0, 418.0), "own_hint": true},
 		"platforms": [
 			{"pos": Vector2(560, 460),  "w": 180.0},
 			{"pos": Vector2(1150, 440), "w": 170.0},
@@ -2745,8 +2749,10 @@ static func _gauntlet_grid() -> Dictionary:
 			{"x": 1750, "y": 478.0, "dir": "down", "interval": 1.6, "phase": 0.33},
 			# 레버 발판 위 하향 포탑 — 당기기 = 발사 틈 읽기(절정). telegraph 기본 0.5 유지.
 			{"x": 2300, "y": 458.0, "dir": "down", "interval": 1.7, "phase": 0.66},
+			# 상향 쌍(gg1)은 발판 1150(스팬 1065~1235)을 좌우에서 포위 — 구 1150은 발판 정하방이라
+			# 탄이 122px 만에 슬래브에 먹혔다(트랩 스윕 2026-08-24, 발판이 탄 먹는 배치 금지).
 			{"x": 1000, "y": 588.0, "dir": "up", "mode": "triggered", "trigger_id": "gg1", "burst": 3},
-			{"x": 1150, "y": 588.0, "dir": "up", "mode": "triggered", "trigger_id": "gg1", "burst": 3},
+			{"x": 1300, "y": 588.0, "dir": "up", "mode": "triggered", "trigger_id": "gg1", "burst": 3},
 			{"x": 2050, "y": 588.0, "dir": "up", "mode": "triggered", "trigger_id": "gg2", "burst": 3},
 			{"x": 2200, "y": 588.0, "dir": "up", "mode": "triggered", "trigger_id": "gg2", "burst": 3},
 		],

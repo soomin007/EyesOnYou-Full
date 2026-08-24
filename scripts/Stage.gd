@@ -3665,6 +3665,11 @@ func _build_mid_gate() -> void:
 		return
 	_mid_gate_mode = str(g.get("mode", "lever"))
 	_mid_gate_x = float(g.get("x", 0.0))
+	# own_hint: 맵 전용 route_lines가 게이트 안내를 이미 하는 맵은 공통 접근 힌트를 끈다 —
+	# 같은 문을 두 문구가 연달아(호칭까지 다르게) 안내하던 중복 제거(2026-08-24 사용자 지적,
+	# 관문 맵 10곳 중 7곳 해당). 공통 힌트는 전용 라인 없는 맵의 안전망으로만 남는다.
+	if bool(g.get("own_hint", false)):
+		_mid_gate_hint_shown = true
 	var gate_h: float = 480.0
 	var top_y: float = GROUND_Y - gate_h
 	_mid_gate_body = StaticBody2D.new()
