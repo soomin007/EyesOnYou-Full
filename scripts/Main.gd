@@ -1,10 +1,10 @@
 extends Node
 
 func _ready() -> void:
-	# 저장된 키설정을 먼저 적용한 뒤, 핵심 마우스(좌=사격/우=스킬)·WASD-UI 기본을 보강한다.
+	# 저장 설정 로드는 GameState._ready(autoload — 메인 씬 _ready보다 먼저 실행)가 담당한다
+	# (2026-08-24 이동: 하니스/F6 직부팅이 로드 없이 저장해 실데이터를 덮는 사고 차단).
 	# 순서 중요: load_settings가 attack 이벤트를 cfg값으로 덮어쓰므로(erase+reload), 마우스 보강은
-	# 그 뒤에 둬야 한다. 안 그러면 cfg에 마우스 좌클릭이 빠진 경우 좌클릭 사격이 사라진다(사용자 보고 버그).
-	GameState.load_settings()
+	# 그 뒤에 둬야 한다 — autoload가 항상 먼저 돌므로 여기서 보강하면 순서가 보장된다.
 	_bind_default_mouse_inputs()
 	_bind_wasd_to_ui()
 	_bind_pause_fallback()

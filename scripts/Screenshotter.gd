@@ -20,6 +20,7 @@ const TARGETS: Array = [
 ]
 
 func _ready() -> void:
+	GameState.persist_blocked = true   # 실사용자 저장 파일 보호(2026-08-24) — 하니스 공통
 	DirAccess.make_dir_recursive_absolute(OUT_DIR)
 	_run.call_deferred()
 

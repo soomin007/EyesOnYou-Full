@@ -72,13 +72,14 @@ func _ready() -> void:
 		Time.get_datetime_string_from_system(), ending_id, GameState.run_time_text(),
 		GameState.hits_taken, GameState.kills_total, GameState.score, GameState.death_count,
 		" / ".join(GameState.stage_time_log)]
-	var fa: FileAccess = FileAccess.open("user://run_history.log", FileAccess.READ_WRITE)
-	if fa == null:
-		fa = FileAccess.open("user://run_history.log", FileAccess.WRITE)
-	if fa != null:
-		fa.seek_end(0)
-		fa.store_string(run_line)
-		fa.close()
+	if not GameState.persist_blocked:   # QA 하니스 실행은 실플레이 기록에 섞지 않는다
+		var fa: FileAccess = FileAccess.open("user://run_history.log", FileAccess.READ_WRITE)
+		if fa == null:
+			fa = FileAccess.open("user://run_history.log", FileAccess.WRITE)
+		if fa != null:
+			fa.seek_end(0)
+			fa.store_string(run_line)
+			fa.close()
 	# ??? 방 방문(hidden_visit_count > 0) 또는 ARCTURUS 아카이브 읽음(visited_arcturus) 시
 	# 라이브 lore 라인을 보여주고, 미방문 시엔 짧고 호기심 hint 라인.
 	var explored_lore: bool = GameState.hidden_visit_count > 0 or GameState.visited_arcturus

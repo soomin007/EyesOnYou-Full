@@ -29,6 +29,10 @@ const RUN_PATH: String = "user://run.cfg"
 const RUN_VERSION: int = 4  # 4: 5막 재구조화(15스테이지 / 엔드게임 막5 이주) — 구 run.cfg(v3, 9스테이지) 무효화
 # 기록 재진입(팔림프세스트) 스냅샷 — 완주 런의 막 경계 상태(act0~4 확정 + pending_actN 대기).
 const PALIMPSEST_PATH: String = "user://palimpsest.cfg"
+# QA 하니스(VerifyShots·BotRunner 등 도구 씬 직부팅)가 _ready에서 켠다 — user:// 저장 4종
+# (settings/run/palimpsest/playstyle)과 run.cfg 삭제를 전면 차단해, 스테이징된 상태가
+# 실사용자 저장 파일을 덮는 오염을 막는다(2026-08-24, "에디터마다 설정 리셋" 원인).
+var persist_blocked: bool = false
 # 플레이 피드백 설문(구글 폼). 타이틀·크레딧 끝 메뉴의 "피드백 보내기"가 연다.
 const FEEDBACK_URL: String = "https://forms.gle/byS8EABJitB9r6z88"
 const KEYBIND_ACTIONS: Array[String] = ["move_left", "move_right", "jump", "attack", "dash", "skill", "pause"]
@@ -343,6 +347,11 @@ func controls_hint_line() -> String:
 		action_label("skill", "L"), action_label("pause", "ESC")]
 
 func _ready() -> void:
+	# 저장 설정을 진입 경로와 무관하게 가장 먼저 올린다 — F5(main.tscn)든 F6(현재 씬)이든
+	# 도구 씬 직부팅이든. 과거엔 Main._ready만 호출해, main.tscn을 안 거치는 실행이 기본값
+	# 메모리 상태로 save_settings()를 만나 실사용자 settings.cfg를 기본값으로 덮는 사고가
+	# 반복됐다(2026-08-24 확정 · known_issues "하니스가 실저장을 덮는다" 항목).
+	load_settings()
 	# 에디터에서 실행하면 디버그 자동 해제 — 개발 중 매번 "snu" 시퀀스를 칠 필요 없게.
 	# 내보낸 릴리스 빌드(웹 등)는 has_feature("editor")=false라 그대로 잠김(일반 플레이어 노출 방지).
 	if OS.has_feature("editor"):
@@ -1059,6 +1068,8 @@ func _store_run_state(cf: ConfigFile, section: String) -> void:
 	cf.set_value(section, "stage_time_log", stage_time_log)
 
 func save_run() -> void:
+	if persist_blocked:
+		return
 	var cf := ConfigFile.new()
 	cf.set_value("meta", "version", RUN_VERSION)
 	_store_run_state(cf, "run")
@@ -1074,6 +1085,8 @@ func has_run() -> bool:
 	return int(cf.get_value("meta", "version", 0)) == RUN_VERSION
 
 func clear_run() -> void:
+	if persist_blocked:
+		return
 	var d := DirAccess.open("user://")
 	if d != null and d.file_exists("run.cfg"):
 		d.remove("run.cfg")
@@ -1160,7 +1173,7 @@ func act_start_stage(act_idx: int) -> int:
 	return s
 
 func save_act_snapshot() -> void:
-	if story_mode or playground_active:
+	if story_mode or playground_active or persist_blocked:
 		return
 	if not is_act_start(current_stage):
 		return
@@ -1177,6 +1190,8 @@ func save_act_snapshot() -> void:
 # 엔딩 도달 — 이번 런이 지나온 막 경계 pending을 확정 스냅샷으로 승격.
 # 재진입 런은 진입한 막부터의 구간만 덮어쓴다(앞 구간은 이전 완주 기록 유지 = 팔림프세스트).
 func promote_act_snapshots() -> void:
+	if persist_blocked:
+		return
 	var cf := ConfigFile.new()
 	if cf.load(PALIMPSEST_PATH) != OK:
 		return
@@ -1196,6 +1211,8 @@ func promote_act_snapshots() -> void:
 # 완주 못 한 런의 잔여 pending 폐기 — 새 런 시작(start_main_game)·재진입 시작에서 호출.
 # (이어하기는 같은 런의 연속이라 pending을 보존한다.)
 func clear_pending_snapshots() -> void:
+	if persist_blocked:
+		return
 	var cf := ConfigFile.new()
 	if cf.load(PALIMPSEST_PATH) != OK:
 		return
@@ -1347,6 +1364,8 @@ func load_settings() -> void:
 				InputMap.action_add_event(action, ev4)
 
 func save_settings() -> void:
+	if persist_blocked:
+		return
 	var cf := ConfigFile.new()
 	cf.set_value("meta", "version", SETTINGS_VERSION)
 	cf.set_value("flags", "tutorial_done", tutorial_done)
@@ -1482,6 +1501,8 @@ func get_playstyle() -> Dictionary:
 	return _playstyle
 
 func _save_playstyle() -> void:
+	if persist_blocked:
+		return
 	var cf := ConfigFile.new()
 	for k in _playstyle:
 		cf.set_value("playstyle", k, _playstyle[k])

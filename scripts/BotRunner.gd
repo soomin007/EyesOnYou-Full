@@ -49,6 +49,9 @@ const HP_POOL: int = 30   # 사망 중단 없이 받은 피해를 지표로 잰�
 const ONLY_MAP: String = ""   # ""이면 전체 · 진단 시 rid 지정(콤마로 여러 개)
 
 func _ready() -> void:
+	# 실사용자 저장 파일 보호 — 계측 주행 중 도감 첫 조우 등으로 settings.cfg가 기본값으로
+	# 덮이는 것을 차단(2026-08-24, 설정 리셋 원인).
+	GameState.persist_blocked = true
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	Engine.time_scale = 3.0
 	# 배속에 맞춰 물리 틱도 3배 — 게임초당 물리 delta를 1/60로 보존한다. 이거 없이 scale 3만

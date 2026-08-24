@@ -35,6 +35,9 @@ const TARGETS: Array = [
 ]
 
 func _ready() -> void:
+	# 실사용자 저장 파일 보호 — 스테이징된 상태(도감 대입·라우트 진행 등)가 settings/run/
+	# palimpsest/playstyle에 저장되는 것을 전면 차단(2026-08-24, 설정 리셋 원인).
+	GameState.persist_blocked = true
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	DirAccess.make_dir_recursive_absolute("user://verify_shots")
 	_run.call_deferred()

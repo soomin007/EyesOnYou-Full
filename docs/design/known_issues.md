@@ -568,6 +568,22 @@
   가능하면 대입 대신 누락분 append, 그리고 하니스 전 settings.cfg 백업. ⓑ `_check_first_encounter`는
   `harmless` 개체를 제외한다 — 조우/도감 검증용 스폰은 harmless=false로 둘 것(true면 조용히 미발동).
 
+- **[근본 수정 2026-08-24] 하니스/직부팅이 실사용자 저장 파일을 기본값으로 덮던 문제 — 2중 방어 도입.**
+  증상: 에디터에서 게임을 켤 때마다 설정·도감·엔딩 기록이 초기화("매번 리셋" 사용자 보고). 원인:
+  `load_settings()`가 Main.gd(main.tscn)에서만 불려, main.tscn을 안 거치는 실행(하니스 도구 씬·F6
+  현재 씬)은 기본값 메모리로 시작 → 그 중 `save_settings()`가 한 번이라도 돌면(도감 save, 라우트 진입
+  save_run, start_main_game의 clear_pending_snapshots 등) 실파일이 기본값으로 덮였다. 세션마다 도는
+  검증 갤러리 하니스가 이를 반복 재생산. 방어책:
+  ① `load_settings()`를 `GameState._ready()`(autoload)로 이동 — 어떤 진입 경로든 로드가 저장보다 먼저.
+  ② `GameState.persist_blocked` 플래그 — 하니스(VerifyShots·BotRunner·IgShotter·ChainShotter·
+  Screenshotter)는 `_ready` 첫 줄에서 켠다. user:// 쓰기 전 지점(settings/run/palimpsest×3/playstyle/
+  clear_run/run_history)이 이 플래그로 무력화된다. **새 하니스를 만들면 반드시 첫 줄에
+  `GameState.persist_blocked = true`.** 새 user:// 쓰기 지점을 추가하면 반드시 이 가드도 함께.
+  주의: 저장 부작용이 있는 씬(ending.tscn 등)의 *직부팅 컴파일 검증*은 실데이터를 실제로 쓴다
+  (record_ending이 가짜 완주 기록 + clear_run으로 이어하기 삭제 — 2026-08-24 검증 중 실제 발생,
+  수동 복구). 그런 씬은 persist_blocked를 켜는 임시 스모크 씬을 경유해 검증하고, 하니스류 실행 전
+  user:// 4파일 백업을 뜨고 검증이 끝날 때까지 지우지 말 것.
+
 - **곱셈 modulate로는 붉은/어두운 바탕을 금색으로 만들 수 없다 — 가산(ADD) 블렌드 오버레이로.**
   shiny 몸통에 금 틴트(1.5,1.24,0.55)를 곱해도 빨강×금=주황일 뿐이다(곱셈은 채널을 더 못 늘림).
   → `CanvasItemMaterial.BLEND_MODE_ADD` 자식 노드(`_ShinyGlint`)로 금빛 워시를 얹으면 어떤 바탕색
