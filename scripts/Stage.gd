@@ -50,6 +50,10 @@ class HeartRow extends Control:
 			var t: float = TAU * float(k) / 40.0
 			var hx: float = 16.0 * pow(sin(t), 3.0)
 			var hy: float = -(13.0 * cos(t) - 5.0 * cos(2.0 * t) - 2.0 * cos(3.0 * t) - cos(4.0 * t))
+			# 수학 하트 곡선은 아래 꼬리(+17)가 로브(-11)의 1.5배로 길고 뾰족하다 — 아래쪽만
+			# tanh 소프트 클램프로 압축해 짧고 둥근 게임 하트로(갤러리 지적 2026-08-25).
+			if hy > 0.0:
+				hy = 11.5 * tanh(hy / 11.5)
 			pts.append(c + Vector2(hx, hy) * s)
 		return pts
 	func _draw() -> void:
@@ -1223,16 +1227,18 @@ func _build_speaker_pill(speaker: String, sp_color: Color, message: String, msg_
 	var total_chars: int = message.length()
 	var type_tw := msg_l.create_tween()
 	type_tw.tween_interval(0.15)
+	# 큐빅 in-out — 시작·끝만 타자기 체감, 중간은 가속(갤러리 2026-08-25 "등속일 필요 없다").
 	type_tw.tween_method(func(v: float) -> void:
 		if is_instance_valid(msg_l):
 			msg_l.visible_characters = int(v)
-	, 0.0, float(total_chars), _subtitle_type_time(message))
+	, 0.0, float(total_chars), _subtitle_type_time(message)).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
 	hb.add_child(msg_l)
 	return pill
 
-# 타자기 소요 시간 — 글자당 22ms, 0.2~1.1s 클램프. 표시 유지 시간 연장에도 같은 값을 쓴다.
+# 타자기 소요 시간 — 글자당 16ms, 0.2~0.85s 클램프(2026-08-25 가속 개편 · 큐빅 in-out과 한 세트).
+# 표시 유지 시간 연장에도 같은 값을 쓴다.
 func _subtitle_type_time(message: String) -> float:
-	return clampf(float(message.length()) * 0.022, 0.2, 1.1)
+	return clampf(float(message.length()) * 0.016, 0.2, 0.85)
 
 # 화면에 떠있는 모든 자막 일괄 폐기. ARCTURUS 문서 진입처럼 화면을 깨끗이 비워야
 # 하는 상황에서 호출. paused 동안 멈춘 fade-out이 outro 자막 위에 잔재로 남는 문제

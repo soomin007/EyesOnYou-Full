@@ -29,6 +29,18 @@ static func roll_choices(owned: Dictionary, count: int = 3, route_id: String = "
 					available[i] = available[0]
 					available[0] = c
 				break
+	# 저체력 가중(갤러리 제안 2026-08-25) — 체력이 1/3 이하일 때 레벨업하면 최대 체력 카드가
+	# 절반 확률로 후보 3장에 끼어든다. 보장이 아니라 가중("조금 더 높은 확률") · 마지막 슬롯과
+	# 교체라 상성 보장 슬롯(0)과 충돌하지 않는다.
+	if GameState.player_hp <= maxi(1, int(ceil(float(GameState.effective_max_hp()) / 3.0))) \
+			and count >= 1 and randf() < 0.5:
+		for i in available.size():
+			if str((available[i] as Dictionary).get("id", "")) == "hp":
+				if i >= count:
+					var hc: Dictionary = available[i]
+					available[i] = available[count - 1]
+					available[count - 1] = hc
+				break
 	var picks: Array = []
 	for i in min(count, available.size()):
 		var p: Dictionary = available[i]

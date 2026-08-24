@@ -35,6 +35,7 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_back_alley",
 		"name": "외곽 진입로",
+		"elev": "ground",
 		"description": "SILO-7 외벽을 따라 난 정비 통로. 경비망 사각이라 침투 시작점으로 쓴다.",
 		"risk": 1,
 		"reward_type": "recon",
@@ -50,6 +51,7 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_rooftops",
 		"name": "외벽 옥상",
+		"elev": "high",
 		"description": "외벽 옥상의 통신·환기 설비 구역. 트인 만큼 노출되고, 돌풍이 주기적으로 분다.",
 		"risk": 2,
 		"reward_type": "xp",
@@ -64,6 +66,7 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_sewers",
 		"name": "옛 배수로",
+		"elev": "under",
 		"description": "시설이 들어서기 전부터 있던 옛 배수로. 펌프가 살아 있어 물이 주기적으로 차오른다.",
 		"risk": 2,
 		"reward_type": "xp",
@@ -79,6 +82,7 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_subway",
 		"name": "폐쇄 지하철",
+		"elev": "under",
 		"description": "SILO-7이 덮어쓴 폐역. 도시의 흔적이 통로에 그대로 남아 있다.",
 		"risk": 2,
 		"reward_type": "xp",
@@ -88,7 +92,9 @@ const ALL_ROUTES: Array = [
 		"min_stage": 1, "max_stage": 2,
 		"tags": ["근접전", "함정", "전투"],
 		"veil_comment": "옛 지하철입니다. 폐역인데 선로는 살아 있습니다. 신호등을 봐 두십시오.",
-		"entry_comment": "폐역 승강장입니다. 선로 구간에 오래 서 있지 마십시오. 신호가 울리면 비키는 겁니다.",
+		# 하강 진입 한 문장 = 고도 전이 정당화(C안, 2026-08-25). 필터로 지상→지하 전이만 남으니 항상 참.
+		# 열차 규칙은 방2 진입 route_line이 전담(entry는 방1 승강장 홀에서 재생 — 무맥락 검수 FAIL① 수정).
+		"entry_comment": "지하로 내려왔습니다. 폐역 승강장입니다. 출구는 안쪽 선로 방향입니다. 경비를 전부 상대할 필요는 없습니다.",
 		"stage_color": Color(0.08, 0.10, 0.14),
 	},
 	{
@@ -112,6 +118,7 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_watchtower",
 		"name": "감시탑",
+		"elev": "high",
 		"description": "내부를 굽어보는 관제 구역. 저격 감시선과 탐조등이 통로를 가로지른다.",
 		"risk": 3,
 		"reward_type": "recon",
@@ -321,6 +328,7 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_parking_lot",
 		"name": "지하 주차장",
+		"elev": "under",
 		"description": "외곽과 시설을 잇는 지하 주차 구역. 차단 셔터가 주기적으로 통로를 막는다.",
 		"risk": 1,
 		"reward_type": "recon",
@@ -330,7 +338,8 @@ const ALL_ROUTES: Array = [
 		"min_stage": 1, "max_stage": 2,
 		"tags": ["우회", "근접전", "어두운_환경"],
 		"veil_comment": "지하 주차장입니다. 셔터가 열릴 때 지나가십시오. 램프가 붉으면 곧 닫힙니다.",
-		"entry_comment": "주차장입니다. 차 사이로 빠지십시오. 전부 상대할 필요는 없습니다.",
+		# "한 층 아래" = 하강 진입 뉘앙스(C안, 2026-08-25).
+		"entry_comment": "한 층 아래 주차 구역입니다. 차 사이로 빠지십시오. 전부 상대할 필요는 없습니다.",
 		"stage_color": Color(0.12, 0.12, 0.15),
 	},
 	{
@@ -376,6 +385,7 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_demolition_zone",
 		"name": "철거 구역",
+		"elev": "ground",
 		"description": "절반쯤 헐린 외곽 건물군. 위에서 잔해가 떨어지고, 무너진 벽을 지나면 파쇄 마당이 이어진다.",
 		"risk": 2,
 		"reward_type": "xp",
@@ -390,6 +400,7 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_pump_station",
 		"name": "배수 펌프장",
+		"elev": "ground",
 		"description": "외곽 빗물을 퍼내는 펌프장. 방류구가 주기적으로 물을 뿜고, 파이프 위에서 조준선이 내려온다.",
 		"risk": 2,
 		"reward_type": "xp",
@@ -489,6 +500,7 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_perimeter",
 		"name": "외곽 순찰로",
+		"elev": "ground",
 		"description": "외벽을 따라 도는 순찰 동선. 경계등이 지면을 훑는다.",
 		"risk": 2,
 		"reward_type": "recon",
@@ -657,14 +669,22 @@ const STORY_SCHEDULE: Dictionary = {
 static func get_route_pool_for_stage(stage_index: int, visited: Array = []) -> Array:
 	if GameState.story_mode:
 		return _get_story_route_pool(stage_index)
+	# 고도 인접 전이 필터(2026-08-25 A안) — 직전 맵이 옥상/탑(high)이면 지하(under) 후보 제외,
+	# 지하였으면 high 제외. "옥상 직후 폐지하철" 같은 공간 비약 차단(사용자 지적). 막1 전용
+	# (elev는 막1 맵에만 달려 있고, 막2+ 내부 맵은 "" = 무제약).
+	var prev_elev: String = _route_elev(GameState.current_route_id)
 	var guaranteed: Array = []
 	var others: Array = []
+	var elev_cut: Array = []
 	for r in ALL_ROUTES:
 		var route: Dictionary = r
 		var rid: String = str(route.get("id", ""))
 		if rid in visited:
 			continue
 		if not _stage_in_range(route, stage_index):
+			continue
+		if _elev_jump(prev_elev, _route_elev_of(route)):
+			elev_cut.append(route)
 			continue
 		# 스토리 전용 원형(비상 탈출로)은 본편 풀에서 제외 — 처리별 4종이 대체.
 		if bool(route.get("story_only", false)):
@@ -691,18 +711,47 @@ static func get_route_pool_for_stage(stage_index: int, visited: Array = []) -> A
 		pool.append(r)
 		if pool.size() >= pick_count:
 			break
+	# 고도 필터로 후보가 모자라면 걸러낸 후보로 보충 — 선택지 수 보장이 개연성보다 우선.
+	if pool.size() < pick_count:
+		elev_cut.shuffle()
+		for r in elev_cut:
+			pool.append(r)
+			if pool.size() >= pick_count:
+				break
 	return pool
 
 static func _get_story_route_pool(stage_index: int) -> Array:
 	var ids: Array = STORY_SCHEDULE.get(stage_index, [])
+	# 스토리 고정 스케줄에도 고도 전이 필터 적용 — 옥상(s0) 뒤 지하철(s1) 같은 비약 조합은
+	# 그 판에서 숨긴다. 전부 걸러지면 필터 해제(선택지 0 방지).
+	var prev_elev: String = _route_elev(GameState.current_route_id)
 	var out: Array = []
+	var cut: Array = []
 	for rid in ids:
 		for r in ALL_ROUTES:
 			var route: Dictionary = r
 			if route.get("id", "") == rid:
-				out.append(_apply_story_overrides(route))
+				if _elev_jump(prev_elev, _route_elev_of(route)):
+					cut.append(_apply_story_overrides(route))
+				else:
+					out.append(_apply_story_overrides(route))
 				break
-	return out
+	return out if not out.is_empty() else cut
+
+# ─── 고도 밴드(elev) — 막1 공간 개연성 필터 ───
+static func _route_elev_of(route: Dictionary) -> String:
+	return str(route.get("elev", ""))
+
+static func _route_elev(route_id: String) -> String:
+	for r in ALL_ROUTES:
+		var route: Dictionary = r
+		if str(route.get("id", "")) == route_id:
+			return _route_elev_of(route)
+	return ""
+
+# 옥상/탑(high) ↔ 지하(under) 직행만 비약으로 본다. 지상(ground)·미지정("")은 어느 쪽과도 인접 가능.
+static func _elev_jump(prev: String, next: String) -> bool:
+	return (prev == "high" and next == "under") or (prev == "under" and next == "high")
 
 # 스토리 모드에서 명칭/설명/멘트가 일반 모드와 의미가 다른 경우 override.
 # 사용자 피드백: "비상 탈출로"가 보스 후 stage라 임무 시작 단계에서 어색했음.

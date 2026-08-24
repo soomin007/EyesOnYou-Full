@@ -663,13 +663,14 @@ func _veil_say(line: String, dur: float) -> void:
 	# (visible_characters는 렌더만 자름)이라 레이아웃 안 튐.
 	var prefix_len: int = l.text.length() - line.length()
 	l.visible_characters = prefix_len
-	var type_time: float = clampf(float(line.length()) * 0.022, 0.2, 1.1)
+	var type_time: float = clampf(float(line.length()) * 0.016, 0.2, 0.85)
 	var type_tw := l.create_tween()
 	type_tw.tween_interval(0.15)
+	# 큐빅 in-out — Stage 자막과 동일(시작·끝 완속, 중간 가속 · 2026-08-25).
 	type_tw.tween_method(func(v: float) -> void:
 		if is_instance_valid(l):
 			l.visible_characters = int(v)
-	, float(prefix_len), float(l.text.length()), type_time)
+	, float(prefix_len), float(l.text.length()), type_time).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
 	var tw := l.create_tween()
 	tw.tween_property(l, "modulate:a", 1.0, 0.3)
 	tw.tween_interval(dur + type_time)

@@ -353,10 +353,11 @@ func _advance_confession() -> void:
 	_conf_label.visible_characters = prefix_len
 	var type_tw := _conf_label.create_tween()
 	type_tw.tween_interval(0.15)
+	# 큐빅 in-out — Stage 자막과 동일(시작·끝 완속, 중간 가속 · 2026-08-25).
 	type_tw.tween_method(func(v: float) -> void:
 		if is_instance_valid(_conf_label):
 			_conf_label.visible_characters = int(v)
-	, float(prefix_len), float(_conf_label.text.length()), clampf(float(line.length()) * 0.022, 0.2, 1.1))
+	, float(prefix_len), float(_conf_label.text.length()), clampf(float(line.length()) * 0.016, 0.2, 0.85)).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
 	var tw := _conf_label.create_tween()
 	tw.tween_property(_conf_label, "modulate:a", 1.0, 0.4)
 	tw.tween_interval(dur)

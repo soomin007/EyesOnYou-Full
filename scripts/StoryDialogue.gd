@@ -13,7 +13,7 @@ extends CanvasLayer
 
 signal finished
 
-const TYPE_SEC_PER_CHAR: float = 0.022   # Stage._subtitle_type_time과 같은 속도
+const TYPE_SEC_PER_CHAR: float = 0.016   # Stage._subtitle_type_time과 같은 속도(2026-08-25 가속 개편)
 const HOLD_SKIP_SEC: float = 0.55
 const ENTER_LOCKOUT: float = 0.3
 
@@ -388,12 +388,15 @@ func _process(delta: float) -> void:
 	if _lockout_t > 0.0:
 		_lockout_t -= delta
 		return
-	# 타자 진행.
+	# 타자 진행 — smoothstep(시작·끝 완속, 중간 가속). 등속 타자기가 늘어진다는
+	# 갤러리 지적(2026-08-25) 반영: 총 시간도 글자당 16ms · 0.3~1.0s 클램프로 단축.
 	if _typing and _msg_label != null and is_instance_valid(_msg_label):
 		_type_t += delta
-		var chars: int = int(_type_t / TYPE_SEC_PER_CHAR)
-		_msg_label.visible_characters = chars
-		if chars >= _msg_label.text.length():
+		var n: int = _msg_label.text.length()
+		var total: float = clampf(float(n) * TYPE_SEC_PER_CHAR, 0.3, 1.0)
+		var u: float = clampf(_type_t / maxf(total, 0.01), 0.0, 1.0)
+		_msg_label.visible_characters = int(round(float(n) * u * u * (3.0 - 2.0 * u)))
+		if u >= 1.0:
 			_msg_label.visible_characters = -1
 			_typing = false
 	# 길게 누르면 전체 건너뛰기(터치·패드 포함) — 힌트 라벨이 채워지는 걸로 진행 표시.
