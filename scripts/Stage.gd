@@ -5889,6 +5889,27 @@ func _play_rival_lock_beat(act_num: int, tries_left: int = 24) -> void:
 	showcase.draw_scale = 1.9
 	showcase.pulse_locks = true
 	showcase.call("set_state", GameState.player_hp, GameState.effective_max_hp(), GameState.rival_locks_active())
+	# 등장 완충(5차 피드백 "잠금 컷씬이 갑작스럽고 흐름을 끊는다") — 하드 컷 대신 ~1s 동안
+	# 세계가 계단식으로 늘어지며(회선이 렌더에 끼어드는 감각) 컷씬으로 넘어간다. 보스 격파
+	# 슬로우 비트와 같은 문법(실시간 타이머 · ignore_time_scale). 복원은 컷씬 open 직전 —
+	# 컷씬 자체는 tree.paused라 time_scale과 무관하다.
+	Engine.time_scale = 0.62
+	get_tree().create_timer(0.35, true, false, true).timeout.connect(func() -> void:
+		if not is_equal_approx(Engine.time_scale, 1.0):
+			Engine.time_scale = 0.38)
+	get_tree().create_timer(0.7, true, false, true).timeout.connect(func() -> void:
+		if not is_equal_approx(Engine.time_scale, 1.0):
+			Engine.time_scale = 0.22)
+	get_tree().create_timer(1.05, true, false, true).timeout.connect(func() -> void:
+		Engine.time_scale = 1.0
+		if not is_instance_valid(self) or goal_reached or not is_inside_tree():
+			if is_instance_valid(showcase):
+				showcase.queue_free()   # 컷씬이 소유하기 전 이탈 — 고아 노드 방지
+			return
+		_open_rival_lock_cutscene(act_num, showcase))
+
+# 잠금 비트 컷씬 본문 — 감속 완충이 끝난 뒤 열린다(_play_rival_lock_beat에서 분리).
+func _open_rival_lock_cutscene(act_num: int, showcase: Control) -> void:
 	# 라이벌 초상은 은닉판 고정 — 이 비트의 라이벌은 실체 없는 무전 목소리다(정체 공개는 14-1).
 	# 다회차(공개 게이트 통과) 런에서 거대 눈이 뜨던 것도 함께 막는다(4차 피드백 "징그럽다").
 	if act_num == 4:
@@ -8794,21 +8815,105 @@ func _spawn_shiny_orb(pos: Vector2) -> void:
 	orb.set("value", SHINY_ORB_VALUE)   # 일반 1 → 황금 5 (흡인/충돌은 일반 오브와 동일)
 
 # 클리어 가산 토스트(도전 완수·보상·수행 보너스) — 관측 로그 온도의 짧은 확인 도장.
-func _show_clear_toast(pos: Vector2, text: String) -> void:
-	var lbl := Label.new()
-	lbl.text = text
-	lbl.add_theme_font_size_override("font_size", 15)
-	lbl.add_theme_color_override("font_color", Color(0.62, 0.92, 1.0))
-	lbl.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.9))
-	lbl.add_theme_constant_override("outline_size", 3)
-	lbl.z_index = 40
-	add_child(lbl)
-	lbl.global_position = pos + Vector2(-64.0, 0.0)
-	lbl.reset_physics_interpolation()
-	var tw := lbl.create_tween()
-	tw.tween_property(lbl, "global_position:y", lbl.global_position.y - 26.0, 1.1)
-	tw.parallel().tween_property(lbl, "modulate:a", 0.0, 1.1)
-	tw.tween_callback(lbl.queue_free)
+# 클리어 정산 배너 — 클리어 페이드(레이어 38) 위(39)에 화면 고정으로 쌓는 수행·보상 플레이트.
+# 암전된 화면 위의 정산 비트로 읽히는 게 의도(5차 피드백 "보너스 있었는지도 못 느꼈음" 해소).
+# pause(레벨업 카드)에도 살아야 하므로 ALWAYS + PROCESS 트윈. 씬 전환 시 Stage와 함께 정리.
+func _show_clear_banner(lines: Array, veil_line: String) -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 39
+	layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(layer)
+	var box := VBoxContainer.new()
+	box.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	box.offset_top = 150.0
+	box.add_theme_constant_override("separation", 10)
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(box)
+	var any_perf: bool = false
+	var idx: int = 0
+	for ln in lines:
+		var d: Dictionary = ln
+		var perf: bool = bool(d.get("perf", false))
+		any_perf = any_perf or perf
+		var wrap := CenterContainer.new()
+		wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		box.add_child(wrap)
+		var plate := PanelContainer.new()
+		plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var sb := StyleBoxFlat.new()
+		# 수행(금색) / 보상 카드(시안) — 콘솔 탭 문법(모서리 3px + 화자색 테두리 + skew).
+		var accent: Color = Color(1.0, 0.82, 0.35) if perf else Color(0.42, 0.86, 1.0)
+		sb.bg_color = Color(0.09, 0.07, 0.02, 0.94) if perf else Color(0.03, 0.05, 0.09, 0.94)
+		sb.border_color = Color(accent.r, accent.g, accent.b, 0.85)
+		sb.set_border_width_all(1)
+		sb.set_corner_radius_all(3)
+		sb.skew = Vector2(0.14, 0.0)
+		sb.shadow_color = Color(0, 0, 0, 0.5)
+		sb.shadow_size = 10
+		sb.content_margin_left = 26.0
+		sb.content_margin_right = 26.0
+		sb.content_margin_top = 8.0
+		sb.content_margin_bottom = 8.0
+		plate.add_theme_stylebox_override("panel", sb)
+		var lbl := Label.new()
+		lbl.text = str(d.get("text", ""))
+		lbl.add_theme_font_size_override("font_size", 20 if perf else 17)
+		lbl.add_theme_color_override("font_color", accent)
+		lbl.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+		lbl.add_theme_constant_override("outline_size", 4)
+		plate.add_child(lbl)
+		wrap.add_child(plate)
+		# 순차 팝 인 — 살짝 커진 채 나타나 자리 잡는다(0.12s 스태거). 피벗은 레이아웃 확정 후 중앙.
+		plate.resized.connect(func() -> void: plate.pivot_offset = plate.size / 2.0)
+		plate.modulate.a = 0.0
+		plate.scale = Vector2(1.14, 1.14)
+		var tw := plate.create_tween()
+		tw.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+		tw.tween_interval(0.12 * float(idx))
+		tw.tween_property(plate, "modulate:a", 1.0, 0.16)
+		tw.parallel().tween_property(plate, "scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		idx += 1
+	# 합산 점수 한 줄 — "+150"이 어디에 쌓였는지 배너 안에서 답한다(HUD는 페이드 밑).
+	if any_perf:
+		var score_l := Label.new()
+		score_l.text = "SCORE %d" % GameState.score
+		score_l.add_theme_font_size_override("font_size", 14)
+		score_l.add_theme_color_override("font_color", Color(0.85, 0.78, 0.55, 0.9))
+		score_l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+		score_l.add_theme_constant_override("outline_size", 3)
+		score_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		score_l.modulate.a = 0.0
+		box.add_child(score_l)
+		var stw := score_l.create_tween()
+		stw.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+		stw.tween_interval(0.12 * float(idx) + 0.18)
+		stw.tween_property(score_l, "modulate:a", 1.0, 0.2)
+	# VEIL 수행 멘트 — 배너 부속 줄(자막 스택은 페이드에 가려 여기로 승격).
+	if veil_line != "":
+		var v_wrap := CenterContainer.new()
+		v_wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		box.add_child(v_wrap)
+		var v_lbl := Label.new()
+		v_lbl.text = "VEIL │ " + veil_line
+		v_lbl.add_theme_font_size_override("font_size", 15)
+		v_lbl.add_theme_color_override("font_color", Color(0.42, 0.86, 1.0, 0.95))
+		v_lbl.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+		v_lbl.add_theme_constant_override("outline_size", 3)
+		v_lbl.modulate.a = 0.0
+		v_wrap.add_child(v_lbl)
+		var vtw := v_lbl.create_tween()
+		vtw.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+		vtw.tween_interval(0.35)
+		vtw.tween_property(v_lbl, "modulate:a", 1.0, 0.25)
+	# 사운드 — 수행 보너스가 있을 때만 짧은 클리어 스팅(도배 방지: 종류 보상 단독은 무음).
+	if any_perf:
+		SfxPlayer.play("challenge_clear", -8.0)
+	# 수명 — 홀드 뒤 페이드 아웃(씬 전환이 먼저 오면 Stage와 함께 정리되고, 암전 위라 잘림이 안 보인다).
+	var out := layer.create_tween()
+	out.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	out.tween_interval(2.6)
+	out.tween_property(box, "modulate:a", 0.0, 0.4)
+	out.tween_callback(layer.queue_free)
 
 func _show_shiny_toast(pos: Vector2) -> void:
 	var lbl := Label.new()
@@ -9700,33 +9805,38 @@ func _begin_clear_sequence() -> void:
 				reveal_guard += get_process_delta_time()
 	GameState.restrict_combat_input = false
 	var leveled: bool = GameState.on_stage_clear()
-	# 클리어 가산 토스트 — 보상은 눈에 보여야 보상이다(점수만 오르면 침묵 보상).
-	# ("단일 기록" 토스트는 2026-08-23 통일로 폐지 — 사망=막 리셋 규칙에서 per-스테이지
-	#  무사망이 퇴화. 솜씨 축은 아래 무피격/전원 처치가 담당.)
-	if player != null and is_instance_valid(player):
-		if GameState.last_clear_challenge:
-			_show_clear_toast(player.global_position + Vector2(0.0, -64.0), "도전 완수 · 보상 가산")
-		elif GameState.last_clear_reward_note != "":
-			# 종류 보상(기록·정찰)은 지급 순간이 안 보이면 없는 것과 같다 — 위 두 장이 없을 때 표시.
-			_show_clear_toast(player.global_position + Vector2(0.0, -64.0), GameState.last_clear_reward_note)
-		# 수행 보너스(2026-08-23 사용자) — 무피격 / 전원 처치는 위 카드와 별개로 위에 쌓인다.
-		var perf_y: float = -100.0
+	# 클리어 정산 배너(2026-08-25 5차 피드백 "있었는지도 못 느꼈음") — 종전의 월드 토스트·자막(20)은
+	# 클리어 페이드(레이어 38) 밑에 깔린 채 직후 씬 전환에 잘려 사실상 안 보였다. 페이드 위
+	# 레이어(39)의 화면 배너로 올리고, 배너가 있으면 전환을 잠깐 잡아 읽을 시간을 만든다.
+	# ("단일 기록" 토스트는 2026-08-23 통일로 폐지 — 솜씨 축은 무피격/전원 처치가 담당.)
+	var banner_lines: Array = []
+	if GameState.last_clear_challenge:
+		banner_lines.append({"text": "도전 완수 · 보상 가산", "perf": false})
+	elif GameState.last_clear_reward_note != "":
+		# 종류 보상(기록·정찰)은 지급 순간이 안 보이면 없는 것과 같다 — 위 카드가 없을 때 표시.
+		banner_lines.append({"text": GameState.last_clear_reward_note, "perf": false})
+	# 수행 보너스(2026-08-23 사용자) — 무피격 / 전원 처치는 위 카드와 별개로 위에 쌓인다.
+	if GameState.last_clear_nohit:
+		banner_lines.append({"text": "무피격 통과  +150", "perf": true})
+	if GameState.last_clear_allkill:
+		banner_lines.append({"text": "경비 전원 처치  +150", "perf": true})
+	# VEIL 수행 멘트 — 매 스테이지 도배 방지(3스테이지 간격). 자막 스택(레이어 20)은 페이드에
+	# 가려지므로 배너의 부속 줄로 함께 올린다.
+	var veil_line: String = ""
+	if (GameState.last_clear_nohit or GameState.last_clear_allkill) \
+			and GameState.current_stage - GameState.bonus_line_last_stage >= 3:
+		GameState.bonus_line_last_stage = GameState.current_stage
 		if GameState.last_clear_nohit:
-			_show_clear_toast(player.global_position + Vector2(0.0, perf_y), "무피격 통과 +150")
-			perf_y -= 36.0
-		if GameState.last_clear_allkill:
-			_show_clear_toast(player.global_position + Vector2(0.0, perf_y), "경비 전원 처치 +150")
-		# VEIL 수행 멘트 — 매 스테이지 도배 방지(3스테이지 간격). 클리어 직후 = 조용한 순간이라
-		# 자막 문법 유지(컷씬 아님 · 짧은 보고 1줄).
-		if (GameState.last_clear_nohit or GameState.last_clear_allkill) \
-				and GameState.current_stage - GameState.bonus_line_last_stage >= 3:
-			GameState.bonus_line_last_stage = GameState.current_stage
-			if GameState.last_clear_nohit:
-				# EN: "Zero hits taken. Clean pass on this section."
-				_show_veil_subtitle(VeilDialogue.banded("피격 0. 이 구간, 깨끗하게 지나셨습니다.", "피격 0이에요. 이 구간, 깨끗하게 지나셨네요."), 3.0)
-			else:
-				# EN: "All area guards confirmed down. Nothing behind us now."
-				_show_veil_subtitle(VeilDialogue.banded("구역 경비, 전원 처치 확인했습니다. 이제 뒤는 조용합니다.", "구역 경비까지 전부 정리하셨네요. 이제 뒤는 조용해요."), 3.0)
+			# EN: "Zero hits taken. Clean pass on this section."
+			veil_line = VeilDialogue.banded("피격 0. 이 구간, 깨끗하게 지나셨습니다.", "피격 0이에요. 이 구간, 깨끗하게 지나셨네요.")
+		else:
+			# EN: "All area guards confirmed down. Nothing behind us now."
+			veil_line = VeilDialogue.banded("구역 경비, 전원 처치 확인했습니다. 이제 뒤는 조용합니다.", "구역 경비까지 전부 정리하셨네요. 이제 뒤는 조용해요.")
+	if not banner_lines.is_empty():
+		var any_perf0: bool = GameState.last_clear_nohit or GameState.last_clear_allkill
+		_show_clear_banner(banner_lines, veil_line)
+		# 읽을 시간 — 수행 보너스는 정산 비트로 길게, 종류 보상 단독은 짧게.
+		await get_tree().create_timer(1.6 if any_perf0 else 1.0).timeout
 	# 보스(route_lab) 또는 최종 스테이지 클리어 후엔 위협 없는 마무리라 스킬 선택이 무의미 —
 	# 카드를 건너뛰고 보스 처치 대사/엔딩(서사 비트)이 보상을 대신한다(사용자 피드백 "1+3").
 	var skip_card: bool = GameState.current_route_id == "route_lab" or GameState.current_route_id == "route_core_recovery" or GameState.is_final_stage_done()

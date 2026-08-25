@@ -25,6 +25,13 @@ const TARGETS: Array = [
 	{"id": "server_log_doc", "route": "route_server_hall", "seg": 1, "stage": 7, "setup": "doc"},
 	{"id": "arcturus_doc_paper", "route": "route_back_alley", "stage": 1, "setup": "doc_paper"},
 	{"id": "recovery_doc_drive", "route": "route_back_alley", "stage": 1, "setup": "doc_drive"},
+	# 문서 등장 연출(2026-08-25 5차 피드백) — 봉인 정지컷 + 펼침/켜짐 애니메이션.
+	{"id": "arcturus_doc_seal", "route": "route_back_alley", "stage": 1, "setup": "doc_seal"},
+	{"id": "anim_doc_unfold", "route": "route_back_alley", "stage": 1, "setup": "anim_doc_unfold", "anim": 56, "every": 2},
+	{"id": "anim_doc_power", "route": "route_server_hall", "seg": 1, "stage": 7, "setup": "anim_doc_power", "anim": 44, "every": 2},
+	# 클리어 정산 배너 + 잠금 비트 감속 완충(등장 연출).
+	{"id": "clear_banner", "route": "route_back_alley", "stage": 1, "setup": "clear_banner"},
+	{"id": "anim_lock_buffer", "route": "route_pump_station", "setup": "anim_lock_buffer", "anim": 84, "every": 2, "act4": true},
 	{"id": "server_room2_wall", "route": "route_server_hall", "seg": 1, "stage": 7, "setup": ""},
 	{"id": "cooling_room1_no_lever", "route": "route_cooling", "seg": 0, "stage": 7, "setup": ""},
 	{"id": "demolition_turret_gap", "route": "route_demolition_zone", "seg": 0, "stage": 1, "setup": "cam_1190"},
@@ -102,13 +109,15 @@ func _shot(d: Dictionary) -> void:
 				await get_tree().process_frame
 		"cutscene_lock":
 			stage.call("_play_rival_lock_beat", 4, 0)
-			for i in 70:
+			await _wait_cutscene_open()
+			for i in 80:
 				await get_tree().process_frame
 		"cutscene_lock_revealed":
 			# 정체 공개 게이트 통과 상태 — 라이벌 초상이 공개판(눈)으로 나온다.
 			GameState.rival_kills = 1
 			stage.call("_play_rival_lock_beat", 4, 0)
-			for i in 70:
+			await _wait_cutscene_open()
+			for i in 80:
 				await get_tree().process_frame
 		"hud_lock":
 			# 막4 진입 상태 = 잠금 1 — 보라 잠금 하트가 보이는 HUD.
@@ -150,6 +159,22 @@ func _shot(d: Dictionary) -> void:
 			stage.add_child(doc_d)
 			doc_d.show_doc(stage.call("_lab_recovery_doc_lines"))
 			for i in 1050:
+				await get_tree().process_frame
+		"doc_seal":
+			# 종이 등장 연출의 봉인 상태(0.38~0.88s 홀드) 한가운데 정지컷.
+			var doc_s := ArcturusDocumentOverlay.new()
+			stage.add_child(doc_s)
+			doc_s.show_doc(stage.call("_arcturus_document_lines"))
+			for i in 38:
+				await get_tree().process_frame
+		"clear_banner":
+			# 정산 배너 — 무피격+전원 처치 2플레이트 + VEIL 부속 줄. 페이드 위 레이어(39) 확인용.
+			stage.call("_do_clear_fade", 0.8)
+			stage.call("_show_clear_banner", [
+				{"text": "무피격 통과  +150", "perf": true},
+				{"text": "경비 전원 처치  +150", "perf": true},
+			], "피격 0. 이 구간, 깨끗하게 지나셨습니다.")
+			for i in 55:
 				await get_tree().process_frame
 		"cam_1190":
 			if p is Node2D:
@@ -201,6 +226,8 @@ func _shot_anim(d: Dictionary) -> void:
 	DirAccess.make_dir_recursive_absolute("user://verify_shots/%s" % id)
 	GameState.start_main_game()
 	GameState.current_stage = int(d.get("stage", 1))
+	if bool(d.get("act4", false)):
+		GameState.current_stage = GameState.act_start_stage(3)   # 막4 첫 스테이지 = 잠금 1 활성
 	GameState.current_segment = int(d.get("seg", 0))
 	GameState.seen_enemies = ["patrol", "sniper", "drone", "bomber", "shield", "jammer", "elite", "caller"]
 	GameState.player_level = 99
@@ -270,6 +297,21 @@ func _anim_prepare(setup: String, p: Node, stage: Node) -> void:
 			stage.add_child(fd)
 			fd.setup({"x_min": 995.0, "x_max": 1085.0, "interval": 0.9},
 				600.0, stage.call("_debris_mark_platforms"))
+		"anim_doc_unfold":
+			# 종이 등장 — 봉인 도장 찍힘 → 펼침 전 과정(~1.9s).
+			var doc_a := ArcturusDocumentOverlay.new()
+			stage.add_child(doc_a)
+			doc_a.show_doc(stage.call("_arcturus_document_lines"))
+		"anim_doc_power":
+			# 콘솔 등장 — 점화선 → 창 켜짐 → 부팅 플리커(~1.5s).
+			var doc_b := ArcturusDocumentOverlay.new()
+			doc_b.style = "terminal"
+			stage.add_child(doc_b)
+			doc_b.show_doc(stage.call("_server_log_doc_lines"))
+		"anim_lock_buffer":
+			# 잠금 비트 감속 완충 — 세계가 계단식으로 늘어지다 컷씬이 열리는 전 과정(~2.8s).
+			if stage != null:
+				stage.call("_play_rival_lock_beat", 4, 0)
 
 func _anim_tick(setup: String, f: int, p: Node) -> void:
 	match setup:
@@ -296,6 +338,13 @@ func _anim_tick(setup: String, f: int, p: Node) -> void:
 				Input.action_press("move_left")
 			elif f == 64:
 				Input.action_release("move_left")
+
+# 잠금 비트는 감속 완충(~1.05s)을 지나야 컷씬이 열린다 — StoryDialogue.active 대기(상한 ~4s).
+func _wait_cutscene_open() -> void:
+	for i in 240:
+		if StoryDialogue.active != null:
+			return
+		await get_tree().process_frame
 
 func _shot_routemap(id: String) -> void:
 	GameState.start_main_game()

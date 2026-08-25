@@ -59,19 +59,34 @@ var _glitch_burst: float = 0.0
 
 static var active: StoryDialogue = null
 
-# 패널 모서리 브래킷 — 오른쪽 위/아래 모서리에 화자색 ㄱ자 틱(전술 콘솔 문법).
-# 왼쪽 모서리는 초상이 덮으므로 생략. 서식 리뉴얼(4차 피드백 "기본 생성 틀 같다").
+# 패널 장식 — 이중 프레임(바깥 어두운 헤어라인) + 오른쪽 모서리 ㄱ자 브래킷 + 왼쪽 아래 틱 +
+# 윗 레일 눈금·접점 노드(전술 콘솔 문법). 왼쪽 위 모서리는 초상이 덮으므로 비운다.
+# 서식 리뉴얼 2차(5차 피드백 "여전히 너무 밋밋").
 class _PanelTrim extends Control:
 	var col: Color = Color.WHITE
+	var rail_from_x: float = 0.0   # 레일 눈금 시작 x(트림 로컬) — 초상 오른쪽부터. 0이면 생략.
 	func _draw() -> void:
 		var w: float = size.x
 		var h: float = size.y
 		var arm: float = 16.0
 		var th: float = 2.0
+		# 이중 프레임 — 판 바깥 한 겹의 어두운 창틀 라인.
+		draw_rect(Rect2(0.5, 0.5, w - 1.0, h - 1.0), Color(col.r, col.g, col.b, 0.22), false, 1.0)
+		# 오른쪽 모서리 브래킷.
 		draw_rect(Rect2(w - arm, 0.0, arm, th), col, true)
 		draw_rect(Rect2(w - th, 0.0, th, arm), col, true)
 		draw_rect(Rect2(w - arm, h - th, arm, th), col, true)
 		draw_rect(Rect2(w - th, h - arm, th, arm), col, true)
+		# 왼쪽 아래 틱 — 초상에 안 덮이는 쪽 최소 마감(비대칭이 초상 자리를 설명한다).
+		draw_rect(Rect2(0.0, h - th, arm, th), col, true)
+		draw_rect(Rect2(0.0, h - arm, th, arm), col, true)
+		# 윗 레일 — 접점 노드(밝은 점) + 96px 간격 짧은 눈금(전술 눈금자).
+		if rail_from_x > 0.0:
+			draw_rect(Rect2(rail_from_x - 2.0, 3.0, 5.0, 8.0), col, true)
+			var tx: float = rail_from_x + 96.0
+			while tx < w - 20.0:
+				draw_rect(Rect2(tx, 5.0, 1.0, 5.0), Color(col.r, col.g, col.b, 0.55), true)
+				tx += 96.0
 
 func open(lines: Array) -> void:
 	_lines = lines.duplicate()
@@ -277,9 +292,10 @@ func _build_line(ln: Dictionary) -> void:
 	rim.offset_top = -209.0
 	rim.offset_bottom = -207.0
 	_row.add_child(rim)
-	# 모서리 브래킷 — 패널보다 6px 바깥에 화자색 ㄱ자 틱.
+	# 모서리 브래킷 + 이중 프레임 + 레일 눈금 — 패널보다 6px 바깥.
 	var trim := _PanelTrim.new()
 	trim.col = Color(sp_color.r, sp_color.g, sp_color.b, 0.75)
+	trim.rail_from_x = 476.0 - 224.0   # 림 시작(초상 오른쪽 476)을 트림 로컬(left 224)로 환산
 	trim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	trim.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	trim.offset_left = 224.0

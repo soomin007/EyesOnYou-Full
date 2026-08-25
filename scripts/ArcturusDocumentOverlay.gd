@@ -61,6 +61,10 @@ var enter_lockout_t: float = 0.0
 # show_doc 호출 전에 세팅한다.
 var style: String = "paper"
 var _kw_color: String = "#0a4a73"   # [[키워드]] 강조색 — 스타일별로 show_doc에서 결정
+# 양식별 등장 연출(5차 피드백 "처음부터 펼쳐져 있지 않게") — 종이는 봉인 펼침, 콘솔은 켜짐.
+var _stamp: PanelContainer = null   # 종이 우상단 스탬프 — 펼침 연출이 끝나며 페이드 인
+var _head_nodes: Array = []         # 종이 레터헤드·괘선 — 접힌 밴드에서 눌린 잔상이 보여 함께 페이드 인
+var _chrome_nodes: Array = []       # 콘솔 타이틀/하단 바 — 켜짐 연출 후 페이드 인
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -132,6 +136,8 @@ func show_doc(input_lines: Array) -> void:
 		bar.color = Color(0.075, 0.095, 0.125, 1.0) if is_term else Color(0.105, 0.075, 0.165, 1.0)
 		bar.position = Vector2((VIEWPORT_W - PAPER_WIDTH) * 0.5 - MARGIN_SIDE, 0.0)
 		bar.size = Vector2(PAPER_WIDTH + MARGIN_SIDE * 2.0, 30.0)
+		bar.modulate.a = 0.0   # 켜짐 연출(_enter_power_on)이 창 점등 후 페이드 인
+		_chrome_nodes.append(bar)
 		layer.add_child(bar)
 		var dots := Label.new()
 		dots.text = "● ● ●"
@@ -173,6 +179,8 @@ func show_doc(input_lines: Array) -> void:
 		foot.color = bar.color
 		foot.position = Vector2(bar.position.x, VIEWPORT_H - 26.0)
 		foot.size = Vector2(bar.size.x, 26.0)
+		foot.modulate.a = 0.0   # 켜짐 연출 후 페이드 인(타이틀 바와 동시)
+		_chrome_nodes.append(foot)
 		layer.add_child(foot)
 		var foot_l := Label.new()
 		if is_term:
@@ -207,18 +215,24 @@ func show_doc(input_lines: Array) -> void:
 		lh.add_theme_font_size_override("font_size", 19)
 		lh.add_theme_color_override("font_color", Color(0.33, 0.36, 0.48, 0.9))
 		lh.position = Vector2(0.0, -60.0)
+		lh.modulate.a = 0.0   # 접힌 밴드에서 눌린 잔상 방지 — 펼침 연출과 함께 페이드 인
+		_head_nodes.append(lh)
 		paper.add_child(lh)
 		var rule := ColorRect.new()
 		rule.color = Color(0.30, 0.33, 0.45, 0.55)
 		rule.position = Vector2(0.0, -28.0)
 		rule.size = Vector2(PAPER_WIDTH, 2.0)
+		rule.modulate.a = 0.0
+		_head_nodes.append(rule)
 		paper.add_child(rule)
 		var rule2 := ColorRect.new()
 		rule2.color = Color(0.30, 0.33, 0.45, 0.35)
 		rule2.position = Vector2(0.0, -24.0)
 		rule2.size = Vector2(PAPER_WIDTH, 1.0)
+		rule2.modulate.a = 0.0
+		_head_nodes.append(rule2)
 		paper.add_child(rule2)
-		var stamp := PanelContainer.new()
+		_stamp = PanelContainer.new()
 		var st_sb := StyleBoxFlat.new()
 		st_sb.bg_color = Color(0, 0, 0, 0)
 		st_sb.border_color = Color(0.72, 0.18, 0.16, 0.70)
@@ -227,15 +241,16 @@ func show_doc(input_lines: Array) -> void:
 		st_sb.content_margin_right = 14.0
 		st_sb.content_margin_top = 3.0
 		st_sb.content_margin_bottom = 3.0
-		stamp.add_theme_stylebox_override("panel", st_sb)
-		stamp.position = Vector2(PAPER_WIDTH - 225.0, -64.0)
-		stamp.rotation = -0.045
+		_stamp.add_theme_stylebox_override("panel", st_sb)
+		_stamp.position = Vector2(PAPER_WIDTH - 225.0, -64.0)
+		_stamp.rotation = -0.045
+		_stamp.modulate.a = 0.0   # 봉인 펼침 연출(_enter_unfold)이 끝나며 페이드 인
 		var st_l := Label.new()
 		st_l.text = "RESTRICTED"
 		st_l.add_theme_font_size_override("font_size", 20)
 		st_l.add_theme_color_override("font_color", Color(0.72, 0.18, 0.16, 0.78))
-		stamp.add_child(st_l)
-		paper.add_child(stamp)
+		_stamp.add_child(st_l)
+		paper.add_child(_stamp)
 	# 줄들 미리 배치 (alpha=0)
 	var y: float = 0.0
 	for entry in lines_data:
@@ -284,15 +299,92 @@ func show_doc(input_lines: Array) -> void:
 		paper.add_child(lbl)
 		labels.append(lbl)
 		y += _line_height_for(kind)
-	# 페이드 인 → 타이핑 시작
+	# 배경 페이드 인 → 양식별 등장 연출(5차 피드백 "처음부터 펼쳐져 있지 않게 · 양식에 맞게
+	# 펼쳐지거나 켜지게") → 타이핑 시작. 종이 = 봉인 펼침 / 콘솔·뷰어 = 전원 켜짐.
 	get_tree().paused = true
 	var tw_bg := bg.create_tween()
 	tw_bg.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	tw_bg.tween_property(bg, "color:a", 0.92, 0.6)
-	var tw_paper := paper.create_tween()
-	tw_paper.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	tw_paper.tween_property(paper, "modulate:a", 1.0, 0.7)
-	tw_paper.tween_callback(_start_typing)
+	tw_bg.tween_property(bg, "color:a", 0.92, 0.5)
+	if is_term or is_drive:
+		_enter_power_on()
+	else:
+		_enter_unfold()
+
+# 종이 등장 — 접힌 문서 밴드 위에 봉인 도장이 쾅 찍혀 있고, 펼치면서 봉인이 걷혀
+# 문서 우상단 스탬프로 교대된다(접힌 상태 0.5s → 펼침 0.55s).
+func _enter_unfold() -> void:
+	paper.pivot_offset = Vector2(PAPER_WIDTH * 0.5, 0.0)
+	paper.scale = Vector2(1.0, 0.12)
+	# 화면 고정 봉인 — 접힌 밴드 중앙에 크게. 펼칠 때 페이드 아웃(원 스탬프와 교대).
+	var seal := PanelContainer.new()
+	var sl_sb := StyleBoxFlat.new()
+	sl_sb.bg_color = Color(0, 0, 0, 0)
+	sl_sb.border_color = Color(0.72, 0.18, 0.16, 0.85)
+	sl_sb.set_border_width_all(4)
+	sl_sb.content_margin_left = 20.0
+	sl_sb.content_margin_right = 20.0
+	sl_sb.content_margin_top = 6.0
+	sl_sb.content_margin_bottom = 6.0
+	seal.add_theme_stylebox_override("panel", sl_sb)
+	var seal_l := Label.new()
+	seal_l.text = "RESTRICTED"
+	seal_l.add_theme_font_size_override("font_size", 28)
+	seal_l.add_theme_color_override("font_color", Color(0.72, 0.18, 0.16, 0.9))
+	seal.add_child(seal_l)
+	seal.rotation = -0.05
+	seal.modulate.a = 0.0
+	seal.scale = Vector2(1.7, 1.7)
+	seal.resized.connect(func() -> void: seal.pivot_offset = seal.size / 2.0)
+	layer.add_child(seal)
+	# 접힌 밴드(종이 상단 12%) 중앙쯤 — paper는 진입 시 MARGIN_TOP에 있다.
+	seal.position = Vector2(VIEWPORT_W * 0.5 - 120.0, MARGIN_TOP + 26.0)
+	var tw := create_tween()
+	tw.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	# 접힌 밴드 페이드 인 → 도장이 내려찍히는 팝(스케일 다운) → 반 박자 봉인 상태 보여주기.
+	tw.tween_property(paper, "modulate:a", 1.0, 0.22)
+	tw.tween_property(seal, "modulate:a", 1.0, 0.10)
+	tw.parallel().tween_property(seal, "scale", Vector2.ONE, 0.16).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.tween_interval(0.5)
+	# 펼침 — 종이가 아래로 펴지고, 봉인은 걷히고, 레터헤드 옆 원 스탬프가 자리 잡는다.
+	tw.tween_property(paper, "scale:y", 1.0, 0.55).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(seal, "modulate:a", 0.0, 0.4)
+	if _stamp != null:
+		tw.parallel().tween_property(_stamp, "modulate:a", 1.0, 0.45)
+	for hn in _head_nodes:
+		if hn != null and is_instance_valid(hn):
+			tw.parallel().tween_property(hn, "modulate:a", 1.0, 0.45)
+	tw.tween_callback(seal.queue_free)
+	tw.tween_callback(_start_typing)
+
+# 콘솔·뷰어 등장 — 수평 점화선이 번쩍이고 창이 세로로 켜진다(CRT 전원 문법) + 부팅 플리커.
+# 플리커는 저진폭 2회(광과민 고려)이며 화면 효과 옵션이 꺼져 있으면 생략.
+func _enter_power_on() -> void:
+	# 창은 점화선 번쩍임 직후에야 보인다(그 전까지 alpha 0 · 꺼진 화면).
+	paper.pivot_offset = Vector2(PAPER_WIDTH * 0.5, VIEWPORT_H * 0.38 - MARGIN_TOP)
+	paper.scale = Vector2(1.0, 0.015)
+	var ign := ColorRect.new()
+	ign.color = Color(0.70, 1.0, 0.85, 0.0) if style == "terminal" else Color(0.85, 0.70, 1.0, 0.0)
+	ign.position = Vector2((VIEWPORT_W - PAPER_WIDTH) * 0.5 - MARGIN_SIDE, VIEWPORT_H * 0.38 - 1.5)
+	ign.size = Vector2(PAPER_WIDTH + MARGIN_SIDE * 2.0, 3.0)
+	layer.add_child(ign)
+	var tw := create_tween()
+	tw.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	tw.tween_interval(0.3)
+	tw.tween_property(ign, "color:a", 0.9, 0.07)
+	tw.tween_callback(func() -> void: paper.modulate.a = 1.0)
+	tw.tween_property(paper, "scale:y", 1.0, 0.26).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(ign, "color:a", 0.0, 0.22)
+	if GameState.screen_fx_enabled:
+		tw.tween_property(paper, "modulate:a", 0.72, 0.05)
+		tw.tween_property(paper, "modulate:a", 1.0, 0.06)
+		tw.tween_property(paper, "modulate:a", 0.85, 0.05)
+		tw.tween_property(paper, "modulate:a", 1.0, 0.07)
+	# 타이틀/하단 바 — 창이 켜진 뒤 함께 점등.
+	for c in _chrome_nodes:
+		if c != null and is_instance_valid(c):
+			tw.parallel().tween_property(c, "modulate:a", 1.0, 0.25)
+	tw.tween_callback(ign.queue_free)
+	tw.tween_callback(_start_typing)
 
 # [[키워드]] -> 진청 색 강조 bbcode. 원문 대괄호는 [lb]로 이스케이프해 그대로 보이게.
 func _to_bbcode(raw: String) -> String:
