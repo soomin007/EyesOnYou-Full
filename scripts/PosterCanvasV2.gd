@@ -334,7 +334,7 @@ func _build_text() -> void:
 	# 푸터 좌측 · 플레이 링크 + 스펙 (가로 폭 [M, 700])
 	_label("▶  soomin007.github.io/EyesOnYou", Vector2(M, FOOT_Y + 2.0), 600.0, 23,
 		COL_VEIL, HORIZONTAL_ALIGNMENT_LEFT, false)
-	_label("8–15분 · Windows PC · 키보드 / 게임패드 · Godot 4.6 · Pretendard(OFL)",
+	_label("8~15분 · Windows PC · 키보드 / 게임패드 · Godot 4.6 · Pretendard(OFL)",
 		Vector2(M, FOOT_Y + 38.0), 600.0, 14, COL_DIM, HORIZONTAL_ALIGNMENT_LEFT, false)
 	# 푸터 우측 · 피드백 안내 (QR 왼쪽, 좌측 컬럼과 안 겹치게 x=720부터)
 	var fb_url: String = FEEDBACK_URL if FEEDBACK_URL != "" else "전시 현장 QR로 안내"

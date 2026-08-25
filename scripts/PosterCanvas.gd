@@ -312,7 +312,7 @@ func _build_text() -> void:
 	_label("“믿을수록 더 도와드릴 수 있어요.”",
 		Vector2(M + 126.0, DLG_Y + 46.0), W - 2.0 * M - 156.0, 27, COL_WHITE, HORIZONTAL_ALIGNMENT_LEFT, false)
 	# ── 정보칩 + 푸터 ──
-	_label("횡스크롤 로그라이트     ·     8–15분     ·     4종 결말",
+	_label("횡스크롤 로그라이트     ·     8~15분     ·     4종 결말",
 		Vector2(M, 1548.0), W - 2.0 * M, 20, COL_DIM, HORIZONTAL_ALIGNMENT_CENTER, false)
 	_label("▶  soomin007.github.io/EyesOnYou", Vector2(M, 1584.0), W - 2.0 * M, 23, COL_VEIL, HORIZONTAL_ALIGNMENT_CENTER, false)
 	_label("자유전공학부 김수민", Vector2(M, 1624.0), W - 2.0 * M, 18,

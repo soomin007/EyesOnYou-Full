@@ -56,14 +56,14 @@ def main() -> int:
             print("[WARN] read fail %s: %s" % (f, e))
             warns += 1
             continue
+        # 자기 참조 예외: 이 린트/훅은 검사 대상 문자를 코드 리터럴로 다룬다.
+        self_ref: bool = f.replace("\\", "/").endswith(
+            ("tools/text_lint.py", "tools/hooks/dialogue_watch.py"))
         for num, ln in enumerate(lines, 1):
-            if "—" in ln:
-                # 자기 참조 예외: 이 린트/훅이 검사 대상 문자를 코드로 다루는 줄.
-                if f.replace("\\", "/").endswith(("tools/text_lint.py", "tools/hooks/dialogue_watch.py")):
-                    continue
+            if "—" in ln and not self_ref:
                 print("[ERROR] em dash %s:%d" % (f, num))
                 errors += 1
-            if "–" in ln:
+            if "–" in ln and not self_ref:
                 print("[WARN] en dash %s:%d" % (f, num))
                 warns += 1
             if f.endswith(".gd"):
