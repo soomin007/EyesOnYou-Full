@@ -314,7 +314,7 @@ static func get_levelup_advice(player_skills: Dictionary, route_tags: Array, rou
 	if "드론" in route_tags and not has_ranged_buff:
 		return {"line": banded("드론은 위에서 옵니다. 원거리 화력이 있으면 한결 안전합니다.", "드론은 위에서 와요. 원거리가 있으면 한결 안전하죠."), "family": SkillTreeData.FAMILY_COMBAT, "skill_id": ""}
 	if "노출" in route_tags and not has_survival:
-		return {"line": banded("이 구간은 숨을 데가 없습니다. 생존 계열을 권합니다.", "이 구간은 숨을 데가 없어요. 생존 쪽이 안심돼요."), "family": SkillTreeData.FAMILY_SURVIVAL, "skill_id": ""}
+		return {"line": banded("이 구간은 숨을 데가 없습니다. 생존 계열을 추천합니다.", "이 구간은 숨을 데가 없어요. 생존 쪽이 안심돼요."), "family": SkillTreeData.FAMILY_SURVIVAL, "skill_id": ""}
 	if "수직" in route_tags and not has_mobility_buff:
 		return {"line": banded("위로 가는 길입니다. 이동 능력이 있으면 수월합니다.", "위로 가는 길이네요. 이동 능력이 있으면 편하고요."), "family": SkillTreeData.FAMILY_MOBILITY, "skill_id": ""}
 	if "도전" in route_tags and not has_survival:

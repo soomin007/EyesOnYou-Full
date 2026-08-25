@@ -281,7 +281,7 @@ static func _sewers_junction() -> Dictionary:
 		],
 		"platforms": [
 			# 진입 → 상층 (낙하)
-			{"pos": Vector2(560, 280), "w": 200.0},
+			{"pos": Vector2(560, 292), "w": 200.0},
 			{"pos": Vector2(560, 460), "w": 160.0},
 			{"pos": Vector2(480, 640), "w": 240.0},  # 분기점
 			# 좌측 · 넓은 통로 (적 + XP)
@@ -790,6 +790,9 @@ static func _ward() -> Dictionary:
 			{"pos": Vector2(3020, 480), "w": 80.0},
 			# 주 통로 장애물 · 이스터에그 문 위치(x=2000)는 시야가 트여야 해서 제외.
 			{"pos": Vector2(1200, 560), "w": 120.0},
+			# 중간 디딤(2026-08-25) · 복도 중반(1520~1620 틈)으로 떨어지면 지면→420이 180px
+			# 풀더블 요구였다 - 낮은 디딤을 놓아 두 걸음 복귀로 완화(장애물 발판 문법 재사용).
+			{"pos": Vector2(1950, 560), "w": 120.0},
 			{"pos": Vector2(2800, 560), "w": 120.0},
 			# 글라이드 게이트 · 우회 발판(1380,420) 위 220px 단독 알코브. 더블점프(apex 230)론
 			# 못 닿고 삼단점프(글라이드 T2, apex 150)로만 닿음. 위 보상이 보여 "어떻게 올라가지?" 유도.
@@ -1805,7 +1808,7 @@ static func _demo_street() -> Dictionary:
 			{"x_min": 1800.0, "x_max": 2800.0, "interval": 2.0, "phase": 0.45},
 		],
 		"route_lines": [
-			{"x": 300.0, "who": "veil", "text": "위가 계속 무너집니다. 바닥에 그림자가 지면 그 자리를 비키십시오.", "dur": 3.8},
+			{"x": 300.0, "who": "veil", "text": "위에서 잔해가 계속 떨어집니다. 바닥에 그림자가 지면 그 자리를 비키십시오.", "dur": 3.8},
 		],
 	}
 
@@ -2431,24 +2434,24 @@ static func _core_recovery() -> Dictionary:
 		"arena_clear_xp": 4,
 		"platforms": [
 			# 중층 링
-			{"pos": Vector2(350, 1040),  "w": 230.0},
+			{"pos": Vector2(350, 1052),  "w": 230.0},
 			{"pos": Vector2(1200, 1000), "w": 280.0},
-			{"pos": Vector2(2050, 1040), "w": 230.0},
+			{"pos": Vector2(2050, 1052), "w": 230.0},
 			# 중앙 상단(회복 지점 · P1 소모 보전)
 			{"pos": Vector2(1200, 860),  "w": 220.0},
 			# 상층 연결 계단
-			{"pos": Vector2(700, 880),   "w": 160.0},
-			{"pos": Vector2(1700, 880),  "w": 160.0},
+			{"pos": Vector2(700, 892),   "w": 160.0},
+			{"pos": Vector2(1700, 892),  "w": 160.0},
 			# 상층 관측 데크(안테나 자리)
-			{"pos": Vector2(450, 720),   "w": 300.0},
-			{"pos": Vector2(1950, 720),  "w": 300.0},
+			{"pos": Vector2(450, 736),   "w": 300.0},
+			{"pos": Vector2(1950, 736),  "w": 300.0},
 		],
 		# P1 목표형 전투: 초기 스폰 = 상층 데크의 관측 안테나(jammer 로직 재사용) 2기뿐.
 		# 잡몹은 Stage가 끝없이 소규모 투입(_p1_trickle_tick · 전멸 불가). 출구 = 안테나 파괴뿐.
 		# 안테나의 재밍 그늘이 좌우 절반의 마커를 지운다(§7.2 "재밍 그늘").
 		"enemies": {
 			"patrol": [], "sniper": [], "drone": [], "bomber": [], "shield": [],
-			"jammer": [Vector2(450, 690.0), Vector2(1950, 690.0)],
+			"jammer": [Vector2(450, 706.0), Vector2(1950, 706.0)],
 		},
 		"rewards": {"xp_orbs": [], "hp_pickups": [Vector2(1200, 830.0)]},
 		"spikes": [],
@@ -2516,7 +2519,7 @@ static func _condenser_hall() -> Dictionary:
 		"platforms": [
 			# 상부 코일 포켓 + 저단차(수칙 3·4) · 낙수점(420~2760)과 간섭 없는 x 유지.
 			{"pos": Vector2(600, 460),  "w": 190.0},
-			{"pos": Vector2(1100, 420), "w": 160.0},
+			{"pos": Vector2(1100, 432), "w": 160.0},
 			{"pos": Vector2(1560, 340), "w": 140.0},   # 응축 코일 상부(리스크-리워드 포켓)
 			{"pos": Vector2(2040, 460), "w": 200.0},
 			{"pos": Vector2(2520, 440), "w": 160.0},
@@ -3313,8 +3316,8 @@ static func _holdout() -> Dictionary:
 		],
 		"platforms": [
 			# 좌우 상단 저격 발판 · 엄폐 위 각으로 플레이어만 압박(pop 타이밍을 좁힘).
-			{"pos": Vector2(340, 520), "w": 170.0},
-			{"pos": Vector2(1580, 520), "w": 170.0},
+			{"pos": Vector2(340, 532), "w": 170.0},
+			{"pos": Vector2(1580, 532), "w": 170.0},
 			# 저격 발판 도달 계단(2026-08-11) · 이 게임은 마우스 조준이 없어(수평탄) 높은 저격수는
 			# 수류탄 각/엄폐 위 점프샷 말고는 못 잡는데, ENEMY_CLEAR라 처치 경로 보장이 필요.
 			# 지상(820)→계단(700, 단일 풀점프)→저격 발판(520, 더블점프). 저격 압박 정체성은 유지.
@@ -3339,7 +3342,7 @@ static func _holdout() -> Dictionary:
 				"banner":  "WAVE 2",
 				"enemies": {
 					"bomber": [Vector2(150, 790.0), Vector2(1770, 790.0)],
-					"sniper": [Vector2(340, 490.0)],
+					"sniper": [Vector2(340, 502.0)],
 				},
 			},
 			# ── 배치 3 확장(2026-08-19): 웨이브 3 → 6(room_chain_expansion §3 · 목표 막4 100~130s).
@@ -3361,7 +3364,7 @@ static func _holdout() -> Dictionary:
 				"banner":  "WAVE 4",
 				"enemies": {
 					# 저격 이중 사선 + 호출병: 사선에 묶여 있는 동안 증원이 계속 불려 온다.
-					"sniper": [Vector2(340, 490.0), Vector2(1580, 490.0)],
+					"sniper": [Vector2(340, 502.0), Vector2(1580, 502.0)],
 					"caller": [Vector2(1700, 790.0)],
 				},
 			},
@@ -3382,7 +3385,7 @@ static func _holdout() -> Dictionary:
 					# 중앙 스쿼드 + 양익 저격 + 재머 절정.
 					"shield": [Vector2(960, 790.0)],
 					"patrol": [Vector2(880, 790.0), Vector2(1040, 790.0)],
-					"sniper": [Vector2(340, 490.0), Vector2(1580, 490.0)],
+					"sniper": [Vector2(340, 502.0), Vector2(1580, 502.0)],
 					"jammer": [Vector2(1240, 790.0)],
 				},
 			},
@@ -3391,7 +3394,7 @@ static func _holdout() -> Dictionary:
 		"enemies": {
 			"patrol": [Vector2(180, 790.0), Vector2(1740, 790.0)],
 			"bomber": [Vector2(150, 790.0), Vector2(1770, 790.0)],
-			"sniper": [Vector2(340, 490.0), Vector2(1580, 490.0)],
+			"sniper": [Vector2(340, 502.0), Vector2(1580, 502.0)],
 			"shield": [Vector2(960, 790.0)],
 			"drone":  [],
 			"jammer": [Vector2(1240, 790.0)],

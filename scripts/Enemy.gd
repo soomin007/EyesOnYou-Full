@@ -93,7 +93,8 @@ const CALLER_LIVE_CAP: int = 4            # 이 호출병이 부른 생존 증�
 
 # Sniper · 시야가 트여 있을 때만 발사
 const SNIPER_FIRE_INTERVAL: float = 2.6
-const SNIPER_AIM_TIME: float = 0.7
+# 조준(붉은 조준선)→발사 시간 · 0.1s 상향(2026-08-25 사용자 "저격수 공격 타이밍 0.1초 늦춰").
+const SNIPER_AIM_TIME: float = 0.8
 # 재조준(압력 파일럿 2026-08-21, hp_survival_economy §4-A · 사용자 승인): 발사 직후·조준 중
 # 시야 끊김 직후에는 다음 사이클 대기를 줄여 "한 번 피하고 서 있기"를 막는다. 예고(aim) 시간은
 # 불변 · 보고 피할 수 있음은 유지, 유휴 간격만 줄어든다. 첫 조우(사거리 진입)는 풀 인터벌.
@@ -108,7 +109,7 @@ const SNIPER_RANGE: float = 820.0
 # 오르게 한다. 전투 맵(subway/datacenter) 저격수는 avoid_only 미부착이라 그대로(영향 없음).
 # 모래주머니/ㄴ자 발판으로는 하향 사격을 못 막는다(탄이 발판 밑으로 빠짐) → 압박 수치로 조정.
 const NEST_SNIPER_RANGE: float = 700.0
-const NEST_SNIPER_AIM_TIME: float = 1.7    # 텔레그래프(붉은 조준선)=조준→발사 시간. 길게 잡아 등반 중 피할 여유.
+const NEST_SNIPER_AIM_TIME: float = 1.8    # 텔레그래프(붉은 조준선)=조준→발사 시간. 길게 잡아 등반 중 피할 여유. (+0.1s 2026-08-25)
 const NEST_SNIPER_INTERVAL_MUL: float = 1.5  # 발사 간격 1.5배(2.6→3.9s) · 등반 중 피탄 횟수↓
 
 # Drone · 머리 위 호버 후 폭탄 투하
@@ -130,7 +131,7 @@ const ELITE_PATROL_SPEED: float = 85.0
 const ELITE_PATROL_CHARGE_SPEED: float = 330.0
 const ELITE_PATROL_RECOVERY: float = 0.6
 const ELITE_PATROL_BURST_GAP: float = 0.15       # 2연 버스트 간격 · 수평탄이라 점프 하나로 함께 회피
-const ELITE_SNIPER_AIM: float = 0.55
+const ELITE_SNIPER_AIM: float = 0.65   # (+0.1s 2026-08-25 · 일반과 동일 폭)
 const ELITE_SNIPER_INTERVAL: float = 1.9          # risk3 0.7배 곱해도 1.33s · 회피 가능선
 const ELITE_DRONE_SPEED: float = 125.0
 const ELITE_DRONE_BOMB_INTERVAL: float = 2.8      # 2연 투하 보상으로 사이클은 완만

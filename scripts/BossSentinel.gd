@@ -12,6 +12,7 @@ signal self_destruct_started
 signal self_destruct_disarmed
 signal vent_started
 signal overheat_stalled
+signal sweep_telegraphed
 
 # 전면 리워크(2026-08-25 사용자 C안, sentinel_rework.md §8): 무대 세로 확장(2200x1300 ·
 # ARENA_FOLLOW) + P2+ 고도 추적·데크 스윕(상층 캠핑 해소) + 배기 리듬 완화. 5차 갤러리 지적
@@ -85,9 +86,11 @@ const HOVER_RANGE_X: Vector2 = Vector2(200.0, 2000.0)  # 좌/우 한계 (lab 220
 const TRACK_DEAD_ZONE: float = 80.0  # P2/P3 추적 시 dead zone
 # P2+ 고도 추적(리워크 §8) · 플레이어 고도보다 TRACK_OFFSET_Y 위 밴드로 내려온다.
 # 상층 캠핑이 영구 안전지대가 아니게 하는 축 · 낮게 유인하면 증기 실속 사거리에 든다.
+# 완화(2026-08-25 7차 갤러리 "고도 추적 여전히 짜증"): 오프셋 260→340(더 위에 머묾) ·
+# 하한 980→860(지면까지 쫓아 내려오지 않음) · 수직 추적 속도는 _move에서 150→110.
 const HOVER_Y_MIN: float = 400.0
-const HOVER_Y_MAX: float = 980.0
-const TRACK_OFFSET_Y: float = 260.0
+const HOVER_Y_MAX: float = 860.0
+const TRACK_OFFSET_Y: float = 340.0
 const GROUND_Y_LAB: float = 1220.0   # 자폭 추락 바닥(콜리전 대신 수동 클램프 · 비행체는 발판 관통)
 # 데크 스윕(리워크 §8 신설) · P2+에서 주기적으로 플레이어 고도를 예고한 뒤 수평 관통 돌진.
 # "어느 발판이든 스윕 한 번이면 비켜야 한다"의 앵커 패턴. 예고 0.8s + 경로 표시선(예고 원칙 준수).
@@ -423,7 +426,7 @@ func _move(_delta: float) -> void:
 	if phase >= 2 and p != null:
 		hover_target = clampf(p.global_position.y - TRACK_OFFSET_Y, HOVER_Y_MIN, HOVER_Y_MAX)
 	var dy: float = hover_target - global_position.y
-	velocity.y = clamp(dy * 4.0, -150.0, 150.0)
+	velocity.y = clamp(dy * 4.0, -110.0, 110.0)
 	move_and_slide()
 
 # ─── 데크 스윕(리워크 §8) · 예고(고도 조준 + 날개 주황 점멸 + 경로선) 후 수평 관통 돌진 ───
@@ -449,13 +452,15 @@ func _begin_sweep() -> void:
 		_sweep_line = Line2D.new()
 		_sweep_line.points = PackedVector2Array([
 			Vector2(HOVER_RANGE_X.x - 120.0, _sweep_y), Vector2(HOVER_RANGE_X.y + 120.0, _sweep_y)])
-		_sweep_line.width = 3.0
+		_sweep_line.width = 4.0
 		_sweep_line.default_color = Color(1.0, 0.42, 0.30, 0.0)
 		_sweep_line.z_index = 5
 		parent.add_child(_sweep_line)
 		var lt: Tween = _sweep_line.create_tween()
-		lt.tween_property(_sweep_line, "default_color:a", 0.70, SWEEP_TELEGRAPH * 0.85)
+		lt.tween_property(_sweep_line, "default_color:a", 0.85, SWEEP_TELEGRAPH * 0.85)
 	SfxPlayer.play_at("enemy_sniper_charge", global_position, -4.0)
+	# 첫 예고 해설은 Stage가 이 시그널로(7차 갤러리 "예고가 뭔 의민지 모르겠음").
+	emit_signal("sweep_telegraphed")
 
 func _sweep_process(delta: float) -> void:
 	if _sweep_state == 1:

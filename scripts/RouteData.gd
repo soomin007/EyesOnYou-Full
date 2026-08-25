@@ -43,7 +43,7 @@ const ALL_ROUTES: Array = [
 		"unique": false,
 		"min_stage": 0, "max_stage": 1,
 		"tags": ["우회", "어두운_환경"],
-		"veil_comment": "이쪽을 권합니다. 경비가 약하고, 길이 단순합니다.",
+		"veil_comment": "이쪽을 추천합니다. 경비가 약하고, 길이 단순합니다.",
 		"entry_comment": "외곽 진입 확인. 목표는 깊숙한 안쪽입니다. 다 싸울 필요는 없습니다.",
 		"entry_comment_replay": "외곽으로 들어왔습니다. 이 어둠이 어쩐지 익숙합니다. 처음일 텐데 말입니다. 안쪽 깊은 곳까지, 서두르지 말고 가십시오.",
 		"stage_color": Color(0.12, 0.12, 0.14),
@@ -52,7 +52,7 @@ const ALL_ROUTES: Array = [
 		"id": "route_rooftops",
 		"name": "외벽 옥상",
 		"elev": "high",
-		"description": "외벽 옥상의 통신·환기 설비 구역. 트인 만큼 노출되고, 돌풍이 주기적으로 분다.",
+		"description": "외벽 옥상의 통신·환기 설비 구역. 지붕 없는 정비 발판이 시설 가장자리를 따라 이어진다.",
 		"risk": 2,
 		"reward_type": "xp",
 		"hidden": false,
@@ -67,7 +67,7 @@ const ALL_ROUTES: Array = [
 		"id": "route_sewers",
 		"name": "옛 배수로",
 		"elev": "under",
-		"description": "시설이 들어서기 전부터 있던 옛 배수로. 펌프가 살아 있어 물이 주기적으로 차오른다.",
+		"description": "시설이 들어서기 전부터 있던 옛 배수로. 도시 시절의 물길이 아직 시설 밑을 지난다.",
 		"risk": 2,
 		"reward_type": "xp",
 		"hidden": false,
@@ -100,7 +100,7 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_cooling",
 		"name": "냉각 시설",
-		"description": "서버를 식히는 냉각 플랜트. 바닥 증기 분출구가 주기로 터지고, 드론이 머리 위를 점한다.",
+		"description": "서버 열을 빼내는 냉각 플랜트. 살아 있는 배관 곳곳에서 증기가 새어 나온다.",
 		"risk": 2,
 		"reward_type": "xp",
 		"hidden": false,
@@ -345,7 +345,7 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_substation",
 		"name": "변전소",
-		"description": "시설 전력을 받는 옥외 변전 설비. 노출 전선이 주기적으로 방전하고, 변압기 위로 저격선이 깔린다.",
+		"description": "시설 전력을 받는 옥외 변전 설비. 절연이 삭아 장비 곳곳에서 스파크가 튄다.",
 		"risk": 3,
 		"reward_type": "xp",
 		"hidden": false,
@@ -386,7 +386,7 @@ const ALL_ROUTES: Array = [
 		"id": "route_demolition_zone",
 		"name": "철거 구역",
 		"elev": "ground",
-		"description": "절반쯤 헐린 외곽 건물군. 위에서 잔해가 떨어지고, 무너진 벽을 지나면 파쇄 마당이 이어진다.",
+		"description": "절반쯤 헐린 외곽 건물군. 철거가 중단된 채 골조만 남았고, 무너진 벽 너머로 파쇄 마당이 이어진다.",
 		"risk": 2,
 		"reward_type": "xp",
 		"hidden": false,
@@ -401,7 +401,7 @@ const ALL_ROUTES: Array = [
 		"id": "route_pump_station",
 		"name": "배수 펌프장",
 		"elev": "ground",
-		"description": "외곽 빗물을 퍼내는 펌프장. 방류구가 주기적으로 물을 뿜고, 파이프 위에서 조준선이 내려온다.",
+		"description": "외곽 빗물을 퍼내는 배수 펌프장. 가동을 멈춘 적 없는 방류 설비가 이 일대의 물길을 쥐고 있다.",
 		"risk": 2,
 		"reward_type": "xp",
 		"hidden": false,
@@ -418,7 +418,7 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_relay_station",
 		"name": "통신 중계소",
-		"description": "시설 교신을 중계하는 안테나 구역. 중계기 위 저격과 머리 위 드론이 겹친다.",
+		"description": "시설 교신을 중계하는 안테나 구역. 송신 때마다 간섭파가 장비 사이를 훑고 지나간다.",
 		"risk": 3,
 		"reward_type": "record",
 		"hidden": false,
@@ -435,15 +435,15 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_warehouse",
 		"name": "물류 창고",
-		"description": "시설 보급을 쌓아둔 적재 창고. 컨베이어가 아직 돌아 바닥이 흐른다.",
+		"description": "시설 보급을 쌓아둔 적재 창고. 바닥 컨베이어가 아직 돌아가고 있다.",
 		"risk": 2,
 		"reward_type": "xp",
 		"hidden": false,
 		"unique": false,
 		"min_stage": 3, "max_stage": 5,
 		"tags": ["근접전", "전투"],
-		"veil_comment": "물류 창고입니다. 바닥 컨베이어가 밉니다. 거스르는 구간에 자폭병과 방패병.",
-		"veil_comment_warm": "물류 창고예요. 바닥 컨베이어가 밀어요. 거스르는 구간에 자폭병이랑 방패병.",
+		"veil_comment": "물류 창고입니다. 바닥 컨베이어가 몸을 계속 밀어냅니다. 거슬러 가는 구간에 자폭병과 방패병이 있습니다.",
+		"veil_comment_warm": "물류 창고예요. 바닥 컨베이어가 몸을 계속 밀어내니까, 거슬러 가는 구간의 자폭병과 방패병을 조심하세요.",
 		"entry_comment": "적재 창고입니다. 컨테이너를 엄폐로. 근접을 조심하십시오.",
 		"entry_comment_warm": "적재 창고예요. 컨테이너를 엄폐로. 근접 조심해요.",
 		"stage_color": Color(0.15, 0.14, 0.12),
@@ -451,7 +451,7 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_checkpoint",
 		"name": "보안 검문소",
-		"description": "내부 구역을 나누는 보안 검문선. 검문 레이저를 건드리면 포탑이 깨어난다.",
+		"description": "내부 구역을 나누는 보안 검문선. 통로마다 검문 레이저와 연동 포탑이 깔려 있다.",
 		"risk": 2,
 		"reward_type": "recon",
 		"hidden": false,
@@ -484,7 +484,7 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_condenser",
 		"name": "응축기 구역",
-		"description": "냉각수를 응축하는 구역. 천장 배관에서 뜨거운 응축수가 방울져 떨어진다.",
+		"description": "냉각수를 모아 응축하는 집수 구역. 압력 높은 배관 이음새마다 뜨거운 물방울이 맺혀 있다.",
 		"risk": 2,
 		"reward_type": "xp",
 		"hidden": false,
@@ -531,7 +531,7 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_freight_lift",
 		"name": "화물 리프트",
-		"description": "시설 정비 화물구역. 스파이크 구덩이 위를 왕복하는 화물 리프트를 타이밍 맞춰 건넌다.",
+		"description": "시설 정비 화물 구역. 가시 구덩이 위로 화물 리프트가 쉬지 않고 오간다.",
 		"risk": 2,
 		"reward_type": "xp",
 		"hidden": false,
@@ -548,7 +548,7 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_car_cover",
 		"name": "차량 엄폐 통로",
-		"description": "버려진 정비 차량이 늘어선 사격 통로. 저격에 노출된 개활지라, 차량 뒤에 붙어 전진해야 한다.",
+		"description": "버려진 정비 차량이 늘어선 곧은 통로. 육교 위 저격 초소가 훤히 트인 길 전체를 내려다본다.",
 		"risk": 3,
 		"reward_type": "xp",
 		"hidden": false,
@@ -565,7 +565,7 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_collapse",
 		"name": "붕괴 갱도",
-		"description": "구조가 무너지기 시작한 정비 갱도. 뒤에서 붕괴가 쫓아온다. 멈추면 삼켜진다.",
+		"description": "구조가 버티지 못하기 시작한 정비 갱도. 버팀목 부러지는 소리가 걸음을 앞질러 들린다.",
 		"risk": 3,
 		"reward_type": "xp",
 		"hidden": false,
@@ -573,8 +573,8 @@ const ALL_ROUTES: Array = [
 		# 막4 램프 s11 고조~막5 s12(act_identity §6): 추격 절정 · 막4 "추적"의 시그니처. 재머 금지.
 		"min_stage": 11, "max_stage": 12,
 		"tags": ["이동", "노출"],
-		"veil_comment": "뒤가 무너집니다. 멈추지 마십시오. 잔해는 넘고, 계속 앞으로.",
-		"veil_comment_warm": "뒤가 무너져요. 멈추지 말아요. 잔해는 넘고, 계속 앞으로.",
+		"veil_comment": "등 뒤에서 통로가 무너집니다. 멈추지 마십시오. 잔해는 넘고, 계속 앞으로.",
+		"veil_comment_warm": "등 뒤에서 통로가 무너져요. 멈추지 마세요. 잔해는 넘고, 계속 앞으로.",
 		"entry_comment": "구조가 버티지 못합니다. 붕괴가 따라옵니다. 멈추면 삼켜집니다. 앞으로만.",
 		"entry_comment_warm": "구조가 버티질 못해요. 붕괴가 따라와요. 멈추면 삼켜져요. 앞으로만.",
 		"stage_color": Color(0.10, 0.08, 0.07),
@@ -582,7 +582,7 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_core_defense",
 		"name": "반응로 제어실",
-		"description": "시설 중앙 반응로 제어실. 밀려드는 적으로부터 코어를 지켜야 한다. 자리를 비우면 코어가 무너진다.",
+		"description": "시설 중앙 반응로 제어실. 코어가 노출된 채 돌아가는, 시설이 가장 예민해지는 방이다.",
 		"risk": 3,
 		"reward_type": "record",
 		"hidden": false,
@@ -599,7 +599,7 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_scanner_sweep",
 		"name": "감시 회랑",
-		"description": "보안 스캔 빔이 통로를 주기적으로 훑는 감시 회랑. 빔이 지날 때 대피 칸에 숨지 않으면 노출된다.",
+		"description": "천장 레일을 따라 보안 스캔이 오가는 감시 회랑. 통로 벽에 정비용 대피 칸이 파여 있다.",
 		"risk": 3,
 		"reward_type": "recon",
 		"hidden": false,
@@ -619,7 +619,7 @@ const ALL_ROUTES: Array = [
 	{
 		"id": "route_holdout",
 		"name": "저지선",
-		"description": "발각된 통제 구역. 부서지는 바리케이드 뒤에서 밀려오는 경비를 저지한다. 바리케이드는 영원하지 않다.",
+		"description": "침입이 발각돼 봉쇄된 통제 구역. 경비가 몰려드는 길목에 임시 바리케이드가 둘러쳐져 있다.",
 		"risk": 3,
 		"reward_type": "xp",
 		"hidden": false,
@@ -817,7 +817,7 @@ static func reward_type_label(t: String) -> String:
 # "first"는 데이터 없는 첫 스테이지 전용이라 항상 cold · warm 풀 불필요.
 const REC_REASON: Dictionary = {
 	"first": [
-		"처음이니 무난한 쪽을 권합니다.",
+		"처음이니 무난한 쪽을 추천합니다.",
 		"첫 길은 이쪽이 수월합니다.",
 		"초반에는 이쪽입니다.",
 	],
@@ -839,7 +839,7 @@ const REC_REASON: Dictionary = {
 	"steady": [
 		"이쪽이 좋아 보입니다.",
 		"여기가 적당합니다.",
-		"이 길을 권합니다.",
+		"이 길이 좋겠습니다.",
 	],
 }
 const REC_REASON_WARM: Dictionary = {
@@ -861,7 +861,7 @@ const REC_REASON_WARM: Dictionary = {
 	"steady": [
 		"이쪽이 좋아 보여요.",
 		"여기가 적당해요.",
-		"이 길을 권해요.",
+		"저라면 이쪽부터 가요.",
 	],
 }
 

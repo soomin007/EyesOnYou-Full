@@ -333,6 +333,12 @@
 | 기본 | 저 기계는 열에 약합니다. 증기 기둥 위로 몰아넣으면 잠깐 멈춥니다. | That machine runs hot. Herd it over a steam column and it will stop for a moment. |
 | warm | 저 기계, 열에 약해요. 증기 기둥 위로 몰아넣으면 잠깐 멈춥니다. | |
 
+#### 첫 데크 스윕 예고 자막 (`_on_boss_sweep_telegraphed`, 1회 · 2026-08-25)
+| 밴드 | KO | EN |
+|---|---|---|
+| 기본 | 적이 겨눈 건 요원이 선 높이입니다. 붉은 선을 따라 지나갑니다. 그 높이만 피하십시오. | It is aiming at your height. It will pass along the red line. Just step off that height. |
+| warm | 붉은 선 높이로 적이 돌진합니다. 그 높이만 벗어나면 됩니다. 요원이라면 어렵지 않을 겁니다. | |
+
 #### 첫 과열 실속 자막 (`_on_boss_overheat_stalled`, 1회 · 2026-08-22)
 | 밴드 | KO | EN |
 |---|---|---|
@@ -371,8 +377,8 @@
 |---|---|---|
 | 무피격 | 피격 0. 이 구간, 깨끗하게 지나셨습니다. | Zero hits taken. Clean pass on this section. |
 | 무피격 · warm | 피격 0이에요. 이 구간, 깨끗하게 지나셨네요. | |
-| 전원 처치 | 구역 경비, 전원 처치 확인했습니다. 이제 뒤는 조용합니다. | All area guards confirmed down. Nothing behind us now. |
-| 전원 처치 · warm | 구역 경비까지 전부 정리하셨네요. 이제 뒤는 조용해요. | |
+| 전원 처치 | 구역 경비, 전원 처치 확인했습니다. 등 뒤에 남은 적은 없습니다. | All area guards confirmed down. Nothing behind us now. |
+| 전원 처치 · warm | 구역 경비까지 전부 정리하셨네요. 등 뒤에 남은 적은 없어요. | |
 
 ---
 

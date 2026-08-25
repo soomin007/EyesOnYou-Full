@@ -883,7 +883,9 @@ func register_death() -> void:
 	# 보스전: 같은 스테이지 P1부터(Death._restart_stage가 rival_phase_reached를 리셋).
 	if story_mode or playground_active:
 		return
-	if current_route_id != "route_core_recovery":
+	# 보스전 사망 = 그 자리(보스전 처음)부터 · 14-1과 SENTINEL(lab) 공통(2026-08-23 통일
+	# "보스전만 같은 자리"가 14-1에만 구현돼 lab은 막3 처음으로 끌려갔다 · 7차 갤러리 지적).
+	if current_route_id != "route_core_recovery" and current_route_id != "route_lab":
 		current_stage = act_start_stage(act_for_stage(current_stage))
 		rival_phase_reached = 0
 		# 진행 불가 소프트락 수정(2026-08-25 사용자 보고): 막 시작으로 후퇴하면서 그 막에서

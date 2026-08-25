@@ -61,23 +61,31 @@ func _sweep_death_invariant() -> void:
 		var act_s: int = GameState.act_start_stage(GameState.act_for_stage(s))
 		var exp_aggr: int = 0
 		var boot_fail: bool = false
-		for t in s:
+		# 스테이지 s의 맵 선택까지 실제 경로로 진행한 뒤(현실의 사망 시점) 그 안에서 죽는다.
+		for t in s + 1:
 			GameState.current_stage = t
 			var pool0: Array = RouteData.get_route_pool_for_stage(t, GameState.route_history)
 			if pool0.is_empty():
 				boot_fail = true
 				break
 			GameState.record_route_choice(pool0[0], "")
-			GameState.current_stage = t + 1
-			if GameState.is_act_start(t + 1):
-				GameState.capture_act_checkpoint()
-			if t + 1 == act_s:
-				exp_aggr = GameState.aggression_score
+			if t < s:
+				GameState.current_stage = t + 1
+				if GameState.is_act_start(t + 1):
+					GameState.capture_act_checkpoint()
+					# 기대값 = 검문 시점 값(막 시작 맵 "선택 전") · 복원의 정답과 동일 시점.
+					exp_aggr = GameState.aggression_score
 		if boot_fail:
 			bad.append("s%d 풀 소진(그리디)" % s)
 			continue
 		GameState.current_stage = s
+		var died_in: String = GameState.current_route_id
 		GameState.register_death()
+		# 보스방(lab·14-1)은 제자리 재시작 · 그 외는 막 시작 되감기 + 파생 상태 복원.
+		if died_in == "route_lab" or died_in == "route_core_recovery":
+			if GameState.current_stage != s:
+				bad.append("s%d(보스방) 제자리 아님 stage=%d" % [s, GameState.current_stage])
+			continue
 		var pool: Array = RouteData.get_route_pool_for_stage(GameState.current_stage, GameState.route_history)
 		var exp_rid: String = str(GameState.route_history.back()) if not GameState.route_history.is_empty() else ""
 		if GameState.current_stage != act_s:
@@ -92,7 +100,7 @@ func _sweep_death_invariant() -> void:
 			bad.append("s%d rid '%s' != 기록 끝 '%s'" % [s, GameState.current_route_id, exp_rid])
 		elif GameState.aggression_score != exp_aggr:
 			bad.append("s%d 공격성 %d != 막시작 %d(이중 집계)" % [s, GameState.aggression_score, exp_aggr])
-	_check("A. 전 스테이지 사망 불변식(s0~13 · 파생 집계 포함)", bad.is_empty(), str(bad))
+	_check("A. 전 스테이지 사망 불변식(s0~13 · 파생 집계·보스방 제자리 포함)", bad.is_empty(), str(bad))
 	# 14-1 예외 · 보스전 사망은 제자리(리셋은 페이즈만).
 	GameState.start_main_game()
 	_greedy_to(13)

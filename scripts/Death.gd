@@ -95,6 +95,11 @@ func _restart_stage() -> void:
 		GameState.rival_phase_reached = 0
 		get_tree().change_scene_to_file.call_deferred(SceneRouter.STAGE)
 		return
+	# SENTINEL(lab) 보스전 사망도 같은 자리부터(2026-08-25 사용자 "보스전 처음으로 가는 게
+	# 맞을 듯") · 재도전 인트로 생략(boss_intro_seen_run)은 기존 가드가 처리.
+	if GameState.current_route_id == "route_lab":
+		get_tree().change_scene_to_file.call_deferred(SceneRouter.STAGE)
+		return
 	# 본편 사망 = 막 첫 스테이지(2026-08-23 통일). current_stage 후퇴·저장은 register_death가
 	# 이미 마쳤고, 여기선 브리핑으로 보낸다(막 첫 구역의 루트 재선택부터).
 	get_tree().change_scene_to_file.call_deferred(SceneRouter.BRIEFING)

@@ -6753,6 +6753,7 @@ func _spawn_boss(boss_meta: Dictionary) -> void:
 	boss.self_destruct_disarmed.connect(_on_boss_self_destruct_disarmed)
 	boss.vent_started.connect(_on_boss_vent_started)
 	boss.overheat_stalled.connect(_on_boss_overheat_stalled)
+	boss.sweep_telegraphed.connect(_on_boss_sweep_telegraphed)
 	_build_boss_hp_bar()
 	# 플레이어 성장 스케일(2026-08-10) · 15스테이지 확장으로 s8 시점 화력이 원 설계(9스테이지)보다
 	# 높아 보스가 너무 빨리 녹는다는 피드백. 공격 계열 티어 합 × 2 HP 가산.
@@ -6901,6 +6902,17 @@ func _clear_facility_hazards() -> void:
 
 # 증기 과열 실속(카운터플레이 성공) · 흔들림 + 첫 회에 보상 창을 말로.
 var _boss_stall_line_shown: bool = false
+
+# 첫 데크 스윕 예고 해설 1회(2026-08-25 7차 갤러리 "예고가 뭔 의민지 모르겠음") ·
+# 붉은 경로선의 뜻(그 높이를 관통)과 대처(그 높이만 벗어나기)를 말로 한 번 짚는다.
+var _boss_sweep_line_shown: bool = false
+
+func _on_boss_sweep_telegraphed() -> void:
+	if _boss_sweep_line_shown:
+		return
+	_boss_sweep_line_shown = true
+	# EN: "It is aiming at your height. The red line is its path. Step off that height."
+	_show_veil_subtitle(VeilDialogue.banded("적이 겨눈 건 요원이 선 높이입니다. 붉은 선을 따라 지나갑니다. 그 높이만 피하십시오.", "붉은 선 높이로 적이 돌진합니다. 그 높이만 벗어나면 됩니다. 요원이라면 어렵지 않을 겁니다."), 3.6)
 
 func _on_boss_overheat_stalled() -> void:
 	_camera_shake(9.0, 0.4)
@@ -8661,8 +8673,8 @@ func _start_rival_p3(hold: float = 3.0) -> void:
 	# 가짜 마커는 지상·중층·데크에 분산. 가짜 눈(동반 미끼)은 FalseVeil이 자체 관리.
 	var p3_anchors: Array = [Vector2(1200.0, 560.0), Vector2(620.0, 640.0), Vector2(1780.0, 640.0)]
 	var p3_spots: Array = [Vector2(350.0, 1190.0), Vector2(850.0, 1190.0), Vector2(1550.0, 1190.0),
-		Vector2(2050.0, 1190.0), Vector2(350.0, 1010.0), Vector2(2050.0, 1010.0),
-		Vector2(700.0, 850.0), Vector2(1700.0, 850.0), Vector2(1200.0, 830.0)]
+		Vector2(2050.0, 1190.0), Vector2(350.0, 1022.0), Vector2(2050.0, 1022.0),
+		Vector2(700.0, 862.0), Vector2(1700.0, 862.0), Vector2(1200.0, 830.0)]
 	# 다회차 기억 변주 · P3 · 실체화 시작 지점·가짜 병사 슬롯 순서를 회차로 회전
 	# ("네가 외운 자리에는 없다"). 수류탄으로 끝냈던 기억이 있으면 가짜 눈이 지난 회차의
 	# 진짜 자리(+2 회전)에 선다 · 익숙한 자리일수록 가짜다. 개수·창 길이·HP는 불변.
@@ -9888,7 +9900,7 @@ func _begin_clear_sequence() -> void:
 			veil_line = VeilDialogue.banded("피격 0. 이 구간, 깨끗하게 지나셨습니다.", "피격 0이에요. 이 구간, 깨끗하게 지나셨네요.")
 		else:
 			# EN: "All area guards confirmed down. Nothing behind us now."
-			veil_line = VeilDialogue.banded("구역 경비, 전원 처치 확인했습니다. 이제 뒤는 조용합니다.", "구역 경비까지 전부 정리하셨네요. 이제 뒤는 조용해요.")
+			veil_line = VeilDialogue.banded("구역 경비, 전원 처치 확인했습니다. 등 뒤에 남은 적은 없습니다.", "구역 경비까지 전부 정리하셨네요. 등 뒤에 남은 적은 없어요.")
 	if not banner_lines.is_empty():
 		var any_perf0: bool = GameState.last_clear_nohit or GameState.last_clear_allkill
 		_show_clear_banner(banner_lines, veil_line)
