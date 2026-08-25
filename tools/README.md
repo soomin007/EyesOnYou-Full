@@ -18,6 +18,7 @@
 |---|---|---|
 | VerifyShots | `VERIFY_ONLY=id1,id2` 환경 변수 + `godot --path . --audio-driver Dummy tools/verify_shots.tscn` | 갤러리용 스크린샷·프레임 연사(창모드 · 오디오 무음) |
 | BotRunner | `scenes/bot_runner.tscn` (헤드리스 가능) | 빌드×맵 자동 주파 계측([BOT] 지표) |
+| BossTimeBench | `godot --headless --path . tools/boss_time_bench.tscn` | SENTINEL 격파 시간 하한(전 시간 명중 지속 화력 모델 · 빌드 4변형) |
 | ChainShotter | `scenes/chain_shotter.tscn` | 방 체인 배경 촬영 |
 
 ## 편집 시점 감지 (자동)
