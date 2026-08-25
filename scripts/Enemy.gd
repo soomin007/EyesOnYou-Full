@@ -155,6 +155,7 @@ const EDGE_LOOKAHEAD_X_FAST: float = 80.0
 const EDGE_LOOKAHEAD_Y: float = 80.0
 const EDGE_FLIP_COOLDOWN: float = 0.15
 var edge_flip_cd: float = 0.0
+var wall_flip_cd: float = 0.0   # 벽 반전 쿨다운 · 기둥 사이 끼임 진동 방지(2026-08-25)
 
 func _has_ground_ahead(check_dir: int, lookahead: float = EDGE_LOOKAHEAD_X) -> bool:
 	# 발 앞 lookahead 위치에서 아래 EDGE_LOOKAHEAD_Y 안에 ground/platform이 있는가.
@@ -948,8 +949,16 @@ func _tick_patrol(delta: float) -> void:
 					dir = -1
 				elif global_position.x < origin_x - patrol_range:
 					dir = 1
-				if is_on_wall():
+				if wall_flip_cd > 0.0:
+					wall_flip_cd -= delta
+				elif is_on_wall():
 					dir = -dir
+					wall_flip_cd = EDGE_FLIP_COOLDOWN
+					# 기둥 끼임 수정(2026-08-25 사용자 보고 "순찰이 기둥에 끼어 버벅"):
+					# 순찰 원점이 벽 너머면 위 범위 로직이 매 틱 벽 쪽으로 dir을 되돌려
+					# 벽 반전과 영구 진동했다. 벽을 만나면 원점을 현재 위치로 재고정해
+					# 순찰 대역이 닿을 수 있는 쪽으로 옮겨 앉는다(+반전 쿨다운).
+					origin_x = global_position.x
 				# 발판 가장자리 감지 · 떨어지지 않게 진행 방향에 ground 없으면 반전
 				if edge_flip_cd > 0.0:
 					edge_flip_cd -= delta
