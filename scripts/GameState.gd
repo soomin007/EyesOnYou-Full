@@ -426,6 +426,10 @@ func rival_locks_active() -> int:
 		locks += 1
 	if act >= 4:
 		locks += 1
+	# 하한 가드(2026-08-25 사용자 보고): 최대 HP를 안 키운 런(기본 3)은 막5에서 3-2=1칸이
+	# 되어 저격 밸런스와 겹쳐 즉사 루프였다. 잠금은 실효 최대가 2칸 밑으론 못 내려간다 —
+	# 안 걸린 잠금은 컷씬도 생략된다(Stage._maybe_rival_lock_beat 게이트).
+	locks = mini(locks, maxi(0, player_max_hp - 2))
 	return maxi(0, locks - rival_locks_broken)
 
 # 잠금 반영 실효 최대 HP — 회복·부활·HUD의 단일 상한(라이벌이 잠근 칸은 안 찬다).
@@ -845,6 +849,12 @@ func register_death() -> void:
 	if current_route_id != "route_core_recovery":
 		current_stage = act_start_stage(act_for_stage(current_stage))
 		rival_phase_reached = 0
+		# 진행 불가 소프트락 수정(2026-08-25 사용자 보고): 막 시작으로 후퇴하면서 그 막에서
+		# 골랐던 경로 기록을 안 지우면 불변식(route_history.size == current_stage)이 깨지고,
+		# RouteMap이 history 필터로 풀을 짜므로 죽을 때마다 실패한 시도의 맵이 영구 소모돼
+		# 여러 번 죽으면 선택지가 말라붙었다. 되감은 스테이지 이후의 기록을 잘라 풀을 되돌린다.
+		if route_history.size() > current_stage:
+			route_history.resize(current_stage)
 	player_hp = effective_max_hp()
 	save_run()
 
@@ -1114,6 +1124,10 @@ func _restore_run_state(cf: ConfigFile, section: String) -> void:
 	route_history = []
 	for v in cf.get_value(section, "route_history", []):
 		route_history.append(str(v))
+	# 불변식 복구(2026-08-25) — 사망 후퇴가 기록을 안 자르던 구버전 세이브는 history가
+	# current_stage보다 길어 맵 풀이 말라 있었다. 로드 시 잘라 기존 세이브도 치유한다.
+	if route_history.size() > current_stage:
+		route_history.resize(current_stage)
 	last_veil_recommended_route = str(cf.get_value(section, "last_veil_recommended_route", ""))
 	followed_veil_last_choice = bool(cf.get_value(section, "followed_veil_last_choice", false))
 	var saved_skills: Dictionary = cf.get_value(section, "skills", {})

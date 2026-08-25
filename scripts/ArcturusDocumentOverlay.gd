@@ -310,15 +310,53 @@ func show_doc(input_lines: Array) -> void:
 	else:
 		_enter_unfold()
 
-# 종이 등장 — 접힌 문서 밴드 위에 봉인 도장이 쾅 찍혀 있고, 펼치면서 봉인이 걷혀
-# 문서 우상단 스탬프로 교대된다(접힌 상태 0.5s → 펼침 0.55s).
+# 종이 등장 v2(2026-08-25 사용자 "펼친다는 느낌이 전혀 아님") — 삼단 접지 편지 문법.
+# 접힌 팩(상단 면) 아래 가장자리를 봉인 도장이 물고 있고, 봉인이 뜯기면 아랫단이 두 번
+# "젖혀지며" 열린다: 각 단은 뒷면(어두움)이 밝아지며 위 접선(pivot)에서 자라는 원근 눈속임 +
+# 접선 크리스 음영. 다 펼쳐지면 실제 종이로 교차 페이드하고, 접힌 자국이 잠시 남는다.
 func _enter_unfold() -> void:
-	paper.pivot_offset = Vector2(PAPER_WIDTH * 0.5, 0.0)
-	paper.scale = Vector2(1.0, 0.12)
-	# 화면 고정 봉인 — 접힌 밴드 중앙에 크게. 펼칠 때 페이드 아웃(원 스탬프와 교대).
+	var pw: float = PAPER_WIDTH + MARGIN_SIDE * 2.0
+	var px: float = (VIEWPORT_W - PAPER_WIDTH) * 0.5 - MARGIN_SIDE
+	var seg_h: float = 210.0
+	var top_y: float = MARGIN_TOP - 68.0   # paper_visual 윗변(head_room 68)과 정렬
+	var cream: Color = paper_visual.color
+	var wrap := Control.new()   # 가짜 접지 팩 — 교차 페이드 후 통째로 제거
+	wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	wrap.modulate.a = 0.0
+	layer.add_child(wrap)
+	# 접힌 팩 상단 면 + 아래 가장자리(종이 뭉치 두께).
+	var band := ColorRect.new()
+	band.color = cream
+	band.position = Vector2(px, top_y)
+	band.size = Vector2(pw, seg_h)
+	wrap.add_child(band)
+	var band_edge := ColorRect.new()
+	band_edge.color = Color(0.55, 0.52, 0.46, 0.85)
+	band_edge.position = Vector2(px, top_y + seg_h)
+	band_edge.size = Vector2(pw, 4.0)
+	wrap.add_child(band_edge)
+	# 아랫단 2·3 — 위 접선 pivot에서 scale.y 0→1로 젖혀진다. 시작은 뒷면 음영(어두운 modulate).
+	var segs: Array = []
+	for i in 2:
+		var seg := ColorRect.new()
+		seg.color = cream
+		seg.position = Vector2(px, top_y + seg_h * float(i + 1))
+		seg.size = Vector2(pw, seg_h)
+		seg.pivot_offset = Vector2(pw * 0.5, 0.0)
+		seg.scale = Vector2(1.0, 0.0)
+		seg.modulate = Color(0.72, 0.70, 0.66)
+		wrap.add_child(seg)
+		# 접선 크리스 음영 — 단 상단의 어두운 띠(접혔던 자리).
+		var crease := ColorRect.new()
+		crease.color = Color(0.35, 0.32, 0.28, 0.30)
+		crease.position = Vector2.ZERO
+		crease.size = Vector2(pw, 7.0)
+		seg.add_child(crease)
+		segs.append(seg)
+	# 봉인 도장 — 팩 아래 가장자리를 물고 있는 위치. 펼침 시작에 뜯겨 나간다.
 	var seal := PanelContainer.new()
 	var sl_sb := StyleBoxFlat.new()
-	sl_sb.bg_color = Color(0, 0, 0, 0)
+	sl_sb.bg_color = Color(0.92, 0.90, 0.84, 1.0)
 	sl_sb.border_color = Color(0.72, 0.18, 0.16, 0.85)
 	sl_sb.set_border_width_all(4)
 	sl_sb.content_margin_left = 20.0
@@ -335,26 +373,52 @@ func _enter_unfold() -> void:
 	seal.modulate.a = 0.0
 	seal.scale = Vector2(1.7, 1.7)
 	seal.resized.connect(func() -> void: seal.pivot_offset = seal.size / 2.0)
-	layer.add_child(seal)
-	# 접힌 밴드(종이 상단 12%) 중앙쯤 — paper는 진입 시 MARGIN_TOP에 있다.
-	seal.position = Vector2(VIEWPORT_W * 0.5 - 120.0, MARGIN_TOP + 26.0)
+	wrap.add_child(seal)
+	seal.position = Vector2(VIEWPORT_W * 0.5 - 120.0, top_y + seg_h - 26.0)
+	# 펼친 실제 종이에 남는 접힌 자국 — 잠시 보였다 사라진다(paper 로컬 y = 화면 - MARGIN_TOP).
+	var remnants: Array = []
+	for i in 2:
+		var line := ColorRect.new()
+		line.color = Color(0.40, 0.37, 0.32, 0.20)
+		line.position = Vector2(-MARGIN_SIDE, top_y + seg_h * float(i + 1) - MARGIN_TOP)
+		line.size = Vector2(pw, 2.0)
+		line.modulate.a = 0.0
+		paper.add_child(line)
+		remnants.append(line)
 	var tw := create_tween()
 	tw.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	# 접힌 밴드 페이드 인 → 도장이 내려찍히는 팝(스케일 다운) → 반 박자 봉인 상태 보여주기.
-	tw.tween_property(paper, "modulate:a", 1.0, 0.22)
+	# 팩 페이드 인 → 도장이 내려찍히는 팝 → 반 박자 봉인 상태.
+	tw.tween_property(wrap, "modulate:a", 1.0, 0.20)
 	tw.tween_property(seal, "modulate:a", 1.0, 0.10)
 	tw.parallel().tween_property(seal, "scale", Vector2.ONE, 0.16).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	tw.tween_interval(0.5)
-	# 펼침 — 종이가 아래로 펴지고, 봉인은 걷히고, 레터헤드 옆 원 스탬프가 자리 잡는다.
-	tw.tween_property(paper, "scale:y", 1.0, 0.55).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tw.parallel().tween_property(seal, "modulate:a", 0.0, 0.4)
+	tw.tween_interval(0.45)
+	# 봉인 뜯김 + 1단 젖힘(뒷면이 밝아지며 내려온다).
+	tw.tween_property(seal, "modulate:a", 0.0, 0.28)
+	tw.parallel().tween_property(seal, "rotation", 0.30, 0.28)
+	tw.parallel().tween_property(seal, "position", seal.position + Vector2(52.0, -40.0), 0.28)
+	tw.parallel().tween_property(segs[0], "scale:y", 1.0, 0.36).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(segs[0], "modulate", Color.WHITE, 0.36)
+	# 2단 젖힘.
+	tw.tween_property(segs[1], "scale:y", 1.0, 0.30).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(segs[1], "modulate", Color.WHITE, 0.30)
+	# 실제 종이로 교차 페이드 + 레터헤드·스탬프 자리 잡기 + 접힌 자국 잔상.
+	tw.tween_property(paper, "modulate:a", 1.0, 0.16)
+	tw.parallel().tween_property(wrap, "modulate:a", 0.0, 0.22)
 	if _stamp != null:
-		tw.parallel().tween_property(_stamp, "modulate:a", 1.0, 0.45)
+		tw.parallel().tween_property(_stamp, "modulate:a", 1.0, 0.35)
 	for hn in _head_nodes:
 		if hn != null and is_instance_valid(hn):
-			tw.parallel().tween_property(hn, "modulate:a", 1.0, 0.45)
-	tw.tween_callback(seal.queue_free)
+			tw.parallel().tween_property(hn, "modulate:a", 1.0, 0.35)
+	for rn in remnants:
+		tw.parallel().tween_property(rn, "modulate:a", 1.0, 0.16)
+	tw.tween_callback(wrap.queue_free)
 	tw.tween_callback(_start_typing)
+	# 접힌 자국은 읽기 시작하면 천천히 사라진다.
+	for rn in remnants:
+		var rt := (rn as ColorRect).create_tween()
+		rt.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+		rt.tween_interval(2.2)
+		rt.tween_property(rn, "modulate:a", 0.0, 1.6)
 
 # 콘솔·뷰어 등장 — 수평 점화선이 번쩍이고 창이 세로로 켜진다(CRT 전원 문법) + 부팅 플리커.
 # 플리커는 저진폭 2회(광과민 고려)이며 화면 효과 옵션이 꺼져 있으면 생략.

@@ -271,7 +271,9 @@ func _build_line(ln: Dictionary) -> void:
 	# add_child는 패널·림·브래킷 뒤로 미룬다 — 초상이 대사 판 *위에* 그려져 경계를 넘어온
 	# 구도(2026-08-25 사용자 안). 텍스트 영역(x498~)과는 안 겹친다(초상 우변 468).
 	var panel := PanelContainer.new()
-	sb.content_margin_left = 268.0
+	# 텍스트 시작 = 이름표 왼끝(486)과 정렬(2026-08-25 사용자 "정렬을 맞추든지 물음표 옆까지
+	# 당기든지"). 판 left 230 + 256 = 486. 초상 우변(468)과도 안 겹친다.
+	sb.content_margin_left = 256.0
 	sb.content_margin_right = 34.0
 	sb.content_margin_top = 22.0
 	sb.content_margin_bottom = 18.0

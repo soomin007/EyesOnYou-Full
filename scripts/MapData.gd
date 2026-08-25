@@ -869,7 +869,9 @@ static func _datacenter() -> Dictionary:
 				"trigger": "immediate",  # 진입 즉시
 				"banner":  "WAVE 1",
 				"enemies": {
-					"patrol": [Vector2(400, 790.0), Vector2(1200, 790.0), Vector2(1700, 790.0)],
+					# 첫 순찰 400→800(2026-08-25 사용자 "스폰 앞 패트롤 치워줄 것") — 스폰(200)
+					# 코앞 개전 대신 들어서며 살펴볼 여유를 준다.
+					"patrol": [Vector2(800, 790.0), Vector2(1200, 790.0), Vector2(1700, 790.0)],
 				},
 			},
 			{

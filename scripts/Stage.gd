@@ -5903,12 +5903,16 @@ func _maybe_rival_lock_beat() -> void:
 	if not GameState.is_act_start(GameState.current_stage):
 		return
 	var act: int = GameState.act_for_stage(GameState.current_stage)
+	# 잠금 하한 가드와 짝(2026-08-25) — 실제로 안 걸린 잠금은 컷씬도 안 튼다(하트가 안
+	# 잠기는데 "가져갑니다"라고 말하는 거짓 방지). shown 플래그는 세워 재방문 재생도 막는다.
 	if act == 3 and not GameState.rival_lock_beat4_shown:
 		GameState.rival_lock_beat4_shown = true
-		get_tree().create_timer(4.2, false).timeout.connect(_play_rival_lock_beat.bind(4))
+		if GameState.rival_locks_active() >= 1:
+			get_tree().create_timer(4.2, false).timeout.connect(_play_rival_lock_beat.bind(4))
 	elif act == 4 and not GameState.rival_lock_beat5_shown:
 		GameState.rival_lock_beat5_shown = true
-		get_tree().create_timer(4.2, false).timeout.connect(_play_rival_lock_beat.bind(5))
+		if GameState.rival_locks_active() >= 2:
+			get_tree().create_timer(4.2, false).timeout.connect(_play_rival_lock_beat.bind(5))
 
 func _play_rival_lock_beat(act_num: int, tries_left: int = 24) -> void:
 	if goal_reached or not is_inside_tree():
