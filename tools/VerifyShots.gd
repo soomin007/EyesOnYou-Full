@@ -32,6 +32,9 @@ const TARGETS: Array = [
 	# 클리어 정산 배너 + 잠금 비트 감속 완충(등장 연출).
 	{"id": "clear_banner", "route": "route_back_alley", "stage": 1, "setup": "clear_banner"},
 	{"id": "anim_lock_buffer", "route": "route_pump_station", "setup": "anim_lock_buffer", "anim": 84, "every": 2, "act4": true},
+	# SENTINEL 리워크(2026-08-25 §8) — 격납고 무대 + P2 시설 재배치 + 스윕 예고.
+	{"id": "lab_arena_rework", "route": "route_lab", "stage": 8, "setup": "boss_p2"},
+	{"id": "lab_sweep_telegraph", "route": "route_lab", "stage": 8, "setup": "boss_sweep"},
 	{"id": "server_room2_wall", "route": "route_server_hall", "seg": 1, "stage": 7, "setup": ""},
 	{"id": "cooling_room1_no_lever", "route": "route_cooling", "seg": 0, "stage": 7, "setup": ""},
 	{"id": "demolition_turret_gap", "route": "route_demolition_zone", "seg": 0, "stage": 1, "setup": "cam_1190"},
@@ -175,6 +178,32 @@ func _shot(d: Dictionary) -> void:
 				{"text": "경비 전원 처치  +150", "perf": true},
 			], "피격 0. 이 구간, 깨끗하게 지나셨습니다.")
 			for i in 55:
+				await get_tree().process_frame
+		"boss_p2":
+			# P2 강제(시설 소환 + 고도 추적) — 플레이어는 중층에 세워 추적 고도가 드러나게.
+			var bs: Node = stage.get("boss")
+			if bs != null:
+				bs.set("intro_hold", false)
+				stage.set("_boss_intro_skip", true)
+				bs.set("hp", 37)
+				bs.call("take_damage", 2, 0)
+			if p is Node2D:
+				(p as Node2D).global_position = Vector2(1290.0, 930.0)
+			for i in 150:
+				await get_tree().process_frame
+		"boss_sweep":
+			# 스윕 예고 컷 — 데크 2단 위 플레이어 + 예고선/날개 점멸.
+			var bw: Node = stage.get("boss")
+			if bw != null:
+				bw.set("intro_hold", false)
+				stage.set("_boss_intro_skip", true)
+				bw.set("hp", 37)
+				bw.call("take_damage", 2, 0)
+				bw.set("phase_freeze_t", 0.0)
+				bw.set("_sweep_cd", 0.05)
+			if p is Node2D:
+				(p as Node2D).global_position = Vector2(1100.0, 498.0)
+			for i in 42:
 				await get_tree().process_frame
 		"cam_1190":
 			if p is Node2D:

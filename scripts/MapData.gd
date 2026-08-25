@@ -1246,44 +1246,54 @@ static func _escape_leave() -> Dictionary:
 # ─── 10. 핵심부 (ARENA, 보스 챔버) ────────────────────────────
 # ground 820. 점프 단계화 — 지면 → mid step → 상단 보상.
 # 보스 SENTINEL 단독 챔버 (world_layout §2.10). 일반 적은 spawn하지 않음 — 3페이즈 보스가 전부.
+# 격납고 리워크(2026-08-25 사용자 C안 · sentinel_rework §8): 세로 확장 무대 + 상부 정비 데크
+# 2단 + ARENA_FOLLOW 카메라(14-1 복층 문법 이식). 지면→스텝→중층→상층→데크1→데크2의
+# 수직 사다리(단차 124~156px)로, 보스가 P2+에서 플레이어 고도로 내려와 견제한다 —
+# "상층 캠핑에 바닥 함정 무의미" 지적의 구조 해소.
 static func _lab() -> Dictionary:
 	return {
 		"world_type":   "ARENA",
-		"world_size":   Vector2(1920.0, 900.0),
-		"player_start": Vector2(200.0, 760.0),
+		"world_size":   Vector2(2200.0, 1300.0),
+		"player_start": Vector2(240.0, 1160.0),
 		"goal_type":    "ENEMY_CLEAR",
 		"goal_pos":     Vector2.ZERO,
-		"camera_mode":  "FIXED",
-		"ground_y":     820.0,
+		"camera_mode":  "ARENA_FOLLOW",
+		"ground_y":     1220.0,
 		"platforms": [
-			# Step 발판 (지면 → mid 도약용)
-			{"pos": Vector2(120, 700),  "w": 100.0},
-			{"pos": Vector2(420, 700),  "w": 100.0},
-			{"pos": Vector2(720, 700),  "w": 100.0},
-			{"pos": Vector2(1080, 700), "w": 100.0},
-			{"pos": Vector2(1380, 700), "w": 100.0},
-			{"pos": Vector2(1700, 700), "w": 100.0},
-			# Mid 발판 (피난처 — 폭격 회피용)
-			{"pos": Vector2(220, 580),  "w": 200.0},
-			{"pos": Vector2(620, 560),  "w": 180.0},
-			{"pos": Vector2(960, 580),  "w": 200.0},
-			{"pos": Vector2(1300, 560), "w": 180.0},
-			{"pos": Vector2(1700, 580), "w": 200.0},
-			# 상단 발판 — 보스와 같은 높이 사격용
-			{"pos": Vector2(620, 420),  "w": 140.0},
-			{"pos": Vector2(960, 380),  "w": 200.0},
-			{"pos": Vector2(1300, 420), "w": 140.0},
+			# 스텝 (지면 → 중층 도약)
+			{"pos": Vector2(160, 1096),  "w": 110.0},
+			{"pos": Vector2(620, 1096),  "w": 110.0},
+			{"pos": Vector2(1100, 1096), "w": 120.0},
+			{"pos": Vector2(1580, 1096), "w": 110.0},
+			{"pos": Vector2(2040, 1096), "w": 110.0},
+			# 중층 (피난·이동)
+			{"pos": Vector2(340, 952),  "w": 210.0},
+			{"pos": Vector2(820, 940),  "w": 180.0},
+			{"pos": Vector2(1290, 960), "w": 220.0},
+			{"pos": Vector2(1760, 940), "w": 180.0},
+			{"pos": Vector2(2060, 952), "w": 160.0},
+			# 상층 사격 발판 (구 380 트리오 계승)
+			{"pos": Vector2(560, 812),  "w": 160.0},
+			{"pos": Vector2(1100, 800), "w": 210.0},
+			{"pos": Vector2(1640, 812), "w": 160.0},
+			# 정비 데크 1단 (좌/우 렉) + 연결 플레이트
+			{"pos": Vector2(300, 668),  "w": 280.0},
+			{"pos": Vector2(1900, 668), "w": 280.0},
+			{"pos": Vector2(700, 600),  "w": 120.0},
+			{"pos": Vector2(1500, 600), "w": 120.0},
+			# 정비 데크 2단 (중앙 꼭대기 — 보스 경합 지대, P2 방전 아크는 1단만)
+			{"pos": Vector2(1100, 528), "w": 320.0},
 			# 지면 잔해 (시각적 cover)
-			{"pos": Vector2(500, 820),  "w": 120.0},
-			{"pos": Vector2(1100, 820), "w": 120.0},
-			{"pos": Vector2(1500, 820), "w": 120.0},
+			{"pos": Vector2(480, 1220),  "w": 120.0},
+			{"pos": Vector2(1100, 1220), "w": 130.0},
+			{"pos": Vector2(1720, 1220), "w": 120.0},
 		],
 		"enemies": {
 			# 보스 챔버 — 일반 적 없음
 			"patrol": [], "shield": [], "sniper": [], "drone": [], "bomber": [],
 		},
 		"rewards": {
-			"xp_orbs":    [Vector2(960, 360.0), Vector2(1000, 360.0)],
+			"xp_orbs":    [Vector2(1080, 496.0), Vector2(1120, 496.0)],
 			"hp_pickups": [],
 		},
 		"spikes": [],
@@ -1292,7 +1302,7 @@ static func _lab() -> Dictionary:
 		# 보스 메타 — Stage._spawn_boss가 인식해 BossSentinel을 spawn.
 		"boss": {
 			"type":  "sentinel",
-			"spawn": Vector2(960.0, 280.0),  # 호버 라인 중앙 (BossSentinel.HOVER_Y와 일치)
+			"spawn": Vector2(1100.0, 520.0),  # P1 호버 라인 중앙 (BossSentinel.HOVER_Y와 일치)
 		},
 	}
 

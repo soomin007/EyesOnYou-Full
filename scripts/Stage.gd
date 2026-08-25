@@ -4748,17 +4748,63 @@ func _ambience_rooftops() -> void:
 		add_child(s)
 
 func _ambience_lab() -> void:
-	# 격자 라인 — 수직선이 일정 간격으로
-	var x: float = 200.0
-	while x < STAGE_LENGTH:
-		var line := ColorRect.new()
-		line.color = Color(0.55, 0.85, 0.95, 0.08)
-		line.position = Vector2(x, -200.0)
-		line.size = Vector2(1.0, 800.0)
-		line.z_index = -10
-		add_child(line)
-		x += 120.0
-	# 배경 텍스트 라벨은 정신 사납다는 사용자 피드백으로 제거 — 격자 라인 ambience만 유지.
+	# 격납고 시그니처(리워크 2026-08-25) — 구 등간격 수직 격자 폐지(수직 스트라이프 금지 규칙).
+	# 상부 격납 셔터(인트로 "셔터 개방"의 실물 근거) + 데크 캣워크 레일(수평 모티프) +
+	# 데크 경고등 + 지면 분출구 주의 띠. 나머지 질감은 전 맵 공유 시각 시스템이 얹는다.
+	# ① 격납 셔터 — 보스 스폰(1100,400) 뒤 상부의 큰 이중 판 + 중앙 이음 냉광.
+	for side_i in 2:
+		var sh := ColorRect.new()
+		sh.color = Color(0.085, 0.10, 0.13, 1.0)
+		sh.position = Vector2(760.0 + float(side_i) * 350.0, 60.0)
+		sh.size = Vector2(330.0, 300.0)
+		sh.z_index = -9
+		add_child(sh)
+		var sy: float = 110.0
+		while sy < 350.0:
+			var seam := ColorRect.new()
+			seam.color = Color(0.03, 0.04, 0.06, 0.9)
+			seam.position = Vector2(sh.position.x, sy)
+			seam.size = Vector2(330.0, 2.0)
+			seam.z_index = -9
+			add_child(seam)
+			sy += 48.0
+	var joint := ColorRect.new()
+	joint.color = Color(0.45, 0.85, 0.95, 0.20)
+	joint.position = Vector2(1097.0, 60.0)
+	joint.size = Vector2(6.0, 300.0)
+	joint.z_index = -9
+	add_child(joint)
+	# ② 캣워크 레일 — 데크 밴드 뒤의 수평 배경 라인 2줄(발판과 별개 · 깊이 신호).
+	for ry in [508.0, 648.0]:
+		var rail := ColorRect.new()
+		rail.color = Color(0.55, 0.85, 0.95, 0.06)
+		rail.position = Vector2(120.0, float(ry))
+		rail.size = Vector2(STAGE_LENGTH - 240.0, 2.0)
+		rail.z_index = -10
+		add_child(rail)
+	# ③ 데크 경고등 — 가장자리 앰버 점 · 느린 맥동(광과민 안전 저진폭).
+	for bp in [Vector2(170.0, 652.0), Vector2(430.0, 652.0), Vector2(1770.0, 652.0),
+			Vector2(2030.0, 652.0), Vector2(950.0, 512.0), Vector2(1250.0, 512.0)]:
+		var lamp := ColorRect.new()
+		lamp.color = Color(0.95, 0.72, 0.28, 0.5)
+		lamp.position = bp
+		lamp.size = Vector2(5.0, 5.0)
+		lamp.z_index = -6
+		add_child(lamp)
+		var ltw := lamp.create_tween()
+		ltw.set_loops()
+		ltw.tween_property(lamp, "modulate:a", 0.35, 1.4)
+		ltw.tween_property(lamp, "modulate:a", 1.0, 1.4)
+	# ④ 지면 분출구 주의 띠 — P2 시설 소환(증기 480·1720)의 자리 예고.
+	for hx in [480.0, 1720.0]:
+		var strip := ColorRect.new()
+		strip.color = Color(0.85, 0.68, 0.25, 0.30)
+		strip.position = Vector2(float(hx) - 70.0, GROUND_Y - 3.0)
+		strip.size = Vector2(140.0, 3.0)
+		strip.z_index = -5
+		add_child(strip)
+	# ⑤ 격납고 명패 — 시설 표지(다른 맵의 로어 라벨과 같은 문법).
+	_add_lore_label(Vector2(300.0, 300.0), "제7 격납고 · 출입 통제", Color(0.55, 0.85, 0.95, 0.45), 14)
 
 func _ambience_back_alley() -> void:
 	# 노란 가로등 — 띄엄띄엄
@@ -6797,40 +6843,43 @@ func _summon_facility_hazards() -> void:
 	if not _boss_facility_nodes.is_empty():
 		return
 	SfxPlayer.play("hatch_open")
-	# 바닥 해치 개방 플래시 — 소환 지점 4곳에 짧은 앰버 밴드.
-	for hx in [480.0, 1440.0, 720.0, 1200.0]:
+	# 해치 개방 플래시 — 지면 분출구 2곳 + 데크 1단 방전 구간 2곳(리워크 §8 재배치).
+	for entry0 in [[480.0, GROUND_Y], [1720.0, GROUND_Y], [300.0, 668.0], [1900.0, 668.0]]:
+		var h: Array = entry0
 		var hatch := ColorRect.new()
 		hatch.color = Color(0.95, 0.75, 0.30, 0.55)
-		hatch.position = Vector2(float(hx) - 60.0, GROUND_Y - 4.0)
+		hatch.position = Vector2(float(h[0]) - 60.0, float(h[1]) - 4.0)
 		hatch.size = Vector2(120.0, 8.0)
 		hatch.z_index = 2
 		add_child(hatch)
 		var htw := hatch.create_tween()
 		htw.tween_property(hatch, "modulate:a", 0.0, 1.2)
 		htw.tween_callback(hatch.queue_free)
-	# 증기 분출구 2기 — 냉각 설비의 회수. 높이 200(중층 피난 발판은 침범 안 함).
-	# plume 560 = 분출 시 옅은 열기둥이 호버 라인(280)까지 닿는다 — 보스를 그 위로 유인하면
-	# 과열 실속(카운터플레이 2026-08-22). 열기둥은 플레이어 무해(짙은 증기만 위험).
-	for entry in [[480.0, 0.0], [1440.0, 0.5]]:
+	# 증기 분출구 2기 — 냉각 설비의 회수 · "내려가면 보상" 자리. plume 620 = 분출 시 옅은
+	# 열기둥이 호버 최상단(400)까지 닿는다 — 보스가 P2+ 고도 추적으로 내려온 순간 분출구
+	# 기둥 위로 유인하면 과열 실속(카운터플레이). 열기둥은 플레이어 무해(짙은 증기만 위험).
+	for entry in [[480.0, 0.0], [1720.0, 0.5]]:
 		var e: Array = entry
 		var vent := SteamVent.new()
 		vent.position = Vector2(float(e[0]), GROUND_Y)
-		vent.height = 200.0
-		vent.plume_height = 560.0
+		vent.height = 220.0
+		vent.plume_height = 620.0
 		vent.phase = float(e[1])
 		add_child(vent)
 		_boss_facility_nodes.append(vent)
-	# 방전 아크 2구간 — 변전 설비의 회수. 지상 체류 비용(스텝·중층 발판이 답).
-	for entry in [[620.0, 820.0, 0.0], [1100.0, 1300.0, 0.5]]:
+	# 방전 아크 2구간 — 변전 설비의 회수. 리워크 §8: 지면이 아니라 **정비 데크 1단 위**.
+	# "플레이어는 상층에 있는데 바닥 함정이 무의미"(5차 갤러리) — 캠핑 비용이 캠핑 자리에 붙는다.
+	# 데크 2단(중앙 꼭대기)은 아크 없음 — 대신 보스 고도 추적·스윕이 경합한다.
+	for entry in [[180.0, 420.0, 0.0], [1780.0, 2020.0, 0.5]]:
 		var e: Array = entry
 		var arc := ElectricArc.new()
 		add_child(arc)
-		arc.setup(float(e[0]), float(e[1]), GROUND_Y, float(e[2]), 1)
+		arc.setup(float(e[0]), float(e[1]), 668.0, float(e[2]), 1)
 		_boss_facility_nodes.append(arc)
 	# 학습 회수를 말로 1회 — "지나온 설비가 이 병기의 몸".
 	get_tree().create_timer(1.2, false).timeout.connect(func() -> void:
 		if is_inside_tree():
-			_show_veil_subtitle(VeilDialogue.banded("증기와 방전, 지나온 설비들입니다. 리듬은 이미 배우셨습니다. 바닥에 오래 서지 마십시오.", "증기랑 방전, 지나온 설비들이에요. 리듬은 이미 배웠잖아요. 바닥에 오래 서지 말아요."), 4.2))
+			_show_veil_subtitle(VeilDialogue.banded("증기와 방전, 지나온 설비들입니다. 리듬은 이미 배우셨습니다. 위쪽 발판의 방전을 조심하십시오.", "증기랑 방전, 지나온 설비들이죠. 리듬은 이미 몸에 익었을 겁니다. 위쪽 발판의 방전만 조심해요."), 4.2))
 	# 카운터플레이 티칭 1회(2026-08-22) — 설비는 보스만의 무기가 아니다.
 	# EN: "That machine runs hot. Herd it over a steam column and it will stop for a moment."
 	# ("기체" = 어려운 한자어 + 증기(氣體) 동음 오독 지적 · 무맥락 검수 1차, 2026-08-23)

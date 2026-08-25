@@ -13,14 +13,15 @@ signal self_destruct_disarmed
 signal vent_started
 signal overheat_stalled
 
-# 리워크(2026-08-22 사용자 확정, sentinel_rework.md): 목표 전투 시간 = 현 최종 보스급(60~90s ·
-# "지금의 최종 보스전 시간이 중간 보스에서 걸리게"). 28→36 + P2 시설 소환(증기·방전, Stage
-# _summon_facility_hazards)의 회피 부하가 실효 DPS를 낮춰 추가 연장. 창당 상한은 max_hp 비례라
-# 배기 창 수(≈5.5회)는 불변 — 창 사이 교전이 길어지는 구조. 14-1은 이후 이보다 길게(후속).
-const HP_MAX: int = 36
-const HP_PHASE2: int = 25  # 이 값 이하 들어오면 P2
-const HP_PHASE3: int = 13  # 이 값 이하 들어오면 P3
-const HP_SELF_DESTRUCT: int = 7  # 이 값 이하 시 자폭 카운트다운 시작 (버퍼 — 잔탄에 즉사 방지, 자폭 시퀀스 보장)
+# 전면 리워크(2026-08-25 사용자 C안, sentinel_rework.md §8): 무대 세로 확장(2200x1300 ·
+# ARENA_FOLLOW) + P2+ 고도 추적·데크 스윕(상층 캠핑 해소) + 배기 리듬 완화. 5차 갤러리 지적
+# "체력이 적어 과열 패턴만 잦고 귀찮다" — HP 36→52 · 창당 상한 분모 5.5→3.8로 배기를
+# ~5회→~3회로 줄이고 창 하나를 길게. 목표 전투 시간 60~90s 유지(창 수가 아니라 이동·회피
+# 부하가 시간을 만든다). 14-1은 이보다 길게(§7).
+const HP_MAX: int = 52
+const HP_PHASE2: int = 36  # 이 값 이하 들어오면 P2 (~69%)
+const HP_PHASE3: int = 19  # 이 값 이하 들어오면 P3 (~37%)
+const HP_SELF_DESTRUCT: int = 8  # 이 값 이하 시 자폭 카운트다운 시작 (버퍼 — 잔탄에 즉사 방지, 자폭 시퀀스 보장)
 const HP_SELF_DESTRUCT_STORY: int = 2  # 스토리 보스(HP 8)는 더 낮게 — 충분히 싸운 뒤 자폭
 # 스토리 모드 — P2/P3 스킵, 자폭 트리거까지 짧게.
 const HP_MAX_STORY: int = 8
@@ -30,10 +31,10 @@ const PHASE_FREEZE_DURATION: float = 1.2  # 페이즈 전환 시 정지 + 무적
 # 어떤 화력이든 배기 ~7회를 상대해야 자폭 임계에 닿는다 = 시간 하한 보장(known_issues:
 # "수치 상향만으론 평소와 같음" — HP가 아니라 창이 길이를 만든다). 배기 중 무적 + 증기 방출
 # + 증원 1기 호출(무방비를 잡몹이 메운다). 스토리 모드는 미적용(짧게 유지).
-# 창당 상한 분모 8.0→5.5(2026-08-20 사용자 "공격 두 번이면 충전, 버려지는 시간이 많다"):
-# 28HP 기준 창 7회→5회로 배기 빈도 자체를 줄인다.
-const VENT_DIVISOR: float = 5.5
-const VENT_DURATION: float = 3.0
+# 창당 상한 분모 8.0→5.5(2026-08-20)→3.8(2026-08-25 리워크 §8 "과열 패턴이 쓸데없이 잦다"):
+# 52HP 기준 배기 ~3회 · 창 하나가 길어 사격 리듬이 덜 끊긴다. 배기 자체도 3.0→2.6s 단축.
+const VENT_DIVISOR: float = 3.8
+const VENT_DURATION: float = 2.6
 # 강제 배출(2026-08-20 재해석) — 배기 중 피격 1발당 배기 시간 단축. 배기가 "기다리는 무적"이
 # 아니라 "쏘면 빨리 끝나는 창"이 된다. 고화력 빌드일수록 배기가 짧아져 잦음이 상쇄된다.
 # 계산: 기본 연사(1발/0.42s) 사격 시 3s 배기 ≈ 1.8s에 종료 · 오연사 만렙 ≈ 0.7s.
@@ -76,9 +77,25 @@ const MISSILE_INTERVAL_P2: float = 3.5
 const MISSILE_INTERVAL_P3: float = 2.5
 const MISSILE_TELEGRAPH: float = 0.3
 const MISSILE_SPEED: float = 380.0
-const HOVER_Y: float = 280.0  # 호버 라인 (lab ground 820 기준 위쪽)
-const HOVER_RANGE_X: Vector2 = Vector2(160.0, 1760.0)  # 좌/우 한계 (lab 1920 기준)
+# P1 호버 = 데크 2단(528)과 같은 높이 — 데크 2단에선 수평 사격, 데크 1단(668)·연결
+# 플레이트(600)에선 점프샷이 닿는다. 400으로 두면 데크 2단 점프샷만 닿아 왕복(77px/s)
+# 보스가 사거리 밖에 머무는 시간이 너무 길다(리워크 §8 검증 중 발견).
+const HOVER_Y: float = 520.0
+const HOVER_RANGE_X: Vector2 = Vector2(200.0, 2000.0)  # 좌/우 한계 (lab 2200 기준)
 const TRACK_DEAD_ZONE: float = 80.0  # P2/P3 추적 시 dead zone
+# P2+ 고도 추적(리워크 §8) — 플레이어 고도보다 TRACK_OFFSET_Y 위 밴드로 내려온다.
+# 상층 캠핑이 영구 안전지대가 아니게 하는 축 · 낮게 유인하면 증기 실속 사거리에 든다.
+const HOVER_Y_MIN: float = 400.0
+const HOVER_Y_MAX: float = 980.0
+const TRACK_OFFSET_Y: float = 260.0
+const GROUND_Y_LAB: float = 1220.0   # 자폭 추락 바닥(콜리전 대신 수동 클램프 — 비행체는 발판 관통)
+# 데크 스윕(리워크 §8 신설) — P2+에서 주기적으로 플레이어 고도를 예고한 뒤 수평 관통 돌진.
+# "어느 발판이든 스윕 한 번이면 비켜야 한다"의 앵커 패턴. 예고 0.8s + 경로 표시선(예고 원칙 준수).
+const SWEEP_INTERVAL_P2: float = 7.5
+const SWEEP_INTERVAL_P3: float = 5.2
+const SWEEP_TELEGRAPH: float = 0.8
+const SWEEP_SPEED: float = 640.0
+const SWEEP_Y_MAX: float = 1140.0   # 지면(1220) 위 여유 — 지면 깔기 금지
 
 # 페이즈 전환 시 좌/우에서 소환되는 잔당 — 보스 본체에 묶이지 않은 압박.
 # P2는 drone 2(천장 폭격), P3는 patrol 2(지면 추격)로 페이즈 차별화.
@@ -121,6 +138,13 @@ var _fake_destruct_done: bool = false   # 위장 자폭 소진 여부
 var _speed_mul: float = 1.0         # 재기동 후 이동 배속
 var _vent_summon_kind: int = 2      # 배기 증원 타입 교대(드론↔순찰)
 var _debris_nodes: Array = []       # P3 낙하 잔해(§6-3) — 사망 시 정리
+# 데크 스윕 상태(리워크 §8) — 0=없음 · 1=예고(고도 조준+날개 점멸+경로선) · 2=관통 돌진.
+var _sweep_state: int = 0
+var _sweep_t: float = 0.0
+var _sweep_y: float = 0.0
+var _sweep_dir: int = 1
+var _sweep_cd: float = 5.0          # P2 진입 직후 첫 스윕까지 유예
+var _sweep_line: Line2D = null
 # 과열 가독(2026-08-20 사용자 "김 나는 이펙트가 뭔지 모르겠다 · 뜬금없이 무적"): 창이 찰수록
 # 몸체 주변이 달아오르고(예고 tell), 배기 중엔 라벨이 상태를 글자로 말한다.
 var _heat_glow: Node2D = null
@@ -152,7 +176,10 @@ func _ready() -> void:
 	add_to_group("enemy")
 	add_to_group("boss")
 	collision_layer = 4
-	collision_mask = 1
+	# 리워크 §8 — 비행체는 발판을 관통한다(mask 0). 구 무대(발판 위 고정 호버)에선 mask 1이어도
+	# 부딪힐 일이 없었지만, 고도 추적·스윕은 발판 밴드를 지나다녀 물리 충돌이 곧 낑김이다.
+	# 자폭 추락의 착지는 GROUND_Y_LAB 수동 클램프가 대신한다.
+	collision_mask = 0
 	story_simplified = GameState.story_mode
 	if story_simplified:
 		max_hp = HP_MAX_STORY
@@ -259,10 +286,20 @@ func _physics_process(delta: float) -> void:
 			if _vent_label != null:
 				_vent_label.visible = false
 		return
+	# 데크 스윕 진행 중 — 일반 이동/공격 대신 스윕 상태기. 접촉 판정은 유지(관통이 곧 공격).
+	if _sweep_state != 0:
+		_sweep_process(delta)
+		_check_touch_player()
+		return
 	_move(delta)
 	_attacks(delta)
 	_check_touch_player()
 	_check_steam_overheat()
+	# 데크 스윕 쿨다운(P2+ · 리워크 §8) — 배기/실속/전환이 아닌 평시에만 흐른다.
+	if phase >= 2 and not story_simplified:
+		_sweep_cd -= delta
+		if _sweep_cd <= 0.0:
+			_begin_sweep()
 
 # 증기 기둥 겹침 판정 — 분출 중인 SteamVent(짙은 증기 + 열기둥) 위에 겹치면 실속.
 # 플레이어가 분출구 근처로 유인해 타이밍을 맞추는 조종 플레이(자기도 증기에 맞을 리스크 교환).
@@ -285,6 +322,7 @@ func _check_steam_overheat() -> void:
 func _enter_stall() -> void:
 	if stall_t > 0.0 or vent_t > 0.0 or self_destruct_active or dead or phase_freeze_t > 0.0:
 		return
+	_cancel_sweep()
 	stall_t = STALL_DURATION
 	# 진행 중이던 텔레그래프 취소 — 실속 중 공격 없음.
 	bomb_telegraph_t = 0.0
@@ -313,10 +351,13 @@ func _self_destruct_motion(delta: float) -> void:
 		dir = int(sign(dx)) if abs(dx) > 1.0 else dir
 	else:
 		velocity.x = 0.0
-	# 추락 — 가속도 누적 (지면에 닿을 때까지). 시각적으로 "통제 잃음".
+	# 추락 — 가속도 누적. 시각적으로 "통제 잃음". mask 0(발판 관통)이라 착지는 수동 클램프.
 	self_destruct_fall_v += SELF_DESTRUCT_FALL_ACCEL * delta
 	velocity.y = self_destruct_fall_v
 	move_and_slide()
+	if global_position.y >= GROUND_Y_LAB - 30.0:
+		global_position.y = GROUND_Y_LAB - 30.0
+		self_destruct_fall_v = 0.0
 	# 살짝 진동 (파지직 흔들림)
 	if visual != null:
 		visual.position = Vector2(randf_range(-2.0, 2.0), randf_range(-2.0, 2.0))
@@ -357,7 +398,7 @@ func _current_speed() -> float:
 
 func _move(_delta: float) -> void:
 	var p: Node2D = _find_player()
-	# Y는 HOVER_Y에 고정 (drone-like 호버), X는 페이즈별 행동
+	# X는 페이즈별 행동, Y는 P1 고정 호버 / P2+ 플레이어 고도 밴드 추적(리워크 §8).
 	if phase == 1:
 		# 가로 왕복
 		velocity.x = float(dir) * _current_speed()
@@ -376,10 +417,86 @@ func _move(_delta: float) -> void:
 			else:
 				velocity.x = sign(dx) * _current_speed()
 				dir = int(sign(dx))
-	# Y 회복 (HOVER_Y 라인으로)
-	var dy: float = HOVER_Y - global_position.y
-	velocity.y = clamp(dy * 4.0, -120.0, 120.0)
+	# Y — P1은 HOVER_Y 라인, P2+는 플레이어보다 TRACK_OFFSET_Y 위 밴드로. 상층 데크에 있으면
+	# 눈앞까지 내려오고, 지면으로 유인하면 증기 실속 사거리에 든다("바닥 함정 무의미" 해소 축).
+	var hover_target: float = HOVER_Y
+	if phase >= 2 and p != null:
+		hover_target = clampf(p.global_position.y - TRACK_OFFSET_Y, HOVER_Y_MIN, HOVER_Y_MAX)
+	var dy: float = hover_target - global_position.y
+	velocity.y = clamp(dy * 4.0, -150.0, 150.0)
 	move_and_slide()
+
+# ─── 데크 스윕(리워크 §8) — 예고(고도 조준 + 날개 주황 점멸 + 경로선) 후 수평 관통 돌진 ───
+
+func _begin_sweep() -> void:
+	var p: Node2D = _find_player()
+	if p == null:
+		_sweep_cd = 2.0
+		return
+	_sweep_state = 1
+	_sweep_t = SWEEP_TELEGRAPH
+	_sweep_y = clampf(p.global_position.y - 42.0, HOVER_Y_MIN, SWEEP_Y_MAX)
+	var dx: float = p.global_position.x - global_position.x
+	_sweep_dir = 1 if dx >= 0.0 else -1
+	# 진행 중이던 공격 텔레그래프 취소 — 스윕 예고와 겹치면 신호가 안 읽힌다.
+	bomb_telegraph_t = 0.0
+	missile_telegraph_t = 0.0
+	if bomb_dot != null:
+		bomb_dot.color.a = 0.0
+	# 경로 표시선 — 스윕 고도를 가로지르는 붉은 라인(예고 동안 점점 선명).
+	var parent: Node = get_parent()
+	if parent != null:
+		_sweep_line = Line2D.new()
+		_sweep_line.points = PackedVector2Array([
+			Vector2(HOVER_RANGE_X.x - 120.0, _sweep_y), Vector2(HOVER_RANGE_X.y + 120.0, _sweep_y)])
+		_sweep_line.width = 3.0
+		_sweep_line.default_color = Color(1.0, 0.42, 0.30, 0.0)
+		_sweep_line.z_index = 5
+		parent.add_child(_sweep_line)
+		var lt: Tween = _sweep_line.create_tween()
+		lt.tween_property(_sweep_line, "default_color:a", 0.70, SWEEP_TELEGRAPH * 0.85)
+	SfxPlayer.play_at("enemy_sniper_charge", global_position, -4.0)
+
+func _sweep_process(delta: float) -> void:
+	if _sweep_state == 1:
+		_sweep_t -= delta
+		# 조준 고도로 이동하며 예고 — 날개 주황 점멸.
+		var dy: float = _sweep_y - global_position.y
+		velocity = Vector2(velocity.x * 0.82, clampf(dy * 6.0, -460.0, 460.0))
+		move_and_slide()
+		var pulse: float = 0.5 + 0.5 * sin(_sweep_t * 30.0)
+		for w in [wing_l, wing_r]:
+			if w != null:
+				w.color = Color(1.0, 0.62, 0.20, pulse)
+		if _sweep_t <= 0.0:
+			_sweep_state = 2
+			SfxPlayer.play_at("boss_missile_launch", global_position, -2.0)
+		return
+	# 관통 돌진 — 수평 고속 통과. 무대 경계 도달로 종료.
+	velocity = Vector2(float(_sweep_dir) * SWEEP_SPEED, clampf((_sweep_y - global_position.y) * 8.0, -260.0, 260.0))
+	move_and_slide()
+	dir = _sweep_dir
+	if (_sweep_dir > 0 and global_position.x >= HOVER_RANGE_X.y) \
+			or (_sweep_dir < 0 and global_position.x <= HOVER_RANGE_X.x):
+		_end_sweep()
+
+func _end_sweep() -> void:
+	_sweep_state = 0
+	_sweep_cd = SWEEP_INTERVAL_P3 if phase >= 3 else SWEEP_INTERVAL_P2
+	for w in [wing_l, wing_r]:
+		if w != null:
+			w.color = Color(1.0, 0.20, 0.20, 0.0)   # 미사일 텔레그래프의 원래 빨강으로 복원
+	if _sweep_line != null and is_instance_valid(_sweep_line):
+		var lt: Tween = _sweep_line.create_tween()
+		lt.tween_property(_sweep_line, "default_color:a", 0.0, 0.3)
+		lt.tween_callback(_sweep_line.queue_free)
+	_sweep_line = null
+
+# 배기/실속/자폭/페이즈 전환이 스윕을 끊을 때 — 예고선 잔존·스테일 고도로의 재개를 막는다.
+func _cancel_sweep() -> void:
+	if _sweep_state == 0:
+		return
+	_end_sweep()
 
 func _attacks(delta: float) -> void:
 	# 폭탄 — 모든 페이즈 공통 (간격만 다름)
@@ -536,6 +653,7 @@ func _flash_hit() -> void:
 func _transition_to(new_phase: int) -> void:
 	phase = new_phase
 	phase_freeze_t = PHASE_FREEZE_DURATION
+	_cancel_sweep()
 	SfxPlayer.play_at("boss_phase_change", global_position)
 	# 텔레그래프 노드 리셋 — 전환 직후 잔존 점등이 어색.
 	bomb_telegraph_t = 0.0
@@ -556,13 +674,13 @@ func _transition_to(new_phase: int) -> void:
 	# 콜리전 설정이 거부된다(2026-08-20 실플레이 로그 실측, known_issues).
 	call_deferred("_summon_minions", new_phase)
 	# P3 불안정 구간 — 낙하 잔해 2존(final_boss_rework §6-3 · 자폭 문법과 정합 · 가벼운 빈도).
-	# lab ground 820 기준(HOVER 상수들과 같은 좌표계). 사망 시 _debris_nodes로 정리.
+	# 리워크 무대(2200x1300 · ground 1220) 기준. 사망 시 _debris_nodes로 정리.
 	if new_phase == 3 and not story_simplified and _debris_nodes.is_empty():
-		for cfg0 in [{"x_min": 300.0, "x_max": 800.0, "interval": 7.0},
-				{"x_min": 1150.0, "x_max": 1650.0, "interval": 8.0, "phase": 0.5}]:
+		for cfg0 in [{"x_min": 350.0, "x_max": 900.0, "interval": 7.0},
+				{"x_min": 1300.0, "x_max": 1850.0, "interval": 8.0, "phase": 0.5}]:
 			var fd := FallingDebris.new()
 			get_parent().add_child(fd)
-			fd.setup(cfg0, 820.0)
+			fd.setup(cfg0, GROUND_Y_LAB)
 			_debris_nodes.append(fd)
 	emit_signal("phase_changed", new_phase)
 
@@ -570,6 +688,7 @@ func _transition_to(new_phase: int) -> void:
 func _enter_vent() -> void:
 	if vent_t > 0.0 or self_destruct_active or dead:
 		return
+	_cancel_sweep()
 	vent_t = VENT_DURATION
 	SfxPlayer.play_at("hatch_open", global_position)
 	# 가독 — 달아오름 최대 + 상태 라벨 점등(첫 배기 VEIL 해설은 Stage가 vent_started로).
@@ -592,9 +711,10 @@ func _vent_summon() -> void:
 	if alive < VENT_SUMMON_CAP:
 		var kind: int = _vent_summon_kind
 		_vent_summon_kind = 0 if _vent_summon_kind == 2 else 2
-		var y: float = HOVER_Y if kind == 2 else (global_position.y + 280.0)
+		# 순찰은 보스 아래(지면 위로 낙하 안착 · 상한 클램프), 드론은 P1 호버 라인.
+		var y: float = HOVER_Y if kind == 2 else minf(global_position.y + 280.0, GROUND_Y_LAB - 80.0)
 		var side: float = -1.0 if randf() < 0.5 else 1.0
-		var pos := Vector2(clampf(global_position.x + side * SUMMON_OFFSET_X, 140.0, 1780.0), y)
+		var pos := Vector2(clampf(global_position.x + side * SUMMON_OFFSET_X, 160.0, 2040.0), y)
 		var hp_for: int = SUMMON_DRONE_HP if kind == 2 else SUMMON_PATROL_HP
 		var m2: CharacterBody2D = _spawn_minion(kind, pos, hp_for)
 		if m2 != null:
@@ -650,13 +770,13 @@ func _summon_minions(new_phase: int) -> void:
 	# 0=patrol, 2=drone (Stage._spawn_enemy의 kind와 일치)
 	var kind: int = 2 if new_phase == 2 else 0
 	var hp_for: int = SUMMON_DRONE_HP if kind == 2 else SUMMON_PATROL_HP
-	# drone은 호버 라인 부근, patrol은 지면 위로 spawn.
-	var y: float = HOVER_Y if kind == 2 else (global_position.y + 280.0)
-	# X는 ARENA(1920) 안쪽으로 클램프 — 보스가 한쪽에 치우친 채 전환되면 보스 기준 ±760이
+	# drone은 호버 라인 부근, patrol은 보스 아래(지면 위 낙하 안착 · 상한 클램프)로 spawn.
+	var y: float = HOVER_Y if kind == 2 else minf(global_position.y + 280.0, GROUND_Y_LAB - 80.0)
+	# X는 ARENA(2200) 안쪽으로 클램프 — 보스가 한쪽에 치우친 채 전환되면 보스 기준 ±760이
 	# 벽 밖으로 나가, patrol이 좌하단 구석에 낀 채 방치됐다(사용자 보고 2026-08-14).
 	var positions: Array = [
-		Vector2(clampf(global_position.x - SUMMON_OFFSET_X, 140.0, 1780.0), y),
-		Vector2(clampf(global_position.x + SUMMON_OFFSET_X, 140.0, 1780.0), y),
+		Vector2(clampf(global_position.x - SUMMON_OFFSET_X, 160.0, 2040.0), y),
+		Vector2(clampf(global_position.x + SUMMON_OFFSET_X, 160.0, 2040.0), y),
 	]
 	for pos in positions:
 		var m: CharacterBody2D = _spawn_minion(kind, pos, hp_for)
@@ -695,6 +815,7 @@ func _spawn_minion(kind: int, pos: Vector2, hp_value: int) -> CharacterBody2D:
 func _arm_self_destruct() -> void:
 	self_destruct_active = true
 	self_destruct_t = 0.0
+	_cancel_sweep()
 	# 실속 잔여 정리 — 자폭 시퀀스 뒤(위장 자폭 재기동 포함)에 실속이 되살아나지 않게.
 	stall_t = 0.0
 	if _vent_label != null:
@@ -793,6 +914,9 @@ func _die() -> void:
 		if is_instance_valid(fd):
 			(fd as Node).queue_free()
 	_debris_nodes.clear()
+	if _sweep_line != null and is_instance_valid(_sweep_line):
+		_sweep_line.queue_free()
+	_sweep_line = null
 	emit_signal("self_destruct_disarmed")
 	emit_signal("killed", global_position)
 	# 시각적 사라짐
