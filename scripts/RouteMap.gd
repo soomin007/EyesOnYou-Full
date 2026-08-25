@@ -10,16 +10,16 @@ extends Control
 var pool: Array = []
 var recommended_id: String = ""
 var recommended_reason: String = ""
-# §4 상충 추천(rival_veil_concept — 막4 "두 목소리") — 가짜 목소리가 다른 맵을 권한다.
+# §4 상충 추천(rival_veil_concept · 막4 "두 목소리") · 가짜 목소리가 다른 맵을 권한다.
 var rival_rec_id: String = ""
 var rival_rec_line: String = ""
-# 상충 추천 전용 라벨 — 본 멘트(veil_text)와 한 라벨에 이어 붙이면 같은 색 벽으로 읽힌다
+# 상충 추천 전용 라벨 · 본 멘트(veil_text)와 한 라벨에 이어 붙이면 같은 색 벽으로 읽힌다
 # (가독성 피드백 2026-08-14). 화자색은 인게임 자막과 동일한 바이올렛.
 # warm 밴드 VEIL 반박 라벨은 제거(사용자 2026-08-14 2차: 정적 화면에 실시간 반박이 부자연).
-# 어긋난 정중함 + ? 화자 + 바이올렛 색이 이미 tell — warm 특전은 인게임(P3 지각 보조)에 있다.
+# 어긋난 정중함 + ? 화자 + 바이올렛 색이 이미 tell · warm 특전은 인게임(P3 지각 보조)에 있다.
 var rival_lure_label: Label = null
 
-# 유인 멘트 — 말투 A(결이 어긋난 정중함) 플레이스홀더. 감언과 실제(최고위험 맵)의 어긋남이 본체.
+# 유인 멘트 · 말투 A(결이 어긋난 정중함) 플레이스홀더. 감언과 실제(최고위험 맵)의 어긋남이 본체.
 const _RIVAL_LURES: Array = [
 	"이쪽이 조용합니다. 방금 제가 봤습니다.",
 	"이 길을 비워 뒀습니다. 저를 믿으시죠.",
@@ -27,7 +27,7 @@ const _RIVAL_LURES: Array = [
 ]
 
 # 막4+(라이벌 노골화)에서 후보가 둘 이상이면, 라이벌이 내 VEIL과 **다른** 맵을 권한다(§4 상충).
-# 유인 대상 = 추천 제외 후보 중 최고위험(감언 뒤에 실제 위험 — 화자 "?"와 어긋난 정중함이 tell).
+# 유인 대상 = 추천 제외 후보 중 최고위험(감언 뒤에 실제 위험 · 화자 "?"와 어긋난 정중함이 tell).
 # 선택은 §9 축적(간파율)의 기초 데이터로 카운트(rival_lure_shown/followed).
 func _setup_rival_lure() -> void:
 	rival_rec_id = ""
@@ -48,7 +48,7 @@ func _setup_rival_lure() -> void:
 			rival_rec_id = rid
 	if rival_rec_id != "":
 		rival_rec_line = str(_RIVAL_LURES[randi() % _RIVAL_LURES.size()])
-		# 라이벌 기억(축 C) — 여러 회차에 걸쳐 계속 간파당했으면(누적 노출 6+, 수용 1/3 미만)
+		# 라이벌 기억(축 C) · 여러 회차에 걸쳐 계속 간파당했으면(누적 노출 6+, 수용 1/3 미만)
 		# 감언을 접고 역수를 던진다. 그조차 신뢰할 수 없다는 게 본체(tell·최고위험 유인은 유지).
 		if GameState.rival_lure_shown_total >= 6 \
 				and GameState.rival_lure_followed_total * 3 <= GameState.rival_lure_shown_total:
@@ -58,28 +58,28 @@ var buttons: Array = []
 # 고위험/고보상 별도 패널 (사용자 피드백: 본 멘트에 겹치면 너무 많아짐).
 var risk_reward_panel: PanelContainer = null
 var risk_reward_label: Label = null
-# 권장 스킬 칩 — VEIL 평문에 묻히던 추천을 좌측 아이콘 칩으로 분리(가독성).
+# 권장 스킬 칩 · VEIL 평문에 묻히던 추천을 좌측 아이콘 칩으로 분리(가독성).
 var skill_rec_panel: PanelContainer = null
 var skill_rec_icon: SkillIcon = null
 var skill_rec_name: Label = null
 var skill_rec_reason: Label = null
-# ESC 일시정지 메뉴 — Stage와 동일 패턴(계속/스킬트리/설정/처음으로).
+# ESC 일시정지 메뉴 · Stage와 동일 패턴(계속/스킬트리/설정/처음으로).
 var pause_overlay: CanvasLayer = null
 var settings_overlay: Control = null
 
 func _ready() -> void:
 	# 안전망: 이전 scene에서 paused가 carry되어 메뉴가 freeze되는 패턴 차단.
 	get_tree().paused = false
-	# 자체 일시정지(ESC) 중에도 입력을 받아 ESC로 열고 닫기가 모두 되게 — RouteMap엔
+	# 자체 일시정지(ESC) 중에도 입력을 받아 ESC로 열고 닫기가 모두 되게 · RouteMap엔
 	# _process 게임로직이 없어 ALWAYS여도 안전(PAUSABLE이면 paused 중 ESC를 못 받아 못 닫힘).
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	# 자동저장 — 스테이지 사이(다음 루트 선택 직전)의 깨끗한 스냅샷. 웹에서 닫아도 "이어하기"로 복귀.
+	# 자동저장 · 스테이지 사이(다음 루트 선택 직전)의 깨끗한 스냅샷. 웹에서 닫아도 "이어하기"로 복귀.
 	# (이 시점 불변식: route_history.size() == current_stage)
 	GameState.save_run()
-	# 팔림프세스트 — 막 경계(막 시작 스테이지)면 재진입용 스냅샷도 같은 시점에 기록.
+	# 팔림프세스트 · 막 경계(막 시작 스테이지)면 재진입용 스냅샷도 같은 시점에 기록.
 	# 가드(스토리/연습장/막 경계 아님)는 함수 안에서. 완주(record_ending) 시 확정 승격.
 	GameState.save_act_snapshot()
-	# 표시용 총계(displayed_total_stages) — 막1~3 동안 "…/ 9"로 보여 막4/5 확장을 숨긴다(반전 공개).
+	# 표시용 총계(displayed_total_stages) · 막1~3 동안 "…/ 9"로 보여 막4/5 확장을 숨긴다(반전 공개).
 	stage_label.text = "STAGE %d / %d   루트 선택" % [GameState.current_stage + 1, GameState.displayed_total_stages()]
 	subtitle_label.text = "● 위험도(높을수록 클리어 경험치 큼) · 보상 종류 · ? 미상"
 	pool = RouteData.get_route_pool_for_stage(GameState.current_stage, GameState.route_history)
@@ -87,11 +87,11 @@ func _ready() -> void:
 	recommended_id = str(rec.get("id", ""))
 	recommended_reason = str(rec.get("reason", ""))
 	_setup_rival_lure()
-	# VEIL 멘트 — 신뢰도 톤(색)을 _ready에서 한 번만 적용. 폰트는 22로 키워
+	# VEIL 멘트 · 신뢰도 톤(색)을 _ready에서 한 번만 적용. 폰트는 22로 키워
 	# 선택 화면에서 분명히 눈에 들어오게 (이전 15는 카드에 묻혀 안 보였음).
 	veil_text.add_theme_font_size_override("font_size", 22)
 	veil_text.add_theme_color_override("font_color", GameState.veil_tone_color())
-	# 긴 description이 박스 밖으로 빠져나가던 문제 — 자동 줄바꿈.
+	# 긴 description이 박스 밖으로 빠져나가던 문제 · 자동 줄바꿈.
 	veil_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	veil_text.custom_minimum_size = Vector2(560, 0)
 	_build_rival_lure_labels()
@@ -118,12 +118,12 @@ func _build_rival_lure_labels() -> void:
 	v_box.add_child(rival_lure_label)
 
 func _build_risk_reward_panel() -> void:
-	# VeilBox 우측에 작은 패널 — 고위험/고보상 경고를 본 멘트와 분리해서 표시.
+	# VeilBox 우측에 작은 패널 · 고위험/고보상 경고를 본 멘트와 분리해서 표시.
 	risk_reward_panel = PanelContainer.new()
 	risk_reward_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	risk_reward_panel.anchor_left = 0.78
 	# VeilBox가 0.68로 위로 올라간 데 맞춰 risk 패널도 같이 이동 (사용자 보고:
-	# VeilBox와 Footer 키 안내 겹침 — VeilBox top 0.76→0.68 변경).
+	# VeilBox와 Footer 키 안내 겹침 · VeilBox top 0.76→0.68 변경).
 	risk_reward_panel.anchor_top = 0.54
 	risk_reward_panel.anchor_right = 0.97
 	risk_reward_panel.anchor_bottom = 0.66
@@ -149,10 +149,10 @@ func _build_risk_reward_panel() -> void:
 	risk_reward_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	risk_reward_panel.add_child(risk_reward_label)
 
-# 권장 스킬 칩 — VeilBox 좌측 위(risk/reward 패널과 좌우 대칭). 아이콘 + 이름 + 사유.
+# 권장 스킬 칩 · VeilBox 좌측 위(risk/reward 패널과 좌우 대칭). 아이콘 + 이름 + 사유.
 func _build_skill_rec_panel() -> void:
 	skill_rec_panel = PanelContainer.new()
-	# 좌측 마진(카드 왼쪽 빈 공간)에 배치 — 우측 risk/reward 패널과 좌우 대칭.
+	# 좌측 마진(카드 왼쪽 빈 공간)에 배치 · 우측 risk/reward 패널과 좌우 대칭.
 	# 풀은 최대 3장이라 가운데 정렬된 카드 왼쪽에 마진이 남는다(카드와 안 겹치게 폭 제한).
 	skill_rec_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	skill_rec_panel.anchor_left = 0.025
@@ -213,28 +213,28 @@ func _refresh_hint() -> void:
 
 func _setup_trust_gauge() -> void:
 	# 상단 Header에 신뢰도 게이지 추가. (이전엔 VeilBox 안에 있어서 하단 Footer
-	# 조작 안내와 시각적으로 겹쳤음 — 사용자 피드백 2026-05-05.)
+	# 조작 안내와 시각적으로 겹쳤음 · 사용자 피드백 2026-05-05.)
 	var header: Node = stage_label.get_parent()
 	if header == null:
 		return
 	var gauge := Label.new()
 	gauge.name = "TrustGauge"
-	# 신뢰가 무슨 뜻인지 모른다는 피드백 — 게이지 옆에 의미 한 줄 병기. 게이지 = 추천 수용률
+	# 신뢰가 무슨 뜻인지 모른다는 피드백 · 게이지 옆에 의미 한 줄 병기. 게이지 = 추천 수용률
 	# (엔딩 신뢰 축과 동일 지표, 2026-08-14 통일)이라 문구도 오르내림을 그대로 말한다.
 	gauge.text = "VEIL 신뢰  " + GameState.veil_trust_gauge_dots() + "   (추천을 따르면 차오르고, 무시하면 내려갑니다. 결말에 반영됩니다)"
 	gauge.add_theme_font_size_override("font_size", 14)
 	gauge.add_theme_color_override("font_color", GameState.veil_tone_color())
 	header.add_child(gauge)
 
-# 진행 노드맵 — 헤더와 루트 카드 사이 가로 띠로 "지나온 경로 / 지금 / 남은 단계"를 표시.
-# 데이터는 이미 존재(route_history·current_stage·effective_total_stages) — 시각화만 추가.
+# 진행 노드맵 · 헤더와 루트 카드 사이 가로 띠로 "지나온 경로 / 지금 / 남은 단계"를 표시.
+# 데이터는 이미 존재(route_history·current_stage·effective_total_stages) · 시각화만 추가.
 # 불변식: RouteMap이 뜬 시점에 route_history.size() == current_stage (i단계 선택 = history[i]).
 const PROG_DONE_DOT: Color = Color(0.45, 0.80, 0.62)    # 클리어한 단계 (차분한 초록)
 const PROG_DONE_TEXT: Color = Color(0.58, 0.66, 0.62)
 const PROG_DONE_LINE: Color = Color(0.34, 0.50, 0.44)
 const PROG_FUTURE: Color = Color(0.40, 0.43, 0.50)      # 미상 단계 (흐릿)
 const PROG_FUTURE_LINE: Color = Color(0.24, 0.26, 0.32)
-# 막4/5 확장 구간(반전 공개 후) — 라이벌 바이올렛 계열(간섭 플래시 0.72,0.42,1.0과 같은 축).
+# 막4/5 확장 구간(반전 공개 후) · 라이벌 바이올렛 계열(간섭 플래시 0.72,0.42,1.0과 같은 축).
 const PROG_RIVAL_DOT: Color = Color(0.72, 0.42, 1.0)
 const PROG_RIVAL_TEXT: Color = Color(0.60, 0.44, 0.78)
 const PROG_RIVAL_LINE: Color = Color(0.40, 0.27, 0.55)
@@ -242,9 +242,9 @@ const PROG_RIVAL_LINE: Color = Color(0.40, 0.27, 0.55)
 func _build_progress_strip() -> void:
 	var total: int = GameState.effective_total_stages()
 	var cur: int = GameState.current_stage
-	# 반전 공개(사용자 제안 2026-08-10) — 막1~3 동안은 막3 끝(9단계)까지만 그린다(런이 9에서 끝나는
+	# 반전 공개(사용자 제안 2026-08-10) · 막1~3 동안은 막3 끝(9단계)까지만 그린다(런이 9에서 끝나는
 	# 것처럼). 막4 진입부터 확장 구간(막4/5)이 라이벌 바이올렛으로 드러나고, 첫 공개 1회는 글리치
-	# 페이드인. 가로 잘림 해결 겸: 15노드 × 88px는 1280을 넘친다 — 공개 후엔 컴팩트 폭으로 그린다.
+	# 페이드인. 가로 잘림 해결 겸: 15노드 × 88px는 1280을 넘친다 · 공개 후엔 컴팩트 폭으로 그린다.
 	var ext_start: int = total
 	var shown: int = total
 	if not GameState.story_mode:
@@ -268,10 +268,10 @@ func _build_progress_strip() -> void:
 	for i in shown:
 		var is_ext: bool = i >= ext_start
 		if i > 0:
-			# i단계로 들어가는 연결선 — 그 단계에 도달했으면(i <= cur) "지나온" 색.
+			# i단계로 들어가는 연결선 · 그 단계에 도달했으면(i <= cur) "지나온" 색.
 			row.add_child(_make_progress_connector(i <= cur, compact, is_ext))
 		row.add_child(_make_progress_node(i, cur, compact, is_ext))
-	# 막4 첫 진입 — 숨어 있던 확장 구간의 첫 공개 글리치 연출(런당 1회, run.cfg 영속로 재개 시 반복 방지).
+	# 막4 첫 진입 · 숨어 있던 확장 구간의 첫 공개 글리치 연출(런당 1회, run.cfg 영속로 재개 시 반복 방지).
 	if shown > ext_start and not GameState.map_extension_seen:
 		GameState.map_extension_seen = true
 		GameState.save_run()
@@ -291,21 +291,21 @@ func _make_progress_node(i: int, cur: int, compact: bool, rival: bool) -> Contro
 	name_l.add_theme_font_size_override("font_size", 11)
 	name_l.clip_text = true
 	if i < cur:
-		# 지나온 단계 — 선택했던 맵 이름 표시. 확장 구간은 라이벌 바이올렛.
+		# 지나온 단계 · 선택했던 맵 이름 표시. 확장 구간은 라이벌 바이올렛.
 		var rid: String = str(GameState.route_history[i]) if i < GameState.route_history.size() else ""
 		dot.text = "●"
 		dot.add_theme_color_override("font_color", PROG_RIVAL_DOT if rival else PROG_DONE_DOT)
 		name_l.text = RouteData.name_for_id(rid)
 		name_l.add_theme_color_override("font_color", PROG_RIVAL_TEXT if rival else PROG_DONE_TEXT)
 	elif i == cur:
-		# 지금 고르는 단계 — VEIL 신뢰 톤색으로 강조. (◆는 폰트에 없어 깨질 수 있어 ●로, 색으로 구분.)
+		# 지금 고르는 단계 · VEIL 신뢰 톤색으로 강조. (◆는 폰트에 없어 깨질 수 있어 ●로, 색으로 구분.)
 		var tone: Color = GameState.veil_tone_color()
 		dot.text = "●"
 		dot.add_theme_color_override("font_color", tone)
 		name_l.text = "지금"
 		name_l.add_theme_color_override("font_color", tone)
 	else:
-		# 아직 모르는 앞 단계. 확장 구간은 흐릿한 바이올렛 — "저긴 뭔가 다르다".
+		# 아직 모르는 앞 단계. 확장 구간은 흐릿한 바이올렛 · "저긴 뭔가 다르다".
 		dot.text = "○"
 		dot.add_theme_color_override("font_color", PROG_RIVAL_TEXT if rival else PROG_FUTURE)
 		name_l.text = "?"
@@ -316,7 +316,7 @@ func _make_progress_node(i: int, cur: int, compact: bool, rival: bool) -> Contro
 
 func _make_progress_connector(done: bool, compact: bool, rival: bool) -> Control:
 	# 노드와 같은 2단 구조(선 / 빈칸)로 만들어 점·이름 행 높이를 맞춘다.
-	# 연결선은 글자("──", box-drawing)가 아니라 ColorRect로 그린다 — 번들 폰트(Pretendard)에
+	# 연결선은 글자("──", box-drawing)가 아니라 ColorRect로 그린다 · 번들 폰트(Pretendard)에
 	# box-drawing 글리프가 없어 두부(□)로 깨졌음(사용자 보고 2026-06-25).
 	var box := VBoxContainer.new()
 	box.custom_minimum_size = Vector2(14 if compact else 24, 0)
@@ -338,7 +338,7 @@ func _make_progress_connector(done: bool, compact: bool, rival: bool) -> Control
 	box.add_child(spacer)
 	return box
 
-# 막4 첫 진입 — 숨어 있던 확장 노드/연결선이 지직거리며 드러나는 1회 연출(간섭 플래시와 같은 문법).
+# 막4 첫 진입 · 숨어 있던 확장 노드/연결선이 지직거리며 드러나는 1회 연출(간섭 플래시와 같은 문법).
 # row 자식은 node0, conn, node1, conn, ... 교차 배치라 확장 시작 자식 index = ext_start*2 - 1(그 앞 연결선부터).
 func _play_extension_reveal(row: HBoxContainer, ext_start: int) -> void:
 	var kids: Array = row.get_children()
@@ -363,7 +363,7 @@ func _build_node_buttons() -> void:
 		var b := Button.new()
 		b.custom_minimum_size = Vector2(220, 188)
 		b.toggle_mode = false
-		# ★는 진짜 추천(사유 있음)일 때만 — 단일 후보(배타) 스테이지의 유일한 카드에 ★가 붙으면
+		# ★는 진짜 추천(사유 있음)일 때만 · 단일 후보(배타) 스테이지의 유일한 카드에 ★가 붙으면
 		# "고를 게 없는데 추천"이라는 모순(수용률 집계 제외와 같은 기준, 2026-08-14).
 		b.text = _format_button_text(route,
 			route.get("id", "") == recommended_id and recommended_reason != "",
@@ -372,14 +372,14 @@ func _build_node_buttons() -> void:
 		b.pressed.connect(_on_button_pressed.bind(i))
 		b.focus_entered.connect(_on_focus.bind(i))
 		b.mouse_entered.connect(_on_focus.bind(i))
-		# 카드 하단에 등장 적 타입 아이콘 — 본 적은 그림, 미확인은 ?(발견 루프 존중).
+		# 카드 하단에 등장 적 타입 아이콘 · 본 적은 그림, 미확인은 ?(발견 루프 존중).
 		# hidden(???)/challenge 맵은 적 데이터가 특수하니 생략.
 		if not bool(route.get("hidden", false)) and not bool(route.get("challenge", false)):
 			_attach_enemy_row(b, str(route.get("id", "")))
 		nodes_container.add_child(b)
 		buttons.append(b)
 	if buttons.size() > 0:
-		# 메뉴 등장 직후 1초 동안 포커스 보류 — 점프 연타로 자동 활성화되는 사고 방지.
+		# 메뉴 등장 직후 1초 동안 포커스 보류 · 점프 연타로 자동 활성화되는 사고 방지.
 		GameState.arm_focus_with_delay(self, buttons[0])
 
 func _format_button_text(route: Dictionary, recommended: bool, rival: bool = false) -> String:
@@ -392,7 +392,7 @@ func _format_button_text(route: Dictionary, recommended: bool, rival: bool = fal
 	var prefix: String = "[도전]\n" if challenge else ""
 	var rec: String = "  ★" if recommended else ""
 	if rival:
-		rec += "  ?"   # §4 상충 추천 — 정체 불명의 별도 표(호버 시 "? 추천" 멘트로 설명)
+		rec += "  ?"   # §4 상충 추천 · 정체 불명의 별도 표(호버 시 "? 추천" 멘트로 설명)
 	return "%s%s%s\n\n위험  %s\n보상  %s" % [prefix, route_name, rec, risk_str, reward_str]
 
 # 맵에 등장하는 적 타입(중복 제거, 등장 순서). enemies(고정) + waves(ARENA) 합산.
@@ -410,7 +410,7 @@ func _route_enemy_kinds(route_id: String) -> Array:
 		var wd: Dictionary = w
 		var wen: Dictionary = wd.get("enemies", {})
 		for k in wen.keys():
-			# wen[k]는 적 위치 배열(개수 아님) — int() 생성자 없음(크래시 원인). size()로 검사.
+			# wen[k]는 적 위치 배열(개수 아님) · int() 생성자 없음(크래시 원인). size()로 검사.
 			var arr: Array = wen[k]
 			if arr.size() > 0 and not (str(k) in kinds):
 				kinds.append(str(k))
@@ -468,7 +468,7 @@ func _update_veil_comment() -> void:
 		return
 	var route: Dictionary = pool[hovered_idx]
 	var msg: String = ""
-	# 맵 소개(존재 이유) — 이 장소가 *무엇인가*. veil_comment(전술 "어떻게")와 다른 축이라 중복 아님.
+	# 맵 소개(존재 이유) · 이 장소가 *무엇인가*. veil_comment(전술 "어떻게")와 다른 축이라 중복 아님.
 	var lore: String = str(route.get("description", ""))
 	if lore != "":
 		msg += lore + "\n\n"
@@ -479,14 +479,14 @@ func _update_veil_comment() -> void:
 	else:
 		# 어투 밴드 스윕(2026-08-21): 기본 = 중립 보고체, warm 밴드는 _warm 변형(없으면 기본).
 		msg += "VEIL   " + VeilDialogue.banded(str(route.get("veil_comment", "")), str(route.get("veil_comment_warm", "")))
-	# §4 상충 추천 — 라이벌이 미는 카드엔 정체 불명 "?"의 감언이 붙는다. 신뢰 warm이면
-	# 내 VEIL이 즉시 반박(신뢰가 지각을 산다 §4.1) — 아니면 어긋난 정중함을 스스로 읽어야 한다.
+	# §4 상충 추천 · 라이벌이 미는 카드엔 정체 불명 "?"의 감언이 붙는다. 신뢰 warm이면
+	# 내 VEIL이 즉시 반박(신뢰가 지각을 산다 §4.1) · 아니면 어긋난 정중함을 스스로 읽어야 한다.
 	veil_text.text = msg
-	# 상충 추천 — 전용 라벨(바이올렛)로 분리. "? 추천" 헤더 행은 삭제: 화자 ?와 색이 이미 말한다.
+	# 상충 추천 · 전용 라벨(바이올렛)로 분리. "? 추천" 헤더 행은 삭제: 화자 ?와 색이 이미 말한다.
 	if rival_lure_label != null:
 		rival_lure_label.visible = route.get("id", "") == rival_rec_id and rival_rec_line != ""
 		rival_lure_label.text = "?   " + rival_rec_line
-	# 고위험/고보상 경고는 별도 우측 패널, 권장 스킬은 별도 좌측 칩 — 본 멘트와 시각 분리.
+	# 고위험/고보상 경고는 별도 우측 패널, 권장 스킬은 별도 좌측 칩 · 본 멘트와 시각 분리.
 	_update_risk_reward_panel(route)
 	_update_skill_rec_panel(route)
 
@@ -506,7 +506,7 @@ func _recommended_skill_for_route(route_id: String) -> Dictionary:
 			return {"skill_id": str(m.get("skill", "")), "enemy": en}
 	return {}
 
-# 좌측 권장 스킬 칩 갱신 — 본 적이 없거나 hidden/challenge 맵이면 숨김.
+# 좌측 권장 스킬 칩 갱신 · 본 적이 없거나 hidden/challenge 맵이면 숨김.
 func _update_skill_rec_panel(route: Dictionary) -> void:
 	if skill_rec_panel == null:
 		return
@@ -554,17 +554,17 @@ func _update_risk_reward_panel(route: Dictionary) -> void:
 	risk_reward_panel.visible = true
 
 func _input(event: InputEvent) -> void:
-	# 일시정지 중엔 SPACE 소비 안 함 — 일시정지 메뉴 버튼의 ui_accept(SPACE)를 막지 않게.
+	# 일시정지 중엔 SPACE 소비 안 함 · 일시정지 메뉴 버튼의 ui_accept(SPACE)를 막지 않게.
 	if pause_overlay != null:
 		return
-	# 스페이스(점프 키)로는 맵 확정 금지 — 플레이 중 점프 습관 탓에 맵이 뜨자마자 의도치 않게
+	# 스페이스(점프 키)로는 맵 확정 금지 · 플레이 중 점프 습관 탓에 맵이 뜨자마자 의도치 않게
 	# 카드가 선택돼버리는 것 방지(사용자). _input은 GUI·_unhandled_input보다 먼저 처리되므로
 	# 여기서 소비하면 버튼 ui_accept와 아래 jump 분기 양쪽 다 막힌다. Enter·W·클릭으로는 정상 확정.
 	if event is InputEventKey and event.pressed and (event as InputEventKey).physical_keycode == KEY_SPACE:
 		get_viewport().set_input_as_handled()
 
 func _unhandled_input(event: InputEvent) -> void:
-	# ESC는 최우선 — 선택 화면에서도 일시정지 메뉴를 연다(이전엔 ESC가 아무 반응 없었음).
+	# ESC는 최우선 · 선택 화면에서도 일시정지 메뉴를 연다(이전엔 ESC가 아무 반응 없었음).
 	if event.is_action_pressed("ui_cancel"):
 		get_viewport().set_input_as_handled()
 		if pause_overlay == null:
@@ -622,12 +622,12 @@ func _on_button_pressed(idx: int) -> void:
 	if idx < 0 or idx >= pool.size():
 		return
 	var route: Dictionary = pool[idx]
-	# §9 축적(간파율 기초) — 상충 추천이 떠 있던 선택에서 유인을 따랐는가.
+	# §9 축적(간파율 기초) · 상충 추천이 떠 있던 선택에서 유인을 따랐는가.
 	if rival_rec_id != "":
 		GameState.rival_lure_shown += 1
 		if str(route.get("id", "")) == rival_rec_id:
 			GameState.rival_lure_followed += 1
-	# 단일 후보(배타: s8 lab·s13 core_recovery·s14 escape) 스테이지는 수용률 집계에서 제외 —
+	# 단일 후보(배타: s8 lab·s13 core_recovery·s14 escape) 스테이지는 수용률 집계에서 제외 ·
 	# 고를 게 없는 진입을 "추천을 따랐다"로 세면 분자·분모가 공짜로 차서 lo 엔딩 도달이
 	# 비대칭으로 어려워진다(신뢰 hi/lo 점검 2026-08-14). reason == ""가 단일 후보 신호
 	# (choose_veil_recommendation_with_reason). 어투 trust +2도 같이 안 붙는다(선택이 아니므로).

@@ -1,35 +1,35 @@
 extends Node
 
-# 입력 모드 — 마지막으로 들어온 이벤트가 키보드/마우스인지 패드인지 추적.
+# 입력 모드 · 마지막으로 들어온 이벤트가 키보드/마우스인지 패드인지 추적.
 # UI hint 라벨/키캡 표지가 이 값에 따라 실시간 swap된다.
 # 변경 시 input_kind_changed 시그널 → 각 UI가 _refresh_hints 갱신.
 signal input_kind_changed(kind: String)
-# 스킬 티어가 바뀔 때 — Player가 캐릭터 부착물(파우치·윙 등) 외형을 갱신하는 데 사용.
+# 스킬 티어가 바뀔 때 · Player가 캐릭터 부착물(파우치·윙 등) 외형을 갱신하는 데 사용.
 signal skills_changed
 const PAD_AXIS_DEADZONE: float = 0.4
 var last_input_kind: String = "kb"  # "kb" | "pad"
 
 const TOTAL_STAGES: int = 15   # 5막 골격(2026-07-07): 각 막 3스테이지 × 5 = 15. ACTS 합과 일치.
-# 막(Act) 정의 — 가변 개수. 5막 재구조화(rival_veil_concept §6·§11 골격): 침투/잠입/핵심부(SENTINEL)/
+# 막(Act) 정의 · 가변 개수. 5막 재구조화(rival_veil_concept §6·§11 골격): 침투/잠입/핵심부(SENTINEL)/
 # 추적/대면(회수·처리·탈출). 불변식: 각 막 stages 합 == TOTAL_STAGES. boss 필드는 문서용(스폰은 MapData 구동).
 # 내부 스테이지(0-based): 막1 0-2 / 막2 3-5 / 막3 6-7 전투+8 SENTINEL(lab) / 막4 9-11 / 막5 12 전투+13 회수+14 탈출.
 const ACTS: Array = [
 	{"id": "act1", "name": "침투",   "bgm": "early",    "stages": 3, "boss": ""},
 	{"id": "act2", "name": "잠입",   "bgm": "mid_late", "stages": 3, "boss": ""},
 	{"id": "act3", "name": "핵심부", "bgm": "boss",     "stages": 3, "boss": "sentinel"},
-	# 막4/5 bgm은 실데이터(2026-08-10, act4_bgm_plan §4) — Stage._apply_bgm_for_current_route가
+	# 막4/5 bgm은 실데이터(2026-08-10, act4_bgm_plan §4) · Stage._apply_bgm_for_current_route가
 	# 막4+에서 이 필드로 선곡한다(막1~3은 라우트 매핑 유지, 막1~3 bgm 필드는 문서용).
 	{"id": "act4", "name": "추적",   "bgm": "pursuit",  "stages": 3, "boss": ""},
 	{"id": "act5", "name": "대면",   "bgm": "confront", "stages": 3, "boss": ""},
 ]
 const SCORE_THRESHOLD: int = 4
 const SETTINGS_PATH: String = "user://settings.cfg"
-# 런 진행 저장(이어하기) — 설정과 분리한 별도 파일. 웹에선 user://가 브라우저 IndexedDB에 영속.
+# 런 진행 저장(이어하기) · 설정과 분리한 별도 파일. 웹에선 user://가 브라우저 IndexedDB에 영속.
 const RUN_PATH: String = "user://run.cfg"
-const RUN_VERSION: int = 4  # 4: 5막 재구조화(15스테이지 / 엔드게임 막5 이주) — 구 run.cfg(v3, 9스테이지) 무효화
-# 기록 재진입(팔림프세스트) 스냅샷 — 완주 런의 막 경계 상태(act0~4 확정 + pending_actN 대기).
+const RUN_VERSION: int = 4  # 4: 5막 재구조화(15스테이지 / 엔드게임 막5 이주) · 구 run.cfg(v3, 9스테이지) 무효화
+# 기록 재진입(팔림프세스트) 스냅샷 · 완주 런의 막 경계 상태(act0~4 확정 + pending_actN 대기).
 const PALIMPSEST_PATH: String = "user://palimpsest.cfg"
-# QA 하니스(VerifyShots·BotRunner 등 도구 씬 직부팅)가 _ready에서 켠다 — user:// 저장 4종
+# QA 하니스(VerifyShots·BotRunner 등 도구 씬 직부팅)가 _ready에서 켠다 · user:// 저장 4종
 # (settings/run/palimpsest/playstyle)과 run.cfg 삭제를 전면 차단해, 스테이징된 상태가
 # 실사용자 저장 파일을 덮는 오염을 막는다(2026-08-24, "에디터마다 설정 리셋" 원인).
 var persist_blocked: bool = false
@@ -37,7 +37,7 @@ var persist_blocked: bool = false
 const FEEDBACK_URL: String = "https://forms.gle/byS8EABJitB9r6z88"
 const KEYBIND_ACTIONS: Array[String] = ["move_left", "move_right", "jump", "attack", "dash", "skill", "pause"]
 # 모든 플레이어가 기본 보유하는 베이스라인 스킬 (트리 외)
-# 자료형: Dictionary[String, int] — line_id → 보유 티어 (베이스라인은 항상 1).
+# 자료형: Dictionary[String, int] · line_id → 보유 티어 (베이스라인은 항상 1).
 const STARTING_SKILLS: Dictionary = {"dash": 1, "double_jump": 1}
 
 var current_stage: int = 0
@@ -51,7 +51,7 @@ var score: int = 0
 var hits_taken: int = 0              # 누적 피격 수 (take_hit이 invuln 통과 시 +1)
 var _stage_hits_base: int = 0        # 현재 스테이지 진입 시점 hits_taken 스냅샷
 var _stage_deaths_base: int = 0      # 현재 스테이지 진입 시점 death_count 스냅샷
-# 스테이지 타이머 — wall clock이 아니라 _process delta 누적(2026-08-20). 일시정지(ESC 메뉴·
+# 스테이지 타이머 · wall clock이 아니라 _process delta 누적(2026-08-20). 일시정지(ESC 메뉴·
 # 레벨업·도감 카드) 중엔 _process가 멈추므로, 멈추고 메모하는 시간이 기록을 오염시키지 않는다.
 # 맵 선택·브리핑은 원래 측정 창 밖(record_route_choice ~ on_stage_clear).
 var _stage_timer_on: bool = false    # 스테이지 진입~클리어 동안만 누적
@@ -60,13 +60,13 @@ var recent_stage_hits: Array = []    # 최근 스테이지별 피격 수 (최대
 var recent_stage_deaths: Array = []  # 최근 스테이지별 죽음 수 (최대 2)
 var last_stage_secs: float = 0.0     # 직전 스테이지 소요 시간 (참고용)
 
-# 어투 trust 재설계(2026-06-13, veil_trust_arc.md §3) — 따뜻함=관계, 0에서 climbing.
+# 어투 trust 재설계(2026-06-13, veil_trust_arc.md §3) · 따뜻함=관계, 0에서 climbing.
 # 추천 따라 클리어 +2 / 함께 고비 +2 / 독립 성공 +0. 클리어 시점(on_stage_clear)에 적립.
 var trust_score: int = 0
 var aggression_score: int = 0
-var shared_hardship: int = 0      # 함께 고비를 넘긴 횟수 — WARM 취약함 게이트(§3.5)
-var rec_count: int = 0            # VEIL이 추천을 제시한 스테이지 수 — 엔딩 수용률 분모(§3.3)
-var followed_count: int = 0       # 그중 추천을 따른 수 — 엔딩 수용률 분자
+var shared_hardship: int = 0      # 함께 고비를 넘긴 횟수 · WARM 취약함 게이트(§3.5)
+var rec_count: int = 0            # VEIL이 추천을 제시한 스테이지 수 · 엔딩 수용률 분모(§3.3)
+var followed_count: int = 0       # 그중 추천을 따른 수 · 엔딩 수용률 분자
 var route_history: Array = []
 var last_veil_recommended_route: String = ""
 var followed_veil_last_choice: bool = false
@@ -74,78 +74,78 @@ var followed_veil_last_choice: bool = false
 # VEIL 시야 붕괴(ACT3 degradation)가 한 번 시작되면 이후 맵에서도 계속 어두운 상태 유지.
 # VeilSight.begin_degradation()에서 켜고, VeilSight._ready가 이 값을 보고 시작부터 degraded.
 var veil_degraded: bool = false
-# 시야 역전 onset 맵에서 "진입부터 붕괴" 처리를 위한 1회용 신호 — record_route_choice가 켜고
+# 시야 역전 onset 맵에서 "진입부터 붕괴" 처리를 위한 1회용 신호 · record_route_choice가 켜고
 # Stage._ready가 진입 역전 멘트 1회 소비 후 끈다(중간 글리치·자막 겹침 제거, 사용자 보고).
 var veil_reversal_pending: bool = false
 
-# ??? 방문(진실 목격) — 막3 전투 풀의 ??? 분기를 클리어하면 켜진다. 특수 '진실' 엔딩(9개 중 +1)의 신호.
-# 런 단위(run.cfg 영속) — reset()/start_main_game()에서 해제. 영속 카운트 hidden_visit_count(도감류)와는 별개.
+# ??? 방문(진실 목격) · 막3 전투 풀의 ??? 분기를 클리어하면 켜진다. 특수 '진실' 엔딩(9개 중 +1)의 신호.
+# 런 단위(run.cfg 영속) · reset()/start_main_game()에서 해제. 영속 카운트 hidden_visit_count(도감류)와는 별개.
 var truth_seen: bool = false
 
-# 막1→막2 문턱(B-4) — 런에서 드론이 처음 등장하는 맵(막2+)에 들어서면 VEIL이 1회 반응. 막1=인간 경비만이라
-# 첫 드론 = 시설 내부 진입의 페이오프. 런 단위 비영속(reset/start_main_game 해제) — 재개 시 1회 재발동은 무해.
+# 막1→막2 문턱(B-4) · 런에서 드론이 처음 등장하는 맵(막2+)에 들어서면 VEIL이 1회 반응. 막1=인간 경비만이라
+# 첫 드론 = 시설 내부 진입의 페이오프. 런 단위 비영속(reset/start_main_game 해제) · 재개 시 1회 재발동은 무해.
 var drone_intro_seen: bool = false
-# 이스터에그 — 평화주의(발포 0 클리어) VEIL 대사를 이번 런에 이미 띄웠는가(런당 1회). 비영속, reset에서 초기화.
+# 이스터에그 · 평화주의(발포 0 클리어) VEIL 대사를 이번 런에 이미 띄웠는가(런당 1회). 비영속, reset에서 초기화.
 var pacifist_line_shown: bool = false
-# 특별 개체 조우 VEIL 한마디 — 황금(shiny)/엘리트 각각 런당 1회(2026-08-11 사용자 제안).
+# 특별 개체 조우 VEIL 한마디 · 황금(shiny)/엘리트 각각 런당 1회(2026-08-11 사용자 제안).
 # 엘리트 대사는 "다른 신호" 복선(라이벌의 군대, rival_veil_concept §6). 비영속, reset에서 초기화.
 var shiny_line_shown: bool = false
 var elite_line_shown: bool = false
-# 엘리트 방패병 폭발 무효를 처음 목격했을 때 VEIL 상황 멘트(런당 1회) — "상황에 맞는 멘트" 피드백.
+# 엘리트 방패병 폭발 무효를 처음 목격했을 때 VEIL 상황 멘트(런당 1회) · "상황에 맞는 멘트" 피드백.
 var shield_immune_line_shown: bool = false
-# 포탑 "못 부숴요" 안내 발화 횟수 — 런당 2회까지만(함정 맵마다 반복돼 지겹다는 피드백 2026-08-11).
+# 포탑 "못 부숴요" 안내 발화 횟수 · 런당 2회까지만(함정 맵마다 반복돼 지겹다는 피드백 2026-08-11).
 var trap_warn_count: int = 0
-# VEIL 마킹 소개("위험한 건 제가 먼저 볼게요") — 런당 1회. VeilSight 인스턴스 변수였을 땐 맵마다
+# VEIL 마킹 소개("위험한 건 제가 먼저 볼게요") · 런당 1회. VeilSight 인스턴스 변수였을 땐 맵마다
 # 재생돼 "뜬금없이 자주 나온다"(2026-08-14). 비영속, reset에서 초기화.
 var veilsight_intro_shown: bool = false
-# 런 첫 마커 "VEIL" 서명 태그(인지 강화 ①, 2026-08-14) — 런당 1회. 비영속, reset에서 초기화.
+# 런 첫 마커 "VEIL" 서명 태그(인지 강화 ①, 2026-08-14) · 런당 1회. 비영속, reset에서 초기화.
 var veilsight_tag_shown: bool = false
-# 정찰 보상(reward_type "recon") — 클리어 시 next를 켜고, 다음 record_route_choice에서
+# 정찰 보상(reward_type "recon") · 클리어 시 next를 켜고, 다음 record_route_choice에서
 # active로 승격(그 스테이지 전체 유효 · 사망 재시도 포함). run.cfg 저장으로 이어하기 생존.
 var veilsight_recon_next: bool = false
 var veilsight_recon_active: bool = false
 var recon_note_pending: bool = false      # 발동 스테이지 진입 1회 안내 자막(맵당 1회, 재시도 제외)
-# 클리어 화면 보상 안내 한 줄("기록 1칸 회복" 등) — on_stage_clear가 채우고 Stage가 소비.
+# 클리어 화면 보상 안내 한 줄("기록 1칸 회복" 등) · on_stage_clear가 채우고 Stage가 소비.
 var last_clear_reward_note: String = ""
 
 # 막3 핵심부(lab) 보스 처치 후 데이터 회수 연출 → "처리 선택"(DisposalChoiceOverlay)에서 고른 값.
-# 엔딩 9개의 처리 축(반출/파기/은닉/잔류). 런 단위 — reset()/start_main_game()에서 해제, run.cfg 영속.
-const DISPOSAL_EXTRACT: String = "extract"   # 반출 — 의뢰대로 외부로 가지고 나간다(VEIL 폐기/노출).
-const DISPOSAL_DESTROY: String = "destroy"   # 파기 — 드라이브를 소각한다(아무도 못 가짐).
-const DISPOSAL_CONCEAL: String = "conceal"   # 은닉 — 빼돌려 요원이 보관한다(의뢰 배신).
-const DISPOSAL_LEAVE: String = "leave"       # 잔류 — 건드리지 않고 그 자리에 둔다(시설에 남김).
+# 엔딩 9개의 처리 축(반출/파기/은닉/잔류). 런 단위 · reset()/start_main_game()에서 해제, run.cfg 영속.
+const DISPOSAL_EXTRACT: String = "extract"   # 반출 · 의뢰대로 외부로 가지고 나간다(VEIL 폐기/노출).
+const DISPOSAL_DESTROY: String = "destroy"   # 파기 · 드라이브를 소각한다(아무도 못 가짐).
+const DISPOSAL_CONCEAL: String = "conceal"   # 은닉 · 빼돌려 요원이 보관한다(의뢰 배신).
+const DISPOSAL_LEAVE: String = "leave"       # 잔류 · 건드리지 않고 그 자리에 둔다(시설에 남김).
 var disposal_choice: String = ""
 # 14-1 라이벌 보스 페이즈 체크포인트(§7.2 확정: 사망 시 현 페이즈부터 재시작, 전체 재시작 없음).
-# 0=미도달/P1, 1=P2(빙의), 2=P3(분신전) 도달. 런 내 세션 한정(run.cfg 미저장) — 이어하기 재진입은 P1부터.
+# 0=미도달/P1, 1=P2(빙의), 2=P3(분신전) 도달. 런 내 세션 한정(run.cfg 미저장) · 이어하기 재진입은 P1부터.
 # 해제: 보스 처치(_on_false_veil_defeated) + reset()/start_main_game()(지속 플래그 경계 원칙).
 var rival_phase_reached: int = 0
-# 14-2 코어 대면 터널 실런 모드(§7.1 ④) — Stage가 보스 클리어 → 터널 전환 직전에 켠다.
+# 14-2 코어 대면 터널 실런 모드(§7.1 ④) · Stage가 보스 클리어 → 터널 전환 직전에 켠다.
 # CoreTunnel이 읽어 목격 비트에서 회수 리드아웃·고백·처리 선택을 실행(꺼져 있으면 연습장 프로토).
 # 해제: 처리 선택 완료(터널 → 브리핑) + reset()/start_main_game().
 var core_tunnel_live: bool = false
-# §4 상충 추천 축적(§9 간파율 기초) — 막4+ 루트 선택에서 라이벌 유인이 떠 있던 횟수/따른 횟수.
+# §4 상충 추천 축적(§9 간파율 기초) · 막4+ 루트 선택에서 라이벌 유인이 떠 있던 횟수/따른 횟수.
 # 런 단위(reset 초기화). 엔딩 게이트(§9.1 "거짓 많이 따름" 축)의 원료. run.cfg·스냅샷 영속.
 var rival_lure_shown: int = 0
 var rival_lure_followed: int = 0
 
-# 기록 재진입(팔림프세스트, replay_support_plan §2) — 막 경계 스냅샷에서 재개한 런인가.
+# 기록 재진입(팔림프세스트, replay_support_plan §2) · 막 경계 스냅샷에서 재개한 런인가.
 # reset()/start_main_game()에서 해제(지속 플래그 경계 원칙). reentry_line_pending은
 # 재개 직후 첫 브리핑이 1회 소비(재진입 시스템/VEIL 멘트).
 var reentry_run: bool = false
 var reentry_act: int = -1
 var reentry_line_pending: bool = false
 
-# ─── 라이벌 기억(축 C, replay_support_plan §4) — settings.cfg rival/ 섹션 영속. ───
+# ─── 라이벌 기억(축 C, replay_support_plan §4) · settings.cfg rival/ 섹션 영속. ───
 # 세계관 근거 = 관측 프레임의 팔림프세스트 비대칭(STORY.md): 라이벌은 시설 안에 있어 소거 권한
-# 밖 — 유일하게 회차를 기억한다. §9 간파율 게이트의 데이터 기초를 겸한다(이중 목적).
+# 밖 · 유일하게 회차를 기억한다. §9 간파율 게이트의 데이터 기초를 겸한다(이중 목적).
 var rival_last_disposal: String = ""          # 직전 완주 런의 처리 선택
 var rival_disposal_counts: Dictionary = {}    # 처리 id → 누적 횟수
 var rival_lure_shown_total: int = 0           # 상충 추천 누적 노출(간파율 분모)
 var rival_lure_followed_total: int = 0        # 그중 따른 횟수(간파율 분자)
 var rival_kills: int = 0                      # 14-1 처치 누적
-var rival_fake_clear_seen: bool = false       # 가짜 클리어 목격 — 재방문 시 자기 폭로 후 P3 직행
+var rival_fake_clear_seen: bool = false       # 가짜 클리어 목격 · 재방문 시 자기 폭로 후 P3 직행
 var rival_reentry_count: int = 0              # 기록 재진입 사용 누적
-# 다회차 보스 변주(2026-08-19) — 지난 "격파" 런의 공략 방식. 실패한 시도는 기억 안 됨.
+# 다회차 보스 변주(2026-08-19) · 지난 "격파" 런의 공략 방식. 실패한 시도는 기억 안 됨.
 var rival_boss_first_side: int = -1           # P2 노드를 먼저 부순 쪽(0=좌 1=우 · -1=기록 없음)
 var rival_boss_explosive: bool = false        # P3 결정타가 폭발(수류탄)이었나
 
@@ -161,29 +161,29 @@ var current_route_risk: int = 1   # 1~3, 적 수 배율 + 행동 강화에 사�
 # 보상 축 개편(2026-08-19): 클리어 XP = risk. reward_type은 부가 효과 종류
 # ("xp" 경험치 +2 / "record" 기록 1칸 / "recon" 다음 구간 숨은 요소 표시(재정의 08-21) / "" 없음).
 var current_route_reward_type: String = ""
-var current_route_challenge: bool = false  # 도전 맵 여부 — 고비 판정용
-var current_route_hidden: bool = false     # 히든 맵 여부 — 고비 판정용
+var current_route_challenge: bool = false  # 도전 맵 여부 · 고비 판정용
+var current_route_hidden: bool = false     # 히든 맵 여부 · 고비 판정용
 
 var player_max_hp: int = 3
 var player_hp: int = 3
 var player_xp: int = 0
 var player_level: int = 1
 const XP_PER_LEVEL: int = 8
-# 만렙(모든 스킬 라인 T3) 이후 레벨업 보상 — 15스테이지 확장으로 s10쯤 만렙에 닿으면 레벨업이
+# 만렙(모든 스킬 라인 T3) 이후 레벨업 보상 · 15스테이지 확장으로 s10쯤 만렙에 닿으면 레벨업이
 # 무보상이 되는 문제(사용자 보고 2026-08-10). 스킬 카드 대신 오버플로 카드 1장: 예비 장갑
 # (최대 체력 +1, 상한 OVERFLOW_HP_CAP회) → 상한 뒤엔 응급 처치(체력 회복) → 가득이면 점수 폴백
-# (점수는 인게임에 안 보여 빈 보상이라는 피드백 2026-08-11 — 체감형 우선). 런 단위, run.cfg 영속.
+# (점수는 인게임에 안 보여 빈 보상이라는 피드백 2026-08-11 · 체감형 우선). 런 단위, run.cfg 영속.
 var overflow_hp_bonus: int = 0
 const OVERFLOW_HP_CAP: int = 2
 const OVERFLOW_HEAL_AMOUNT: int = 2
 const OVERFLOW_SCORE_BONUS: int = 500
 
-# 노드맵 막4/5 반전 공개 — 막1~3 동안 노드맵·헤더가 막3 끝(9스테이지)까지만 보이다가 막4 진입 시
+# 노드맵 막4/5 반전 공개 · 막1~3 동안 노드맵·헤더가 막3 끝(9스테이지)까지만 보이다가 막4 진입 시
 # 확장 구간이 드러난다(사용자 제안 2026-08-10). 첫 공개 글리치 연출을 1회만 틀기 위한 플래그.
 # 런 단위, run.cfg 영속(이어하기 재진입 시 연출 반복 방지).
 var map_extension_seen: bool = false
 
-# 보스 인트로(막3 lab, Violet Signal 빌드업 컷씬)를 이번 런에서 봤는가 — 죽고 재도전 시 인트로를
+# 보스 인트로(막3 lab, Violet Signal 빌드업 컷씬)를 이번 런에서 봤는가 · 죽고 재도전 시 인트로를
 # 생략하고 음악만 비트 구간으로 점프하기 위한 세션 플래그. reset()/start_main_game()에서 해제.
 var boss_intro_seen_run: bool = false
 
@@ -191,22 +191,22 @@ var tutorial_done: bool = false
 var bgm_volume: float = 1.0
 var sfx_volume: float = 1.0
 
-# 접근성 — settings.cfg에 영속. reset()에서 안 지움(볼륨처럼 사용자 환경 설정).
+# 접근성 · settings.cfg에 영속. reset()에서 안 지움(볼륨처럼 사용자 환경 설정).
 var screen_brightness: float = 1.0   # 0.5~1.5 (1.0=기본). Accessibility 오버레이가 반영.
 var sfx_captions: bool = false       # 효과음 자막 (무음 플레이 대응)
-# 연출 강도(2026-08-14 사용자) — 광과민·멀미 대응. 끄면 카메라 흔들림/헤드밥, 화면 효과
+# 연출 강도(2026-08-14 사용자) · 광과민·멀미 대응. 끄면 카메라 흔들림/헤드밥, 화면 효과
 # (글리치 셰이더·간섭 플래시·보스 지직임)를 생략한다. 게임 정보 전달엔 영향 없음.
 var camera_shake_enabled: bool = true
 var screen_fx_enabled: bool = true
 
-# 디스플레이 — settings.cfg에 영속. 환경 설정이라 reset()에서 안 지움.
+# 디스플레이 · settings.cfg에 영속. 환경 설정이라 reset()에서 안 지움.
 # 웹에선 창 크기는 브라우저 캔버스가 정하므로 무의미 → 전체화면 토글만 적용.
 var fullscreen: bool = false
 # 입력이 들어오면 자동으로 전체화면 전환(모바일 웹에서 브라우저 UI로 화면이 잘리는 것 완화).
 # OrientationGuard._input이 이 값을 보고 입력마다(전체화면 아닐 때) 재시도. 기본 켜짐, 토글로 끔.
 var auto_fullscreen: bool = true
 var window_size_index: int = 1       # WINDOW_SIZES 인덱스 (창모드일 때만) · 기본 1280×720
-# 전부 16:9(stretch aspect=keep와 한 세트 — 초광폭 시야 이득 차단, 사용자 2026-08-25).
+# 전부 16:9(stretch aspect=keep와 한 세트 · 초광폭 시야 이득 차단, 사용자 2026-08-25).
 # Settings가 현재 모니터보다 큰 항목은 숨긴다.
 const WINDOW_SIZES: Array[Vector2i] = [
 	Vector2i(960, 540),
@@ -216,23 +216,23 @@ const WINDOW_SIZES: Array[Vector2i] = [
 	Vector2i(2560, 1440),
 	Vector2i(3840, 2160),
 ]
-# 구 cfg(2026-08-25 이전)의 window_size_index가 가리키던 3종 — 로드 시 새 배열로 이전.
+# 구 cfg(2026-08-25 이전)의 window_size_index가 가리키던 3종 · 로드 시 새 배열로 이전.
 const _LEGACY_WINDOW_SIZES: Array[Vector2i] = [
 	Vector2i(1280, 720),
 	Vector2i(1600, 900),
 	Vector2i(1920, 1080),
 ]
 
-# 스토리 모드 — 키보드/패드 조작이 어려운 사람을 위한 간략화 모드.
+# 스토리 모드 · 키보드/패드 조작이 어려운 사람을 위한 간략화 모드.
 # 체력 무제한 / 드론 배제 / 보스 P1만 / 스테이지·맵 수 축소.
 # Title의 "스토리 모드" 버튼으로만 켜지고, ending에서 reset() 시 꺼진다.
 var story_mode: bool = false
 const STORY_TOTAL_STAGES: int = 5
 
-# 디버그 연습장 모드 — Settings에서 진입. 영속화하지 않음.
+# 디버그 연습장 모드 · Settings에서 진입. 영속화하지 않음.
 var playground_active: bool = false
 
-# 엔딩 후 "다시 플레이하기"로 들어온 회차인가 — 물음표 방 첫 단말기 변형(VEIL-1 → 추가 풀)을 가른다.
+# 엔딩 후 "다시 플레이하기"로 들어온 회차인가 · 물음표 방 첫 단말기 변형(VEIL-1 → 추가 풀)을 가른다.
 # reset()/start_main_game()에서 일부러 안 지운다(크레딧 버튼이 set한 값이 새 런까지 살아남아야 함).
 # 부스(기기≠사람)에서 새 사람이 VEIL-1 도입을 놓치는 걸 막으려 기기 영속 카운트 대신 명시적 신호로.
 var replaying: bool = false
@@ -240,11 +240,11 @@ var replaying: bool = false
 # 디버그 메뉴 잠금. 타이틀에서 비밀 키 시퀀스("snu")를 입력해야 활성. 영속화하지 않음.
 # 부스/공유 환경에서 일반 플레이어가 디버그 기능에 접근하지 못하도록.
 var debug_unlocked: bool = false
-# 디버그 무적 — 테스트용(재머/맵 확인 등). 켜면 Player.take_hit이 데미지를 무시. 세션 한정, reset에서 안 지움
+# 디버그 무적 · 테스트용(재머/맵 확인 등). 켜면 Player.take_hit이 데미지를 무시. 세션 한정, reset에서 안 지움
 # (맵을 바꿔가며 테스트하는 동안 유지). debug_unlocked일 때만 Settings 디버그 탭에서 토글.
 var debug_invincible: bool = false
 
-# 디버그 엘리트 강제 — 연습장 한정(Stage._spawn_enemy가 playground_active일 때만 참조).
+# 디버그 엘리트 강제 · 연습장 한정(Stage._spawn_enemy가 playground_active일 때만 참조).
 # 실런은 확률 램프(s9 5%→s12 30%)라 전 타입을 못 만날 수 있다는 피드백(2026-08-11) 보완.
 # 무적과 같은 규칙: 세션 한정, reset에서 안 지움.
 var debug_force_elite: bool = false
@@ -252,31 +252,31 @@ var debug_force_elite: bool = false
 # ??? 맵 진행 중 Player 입력 제한 (이동/점프만 허용, 공격/대시/스킬 비활성)
 var restrict_combat_input: bool = false
 
-# 도감 — 첫 조우 시 카드 한 번만 띄우기 위한 영속 플래그.
+# 도감 · 첫 조우 시 카드 한 번만 띄우기 위한 영속 플래그.
 # 게임 reset()에서는 비우지 않음 (한 번 본 적은 다음 런에서도 본 거).
 var seen_enemies: Array = []
 
-# ??? 맵 누적 방문 횟수 — settings.cfg에 영속.
+# ??? 맵 누적 방문 횟수 · settings.cfg에 영속.
 # 첫 방문(0): 기존 VEIL-1/VEIL-2/VEIL 고백 고정.
 # 이후 방문(>=1): 추가 풀에서 1개 랜덤 교체 (VEIL-1 단말기 자리).
 var hidden_visit_count: int = 0
-# 이스터에그 방(ARCTURUS 아카이브) 방문 여부 — 1회만 트리거되도록 영속.
+# 이스터에그 방(ARCTURUS 아카이브) 방문 여부 · 1회만 트리거되도록 영속.
 var visited_arcturus: bool = false
 
-# 본 엔딩 목록(A/B/C/D) — settings.cfg에 영속. 다회차 "엔딩 모으기" + 리플레이 대사 차별화의 토대.
+# 본 엔딩 목록(A/B/C/D) · settings.cfg에 영속. 다회차 "엔딩 모으기" + 리플레이 대사 차별화의 토대.
 var endings_seen: Array = []
-# 엔딩까지 도달한 완주 횟수 — settings.cfg에 영속.
+# 엔딩까지 도달한 완주 횟수 · settings.cfg에 영속.
 var playthrough_count: int = 0
-# 이스터에그 — 황금 희귀 개체 누적 처치 수(숨은 스탯). settings.cfg에 영속.
+# 이스터에그 · 황금 희귀 개체 누적 처치 수(숨은 스탯). settings.cfg에 영속.
 var shiny_kills: int = 0
-# 이스터에그 — 숨은 대체 색(스킨) 잠금 해제. 코나미 코드(데스크톱) 또는 황금 3처치(폰)로. 영속.
+# 이스터에그 · 숨은 대체 색(스킨) 잠금 해제. 코나미 코드(데스크톱) 또는 황금 3처치(폰)로. 영속.
 var alt_skin_unlocked: bool = false
-# 해금한 대체 색을 실제로 입을지(설정 토글). 해금 자체는 유지한 채 끌 수 있다 — "시작부터
+# 해금한 대체 색을 실제로 입을지(설정 토글). 해금 자체는 유지한 채 끌 수 있다 · "시작부터
 # 파랗다, 왜?"(사용자 2026-08-12) 혼란 해소용. 영속.
 var alt_skin_enabled: bool = true
-# 이스터에그 — 서버 복도 숨은 터미널 로그(라이벌 VEIL 복선)를 본 적 있는가(숨은 발견 기록). 영속.
+# 이스터에그 · 서버 복도 숨은 터미널 로그(라이벌 VEIL 복선)를 본 적 있는가(숨은 발견 기록). 영속.
 var found_server_log: bool = false
-# 첫 완주 스팅어(관측 로그, lore_expansion §3-4)를 본 적 있는가 — Credits 끝에서 1회만. 영속.
+# 첫 완주 스팅어(관측 로그, lore_expansion §3-4)를 본 적 있는가 · Credits 끝에서 1회만. 영속.
 var observer_stinger_seen: bool = false
 
 func _input(event: InputEvent) -> void:
@@ -299,7 +299,7 @@ func _input(event: InputEvent) -> void:
 func is_pad_mode() -> bool:
 	return last_input_kind == "pad"
 
-# 입력 락아웃 — 메뉴/오버레이 등장 직후 일정 시간 동안 첫 버튼 포커스를 보류.
+# 입력 락아웃 · 메뉴/오버레이 등장 직후 일정 시간 동안 첫 버튼 포커스를 보류.
 # 사용자 피드백: 점프 연타로 메뉴를 본의 아니게 활성화시키는 사고 방지.
 # release 대기보다 시간 기반(기본 1.0s)이 더 단순·예측 가능.
 const INPUT_LOCKOUT_DURATION: float = 1.0
@@ -318,13 +318,13 @@ func arm_focus_with_delay(host: Node, first_btn: Button, delay: float = INPUT_LO
 			b.grab_focus()
 	)
 
-# 짧은 헬퍼 — 입력 모드에 따라 둘 중 하나를 반환. UI 라벨에서 사용.
+# 짧은 헬퍼 · 입력 모드에 따라 둘 중 하나를 반환. UI 라벨에서 사용.
 func hint(kb_text: String, pad_text: String) -> String:
 	return pad_text if last_input_kind == "pad" else kb_text
 
-# 액션의 대표 입력 라벨 — InputMap에서 첫 키(없으면 마우스)를 읽어 표시용 문자열로 만든다.
+# 액션의 대표 입력 라벨 · InputMap에서 첫 키(없으면 마우스)를 읽어 표시용 문자열로 만든다.
 # 키 안내의 단일 소스: 기본 키를 바꾸거나 사용자가 설정에서 리매핑해도 안내가 자동으로 따라온다.
-# (하드코딩 "J"/"Q" 등을 곳곳에 박지 말 것 — 키 변경 시 안내가 거짓말이 된다.)
+# (하드코딩 "J"/"Q" 등을 곳곳에 박지 말 것 · 키 변경 시 안내가 거짓말이 된다.)
 func action_label(action: String, fallback: String = "?") -> String:
 	if not InputMap.has_action(action):
 		return fallback
@@ -344,12 +344,12 @@ func action_label(action: String, fallback: String = "?") -> String:
 				MOUSE_BUTTON_MIDDLE: return "마우스 가운데"
 	return fallback
 
-# 하단 조작 안내 한 줄 — 키 라벨을 action_label로 동적 조립(단일 소스).
+# 하단 조작 안내 한 줄 · 키 라벨을 action_label로 동적 조립(단일 소스).
 # Tutorial·Stage 일시정지 등이 공유한다. 키 변경/리매핑 시 자동 반영.
 func controls_hint_line() -> String:
 	if is_pad_mode():
 		return "좌스틱/D-Pad 이동   A 점프   ↓ 내려가기   X/RT 사격   B/RB 대시   Y 스킬   START 일시정지"
-	# 일시정지는 보조 키 P 병기 — 웹 전체화면에서 ESC는 브라우저가 먼저 소비(전체화면 해제)해
+	# 일시정지는 보조 키 P 병기 · 웹 전체화면에서 ESC는 브라우저가 먼저 소비(전체화면 해제)해
 	# 한 번에 안 열리므로 P를 상시 보강(Main._bind_pause_fallback)하고 안내에도 노출.
 	return "%s/%s 이동   %s 점프   %s 내려가기   %s 사격   %s 대시   %s 스킬   %s·P 일시정지" % [
 		action_label("move_left", "A"), action_label("move_right", "D"),
@@ -358,50 +358,50 @@ func controls_hint_line() -> String:
 		action_label("skill", "L"), action_label("pause", "ESC")]
 
 func _ready() -> void:
-	# 저장 설정을 진입 경로와 무관하게 가장 먼저 올린다 — F5(main.tscn)든 F6(현재 씬)이든
+	# 저장 설정을 진입 경로와 무관하게 가장 먼저 올린다 · F5(main.tscn)든 F6(현재 씬)이든
 	# 도구 씬 직부팅이든. 과거엔 Main._ready만 호출해, main.tscn을 안 거치는 실행이 기본값
 	# 메모리 상태로 save_settings()를 만나 실사용자 settings.cfg를 기본값으로 덮는 사고가
 	# 반복됐다(2026-08-24 확정 · known_issues "하니스가 실저장을 덮는다" 항목).
 	load_settings()
-	# 에디터에서 실행하면 디버그 자동 해제 — 개발 중 매번 "snu" 시퀀스를 칠 필요 없게.
+	# 에디터에서 실행하면 디버그 자동 해제 · 개발 중 매번 "snu" 시퀀스를 칠 필요 없게.
 	# 내보낸 릴리스 빌드(웹 등)는 has_feature("editor")=false라 그대로 잠김(일반 플레이어 노출 방지).
 	if OS.has_feature("editor"):
 		debug_unlocked = true
 
-# --- 사망 규칙(2026-08-23 통일 · "자원은 HP 하나로") — 덮어쓰기 한도 시스템 폐지 ---
+# --- 사망 규칙(2026-08-23 통일 · "자원은 HP 하나로") · 덮어쓰기 한도 시스템 폐지 ---
 # 사망 = 그 막 첫 스테이지에서 재개(성장·스킬 유지, 되감기는 위치·진행뿐). 예외 = 14-1
 # 보스전(같은 스테이지 P1부터 · 보스 자체 체크포인트 문법, 08-15 확정 유지). 배경: 사용자
 # 2026-08-23 "HP와 별개의 두 번째 자원은 첫 플레이어가 이해 불가 · 데모식 무페널티 회귀는
-# 반려 · 어차피 깰 사람은 어려워도 깬다" — 자원은 HP 하나, 페널티는 막 되감기로 무겁게.
+# 반려 · 어차피 깰 사람은 어려워도 깬다" · 자원은 HP 하나, 페널티는 막 되감기로 무겁게.
 # 라이벌 강탈은 최대 HP 잠금으로 이식: 막4/5 진입 시 1칸씩 잠기고(보라 하트), 14-1 P2/P3
-# 도달로 부순다. rival_locks_broken은 런 영속 — 한 번 부순 잠금은 사망(P1 리셋)에도 다시
+# 도달로 부순다. rival_locks_broken은 런 영속 · 한 번 부순 잠금은 사망(P1 리셋)에도 다시
 # 안 잠긴다(팔림프세스트: 지워도 흔적은 남는다). 스토리 모드·연습장은 시스템 제외.
 var rival_locks_broken: int = 0
 var rival_lock_beat4_shown: bool = false
 var rival_lock_beat5_shown: bool = false
-var last_clear_flawless: bool = false   # (2026-08-23 통일로 상시 false — 호환 위해 변수만 유지)
-var last_clear_challenge: bool = false  # 직전 클리어가 도전 루트(완수 프리미엄) — Stage 토스트용
-# 스테이지 수행 보너스(2026-08-23 사용자 "노히트·전원 사살에 추가 점수와 VEIL 멘트") —
+var last_clear_flawless: bool = false   # (2026-08-23 통일로 상시 false · 호환 위해 변수만 유지)
+var last_clear_challenge: bool = false  # 직전 클리어가 도전 루트(완수 프리미엄) · Stage 토스트용
+# 스테이지 수행 보너스(2026-08-23 사용자 "노히트·전원 사살에 추가 점수와 VEIL 멘트") ·
 # 펌프장 양자택일 구조(무피격 vs 몰살)의 보상판. 판정·가산은 _finalize_stage_metrics.
 var last_clear_nohit: bool = false      # 그 스테이지 피격 0
 var last_clear_allkill: bool = false    # 스폰된 경비 전원 직접 처치(환경 처치 제외 · 스폰 0 맵 제외)
 var bonus_line_last_stage: int = -9     # VEIL 수행 멘트 최근 발화 스테이지(도배 방지 간격용)
 
-# --- 런 정산 통계(2026-08-15 사용자 제안) — 엔딩 정산 화면 + 페이싱 진단용 ---
+# --- 런 정산 통계(2026-08-15 사용자 제안) · 엔딩 정산 화면 + 페이싱 진단용 ---
 var kills_total: int = 0        # 런 누적 처치
 var run_play_secs: float = 0.0  # 런 누적 플레이 시간(스테이지 소요 합, 브리핑·맵선택 제외)
 # 맵별 상세 기록(설계 진단): "번호|route|총초|seg:방별초|kill:처치/스폰|hit:피격|xp:획득".
 # seg 항은 체인 맵만. 스폰 수는 스폰 이벤트 기준(사망 재시도 시 재스폰 포함 · 무사망이면 정확).
 var stage_time_log: Array = []
-var _seg_play_secs: float = 0.0      # 현재 방(세그먼트) 활동 시간 — 스테이지 타이머와 동일 누적
+var _seg_play_secs: float = 0.0      # 현재 방(세그먼트) 활동 시간 · 스테이지 타이머와 동일 누적
 var _stage_seg_times: Array = []
 var stage_enemies_spawned: int = 0
 var _stage_kills_base: int = 0
 var _stage_xp_gained: int = 0
-# risk 보너스 분수 캐리(add_xp) — 가치 1 오브의 +50%가 반올림으로 +100%가 되던 것 방지. 런 단위.
+# risk 보너스 분수 캐리(add_xp) · 가치 1 오브의 +50%가 반올림으로 +100%가 되던 것 방지. 런 단위.
 var _xp_risk_frac: float = 0.0
 
-# 방 체인 전환에서 Stage가 호출 — 방별 스플릿 기록.
+# 방 체인 전환에서 Stage가 호출 · 방별 스플릿 기록.
 func note_segment_split() -> void:
 	_stage_seg_times.append(_seg_play_secs)
 	_seg_play_secs = 0.0
@@ -416,7 +416,7 @@ func run_time_text() -> String:
 	var total: int = int(run_play_secs)
 	return "%d:%02d" % [total / 60, total % 60]
 
-# 라이벌이 잠근 칸 수 — 막4부터 1, 막5부터 2. 부순 잠금(rival_locks_broken)만큼 돌아온다.
+# 라이벌이 잠근 칸 수 · 막4부터 1, 막5부터 2. 부순 잠금(rival_locks_broken)만큼 돌아온다.
 func rival_locks_active() -> int:
 	if story_mode:
 		return 0
@@ -427,12 +427,12 @@ func rival_locks_active() -> int:
 	if act >= 4:
 		locks += 1
 	# 하한 가드(2026-08-25 사용자 보고): 최대 HP를 안 키운 런(기본 3)은 막5에서 3-2=1칸이
-	# 되어 저격 밸런스와 겹쳐 즉사 루프였다. 잠금은 실효 최대가 2칸 밑으론 못 내려간다 —
+	# 되어 저격 밸런스와 겹쳐 즉사 루프였다. 잠금은 실효 최대가 2칸 밑으론 못 내려간다 ·
 	# 안 걸린 잠금은 컷씬도 생략된다(Stage._maybe_rival_lock_beat 게이트).
 	locks = mini(locks, maxi(0, player_max_hp - 2))
 	return maxi(0, locks - rival_locks_broken)
 
-# 잠금 반영 실효 최대 HP — 회복·부활·HUD의 단일 상한(라이벌이 잠근 칸은 안 찬다).
+# 잠금 반영 실효 최대 HP · 회복·부활·HUD의 단일 상한(라이벌이 잠근 칸은 안 찬다).
 func effective_max_hp() -> int:
 	return maxi(1, player_max_hp - rival_locks_active())
 
@@ -496,13 +496,13 @@ func reset() -> void:
 	kills_total = 0
 	run_play_secs = 0.0
 	stage_time_log = []
-	# 디버그 연습장 플래그 누수 차단 — 연습장을 종료 버튼 아닌 경로(ESC→타이틀 등)로 빠져나오면
+	# 디버그 연습장 플래그 누수 차단 · 연습장을 종료 버튼 아닌 경로(ESC→타이틀 등)로 빠져나오면
 	# playground_active가 true로 남아, 다음 일반 모드 클리어가 _trigger_stage_clear에서 연습장 분기로
 	# 빠져 패널만 뜨고 다음 맵으로 안 넘어가던 치명 버그. reset()은 타이틀 복귀/새 런마다 호출되므로 여기서 해제.
 	playground_active = false
 	_reset_perf_metrics()
 
-# 튜토리얼 종료 후 본편 시작 시 호출. 진행/스킬/XP 모두 초기화 — 튜토리얼은
+# 튜토리얼 종료 후 본편 시작 시 호출. 진행/스킬/XP 모두 초기화 · 튜토리얼은
 # 연습용이라 본편에 영향 없음. VEIL이 "잠깐 빌려드려요" 멘트로 명시.
 # (이전엔 튜토리얼에서 고른 스킬을 본편에 들고갔지만, 사용자 피드백으로 분리)
 func start_main_game() -> void:
@@ -565,7 +565,7 @@ func start_main_game() -> void:
 	run_play_secs = 0.0
 	stage_time_log = []
 	clear_pending_snapshots()  # 완주 못 한 이전 런의 막 경계 스냅샷 폐기(승격 오염 방지)
-	playground_active = false  # 연습장 플래그 누수 차단(디버그→일반 모드) — reset()과 동일 방어.
+	playground_active = false  # 연습장 플래그 누수 차단(디버그→일반 모드) · reset()과 동일 방어.
 	_reset_perf_metrics()
 
 func _reset_perf_metrics() -> void:
@@ -587,7 +587,7 @@ func record_route_choice(route: Dictionary, recommended_id: String) -> void:
 	current_route_tags = route.get("tags", [])
 	current_route_risk = int(route.get("risk", 1))
 	current_route_reward_type = str(route.get("reward_type", ""))
-	# 정찰 보상 발동 — 직전 클리어가 recon이면 이번 스테이지 내내 숨은 요소 표시(+관통).
+	# 정찰 보상 발동 · 직전 클리어가 recon이면 이번 스테이지 내내 숨은 요소 표시(+관통).
 	veilsight_recon_active = veilsight_recon_next
 	veilsight_recon_next = false
 	recon_note_pending = veilsight_recon_active
@@ -606,31 +606,31 @@ func record_route_choice(route: Dictionary, recommended_id: String) -> void:
 			veil_degraded = true
 			veil_reversal_pending = true
 	followed_veil_last_choice = (rid == recommended_id and recommended_id != "")
-	# 엔딩 도덕 축 = 추천 수용률(§3.3). 선택 시점에 1회만 집계 — 죽음 재시도엔 record가
-	# 재호출되지 않으므로 한 맵당 한 번. (어투 trust는 클리어 시점에 적립 — on_stage_clear.)
+	# 엔딩 도덕 축 = 추천 수용률(§3.3). 선택 시점에 1회만 집계 · 죽음 재시도엔 record가
+	# 재호출되지 않으므로 한 맵당 한 번. (어투 trust는 클리어 시점에 적립 · on_stage_clear.)
 	if recommended_id != "":
 		rec_count += 1
 		if followed_veil_last_choice:
 			followed_count += 1
-	# 공격성 — 전투 태그/도전 맵 선택. 엔딩 축이며 어투 trust와는 무관(§2 두 축 분리).
+	# 공격성 · 전투 태그/도전 맵 선택. 엔딩 축이며 어투 trust와는 무관(§2 두 축 분리).
 	if "전투" in current_route_tags or "근접전" in current_route_tags:
 		aggression_score += 1
 	if current_route_challenge:
 		aggression_score += 1
-	# 실력 추적 baseline — 이 스테이지에 들어가기 직전 스냅샷. 죽음 재시도엔 재호출되지
+	# 실력 추적 baseline · 이 스테이지에 들어가기 직전 스냅샷. 죽음 재시도엔 재호출되지
 	# 않으므로 baseline..on_stage_clear 한 창에 재시도의 피격·죽음이 모두 누적된다.
 	_stage_hits_base = hits_taken
 	_stage_deaths_base = death_count
 	_stage_timer_on = true
 	_stage_play_secs = 0.0
-	# 상세 런 로그(2026-08-18 사용자 "방별 타이머 등 자세하게") — 방별 스플릿·처치/스폰·XP.
+	# 상세 런 로그(2026-08-18 사용자 "방별 타이머 등 자세하게") · 방별 스플릿·처치/스폰·XP.
 	_seg_play_secs = 0.0
 	_stage_seg_times = []
 	stage_enemies_spawned = 0
 	_stage_kills_base = kills_total
 	_stage_xp_gained = 0
 
-# 피격 1회 등록 — Player.take_hit이 invuln을 통과한 실제 타격마다 호출.
+# 피격 1회 등록 · Player.take_hit이 invuln을 통과한 실제 타격마다 호출.
 # (스토리 모드 체력 무제한이어도 타격 자체는 카운트 → 모드 무관 실력 신호.)
 func register_hit() -> void:
 	hits_taken += 1
@@ -641,7 +641,7 @@ func _finalize_stage_metrics() -> void:
 	var deaths: int = max(0, death_count - _stage_deaths_base)
 	_stage_timer_on = false
 	last_stage_secs = _stage_play_secs
-	# 런 정산 — 스테이지 소요 누적 + 맵별 상세 기록(페이싱·전멸 플레이 진단).
+	# 런 정산 · 스테이지 소요 누적 + 맵별 상세 기록(페이싱·전멸 플레이 진단).
 	run_play_secs += last_stage_secs
 	var segs_txt: String = ""
 	if _stage_seg_times.size() > 0:
@@ -654,7 +654,7 @@ func _finalize_stage_metrics() -> void:
 	stage_time_log.append("%d|%s|%.1f%s|kill:%d/%d|hit:%d|xp:%d" % [
 		current_stage + 1, current_route_id, last_stage_secs, segs_txt,
 		kills_total - _stage_kills_base, stage_enemies_spawned, hits, _stage_xp_gained])
-	# 수행 보너스 판정(2026-08-23) — 무피격 / 전원 직접 처치(kills_total은 환경 처치 미포함이라
+	# 수행 보너스 판정(2026-08-23) · 무피격 / 전원 직접 처치(kills_total은 환경 처치 미포함이라
 	# 열차·낙석 킬은 자동 제외). 본편 런만(연습장·스토리 모드 점수 무의미).
 	last_clear_nohit = false
 	last_clear_allkill = false
@@ -692,9 +692,9 @@ func competence_tier() -> String:
 		return "skilled"
 	return "steady"
 
-# 신뢰 단계 — UI 톤색 + ??? 방 분기용. 어투 trust(0에서 climbing) 원값 기준(§3.4).
+# 신뢰 단계 · UI 톤색 + ??? 방 분기용. 어투 trust(0에서 climbing) 원값 기준(§3.4).
 # 재설계(2026-06-13): trust는 음수가 안 되므로 "거리감"은 낮은 값(broken/cool)으로 표현.
-# 대사 풀 밴드 선택은 veil_register_band() — 취약함 게이트 포함이라 별도.
+# 대사 풀 밴드 선택은 veil_register_band() · 취약함 게이트 포함이라 별도.
 func veil_trust_tier() -> String:
 	var t: int = trust_score
 	if t >= 12:
@@ -707,7 +707,7 @@ func veil_trust_tier() -> String:
 		return "cool"
 	return "broken"
 
-# 대사 풀 어투 밴드(COLD/THAW/WARM) — veil_pool_remap.md. WARM은 취약함 게이트(§3.5):
+# 대사 풀 어투 밴드(COLD/THAW/WARM) · veil_pool_remap.md. WARM은 취약함 게이트(§3.5):
 # trust가 충분해도 "같이 고비를 넘긴 적"이 없으면 THAW에 머문다(무사망 고수=COLD 가능).
 func veil_register_band() -> String:
 	if trust_score >= 8 and shared_hardship >= 1:
@@ -716,31 +716,31 @@ func veil_register_band() -> String:
 		return "thaw"
 	return "cold"
 
-# 차가움(직업적)→따뜻함(유대) 그라데이션. 시작(trust 0)은 스틸블루(거리감) — 적대 빨강 아님.
+# 차가움(직업적)→따뜻함(유대) 그라데이션. 시작(trust 0)은 스틸블루(거리감) · 적대 빨강 아님.
 func veil_tone_color() -> Color:
 	match veil_trust_tier():
 		"high":
-			return Color(0.55, 0.97, 0.85)   # 따뜻한 청록 — 깊은 유대
+			return Color(0.55, 0.97, 0.85)   # 따뜻한 청록 · 깊은 유대
 		"warm":
 			return Color(0.55, 0.90, 0.92)   # 청록 기운
 		"neutral":
-			return Color(0.72, 0.86, 0.92)   # 해빙 — 옅은 청
+			return Color(0.72, 0.86, 0.92)   # 해빙 · 옅은 청
 		"cool":
-			return Color(0.64, 0.76, 0.86)   # 직업적 — 스틸블루
+			return Color(0.64, 0.76, 0.86)   # 직업적 · 스틸블루
 		"broken":
-			return Color(0.60, 0.70, 0.80)   # 가장 차가움 — 거리감(적대 아님)
+			return Color(0.60, 0.70, 0.80)   # 가장 차가움 · 거리감(적대 아님)
 	return Color(0.64, 0.76, 0.86)
 
-# (구 TONE_PREFIXES / veil_tone_prefix 제거 — 2026-06-13. 어투는 신뢰밴드 대사 풀로 운반,
+# (구 TONE_PREFIXES / veil_tone_prefix 제거 · 2026-06-13. 어투는 신뢰밴드 대사 풀로 운반,
 #  레벨업 추천 앞 lead-in은 VeilDialogue.levelup_leadin. 미사용 dead code였음.)
 
-# 엔딩 신뢰 축 분자 — 추천 수용에 라이벌 유인 가중치를 얹은 유효 수용 횟수(사용자 승인 2026-08-14).
-# 가짜 목소리(? 추천)를 따라간 선택은 "안 따름"(분모만 참)에 더해 한 번 더 깎인다 — 막4 두 목소리
+# 엔딩 신뢰 축 분자 · 추천 수용에 라이벌 유인 가중치를 얹은 유효 수용 횟수(사용자 승인 2026-08-14).
+# 가짜 목소리(? 추천)를 따라간 선택은 "안 따름"(분모만 참)에 더해 한 번 더 깎인다 · 막4 두 목소리
 # 선택이 보통 선택보다 두 배로 무겁다. 게이지와 엔딩 판정이 같은 값을 봐야 하므로 여기가 단일 소스.
 func effective_followed() -> int:
 	return maxi(0, followed_count - rival_lure_followed)
 
-# 신뢰 게이지 5점 문자열 — HUD/루트맵/레벨업/엔딩 공용(드리프트 방지).
+# 신뢰 게이지 5점 문자열 · HUD/루트맵/레벨업/엔딩 공용(드리프트 방지).
 # 2026-08-14 통일: 게이지 = 엔딩 신뢰 축과 같은 지표(유효 수용률). 이전엔 어투 trust(고비 공유로도
 # 상승)를 보여줘 "게이지 보고 엔딩을 노렸는데 어긋난다"는 혼동이 있었다(사용자). 추천을 따르면
 # 차고 무시하면 내려가며, 라이벌 유인을 따르면 한 칸 더 꺼진다(감점이 눈에 보이는 피드백).
@@ -750,7 +750,7 @@ func veil_trust_gauge_dots() -> String:
 	if rec_count > 0:
 		filled = int(round(5.0 * float(effective_followed()) / float(rec_count)))
 		# 소표본 착시 방지(2026-08-21 사용자 "새 게임인데 게이지가 꽉 참"): 비율만 보면 첫 추천
-		# 하나만 따라도 1/1=100%로 5칸이 다 찬다. 칸 수를 표본 수(rec_count)로 상한 — 근거가
+		# 하나만 따라도 1/1=100%로 5칸이 다 찬다. 칸 수를 표본 수(rec_count)로 상한 · 근거가
 		# 쌓인 만큼만 차오른다. 엔딩 판정(유효 수용률 50%+)은 비율 그대로라 불변이고,
 		# 종반(rec 5+)엔 상한이 무효라 게이지와 판정이 다시 일치한다.
 		filled = mini(filled, rec_count)
@@ -770,7 +770,7 @@ func enemy_count_multiplier() -> float:
 		3: return 1.5
 	return 1.1
 
-# 레벨업 필요 XP — 8 + 레벨×2(2026-08-23 3차 상향 · XP 재캘리브레이션).
+# 레벨업 필요 XP · 8 + 레벨×2(2026-08-23 3차 상향 · XP 재캘리브레이션).
 # 배경: 방 체인 확산 + 웨이브 3→6으로 런당 공급이 ~508 XP(08-22 [RUN] 실측)까지 불어
 # 만렙(총 ~405)이 s12 전에 닿았다(사용자 보고). 새 곡선 만렙 총량 = 24×8 + 2×Σ(1..24) = 792.
 # 공급 ~470(risk 반올림 수정 반영)이면 풀런 종료 ~L18 = "풀런에 절반만 T3"(08-18 결정) 밴드.
@@ -781,7 +781,7 @@ func xp_to_next() -> int:
 
 func add_xp(amount: int, apply_risk_bonus: bool = true) -> bool:
 	# high-risk 루트(risk=3)에서 적 처치 XP +50% (스테이지 클리어 보상은 apply_risk_bonus=false로 호출).
-	# 반올림 함정 수정(2026-08-23): 가치 1 오브에 round(1.5)=2로 +100%가 되던 것을 분수 캐리로 —
+	# 반올림 함정 수정(2026-08-23): 가치 1 오브에 round(1.5)=2로 +100%가 되던 것을 분수 캐리로 ·
 	# 기대값 정확히 +50%(2개당 1 추가). 사용자 "버블이 2씩 오르는 것 같다"의 정체.
 	var gain: int = amount
 	if apply_risk_bonus and current_route_risk >= 3:
@@ -813,26 +813,26 @@ func add_skill(id: String) -> void:
 		return
 	var new_tier: int = current + 1
 	skills[id] = new_tier
-	# 라인별 즉시 효과 — 티어 업 시점에 적용.
+	# 라인별 즉시 효과 · 티어 업 시점에 적용.
 	# B-1 단계: hp 라인만 처리(기존 regen 동작 보존). 나머지 효과는 B-2에서 Player.gd가 티어를 읽어 분기.
 	match id:
 		"hp":
 			# T1: max_hp +1, T2: 추가 +1 (총 +2), T3: max_hp 변화 없음 (슬로모만)
-			# 즉시 회복 상한은 effective_max_hp — 잠금 활성 중 잠긴 칸 너머로 차지 않게.
+			# 즉시 회복 상한은 effective_max_hp · 잠금 활성 중 잠긴 칸 너머로 차지 않게.
 			if new_tier == 1 or new_tier == 2:
 				player_max_hp += 1
 				player_hp = min(player_hp + 1, effective_max_hp())
 	emit_signal("skills_changed")
 
 func damage_player(amount: int) -> void:
-	# 스토리 모드는 체력 무제한 — 피격 자체를 무시. (Player.take_hit의 invuln 등은 그대로 동작)
+	# 스토리 모드는 체력 무제한 · 피격 자체를 무시. (Player.take_hit의 invuln 등은 그대로 동작)
 	if story_mode:
 		return
 	profile_note_damage(amount)   # 플레이 습관 프로필(실플레이만 · _ps_active 게이트)
 	player_hp = max(0, player_hp - amount)
 
 func heal_player(amount: int) -> void:
-	# 상한 = 실효 최대(라이벌 잠금 반영) — 잠긴 칸은 회복으로도 안 찬다(잠금이 잠금이려면).
+	# 상한 = 실효 최대(라이벌 잠금 반영) · 잠긴 칸은 회복으로도 안 찬다(잠금이 잠금이려면).
 	player_hp = min(effective_max_hp(), player_hp + amount)
 
 func is_dead() -> bool:
@@ -863,9 +863,9 @@ func on_stage_clear() -> bool:
 	# 띄울지 판단할 수 있게 해 보너스 레벨업이 누락되지 않도록.
 	# 방금 깬 스테이지의 실력 지표를 먼저 마감 (current_stage 증가 전).
 	_finalize_stage_metrics()
-	# 어투 trust 적립(§3.2) — 클리어 시점에만. 추천 따라 깼으면 +2.
+	# 어투 trust 적립(§3.2) · 클리어 시점에만. 추천 따라 깼으면 +2.
 	# 함께 고비 돌파(죽고 회복 / 고위험·도전·히든 클리어) +2 = 따뜻함의 주 소스.
-	# 독립적 성공(추천 무시하고 무난히 클리어)은 +0 — 따뜻함은 관계로만 번다(§3.5).
+	# 독립적 성공(추천 무시하고 무난히 클리어)은 +0 · 따뜻함은 관계로만 번다(§3.5).
 	var deaths_this_stage: int = max(0, death_count - _stage_deaths_base)
 	if followed_veil_last_choice:
 		trust_score += 2
@@ -877,7 +877,7 @@ func on_stage_clear() -> bool:
 	score += 100 * current_stage
 	var leveled: bool = false
 	last_clear_reward_note = ""
-	# 클리어 경험치 = 위험도(보상 축 개편 2026-08-19). 위험할수록 항상 더 번다 —
+	# 클리어 경험치 = 위험도(보상 축 개편 2026-08-19). 위험할수록 항상 더 번다 ·
 	# "보상 같은데 위험만 높은" 열세 카드가 구조적으로 사라진다.
 	if current_route_risk > 0:
 		if add_xp(current_route_risk, false):
@@ -889,9 +889,9 @@ func on_stage_clear() -> bool:
 			if add_xp(2, false):
 				leveled = true
 		"record":
-			# 회복 보상(2026-08-23 통일 · 종전 "기록 1칸 회복"의 HP판). 가득이면 경험치로 환산 —
+			# 회복 보상(2026-08-23 통일 · 종전 "기록 1칸 회복"의 HP판). 가득이면 경험치로 환산 ·
 			# 카드가 약속한 보상이 조용히 증발하지 않게(정직 산수 규칙). id "record"는 유지
-			# (route id 하드코딩 함정과 동형 — 라벨·효과만 바꾼다).
+			# (route id 하드코딩 함정과 동형 · 라벨·효과만 바꾼다).
 			if player_hp < effective_max_hp():
 				player_hp = mini(player_hp + 1, effective_max_hp())
 				last_clear_reward_note = "체력 1칸 회복"
@@ -901,21 +901,21 @@ func on_stage_clear() -> bool:
 		"recon":
 			veilsight_recon_next = true
 			last_clear_reward_note = "정찰 데이터 확보 · 다음 구간 숨은 요소 표시"
-	# D축 "단일 기록" 보너스 폐지(2026-08-23 통일) — 사망 = 막 첫 스테이지 재시작 규칙에서는
+	# D축 "단일 기록" 보너스 폐지(2026-08-23 통일) · 사망 = 막 첫 스테이지 재시작 규칙에서는
 	# 클리어한 스테이지가 언제나 그 시도 내 무사망이라 per-스테이지 무사망 보너스가 퇴화한다.
 	# 무사망의 가치는 규칙 자체(막 되감기 회피)가 만들고, 솜씨 축은 무피격/전원 처치 보너스가 담당.
 	last_clear_flawless = false
-	# 도전 루트 완수 프리미엄 — 1히트 실패·시간 제한·VEIL 차단의 기대 보상 보정(2026-08-15 검토:
+	# 도전 루트 완수 프리미엄 · 1히트 실패·시간 제한·VEIL 차단의 기대 보상 보정(2026-08-15 검토:
 	# 종전엔 클리어 XP가 일반 reward3 맵과 동일한데 킬 기회는 없어 이론상 보상 열위였다).
 	last_clear_challenge = current_route_challenge and not story_mode and not playground_active
 	if last_clear_challenge:
 		score += 100 * current_stage
 		if add_xp(4, false):
 			leveled = true
-	# regen은 획득 시점에 max_hp +1 효과만 — 매 stage HP 풀 회복이라 heal_player 불필요
+	# regen은 획득 시점에 max_hp +1 효과만 · 매 stage HP 풀 회복이라 heal_player 불필요
 	return leveled
 
-# 막(Act) 헬퍼 — 흩어진 stage 매직넘버 대신 막 경계로 판정.
+# 막(Act) 헬퍼 · 흩어진 stage 매직넘버 대신 막 경계로 판정.
 # act_for_stage: stage가 속한 막 인덱스(0-based). ACTS의 stages 누적으로 계산.
 func act_for_stage(stage: int) -> int:
 	var acc: int = 0
@@ -929,14 +929,14 @@ func act_def(stage: int) -> Dictionary:
 	var d: Dictionary = ACTS[act_for_stage(stage)]
 	return d
 
-# 막의 *첫* stage 판정 — 막 진입 카드(Briefing) 표시용. stage 0 또는 직전 stage와 막이 다르면 막 진입.
-# 본편(비스토리) 전용 의도 — 호출처(Briefing)에서 story_mode 가드. ACTS stages 누적 경계와 자동 일치.
+# 막의 *첫* stage 판정 · 막 진입 카드(Briefing) 표시용. stage 0 또는 직전 stage와 막이 다르면 막 진입.
+# 본편(비스토리) 전용 의도 · 호출처(Briefing)에서 story_mode 가드. ACTS stages 누적 경계와 자동 일치.
 func is_act_start(stage: int) -> bool:
 	if stage <= 0:
 		return true
 	return act_for_stage(stage) != act_for_stage(stage - 1)
 
-# 시야붕괴 onset 막(마지막 막) 판정 — 보스/탈출 직전 첫 전투 맵에서 켜진다.
+# 시야붕괴 onset 막(마지막 막) 판정 · 보스/탈출 직전 첫 전투 맵에서 켜진다.
 # 스토리 모드는 5스테이지 비트가 촘촘해 기존 삼항(s==2 or s==3)을 그대로 반환(동작 보존).
 func is_late_act(stage: int) -> bool:
 	if story_mode:
@@ -946,15 +946,15 @@ func is_late_act(stage: int) -> bool:
 func effective_total_stages() -> int:
 	return STORY_TOTAL_STAGES if story_mode else TOTAL_STAGES
 
-# 막1~3의 내부 stage 수(=막4 시작 index) — 노드맵 반전 공개의 기준점.
+# 막1~3의 내부 stage 수(=막4 시작 index) · 노드맵 반전 공개의 기준점.
 func stages_through_act3() -> int:
 	var acc: int = 0
 	for i in mini(3, ACTS.size()):
 		acc += int(ACTS[i]["stages"])
 	return acc
 
-# 표시용 총 스테이지 — 막1~3 동안은 막3 끝(9)까지만 보여준다. 막4/5 확장 구간은 막4 진입에서야
-# 드러난다(반전 공개, 사용자 제안 2026-08-10). UI(헤더/노드맵) 전용 — 로직 판정은
+# 표시용 총 스테이지 · 막1~3 동안은 막3 끝(9)까지만 보여준다. 막4/5 확장 구간은 막4 진입에서야
+# 드러난다(반전 공개, 사용자 제안 2026-08-10). UI(헤더/노드맵) 전용 · 로직 판정은
 # effective_total_stages()를 그대로 쓴다.
 func displayed_total_stages() -> int:
 	if story_mode:
@@ -963,10 +963,10 @@ func displayed_total_stages() -> int:
 		return TOTAL_STAGES
 	return stages_through_act3()
 
-# 만렙 이후 레벨업 보상 지급 — LevelUpOverlay 오버플로 카드에서 호출. 반환: 지급 종류("hp"|"heal"|"score").
+# 만렙 이후 레벨업 보상 지급 · LevelUpOverlay 오버플로 카드에서 호출. 반환: 지급 종류("hp"|"heal"|"score").
 # 우선순위: 최대 체력(상한까지) → 응급 처치(회복 여지 있으면) → 점수(가득일 때만 폴백).
 func grant_overflow_reward() -> String:
-	# 상한은 항상 effective_max_hp(잠금 반영) — player_max_hp를 쓰면 잠금 활성 중
+	# 상한은 항상 effective_max_hp(잠금 반영) · player_max_hp를 쓰면 잠금 활성 중
 	# 잠긴 칸 너머로 채우거나(hp), 채울 수 없는데 회복을 지급했다고 알리는(heal) 오보가 난다.
 	if overflow_hp_bonus < OVERFLOW_HP_CAP:
 		overflow_hp_bonus += 1
@@ -992,12 +992,12 @@ func mark_enemy_seen(id: String) -> bool:
 	save_settings()
 	return true
 
-# 엔딩 도달 1회 처리 — 본 엔딩 기록(중복 제외) + 완주 카운트 + 진행 저장 삭제. Ending._ready에서 호출(런당 1회).
+# 엔딩 도달 1회 처리 · 본 엔딩 기록(중복 제외) + 완주 카운트 + 진행 저장 삭제. Ending._ready에서 호출(런당 1회).
 func record_ending(id: String) -> void:
 	if id != "" and not (id in endings_seen):
 		endings_seen.append(id)
 	playthrough_count += 1
-	# 라이벌 기억 적립(축 C) — 본편 완주만. 처리 이력 + 상충 추천 간파율(런 누적 → 영속 합산).
+	# 라이벌 기억 적립(축 C) · 본편 완주만. 처리 이력 + 상충 추천 간파율(런 누적 → 영속 합산).
 	if not story_mode:
 		if disposal_choice != "":
 			rival_last_disposal = disposal_choice
@@ -1005,18 +1005,18 @@ func record_ending(id: String) -> void:
 		rival_lure_shown_total += rival_lure_shown
 		rival_lure_followed_total += rival_lure_followed
 	save_settings()
-	# 팔림프세스트 승격 — 완주한 런의 막 경계 스냅샷만 재진입 원료가 된다.
+	# 팔림프세스트 승격 · 완주한 런의 막 경계 스냅샷만 재진입 원료가 된다.
 	# 스토리 모드 완주는 본편 런이 아니므로 승격하지 않음(버려진 본편 pending 오염 방지).
 	if not story_mode:
 		promote_act_snapshots()
 	clear_run()
 
-# 다회차 — 완주 1회 이상(영속) 또는 즉시 리플레이(replaying). 오프닝/인게임 대사 변형의 단일 신호.
+# 다회차 · 완주 1회 이상(영속) 또는 즉시 리플레이(replaying). 오프닝/인게임 대사 변형의 단일 신호.
 func is_replay_run() -> bool:
 	return playthrough_count >= 1 or replaying
 
-# 디버그 — 영속 메타를 "새 환경" 기본값으로 되돌린다(Settings 디버그 탭 초기화용).
-# 키바인드·볼륨·디스플레이는 안 건드림 — 완전한 새 환경은 파일 삭제 + 재시작으로.
+# 디버그 · 영속 메타를 "새 환경" 기본값으로 되돌린다(Settings 디버그 탭 초기화용).
+# 키바인드·볼륨·디스플레이는 안 건드림 · 완전한 새 환경은 파일 삭제 + 재시작으로.
 func reset_meta_memory() -> void:
 	tutorial_done = false
 	seen_enemies = []
@@ -1040,7 +1040,7 @@ func reset_meta_memory() -> void:
 	rival_boss_first_side = -1
 	rival_boss_explosive = false
 
-# --- 런 진행 저장(이어하기) — user://run.cfg. RouteMap 진입(스테이지 사이)마다 자동저장. ---
+# --- 런 진행 저장(이어하기) · user://run.cfg. RouteMap 진입(스테이지 사이)마다 자동저장. ---
 # 직렬화 단일 소스: _store_run_state/_restore_run_state를 run.cfg(이어하기)와
 # palimpsest.cfg(막 경계 스냅샷, 기록 재진입)가 공유한다. 필드 추가 시 두 함수만 고치면 된다.
 func _store_run_state(cf: ConfigFile, section: String) -> void:
@@ -1080,7 +1080,7 @@ func _store_run_state(cf: ConfigFile, section: String) -> void:
 	cf.set_value(section, "recent_stage_hits", recent_stage_hits)
 	cf.set_value(section, "recent_stage_deaths", recent_stage_deaths)
 	cf.set_value(section, "last_stage_secs", last_stage_secs)
-	# §9 간파율 축적 — 기존 run.cfg 미저장 필드였음(이어하기 시 소실). 스냅샷 정합을 위해 추가.
+	# §9 간파율 축적 · 기존 run.cfg 미저장 필드였음(이어하기 시 소실). 스냅샷 정합을 위해 추가.
 	cf.set_value(section, "rival_lure_shown", rival_lure_shown)
 	cf.set_value(section, "rival_lure_followed", rival_lure_followed)
 	cf.set_value(section, "rival_locks_broken", rival_locks_broken)
@@ -1099,7 +1099,7 @@ func save_run() -> void:
 func has_run() -> bool:
 	if not FileAccess.file_exists(RUN_PATH):
 		return false
-	# 구조 버전 불일치(본편 막 재배치 등)면 무효 — 이어하기 버튼 숨김, 풀 어긋남 방지.
+	# 구조 버전 불일치(본편 막 재배치 등)면 무효 · 이어하기 버튼 숨김, 풀 어긋남 방지.
 	var cf := ConfigFile.new()
 	if cf.load(RUN_PATH) != OK:
 		return false
@@ -1124,7 +1124,7 @@ func _restore_run_state(cf: ConfigFile, section: String) -> void:
 	route_history = []
 	for v in cf.get_value(section, "route_history", []):
 		route_history.append(str(v))
-	# 불변식 복구(2026-08-25) — 사망 후퇴가 기록을 안 자르던 구버전 세이브는 history가
+	# 불변식 복구(2026-08-25) · 사망 후퇴가 기록을 안 자르던 구버전 세이브는 history가
 	# current_stage보다 길어 맵 풀이 말라 있었다. 로드 시 잘라 기존 세이브도 치유한다.
 	if route_history.size() > current_stage:
 		route_history.resize(current_stage)
@@ -1185,7 +1185,7 @@ func load_run() -> bool:
 	_restore_run_state(cf, "run")
 	return true
 
-# --- 기록 재진입(팔림프세스트) — user://palimpsest.cfg. replay_support_plan §2 ---
+# --- 기록 재진입(팔림프세스트) · user://palimpsest.cfg. replay_support_plan §2 ---
 # 런 중 막 경계(RouteMap 진입 + is_act_start)마다 pending_actN에 스냅샷이 쌓이고,
 # 엔딩 도달(record_ending) 시 actN으로 승격된다 = "완주한 기록"만 재진입 가능(확정 §7-1).
 # 서사: 재진입 = 덮어쓴 기록의 진한 구간에서 다시 쓰기(PALIMPSEST 오프닝과 한 몸).
@@ -1212,7 +1212,7 @@ func save_act_snapshot() -> void:
 	_store_run_state(cf, "pending_act%d" % act)
 	cf.save(PALIMPSEST_PATH)
 
-# 엔딩 도달 — 이번 런이 지나온 막 경계 pending을 확정 스냅샷으로 승격.
+# 엔딩 도달 · 이번 런이 지나온 막 경계 pending을 확정 스냅샷으로 승격.
 # 재진입 런은 진입한 막부터의 구간만 덮어쓴다(앞 구간은 이전 완주 기록 유지 = 팔림프세스트).
 func promote_act_snapshots() -> void:
 	if persist_blocked:
@@ -1233,7 +1233,7 @@ func promote_act_snapshots() -> void:
 	if promoted:
 		cf.save(PALIMPSEST_PATH)
 
-# 완주 못 한 런의 잔여 pending 폐기 — 새 런 시작(start_main_game)·재진입 시작에서 호출.
+# 완주 못 한 런의 잔여 pending 폐기 · 새 런 시작(start_main_game)·재진입 시작에서 호출.
 # (이어하기는 같은 런의 연속이라 pending을 보존한다.)
 func clear_pending_snapshots() -> void:
 	if persist_blocked:
@@ -1261,7 +1261,7 @@ func has_any_confirmed_snapshot() -> bool:
 			return true
 	return false
 
-# 재진입 UI용 요약 — 없으면 빈 사전(그 막은 "기록 없음").
+# 재진입 UI용 요약 · 없으면 빈 사전(그 막은 "기록 없음").
 func get_act_snapshot_summary(act: int) -> Dictionary:
 	var cf := ConfigFile.new()
 	if cf.load(PALIMPSEST_PATH) != OK:
@@ -1297,18 +1297,18 @@ func start_reentry(act: int) -> bool:
 	# 스냅샷은 막 시작 스테이지의 RouteMap 진입 시점 상태라 current_stage가 이미 막 경계지만,
 	# 명시 고정으로 불변식(route_history.size() == current_stage)을 보증한다.
 	current_stage = act_start_stage(act)
-	clear_pending_snapshots()   # 이전에 버려진 런의 잔여 pending 제거 — 이번 런이 새로 쌓는다
+	clear_pending_snapshots()   # 이전에 버려진 런의 잔여 pending 제거 · 이번 런이 새로 쌓는다
 	reentry_run = true
 	reentry_act = act
 	reentry_line_pending = true
-	rival_reentry_count += 1   # 라이벌 기억(축 C) — 기록을 뒤진 횟수
+	rival_reentry_count += 1   # 라이벌 기억(축 C) · 기록을 뒤진 횟수
 	save_settings()
 	return true
 
 # --- 설정 영속화 ---
-# v1: input.<action> = [physical_keycode, ...]  — 키보드 전용
-# v2: input.<action> = [{type, code/button}, ...]  — 키보드+마우스
-# v3 (현): v2 + joy_button/joy_motion 타입 — 게임패드 매핑 보존
+# v1: input.<action> = [physical_keycode, ...]  · 키보드 전용
+# v2: input.<action> = [{type, code/button}, ...]  · 키보드+마우스
+# v3 (현): v2 + joy_button/joy_motion 타입 · 게임패드 매핑 보존
 # 구 버전 cfg 로드 시 input 섹션은 무시 (project.godot 기본값 유지), 다음 저장에서 v3로 전환
 
 const SETTINGS_VERSION: int = 4  # 4: 키 기본배열 개편(JKL+ZXC+화살표). 구 cfg 키바인드 무효화→새 기본 적용.
@@ -1354,7 +1354,7 @@ func load_settings() -> void:
 	screen_fx_enabled = bool(cf.get_value("access", "screen_fx", true))
 	fullscreen = bool(cf.get_value("display", "fullscreen", false))
 	auto_fullscreen = bool(cf.get_value("display", "auto_fullscreen", true))
-	# 창 크기 — 신형 "가로x세로" 문자열 우선. 구형 인덱스 cfg는 legacy 3종 표를 거쳐
+	# 창 크기 · 신형 "가로x세로" 문자열 우선. 구형 인덱스 cfg는 legacy 3종 표를 거쳐
 	# 새 배열 인덱스로 이전(배열 확장·재정렬에도 저장된 크기가 보존되게, 2026-08-25).
 	var wsz_str: String = str(cf.get_value("display", "window_size", ""))
 	if wsz_str != "":
@@ -1364,7 +1364,7 @@ func load_settings() -> void:
 		if legacy_i >= 0 and legacy_i < _LEGACY_WINDOW_SIZES.size():
 			window_size_index = maxi(WINDOW_SIZES.find(_LEGACY_WINDOW_SIZES[legacy_i]), 1)
 	if version < SETTINGS_VERSION:
-		# 구 스키마 — 키바인드 폐기, project.godot + Main.gd 기본값 유지
+		# 구 스키마 · 키바인드 폐기, project.godot + Main.gd 기본값 유지
 		return
 	for action in KEYBIND_ACTIONS:
 		if not InputMap.has_action(action):
@@ -1453,7 +1453,7 @@ func save_settings() -> void:
 
 # 디스플레이 설정(전체화면/창 크기)을 DisplayServer에 즉시 반영.
 # Main.gd가 load_settings 직후 호출, Settings에서 값 바꿀 때도 호출.
-# 웹: 창 크기는 브라우저 캔버스가 정하므로 무시 — 전체화면만 적용(버튼 입력=사용자 제스처라 허용됨).
+# 웹: 창 크기는 브라우저 캔버스가 정하므로 무시 · 전체화면만 적용(버튼 입력=사용자 제스처라 허용됨).
 # "1280x720" 형식 문자열 → WINDOW_SIZES 인덱스. 목록에 없는 값은 기본(1280×720)으로.
 func _window_size_index_from_string(s: String) -> int:
 	var parts: PackedStringArray = s.split("x")
@@ -1480,7 +1480,7 @@ func apply_display_settings() -> void:
 	DisplayServer.window_set_position(screen_pos + (screen_size - sz) / 2)
 
 # 피드백 설문을 외부 브라우저(데스크톱) / 새 탭(웹)으로 연다.
-# 버튼 pressed에서 호출 — 웹의 window.open이 팝업 차단되지 않도록 사용자 제스처 컨텍스트 유지.
+# 버튼 pressed에서 호출 · 웹의 window.open이 팝업 차단되지 않도록 사용자 제스처 컨텍스트 유지.
 func open_feedback() -> void:
 	if OS.has_feature("web"):
 		JavaScriptBridge.eval("window.open('%s', '_blank')" % FEEDBACK_URL, true)
@@ -1490,7 +1490,7 @@ func open_feedback() -> void:
 # ─── 플레이 습관 프로필 (2026-08-18 사용자 "봇을 좀 더 나같이") ─────────────────────
 # 실플레이(스토리·연습장·봇 제외)에서 습관 지표를 스테이지 단위로 수집해 user://playstyle.cfg에
 # 이동 평균(EMA)으로 누적한다. BotDriver가 이 프로필을 읽어 봇의 습관(사냥 성향·대시·점프 사격·
-# 교전 거리)을 실측값에 맞춘다 — "사람 같은"이 아니라 "이 사용자 같은" 계측이 목적.
+# 교전 거리)을 실측값에 맞춘다 · "사람 같은"이 아니라 "이 사용자 같은" 계측이 목적.
 # 표본 0이면 기본값(사용자의 알려진 스타일: 풀런 5:26·처치 133 = 전멸 성향 근사)이 쓰인다.
 
 const PLAYSTYLE_PATH: String = "user://playstyle.cfg"
@@ -1528,7 +1528,7 @@ func _process(delta: float) -> void:
 	# 일시정지(레벨업 오버레이 등) 중엔 _process가 멈추므로 활동 시간만 쌓인다.
 	if _ps_active:
 		_ps_time += delta
-	# 스테이지/방 타이머도 같은 원리 — 일시정지·메모 시간은 [RUN] 기록에서 자동 제외.
+	# 스테이지/방 타이머도 같은 원리 · 일시정지·메모 시간은 [RUN] 기록에서 자동 제외.
 	if _stage_timer_on:
 		_stage_play_secs += delta
 		_seg_play_secs += delta
@@ -1551,7 +1551,7 @@ func _save_playstyle() -> void:
 		cf.set_value("playstyle", k, _playstyle[k])
 	cf.save(PLAYSTYLE_PATH)
 
-# Stage._ready에서 호출 — 실플레이만 수집(봇 스위트는 playground_active=true라 자동 제외).
+# Stage._ready에서 호출 · 실플레이만 수집(봇 스위트는 playground_active=true라 자동 제외).
 func profile_stage_begin() -> void:
 	_ps_active = false
 	if playground_active or story_mode:
@@ -1568,7 +1568,7 @@ func profile_stage_begin() -> void:
 	_ps_dmg = 0
 	_ps_kills0 = kills_total
 
-# 골 도달에서만 호출(사망·이탈 스테이지는 표본에서 버린다 — begin이 버퍼를 다시 초기화).
+# 골 도달에서만 호출(사망·이탈 스테이지는 표본에서 버린다 · begin이 버퍼를 다시 초기화).
 func profile_stage_end(alive_enemies: int) -> void:
 	if not _ps_active:
 		return

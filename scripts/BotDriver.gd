@@ -51,7 +51,7 @@ var _pull_pulse: int = 0            # 레버 당기기(공격 키 just_pressed �
 var _pull_t: float = 0.0
 # 레버 스테이징(2026-08-21 펌프장 실측): 레버가 더블점프(~190px)로 안 닿는 높이면 바로 밑에서
 # 수직 점프만 반복하는 교착이 난다(계단식 접근 맵). 밑에서 일정 시간 막히면 옆(±230px)을
-# 경유 목표로 잡아 계단 발판을 밟고 오른다 — 좌우 교대로 시도.
+# 경유 목표로 잡아 계단 발판을 밟고 오른다 · 좌우 교대로 시도.
 var _lever_stuck_t: float = 0.0
 var _lever_stage_dx: float = 0.0
 var _lever_stage_until: float = -1.0
@@ -85,7 +85,7 @@ func _physics_process(delta: float) -> void:
 		_release_all()
 		return
 	_clock += delta
-	# 진전(킬)이 나면 교착 타이머 전부 리셋 — 포기는 무진전일 때만.
+	# 진전(킬)이 나면 교착 타이머 전부 리셋 · 포기는 무진전일 때만.
 	if GameState.kills_total != _kills_seen:
 		_kills_seen = GameState.kills_total
 		_tgt_t = 0.0
@@ -113,7 +113,7 @@ func _physics_process(delta: float) -> void:
 	# 가장 가까운 적을 목적지로(사용자의 "다 잡고 지나간다" 습관). 없으면 골 방향.
 	var nav: Node2D = null
 	var nav_dx: float = 1e9
-	# 표적 고정(대공과 동형 · 2026-08-19) — 적 무리가 겹쳐 다니면 "최근접"이 프레임마다
+	# 표적 고정(대공과 동형 · 2026-08-19) · 적 무리가 겹쳐 다니면 "최근접"이 프레임마다
 	# 스왑되어 교착 타이머가 리셋 → 포기가 안 온다. 기존 목적지가 유효하면 유지.
 	if _nav_id != 0 and (arena or hunt):
 		var heldn: Node2D = instance_from_id(_nav_id) as Node2D
@@ -134,7 +134,7 @@ func _physics_process(delta: float) -> void:
 				continue
 			if _ignore.has(e0.get_instance_id()) and _clock < float(_ignore[e0.get_instance_id()]):
 				continue
-			# 드론(공중 추적 유닛)은 사냥 목적지에서 제외 — 따라오는 적이라 찾아갈 필요가 없고,
+			# 드론(공중 추적 유닛)은 사냥 목적지에서 제외 · 따라오는 적이라 찾아갈 필요가 없고,
 			# 밑에서 등반 점프만 반복하며 시간·피해를 낭비한다(2026-08-18 냉각 TIMEOUT 실측).
 			var et0: Variant = (e0 as Node2D).get("enemy_type")
 			if et0 != null and int(et0) == 2:
@@ -189,7 +189,7 @@ func _physics_process(delta: float) -> void:
 		else:
 			_tgt_id = target.get_instance_id()
 			_tgt_t = 0.0
-	# 중간 관문(레버 모드) — 격벽이 닫혔고 근처까지 왔으면 레버가 목적지(사람의 우회 동선).
+	# 중간 관문(레버 모드) · 격벽이 닫혔고 근처까지 왔으면 레버가 목적지(사람의 우회 동선).
 	# 교전 중엔 전투 우선 · 레버 근처 허공 갈기기는 끈다(공격 키 홀드가 당기기 입력을 막는다).
 	var lever_pos: Vector2 = Vector2.INF
 	if str(_stage.get("_mid_gate_mode")) == "lever" and not bool(_stage.get("_mid_gate_opened")):
@@ -200,7 +200,7 @@ func _physics_process(delta: float) -> void:
 			if lp is Vector2 and absf(_player.global_position.x - float(mg.get("x", 0.0))) < 1100.0:
 				lever_pos = lp
 	var lever_dx: float = (lever_pos.x - _player.global_position.x) if lever_pos != Vector2.INF else 1e9
-	# 방패병 크로스(사용자 기법: "뛰어넘어 등을 갈긴다" — 방패는 정면만 막는다).
+	# 방패병 크로스(사용자 기법: "뛰어넘어 등을 갈긴다" · 방패는 정면만 막는다).
 	# 정면 교착 1.2s면 그쪽으로 점프해 넘어가고, 반대편 착지 후 표적 창을 새로 연다(등 노출).
 	if _cross_t >= 0.0:
 		_cross_t += delta
@@ -210,10 +210,10 @@ func _physics_process(delta: float) -> void:
 		else:
 			var cdx: float = ct.global_position.x - _player.global_position.x
 			if signf(cdx) == -_cross_dir and absf(cdx) > 60.0:
-				_cross_t = -1.0   # 반대편 착지 완료 — 이제 등이 이쪽
+				_cross_t = -1.0   # 반대편 착지 완료 · 이제 등이 이쪽
 	elif target != null and _tgt_t > 1.2 and best < 300.0:
 		var et_t: Variant = target.get("enemy_type")
-		# 크로스는 방패당 2회까지 — 그래도 못 잡으면 기존 6s 스톨 → 포기 경로로(영구 씨름 방지).
+		# 크로스는 방패당 2회까지 · 그래도 못 잡으면 기존 6s 스톨 → 포기 경로로(영구 씨름 방지).
 		if et_t != null and int(et_t) == 4 and int(_cross_count.get(target.get_instance_id(), 0)) < 2:
 			_cross_dir = signf(target.global_position.x - _player.global_position.x)
 			if _cross_dir == 0.0:
@@ -225,10 +225,10 @@ func _physics_process(delta: float) -> void:
 			if _jump_pulse == 0:
 				Input.action_press("jump")
 				_jump_pulse = 2
-	# 대공 표적(사용자 기법: "옆에 비껴 서서 점프샷") — 지상 사냥감(nav)이 다 떨어졌을 때만.
+	# 대공 표적(사용자 기법: "옆에 비껴 서서 점프샷") · 지상 사냥감(nav)이 다 떨어졌을 때만.
 	# 지상 적보다 우선하면 봇이 드론과 씨름하느라 전진·사냥이 전부 멈춘다(2026-08-18 실측).
 	var aa: Node2D = null
-	# 표적 고정 — 드론 무리가 겹쳐 다니면 "최근접"이 프레임마다 스왑되어 교착 타이머가
+	# 표적 고정 · 드론 무리가 겹쳐 다니면 "최근접"이 프레임마다 스왑되어 교착 타이머가
 	# 계속 리셋 → 포기가 영원히 안 오는 무한 교착(2026-08-19 실측). 죽거나 포기할 때까지 유지.
 	if _aa_id != 0 and (arena or hunt) and target == null and _cross_t < 0.0 and lever_pos == Vector2.INF:
 		var held: Node2D = instance_from_id(_aa_id) as Node2D
@@ -255,7 +255,7 @@ func _physics_process(delta: float) -> void:
 			if absf(rel3.x) < aa_best:
 				aa_best = absf(rel3.x)
 				aa = e3
-	# 대공 교착 — 같은 드론 5s 무진전이면 포기(2회면 영구 · 킬 시 _kills_seen 리셋이 풀어준다).
+	# 대공 교착 · 같은 드론 5s 무진전이면 포기(2회면 영구 · 킬 시 _kills_seen 리셋이 풀어준다).
 	if aa != null:
 		if aa.get_instance_id() == _aa_id:
 			_aa_t += delta
@@ -273,15 +273,15 @@ func _physics_process(delta: float) -> void:
 	if _cross_t >= 0.0:
 		move_dir = _cross_dir
 	elif lever_pos != Vector2.INF and target == null:
-		# 레버 감지 Area가 40px 폭(반폭 20) — 정지 문턱이 넓으면 감지 밖에 서서 헛사격한다.
-		# 스테이징 중엔 경유 x(레버 ± 오프셋)로 — 계단 발판을 먼저 밟는다.
+		# 레버 감지 Area가 40px 폭(반폭 20) · 정지 문턱이 넓으면 감지 밖에 서서 헛사격한다.
+		# 스테이징 중엔 경유 x(레버 ± 오프셋)로 · 계단 발판을 먼저 밟는다.
 		var lever_tx: float = lever_pos.x + (_lever_stage_dx if _clock < _lever_stage_until else 0.0)
 		var lever_tdx: float = lever_tx - _player.global_position.x
 		move_dir = signf(lever_tdx) if absf(lever_tdx) > 14.0 else 0.0
 	elif target != null and best < engage_range * 0.75:
 		move_dir = 0.0
 	elif aa != null:
-		# 수평탄이라 바로 밑에선 못 맞힌다 — 옆 80~190px 밴드에 서서 정점 사격.
+		# 수평탄이라 바로 밑에선 못 맞힌다 · 옆 80~190px 밴드에 서서 정점 사격.
 		if absf(aa_dx) < 70.0:
 			move_dir = -signf(aa_dx) if signf(aa_dx) != 0.0 else 1.0
 		elif absf(aa_dx) > 190.0:
@@ -313,10 +313,10 @@ func _physics_process(delta: float) -> void:
 			Input.action_press("move_left")
 			Input.action_release("move_left")
 	# 사격 · 반응 지연 후 꾹(꾹 누르면 쿨다운마다 자동 연발 = 게임 규칙 그대로).
-	# 같은 높이 표적이 없어도 근처에 적이 남았으면(공중 드론 등) "유도 믿고 갈기기" —
+	# 같은 높이 표적이 없어도 근처에 적이 남았으면(공중 드론 등) "유도 믿고 갈기기" ·
 	# 유도 없는 빌드는 빗나간다(= 측정하려는 조준 비용 면제 그 자체). 단 8s 무진전이면
 	# 억제(사람도 안 맞는 갈기기는 관둔다 · 데드락 가드).
-	# 레버 "바로 앞"에서만 허공 갈기기 금지(공격 홀드가 당기기 입력을 막는다) — 접근 중엔 허용
+	# 레버 "바로 앞"에서만 허공 갈기기 금지(공격 홀드가 당기기 입력을 막는다) · 접근 중엔 허용
 	# (유도 빌드가 레버 상공 드론을 지울 수 있어야 한다 · 2026-08-18 냉각 max TIMEOUT 실측).
 	var at_lever: bool = lever_pos != Vector2.INF and absf(lever_dx) < 120.0
 	var blind_fire: bool = false
@@ -347,7 +347,7 @@ func _physics_process(delta: float) -> void:
 		_react_t = 0.0
 		if _pull_pulse == 0:   # 레버 당기기 펄스 중엔 해제하지 않는다(당기기 입력 보호)
 			Input.action_release("attack")
-	# 점프 사격 리듬(프로필 air_shot_ratio) — 유도 빌드(glide T3)는 풀 리듬("뛰면서 갈기기"),
+	# 점프 사격 리듬(프로필 air_shot_ratio) · 유도 빌드(glide T3)는 풀 리듬("뛰면서 갈기기"),
 	# 그 외는 1/3 빈도(유도 없이 지상 표적 상대로 뛰면 수평탄이 넘어가 손해 · 사람도 덜 뛴다).
 	# 허공 갈기기 중엔 항상 풀 리듬(점프 궤적에서 같은 높이 필터가 공중 적을 잡아 준다).
 	var hop_period: float = _hop_period
@@ -361,8 +361,8 @@ func _physics_process(delta: float) -> void:
 			_hop_t = 0.0
 	else:
 		_hop_t = 0.0
-	# 레버 교착 감지 — 바로 밑(수평 근접) 지면에서 더블점프로 안 닿는 높이차. 2.2s 지속 시
-	# 스테이징 발동(좌 → 우 교대 · 3.5s 유지). ⚠ 판정은 **접지 상태에서만** — 점프 정점에서
+	# 레버 교착 감지 · 바로 밑(수평 근접) 지면에서 더블점프로 안 닿는 높이차. 2.2s 지속 시
+	# 스테이징 발동(좌 → 우 교대 · 3.5s 유지). ⚠ 판정은 **접지 상태에서만** · 점프 정점에서
 	# 높이차가 순간적으로 좁혀져 타이머가 매번 리셋되는 구멍이 있었다(2026-08-21 펌프장 실측:
 	# 등반 점프 사이클마다 리셋 → 스테이징이 영영 발동 안 함). 공중에서는 판정을 건너뛴다.
 	if lever_pos != Vector2.INF and target == null and absf(lever_dx) < 70.0:
@@ -374,24 +374,24 @@ func _physics_process(delta: float) -> void:
 					_lever_stage_until = _clock + 3.5
 					_lever_stuck_t = 0.0
 			else:
-				_lever_stuck_t = 0.0   # 계단 위(레버 높이대) 도달 — 교착 아님
+				_lever_stuck_t = 0.0   # 계단 위(레버 높이대) 도달 · 교착 아님
 	else:
 		_lever_stuck_t = 0.0
-	# 머리 위 목적지(발판 위 저격수·레버) — 밑에서 등반 점프 리듬(이단 점프는 공중 재입력).
+	# 머리 위 목적지(발판 위 저격수·레버) · 밑에서 등반 점프 리듬(이단 점프는 공중 재입력).
 	# 스테이징 경유 지점에서도 등반이 나가야 하므로 게이트 폭 220→260(오프셋 230 커버).
 	var climb_up: float = 0.0
 	if lever_pos != Vector2.INF and target == null and absf(lever_dx) < 260.0:
 		climb_up = _player.global_position.y - lever_pos.y
 	elif aa_fire:
-		# 대공 점프샷 — 더블점프 정점(~190)이 드론 고도(-220) 언저리의 조준 밴드에 든다.
+		# 대공 점프샷 · 더블점프 정점(~190)이 드론 고도(-220) 언저리의 조준 밴드에 든다.
 		climb_up = _player.global_position.y - aa.global_position.y
 	elif nav != null and nav_dx < 220.0:
 		climb_up = _player.global_position.y - nav.global_position.y
 	# 사람의 등반 = 점프 직후 더블점프(합산 ~190px). 단발 점프 반복으로는 높은 발판(Δ>104)에
 	# 못 올라 레버·저격 둥지 접근이 실패한다(2026-08-18 냉각 레버 TIMEOUT 실측).
-	# 시퀀스 진행 중엔 climb_up 게이트를 무시 — 1단 상승 중 높이 차가 좁혀지며 게이트가 꺼져
+	# 시퀀스 진행 중엔 climb_up 게이트를 무시 · 1단 상승 중 높이 차가 좁혀지며 게이트가 꺼져
 	# 더블점프 입력이 영영 안 나가는 자가 리셋이 있었다(y 진동 무한 반복의 원인).
-	# 레버 목표일 땐 게이트 60px — 계단 마지막 단(Δ~100)에서 player 중심 기준 climb_up이
+	# 레버 목표일 땐 게이트 60px · 계단 마지막 단(Δ~100)에서 player 중심 기준 climb_up이
 	# 100 밑으로 내려와 점프가 영영 안 나가고 걸어서 떨어지는 루프가 있었다(2026-08-21 펌프장 실측).
 	var climb_gate: float = 60.0 if (lever_pos != Vector2.INF and target == null) else 100.0
 	if climb_up > climb_gate or _climb_seq != 0:
@@ -412,7 +412,7 @@ func _physics_process(delta: float) -> void:
 	else:
 		_climb_seq = 0
 		_climb_t = 0.0
-	# 레버 앞 도착 — 당기기(공격 키 = 상호작용 · just_pressed 필요라 펄스로 누른다). 0.6s 재시도.
+	# 레버 앞 도착 · 당기기(공격 키 = 상호작용 · just_pressed 필요라 펄스로 누른다). 0.6s 재시도.
 	if at_lever and target == null and not blind_fire \
 			and absf(lever_dx) < 46.0 and absf(_player.global_position.y - lever_pos.y) < 96.0:
 		_pull_t += delta
@@ -422,7 +422,7 @@ func _physics_process(delta: float) -> void:
 			_pull_t = 0.0
 	else:
 		_pull_t = 0.6   # 도착 즉시 첫 시도가 나가게
-	# 대시 ① 회피 — 날아오는 적탄이 가까우면 대시(무적 프레임 · 사람의 "보고 피하기").
+	# 대시 ① 회피 · 날아오는 적탄이 가까우면 대시(무적 프레임 · 사람의 "보고 피하기").
 	_dodge_cd = maxf(_dodge_cd - delta, 0.0)
 	if _dodge_cd <= 0.0 and _dash_pulse == 0:
 		for b in get_tree().get_nodes_in_group("enemy_bullet"):
@@ -437,8 +437,8 @@ func _physics_process(delta: float) -> void:
 				_dash_pulse = 2
 				_dodge_cd = 0.5
 				break
-	# 대시 ② 이동 리듬(프로필 dash_pm) — 전진 중 주기 대시(사람의 이동 습관).
-	# 목표(사냥 적·레버)가 가까우면 억제 — 사람의 대시는 긴 전진 구간에서 몰아 쓰는 것이고,
+	# 대시 ② 이동 리듬(프로필 dash_pm) · 전진 중 주기 대시(사람의 이동 습관).
+	# 목표(사냥 적·레버)가 가까우면 억제 · 사람의 대시는 긴 전진 구간에서 몰아 쓰는 것이고,
 	# 기계적 주기 대시는 관성 오버슈트로 정밀 접근을 망친다(2026-08-18 src=user 첫 계측에서
 	# dash_pm 29.9가 그대로 이식되자 검수 존 왕복 TIMEOUT 실측).
 	var dash_ok: bool = true
@@ -454,7 +454,7 @@ func _physics_process(delta: float) -> void:
 			Input.action_press("dash")
 			_dash_pulse = 2
 			_dash_travel_t = 0.0
-	# 수류탄(explosive 보유 시) — 표적 교착 1.2s(방패병 정면 등)면 차징 투척(엄폐 너머 타격).
+	# 수류탄(explosive 보유 시) · 표적 교착 1.2s(방패병 정면 등)면 차징 투척(엄폐 너머 타격).
 	_gren_cd = maxf(_gren_cd - delta, 0.0)
 	if _gren_hold >= 0.0:
 		_gren_hold += delta
@@ -476,7 +476,7 @@ func _physics_process(delta: float) -> void:
 	else:
 		_stuck_t = 0.0
 
-# 포기 등록 — 1회차는 10~12s 무시 후 재고려, 2회차부터 영구 무시(못 잡는 적 무한 회귀 차단).
+# 포기 등록 · 1회차는 10~12s 무시 후 재고려, 2회차부터 영구 무시(못 잡는 적 무한 회귀 차단).
 func _mark_giveup(id: int) -> void:
 	_giveup[id] = int(_giveup.get(id, 0)) + 1
 	_ignore[id] = _clock + (999999.0 if int(_giveup[id]) >= 2 else 11.0)

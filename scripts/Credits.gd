@@ -76,14 +76,14 @@ var _scroll_y: float = 0.0
 var _content_height: float = 0.0
 var _finished: bool = false
 var _hint_label: Label
-# 진입 직후 입력 lockout — 게임 종료 후 점프 연타가 즉시 크레딧을 닫는 사고 방지.
+# 진입 직후 입력 lockout · 게임 종료 후 점프 연타가 즉시 크레딧을 닫는 사고 방지.
 var _input_lockout_t: float = GameState.INPUT_LOCKOUT_DURATION
-# 화면을 누르고 있는 손가락(index) — 폰에서 화면 홀드 = SPACE 홀드(빨리 감기)로 매핑.
+# 화면을 누르고 있는 손가락(index) · 폰에서 화면 홀드 = SPACE 홀드(빨리 감기)로 매핑.
 var _touch_fingers: Dictionary = {}
 
 # 크레딧 끝 메뉴 (scene 모드). "다시 플레이하기"는 포커스 시 글리치로 글자가 바뀐다.
 var _menu_shown: bool = false
-# 첫 완주 스팅어(관측 로그) 상태 — 표시 중 재진입 방지 + ESC 조기 종료 시 정리용 참조.
+# 첫 완주 스팅어(관측 로그) 상태 · 표시 중 재진입 방지 + ESC 조기 종료 시 정리용 참조.
 var _stinger_active: bool = false
 var _stinger_label: Label = null
 var _replay_btn: Button = null
@@ -103,17 +103,17 @@ func _ready() -> void:
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(bg)
-	# 스크롤 컨테이너 — 자식들을 위에서 아래로 쌓고 _scroll_y 만큼 위로 밀어 올림.
-	# anchor_preset 없이 절대 좌표만 — VBox는 자식이 추가되며 자동으로 세로로 자란다.
+	# 스크롤 컨테이너 · 자식들을 위에서 아래로 쌓고 _scroll_y 만큼 위로 밀어 올림.
+	# anchor_preset 없이 절대 좌표만 · VBox는 자식이 추가되며 자동으로 세로로 자란다.
 	_scroll = VBoxContainer.new()
 	_scroll.add_theme_constant_override("separation", 6)
 	_scroll.position = Vector2(0, TOP_GAP)
-	# 화면 폭에 맞춤 — 라인은 SIZE_EXPAND_FILL+CENTER라 화면 가로 중앙 정렬(적응형).
+	# 화면 폭에 맞춤 · 라인은 SIZE_EXPAND_FILL+CENTER라 화면 가로 중앙 정렬(적응형).
 	_scroll.size = Vector2(get_viewport().get_visible_rect().size.x, 0)
 	_scroll.alignment = BoxContainer.ALIGNMENT_BEGIN
 	add_child(_scroll)
 	_build_lines()
-	# 안내 — 우하단. ESC/뒤로 = 즉시 종료, SPACE 길게 = 빨리 감기 (overlay/scene 동일).
+	# 안내 · 우하단. ESC/뒤로 = 즉시 종료, SPACE 길게 = 빨리 감기 (overlay/scene 동일).
 	_hint_label = Label.new()
 	_hint_label.text = _hint_text()
 	_hint_label.add_theme_font_size_override("font_size", 12)
@@ -178,14 +178,14 @@ func _process(delta: float) -> void:
 		speed *= SCROLL_FAST_MULT
 	_scroll_y += speed * delta
 	_scroll.position.y = TOP_GAP - _scroll_y
-	# 끝까지 올라가면 — scene 모드: 다시 플레이/나가기 메뉴. overlay 모드: 그냥 닫기.
+	# 끝까지 올라가면 · scene 모드: 다시 플레이/나가기 메뉴. overlay 모드: 그냥 닫기.
 	if _content_height > 0.0 and _scroll_y >= _content_height + BOTTOM_GAP:
 		if _is_overlay:
 			_finish(true)
 		else:
 			_show_end_menu()
 
-# 화면 홀드를 빨리 감기로 — 루트가 full-rect Control이라 탭이 gui_input에서 소비돼
+# 화면 홀드를 빨리 감기로 · 루트가 full-rect Control이라 탭이 gui_input에서 소비돼
 # _unhandled_input엔 안 오므로 _input에서 직접 손가락을 추적한다(소비하지 않음: 끝 메뉴 버튼 탭 보존).
 func _input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
@@ -196,27 +196,27 @@ func _input(event: InputEvent) -> void:
 			_touch_fingers.erase(st.index)
 
 func _unhandled_input(event: InputEvent) -> void:
-	# ESC는 최우선 — 입력 락아웃과 무관하게 즉시 반응(락아웃은 점프 연타 차단용이라 ESC엔 불필요).
+	# ESC는 최우선 · 입력 락아웃과 무관하게 즉시 반응(락아웃은 점프 연타 차단용이라 ESC엔 불필요).
 	if event.is_action_pressed("ui_cancel"):
-		# 소비 표시를 분기 *전에* — 분기가 씬 전환을 일으키면 이 노드가 트리를 떠나
+		# 소비 표시를 분기 *전에* · 분기가 씬 전환을 일으키면 이 노드가 트리를 떠나
 		# get_viewport()가 null이 된다(2026-08-20 ESC 연타 크래시의 직접 원인).
 		var vp := get_viewport()
 		if vp != null:
 			vp.set_input_as_handled()
 		if _is_overlay:
-			# 오버레이 — 짧게 페이드 후 닫기.
+			# 오버레이 · 짧게 페이드 후 닫기.
 			_finish(false)
 		elif not _menu_shown:
-			# scene 모드 스크롤 중 ESC — 끝까지 기다리지 않고 바로 메뉴로.
+			# scene 모드 스크롤 중 ESC · 끝까지 기다리지 않고 바로 메뉴로.
 			_show_end_menu()
 		else:
-			# 메뉴에서 ESC — 메인으로.
+			# 메뉴에서 ESC · 메인으로.
 			_on_exit_pressed()
 		return
 	if _input_lockout_t > 0.0:
 		return
 
-# fade_long=true — 자동 종료(긴 1.5s 페이드, 여운). false — 수동 ESC(짧은 0.3s).
+# fade_long=true · 자동 종료(긴 1.5s 페이드, 여운). false · 수동 ESC(짧은 0.3s).
 func _finish(fade_long: bool) -> void:
 	if _finished:
 		return
@@ -234,7 +234,7 @@ func _actually_finish() -> void:
 	GameState.reset()
 	_goto_scene(SceneRouter.TITLE)
 
-# 씬 전환 단일 출구 — deferred(입력 전파 중 동기 전환 = 크래시, 2026-08-20) + ESC/버튼
+# 씬 전환 단일 출구 · deferred(입력 전파 중 동기 전환 = 크래시, 2026-08-20) + ESC/버튼
 # 연타 이중 발화 가드.
 var _leaving: bool = false
 
@@ -255,7 +255,7 @@ func open_as_overlay() -> void:
 func _show_end_menu() -> void:
 	if _menu_shown:
 		return
-	# 첫 완주 스팅어(관측 로그, lore_expansion §3-4) — 메뉴보다 먼저 1화면. 타이틀의
+	# 첫 완주 스팅어(관측 로그, lore_expansion §3-4) · 메뉴보다 먼저 1화면. 타이틀의
 	# "기록 재진입" 버튼이 처음 나타나는 순간과 서사적 짝(해금 = 폭로). 1회만(영속).
 	if not _is_overlay and not _stinger_active and GameState.playthrough_count >= 1 \
 			and not GameState.observer_stinger_seen:
@@ -300,7 +300,7 @@ func _show_end_menu() -> void:
 	# 잠깐 "다시 플레이하기"를 보여준 뒤(0.6s) 포커스 → 그 순간 글리치로 변형.
 	GameState.arm_focus_with_delay(self, _replay_btn, 0.6)
 
-# 첫 완주 스팅어 — 관측 로그 문법의 시스템 텍스트 1화면(부관체·숫자 미명시, lore §4).
+# 첫 완주 스팅어 · 관측 로그 문법의 시스템 텍스트 1화면(부관체·숫자 미명시, lore §4).
 # 페이드 인 → 4.6s 유지 → 페이드 아웃 → 플래그 영속 → 끝 메뉴. ESC로 건너뛰면
 # _show_end_menu 쪽 정리 분기가 플래그를 대신 기록한다.
 func _show_observer_stinger() -> void:
@@ -347,7 +347,7 @@ func _on_replay_focus() -> void:
 	_glitch_morph(_replay_btn, REPLAY_LABEL_GLITCH)
 
 func _on_replay_unfocus() -> void:
-	# 포커스도 마우스도 없을 때만 원래 글자로 — 한쪽이라도 걸려 있으면 글리치 라벨 유지.
+	# 포커스도 마우스도 없을 때만 원래 글자로 · 한쪽이라도 걸려 있으면 글리치 라벨 유지.
 	if is_instance_valid(_replay_btn) and not _replay_btn.has_focus():
 		_glitch_morph(_replay_btn, REPLAY_LABEL)
 
@@ -379,7 +379,7 @@ func _scramble(target: String, reveal: float) -> String:
 	return out
 
 func _on_replay_pressed() -> void:
-	# 명시적 다회차 — 물음표 변형 활성. 새 런(노멀) 시작.
+	# 명시적 다회차 · 물음표 변형 활성. 새 런(노멀) 시작.
 	if _leaving:
 		return
 	GameState.replaying = true

@@ -1,7 +1,7 @@
 class_name PosterCanvas
 extends Control
 
-# 과제 제출용 게임 소개 포스터 — 인엔진 렌더. 게임의 실제 색·폰트·VEIL 눈(BriefingVisual 모티프)과
+# 과제 제출용 게임 소개 포스터 · 인엔진 렌더. 게임의 실제 색·폰트·VEIL 눈(BriefingVisual 모티프)과
 # 실제 게임 스크린샷을 함께 써서 화면 아이덴티티와 일치시킨다. _draw로 그래픽(눈/프레임/스샷/엔딩박스/
 # 특징 패널/VEIL 대화창), Label 자식으로 텍스트. 세로 포스터(A4 비율 근사, 1240×1754).
 # Poster.gd가 SubViewport로 PNG 캡처. 스크린샷은 Screenshotter.gd가 미리 저장해 둔 것을 런타임 로드.
@@ -41,9 +41,9 @@ const SHOT_W: float = 336.0
 const SHOT_H: float = 189.0
 const SHOT_GAP: float = 16.0
 const SHOTS: Array = [
-	["res://poster_out/shots/shot_routemap.png", "맵 선택 — 위험과 보상"],
-	["res://poster_out/shots/shot_skilltree.png", "스킬 트리 — 3계열"],
-	["res://poster_out/shots/shot_route_datacenter.png", "전투 — 사격·회피·스킬"],
+	["res://poster_out/shots/shot_routemap.png", "맵 선택 · 위험과 보상"],
+	["res://poster_out/shots/shot_skilltree.png", "스킬 트리 · 3계열"],
+	["res://poster_out/shots/shot_route_datacenter.png", "전투 · 사격·회피·스킬"],
 ]
 
 # ── 특징 2×2 (박스는 엔딩/스샷과 같은 좌우 경계 100~1140에 맞춤. FX는 박스 안쪽 패딩 14) ──
@@ -91,15 +91,15 @@ func _feat_rect(col: int, row: int) -> Rect2:
 
 func _draw() -> void:
 	draw_rect(Rect2(0.0, 0.0, W, H), COL_BG, true)
-	# 미세 스캔라인 — CRT/감시화면 질감
+	# 미세 스캔라인 · CRT/감시화면 질감
 	var y: float = 0.0
 	while y < H:
 		draw_line(Vector2(0.0, y), Vector2(W, y), Color(0.46, 0.86, 1.0, 0.015), 1.0)
 		y += 5.0
-	# 프레임 + 코너 브래킷 — 콘텐츠(M=100)보다 바깥이라 텍스트와 안 겹침
+	# 프레임 + 코너 브래킷 · 콘텐츠(M=100)보다 바깥이라 텍스트와 안 겹침
 	draw_rect(Rect2(FM, FM, W - 2.0 * FM, H - 2.0 * FM), COL_VEIL * Color(1, 1, 1, 0.10), false, 1.0)
 	_corner_brackets(FM)
-	# 키 비주얼 — VEIL 눈 (글로우 강화)
+	# 키 비주얼 · VEIL 눈 (글로우 강화)
 	_draw_eye(EYE_C, EYE_R)
 	# 엔딩 행
 	_draw_endings()
@@ -148,25 +148,25 @@ func _feat_accents() -> void:
 	var sz: float = 22.0
 	draw_rect(Rect2(FX_L, FY_1, sz, sz), COL_VEIL, true)
 	draw_rect(Rect2(FX_R, FY_1, sz, sz), COL_COMBAT, true)
-	# 스킬 셀 — 3계열 칩 (파랑 제외, 코랄/앰버/민트)
+	# 스킬 셀 · 3계열 칩 (파랑 제외, 코랄/앰버/민트)
 	draw_rect(Rect2(FX_L, FY_2, 6.0, sz), COL_COMBAT, true)
 	draw_rect(Rect2(FX_L + 8.0, FY_2, 6.0, sz), COL_AMBER, true)
 	draw_rect(Rect2(FX_L + 16.0, FY_2, 6.0, sz), COL_SURV, true)
 	draw_rect(Rect2(FX_R, FY_2, sz, sz), COL_SURV, true)
 
-# 각 특징 셀 우측 빈 공간에 상징 아이콘 — 셀 액센트색과 매칭.
+# 각 특징 셀 우측 빈 공간에 상징 아이콘 · 셀 액센트색과 매칭.
 func _feat_icons() -> void:
 	var iy1: float = FY_1 - 18.0 + FBOX_H * 0.5
 	var iy2: float = FY_2 - 18.0 + FBOX_H * 0.5
 	var ixl: float = FX_L + 442.0
 	var ixr: float = FX_R + 442.0
-	_icon_veil_mark(Vector2(ixl, iy1), 24.0)  # VEIL — 위협 마킹 화살표
-	_icon_enemy(Vector2(ixr, iy1), 24.0)      # 적 — 조준 레티클 + 표적
-	_icon_skill(Vector2(ixl, iy2), 24.0)      # 스킬 — 3계열 원(삼각 배치)
-	_icon_map(Vector2(ixr, iy2), 24.0)        # 맵 — 좌→우 분기 트리
+	_icon_veil_mark(Vector2(ixl, iy1), 24.0)  # VEIL · 위협 마킹 화살표
+	_icon_enemy(Vector2(ixr, iy1), 24.0)      # 적 · 조준 레티클 + 표적
+	_icon_skill(Vector2(ixl, iy2), 24.0)      # 스킬 · 3계열 원(삼각 배치)
+	_icon_map(Vector2(ixr, iy2), 24.0)        # 맵 · 좌→우 분기 트리
 
 func _icon_veil_mark(c: Vector2, r: float) -> void:
-	# VEIL이 위협을 가리켜 마킹 — 시안 화살표가 표적(코랄)을 짚는다.
+	# VEIL이 위협을 가리켜 마킹 · 시안 화살표가 표적(코랄)을 짚는다.
 	var target: Vector2 = c + Vector2(r * 0.45, -r * 0.4)
 	draw_circle(target, 3.0, COL_COMBAT)
 	_ring(target, 6.5, 1.2, COL_VEIL * Color(1, 1, 1, 0.75))
@@ -201,7 +201,7 @@ func _icon_skill(c: Vector2, r: float) -> void:
 		_ring(pts[i], r * 0.36, 1.3, pc * Color(1, 1, 1, 0.9))
 
 func _icon_map(c: Vector2, r: float) -> void:
-	# 좌→우 분기 트리 — 루트 1개에서 3갈래로 뻗어 "다양한 경로".
+	# 좌→우 분기 트리 · 루트 1개에서 3갈래로 뻗어 "다양한 경로".
 	var col: Color = COL_SURV
 	var root: Vector2 = c + Vector2(-r, 0)
 	var fork: Vector2 = c + Vector2(-r * 0.15, 0)
@@ -226,7 +226,7 @@ func _draw_veil_dialogue() -> void:
 # ── VEIL 눈 (BriefingVisual.gd _draw 모티프, 정적 포즈 + 글로우 halo) ──
 func _draw_eye(c: Vector2, r: float) -> void:
 	var col: Color = COL_VEIL
-	# 외곽 글로우 halo — 이목 강화("감시 카메라/레이더" 분위기)
+	# 외곽 글로우 halo · 이목 강화("감시 카메라/레이더" 분위기)
 	for i in 6:
 		var hf: float = float(i) / 5.0
 		draw_circle(c, r * (1.34 - hf * 0.5), col * Color(1, 1, 1, 0.032 * (1.0 - hf * 0.55)))
@@ -281,10 +281,10 @@ func _corner_brackets(fm: float) -> void:
 
 # ── 텍스트 (Label 자식) ──
 func _build_text() -> void:
-	# 타이틀 — outline 강화(faux-bold)로 엔진 기본 폰트의 가는 획을 보강.
+	# 타이틀 · outline 강화(faux-bold)로 엔진 기본 폰트의 가는 획을 보강.
 	_label("EYES ON YOU", Vector2(M, 400.0), W - 2.0 * M, 128, COL_WHITE, HORIZONTAL_ALIGNMENT_CENTER, false, 9)
 	_label("단 하나의 임무, 네 가지 결말", Vector2(M, 576.0), W - 2.0 * M, 36, COL_VEIL, HORIZONTAL_ALIGNMENT_CENTER, false, 5)
-	_label("현장 요원인 당신에게, 상황실 AI 'VEIL'이 보이지 않는 위협을 미리 짚어준다.\n그 조언을 따를지 무시할지 — 당신의 선택이 결말과 VEIL의 정체를 가른다.",
+	_label("현장 요원인 당신에게, 상황실 AI 'VEIL'이 보이지 않는 위협을 미리 짚어준다.\n그 조언을 따를지 무시할지 · 당신의 선택이 결말과 VEIL의 정체를 가른다.",
 		Vector2((W - 1000.0) * 0.5, 638.0), 1000.0, 23, COL_GRAY, HORIZONTAL_ALIGNMENT_CENTER, true)
 	# ── 엔딩 행 ──
 	_label("어떤 끝에 닿을까", Vector2(M, 730.0), W - 2.0 * M, 16,

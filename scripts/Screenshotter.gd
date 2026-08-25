@@ -20,12 +20,12 @@ const TARGETS: Array = [
 ]
 
 func _ready() -> void:
-	GameState.persist_blocked = true   # 실사용자 저장 파일 보호(2026-08-24) — 하니스 공통
+	GameState.persist_blocked = true   # 실사용자 저장 파일 보호(2026-08-24) · 하니스 공통
 	DirAccess.make_dir_recursive_absolute(OUT_DIR)
 	_run.call_deferred()
 
 func _run() -> void:
-	# 핵심 시스템 — 맵 선택 + 스킬 트리(전투 외 게임의 두 기둥).
+	# 핵심 시스템 · 맵 선택 + 스킬 트리(전투 외 게임의 두 기둥).
 	await _capture_routemap()
 	await _capture_skilltree()
 	# 전투 액션 + 분위기.
@@ -54,7 +54,7 @@ func _capture_routemap() -> void:
 	await get_tree().process_frame
 	_save("routemap", rm)
 
-# 스킬 트리 오버레이 — 대표 빌드를 채워 보유/다음/잠김이 보이게.
+# 스킬 트리 오버레이 · 대표 빌드를 채워 보유/다음/잠김이 보이게.
 func _capture_skilltree() -> void:
 	GameState.start_main_game()
 	GameState.skills["fire_boost"] = 2
@@ -71,7 +71,7 @@ func _capture_stage(rid: String, stage_idx: int, mode: String) -> void:
 	GameState.start_main_game()
 	GameState.current_stage = stage_idx
 	GameState.seen_enemies = ["patrol", "sniper", "drone", "bomber", "shield", "jammer", "elite", "caller"]
-	# 액션 컷용 화력 — 부채꼴 다중사격 + 사격 강화로 탄이 화면에 많이 보이게.
+	# 액션 컷용 화력 · 부채꼴 다중사격 + 사격 강화로 탄이 화면에 많이 보이게.
 	if mode == "action":
 		GameState.skills["multishot"] = 2
 		GameState.skills["fire_boost"] = 1
@@ -103,7 +103,7 @@ func _setup_action() -> void:
 	var enemies: Array = get_tree().get_nodes_in_group("enemy")
 	if player == null or enemies.is_empty():
 		return
-	# 플레이어와 가장 가까운 적 — 그 왼쪽 210px, 같은 높이로 옮겨 카메라에 둘 다 담기게.
+	# 플레이어와 가장 가까운 적 · 그 왼쪽 210px, 같은 높이로 옮겨 카메라에 둘 다 담기게.
 	var ppos: Vector2 = player.global_position
 	var target: Node = enemies[0]
 	var best: float = INF

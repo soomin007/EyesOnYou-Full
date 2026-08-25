@@ -25,7 +25,7 @@ var panel: PanelContainer
 var tabs: TabContainer
 
 # 위/아래 포커스 hold 연속 이동 (사용자 피드백: "쭉 누르고 있어도 드르륵").
-# 사용자 후속: 속도 좀 더 늦게 — 0.06 → 0.18로.
+# 사용자 후속: 속도 좀 더 늦게 · 0.06 → 0.18로.
 const NAV_INITIAL_DELAY: float = 0.4
 const NAV_REPEAT_INTERVAL: float = 0.18
 var nav_dir: int = 0
@@ -89,12 +89,12 @@ func _ready() -> void:
 	tabs = TabContainer.new()
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	tabs.custom_minimum_size = Vector2(0, 380)
-	# 위쪽 탭 헤더는 포커스 받지 않게 — 사용자: "포커스가 위로 올라가지 않게".
+	# 위쪽 탭 헤더는 포커스 받지 않게 · 사용자: "포커스가 위로 올라가지 않게".
 	# 탭 전환은 Q/E (패드 LB/RB)로만.
 	tabs.focus_mode = Control.FOCUS_NONE
 	v.add_child(tabs)
 
-	# 탭 내용을 ScrollContainer로 감싼다 — 작은 화면(모바일 확대)에서 탭 영역이 짧아져도 내용이 잘리지
+	# 탭 내용을 ScrollContainer로 감싼다 · 작은 화면(모바일 확대)에서 탭 영역이 짧아져도 내용이 잘리지
 	# 않고 스크롤된다. TabContainer 탭 제목 = 자식 노드 이름이라 _scroll_wrap이 이름을 보존한다.
 	tabs.add_child(_scroll_wrap(_build_keybind_tab()))
 	tabs.add_child(_scroll_wrap(_build_av_tab()))
@@ -123,7 +123,7 @@ func _ready() -> void:
 	bottom_hb.add_child(btn_close)
 
 	_refresh_all_keybind_buttons()
-	# 진입 시 첫 키바인드 버튼에 포커스 잡기 (1s 락아웃 — 메뉴 연타 사고 방지).
+	# 진입 시 첫 키바인드 버튼에 포커스 잡기 (1s 락아웃 · 메뉴 연타 사고 방지).
 	# arm_focus_with_delay가 host 아래 Button들에 ui_focus/ui_confirm SFX도 자동 wire.
 	if ACTIONS.size() > 0:
 		var first_btns: Array = key_buttons.get(str(ACTIONS[0]["id"]), [])
@@ -153,7 +153,7 @@ func _build_keybind_tab() -> Control:
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(hint)
 
-	# 게임패드 안내 — Xbox 컨트롤러 기본 매핑. 슬롯에는 키/마우스만 표시되지만,
+	# 게임패드 안내 · Xbox 컨트롤러 기본 매핑. 슬롯에는 키/마우스만 표시되지만,
 	# 패드는 별도로 항상 활성화되어 있음 (project.godot 기본값 + 리셋 시에도 복원).
 	var pad_hint := Label.new()
 	pad_hint.text = "Xbox 컨트롤러:  좌스틱/D-Pad 이동 · A 점프 · X 사격(또는 RT) · B 대시(또는 RB) · Y 스킬 · START 메뉴"
@@ -191,7 +191,7 @@ func _build_keybind_tab() -> Control:
 			grid.add_child(btn)
 			btns.append(btn)
 		key_buttons[action_id] = btns
-	# 명시적 focus_neighbor 설정 — 같은 column 내 위/아래 이동을 결정적으로.
+	# 명시적 focus_neighbor 설정 · 같은 column 내 위/아래 이동을 결정적으로.
 	# Godot 자동 계산은 인접 cell의 geometry가 미세하게 어긋나면(라벨 폭 차이 등)
 	# "두 번 눌러야 이동" 같은 결과를 낳을 수 있어서 직접 잡아준다.
 	_wire_keybind_focus()
@@ -216,7 +216,7 @@ func _wire_keybind_focus() -> void:
 			if prev_btns.size() > col and prev_btns[col] is Control:
 				btn.focus_neighbor_top = btn.get_path_to(prev_btns[col])
 			else:
-				# 첫 행 — 위로 더 못 가게 (탭 헤더로 안 새도록).
+				# 첫 행 · 위로 더 못 가게 (탭 헤더로 안 새도록).
 				btn.focus_neighbor_top = btn.get_path_to(btn)
 			if next_btns.size() > col and next_btns[col] is Control:
 				btn.focus_neighbor_bottom = btn.get_path_to(next_btns[col])
@@ -256,8 +256,8 @@ func _build_debug_tab() -> Control:
 	enter_btn.pressed.connect(_on_playground_pressed)
 	v.add_child(enter_btn)
 
-	# 엔딩 미리보기 — 9종 직접 진입(처리 4 × 신뢰 2 + 진실 1). 처리/신뢰/진실 플래그를 임시 세팅해
-	# EndingResolver 분기를 강제한다. (대사는 플레이스홀더 — 사용자 검토.)
+	# 엔딩 미리보기 · 9종 직접 진입(처리 4 × 신뢰 2 + 진실 1). 처리/신뢰/진실 플래그를 임시 세팅해
+	# EndingResolver 분기를 강제한다. (대사는 플레이스홀더 · 사용자 검토.)
 	var spacer := Control.new()
 	spacer.custom_minimum_size = Vector2(0, 12)
 	v.add_child(spacer)
@@ -287,7 +287,7 @@ func _build_debug_tab() -> Control:
 		btn.pressed.connect(_on_ending_preview_pressed.bind(eid))
 		ending_row.add_child(btn)
 		ending_btns.append(btn)
-	# 세로 포커스 연결 — 연습장 버튼 ↕ 엔딩 행. (HBox 내부 좌우는 Godot 자동.) 명시 안 하면
+	# 세로 포커스 연결 · 연습장 버튼 ↕ 엔딩 행. (HBox 내부 좌우는 Godot 자동.) 명시 안 하면
 	# 키보드로 엔딩 버튼에 도달 못 하던 문제(사용자 보고). 좌우는 기본 geometry로 충분.
 	if ending_btns.size() > 0:
 		var first_ending: Button = ending_btns[0] as Button
@@ -296,7 +296,7 @@ func _build_debug_tab() -> Control:
 			var eb: Button = b as Button
 			eb.focus_neighbor_top = eb.get_path_to(enter_btn)
 
-	# ── 메타데이터 관리(사용자 2026-08-13) — 새 환경 테스트용 초기화 + 현황 표시. ──
+	# ── 메타데이터 관리(사용자 2026-08-13) · 새 환경 테스트용 초기화 + 현황 표시. ──
 	var spacer2 := Control.new()
 	spacer2.custom_minimum_size = Vector2(0, 12)
 	v.add_child(spacer2)
@@ -335,7 +335,7 @@ func _build_debug_tab() -> Control:
 
 	return outer
 
-# ── 메타데이터 관리 — 현황/핸들러. 디버그 용도라 확인 대화 없음(라벨에 명시, 사용자가 알고 누름). ──
+# ── 메타데이터 관리 · 현황/핸들러. 디버그 용도라 확인 대화 없음(라벨에 명시, 사용자가 알고 누름). ──
 var _meta_status_label: Label = null
 
 func _meta_status_text() -> String:
@@ -356,7 +356,7 @@ func _remove_user_file(fname: String) -> void:
 	if d != null and d.file_exists(fname):
 		d.remove(fname)
 
-# 전체 초기화 — 저장 파일 3종 삭제 + 영속 메타를 메모리에서도 기본값으로(재시작 없이도 새 환경).
+# 전체 초기화 · 저장 파일 3종 삭제 + 영속 메타를 메모리에서도 기본값으로(재시작 없이도 새 환경).
 func _on_meta_wipe_all() -> void:
 	for f in ["settings.cfg", "run.cfg", "palimpsest.cfg"]:
 		_remove_user_file(f)
@@ -386,13 +386,13 @@ func _on_meta_reset_saves() -> void:
 	_remove_user_file("palimpsest.cfg")
 	_refresh_meta_status()
 
-# 엔딩 미리보기 진입 — 처리(disposal)·신뢰(수용률)·진실(truth_seen)을 ending_id에 맞춰 강제.
-# 기존 진행도는 백업 안 함 — 디버그 용도라 진행 데이터 손실은 무시 (사용자가 알고 누름).
+# 엔딩 미리보기 진입 · 처리(disposal)·신뢰(수용률)·진실(truth_seen)을 ending_id에 맞춰 강제.
+# 기존 진행도는 백업 안 함 · 디버그 용도라 진행 데이터 손실은 무시 (사용자가 알고 누름).
 func _on_ending_preview_pressed(ending_id: String) -> void:
-	GameState.rec_count = 4  # 수용률 분모 고정 — followed_count로 신뢰 hi/lo 강제.
+	GameState.rec_count = 4  # 수용률 분모 고정 · followed_count로 신뢰 hi/lo 강제.
 	GameState.rival_lure_followed = 0  # 유인 감점 잔재가 유효 수용을 깎아 hi 강제가 깨지는 것 방지.
 	if ending_id == EndingResolver.ENDING_TRUTH:
-		# 진실은 처리·신뢰 무관 — truth_seen만 켜면 수렴.
+		# 진실은 처리·신뢰 무관 · truth_seen만 켜면 수렴.
 		GameState.truth_seen = true
 		GameState.disposal_choice = GameState.DISPOSAL_EXTRACT
 		GameState.followed_count = 4
@@ -409,7 +409,7 @@ func _on_playground_pressed() -> void:
 	GameState.playground_active = true
 	GameState.current_stage = 0
 	# 재머가 있는 맵으로 바로 시작(보스 맵 lab의 자폭 경보음 우회 + 진입 즉시 재머 확인).
-	# stage 0 유지 — 막3 시야붕괴 onset이 재머 붕괴와 겹쳐 헷갈리는 것 방지. 다른 맵은 HUD 패널에서 전환.
+	# stage 0 유지 · 막3 시야붕괴 onset이 재머 붕괴와 겹쳐 헷갈리는 것 방지. 다른 맵은 HUD 패널에서 전환.
 	GameState.current_route_id = "route_server_hall"
 	GameState.current_segment = 0
 	GameState.current_route_tags = ["전투", "드론", "원거리"]
@@ -436,9 +436,9 @@ func _build_av_tab() -> Control:
 
 	v.add_child(_make_display_section())
 
-	# 숨은 스킨 토글 — 해금한 사람에게만 보인다(비해금자에겐 스포일러라 숨김).
+	# 숨은 스킨 토글 · 해금한 사람에게만 보인다(비해금자에겐 스포일러라 숨김).
 	# 황금 3처치/코나미로 해금되면 캐릭터가 시작부터 시안 틴트라 "왜 파랗지?" 혼란이
-	# 있었음(사용자 2026-08-12) — 해금은 유지한 채 입을지만 고른다.
+	# 있었음(사용자 2026-08-12) · 해금은 유지한 채 입을지만 고른다.
 	if GameState.alt_skin_unlocked:
 		var skin_section := VBoxContainer.new()
 		skin_section.add_theme_constant_override("separation", 10)
@@ -469,7 +469,7 @@ func _build_av_tab() -> Control:
 	section_b.add_child(_make_volume_row("효과음 볼륨", "sfx"))
 	return outer
 
-# 화면 섹션 — 전체화면 토글 + 창 크기 프리셋. 값은 GameState에 영속, apply_display_settings로 즉시 반영.
+# 화면 섹션 · 전체화면 토글 + 창 크기 프리셋. 값은 GameState에 영속, apply_display_settings로 즉시 반영.
 # 웹에선 창 크기를 브라우저가 정하므로 전체화면 토글과 안내만 노출.
 var _fullscreen_toggle: CheckButton
 var _auto_fs_toggle: CheckButton
@@ -498,7 +498,7 @@ func _make_display_section() -> Control:
 	fs_row.add_child(_fullscreen_toggle)
 	v.add_child(fs_row)
 
-	# 자동 전체화면 — 입력 시 자동으로 전체화면 전환(모바일 웹에서 브라우저 UI로 화면 잘림 완화).
+	# 자동 전체화면 · 입력 시 자동으로 전체화면 전환(모바일 웹에서 브라우저 UI로 화면 잘림 완화).
 	# OrientationGuard._input이 이 설정을 보고 입력마다(전체화면 아닐 때) 재시도한다.
 	var af_row := HBoxContainer.new()
 	af_row.add_theme_constant_override("separation", 14)
@@ -532,7 +532,7 @@ func _make_display_section() -> Control:
 	size_l.add_theme_font_size_override("font_size", 14)
 	size_l.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
 	v.add_child(size_l)
-	# 6종으로 늘어 한 줄이 패널 폭을 넘는다 — 3열 그리드로.
+	# 6종으로 늘어 한 줄이 패널 폭을 넘는다 · 3열 그리드로.
 	var size_row := GridContainer.new()
 	size_row.columns = 3
 	size_row.add_theme_constant_override("h_separation", 10)
@@ -603,7 +603,7 @@ func _on_skin_toggled(pressed: bool) -> void:
 	GameState.save_settings()
 	SfxPlayer.play("ui_slider_tick")
 
-# 탭 내용을 세로 스크롤 컨테이너로 감싼다 — 작은 화면에서 탭 영역이 짧아도 내용을 스크롤로 볼 수 있게.
+# 탭 내용을 세로 스크롤 컨테이너로 감싼다 · 작은 화면에서 탭 영역이 짧아도 내용을 스크롤로 볼 수 있게.
 # TabContainer 탭 제목은 자식 노드 이름이라 원래 이름을 스크롤 컨테이너로 옮겨 보존한다.
 func _scroll_wrap(content: Control) -> ScrollContainer:
 	var sc := ScrollContainer.new()
@@ -640,7 +640,7 @@ func _on_window_size_pressed(index: int) -> void:
 	SfxPlayer.play("ui_slider_tick")
 	_refresh_size_buttons()
 
-# 접근성 탭 — 화면 밝기 + 효과음 자막. 값은 GameState에 영속, Accessibility 오버레이가 반영.
+# 접근성 탭 · 화면 밝기 + 효과음 자막. 값은 GameState에 영속, Accessibility 오버레이가 반영.
 func _build_accessibility_tab() -> Control:
 	var outer := MarginContainer.new()
 	outer.name = "접근성"
@@ -678,7 +678,7 @@ func _build_accessibility_tab() -> Control:
 	spacer2.custom_minimum_size = Vector2(0, 8)
 	v.add_child(spacer2)
 
-	# 연출 강도(2026-08-14 사용자) — 광과민·멀미 대응. 값은 GameState 영속(access/).
+	# 연출 강도(2026-08-14 사용자) · 광과민·멀미 대응. 값은 GameState 영속(access/).
 	v.add_child(_make_section_header("연출 강도"))
 	var fx_note := Label.new()
 	fx_note.text = "흔들림이나 번쩍임이 부담스러우면 끄세요. 게임 진행에는 영향 없습니다."
@@ -781,7 +781,7 @@ func _on_captions_toggled(pressed: bool, toggle: CheckButton) -> void:
 	if pressed:
 		Accessibility.preview_caption()
 
-# 데이터 탭(모든 유저 노출) — 진행 데이터 초기화. 디버그 탭에만 있던 초기화를 일반 유저용으로
+# 데이터 탭(모든 유저 노출) · 진행 데이터 초기화. 디버그 탭에만 있던 초기화를 일반 유저용으로
 # 꺼낸 것(사용자 2026-08-14). 파괴적 동작이라 디버그와 달리 2단 확인: 한 번 누르면 확인 문구로
 # 바뀌고, 제한 시간 안에 한 번 더 눌러야 실행. 키 바인드·볼륨·화면·접근성 설정은 유지한다.
 var _data_status_label: Label = null
@@ -863,7 +863,7 @@ func _disarm_data_reset() -> void:
 		_data_reset_btn.text = DATA_RESET_LABEL
 		_data_reset_btn.remove_theme_color_override("font_color")
 
-# 크레딧 탭 — 패널에서 직접 띄우는 오버레이. Settings를 닫지 않고 그 위에 겹쳐 띄움.
+# 크레딧 탭 · 패널에서 직접 띄우는 오버레이. Settings를 닫지 않고 그 위에 겹쳐 띄움.
 func _build_credits_tab() -> Control:
 	var outer := MarginContainer.new()
 	outer.name = "크레딧"
@@ -899,7 +899,7 @@ func _on_credits_open_pressed() -> void:
 		return
 	credits_overlay = packed.instantiate()
 	credits_overlay.process_mode = Node.PROCESS_MODE_ALWAYS
-	# overlay 모드 진입 — 닫혀도 scene 전환 없이 emit_signal("closed")만.
+	# overlay 모드 진입 · 닫혀도 scene 전환 없이 emit_signal("closed")만.
 	if credits_overlay.has_method("open_as_overlay"):
 		credits_overlay.open_as_overlay()
 	add_child(credits_overlay)
@@ -956,11 +956,11 @@ func _on_volume_changed(value: float, kind: String) -> void:
 	SfxPlayer.play("ui_slider_tick")
 	if kind == "bgm":
 		GameState.bgm_volume = value
-		# BGM autoload — 배경음 볼륨 즉시 반영(다음 트랙 전환까지 기다리지 않게).
+		# BGM autoload · 배경음 볼륨 즉시 반영(다음 트랙 전환까지 기다리지 않게).
 		BgmPlayer.refresh_volume()
 	else:
 		GameState.sfx_volume = value
-		# SfxPlayer._target_db()가 매 play 호출 시 GameState.sfx_volume 참조 — 즉시 반영.
+		# SfxPlayer._target_db()가 매 play 호출 시 GameState.sfx_volume 참조 · 즉시 반영.
 	GameState.save_settings()
 
 func _refresh_all_keybind_buttons() -> void:
@@ -1050,10 +1050,10 @@ func _process(delta: float) -> void:
 		_data_reset_arm_t -= delta
 		if _data_reset_arm_t <= 0.0:
 			_disarm_data_reset()
-	# 위/아래 hold 연속 이동 — Godot 기본 ui_up/down은 echo로 자동 반복되지 않음.
+	# 위/아래 hold 연속 이동 · Godot 기본 ui_up/down은 echo로 자동 반복되지 않음.
 	if capturing_action != "":
 		return
-	# 포커스 가드 — 포커스가 설정창 밖(뒤 메뉴 버튼 등)으로 새면 즉시 현재 탭으로 회수.
+	# 포커스 가드 · 포커스가 설정창 밖(뒤 메뉴 버튼 등)으로 새면 즉시 현재 탭으로 회수.
 	# (사용자 보고: 설정창이 떠 있는데 뒤 메뉴가 선택되던 누수.) focus가 null인 경우는
 	# 진입 직후 arm_focus_with_delay의 1초 락아웃이라 건드리지 않는다.
 	var fo: Control = get_viewport().gui_get_focus_owner()
@@ -1088,7 +1088,7 @@ func _step_focus_vertical(dir: int) -> void:
 	if nb != null:
 		nb.grab_focus()
 
-# 현재 탭의 첫 조작 가능한 컨트롤로 포커스를 옮긴다. 탭 전환(Q/E) 직후 호출 — 안 그러면
+# 현재 탭의 첫 조작 가능한 컨트롤로 포커스를 옮긴다. 탭 전환(Q/E) 직후 호출 · 안 그러면
 # 포커스가 이전 탭(숨겨진 키바인드 버튼 등)에 남아 키보드 네비가 안 되고 뒤 메뉴로 새어나간다.
 func _focus_first_in_current_tab() -> void:
 	if tabs == null:
@@ -1135,12 +1135,12 @@ func _input(event: InputEvent) -> void:
 				elif jb.button_index == JOY_BUTTON_RIGHT_SHOULDER:
 					tab_dir = 1
 		if tab_dir != 0 and tabs != null:
-			# 탭을 떠나면 초기화 무장 해제 — 다른 탭에서 돌아왔을 때 확인 문구가 남아있지 않게.
+			# 탭을 떠나면 초기화 무장 해제 · 다른 탭에서 돌아왔을 때 확인 문구가 남아있지 않게.
 			_disarm_data_reset()
 			var n: int = tabs.get_tab_count()
 			if n > 0:
 				tabs.current_tab = (tabs.current_tab + tab_dir + n) % n
-				# 새 탭의 첫 컨트롤로 포커스 이동 — 모든 탭에서 키보드 네비가 되고 포커스가 안 샌다.
+				# 새 탭의 첫 컨트롤로 포커스 이동 · 모든 탭에서 키보드 네비가 되고 포커스가 안 샌다.
 				_focus_first_in_current_tab()
 			get_viewport().set_input_as_handled()
 			return

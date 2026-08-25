@@ -58,7 +58,7 @@ static func show_card(host: Node, enemy_id: String) -> CanvasLayer:
 	header.add_theme_color_override("font_color", Color(0.55, 0.85, 0.95))
 	v.add_child(header)
 
-	# 적 아이콘 — 도감이 전부 텍스트라 그림 한 장 곁들임(텍스트→그래픽).
+	# 적 아이콘 · 도감이 전부 텍스트라 그림 한 장 곁들임(텍스트→그래픽).
 	var icon := EnemyIcon.new()
 	icon.enemy_id = enemy_id
 	icon.custom_minimum_size = Vector2(76, 76)
@@ -72,7 +72,7 @@ static func show_card(host: Node, enemy_id: String) -> CanvasLayer:
 	name_label.add_theme_color_override("font_color", Color(0.95, 0.95, 0.95))
 	v.add_child(name_label)
 
-	# 관찰 메모 — 짧은 행동 단서. 공략은 플레이로 알아가게 (글로 풀지 않음).
+	# 관찰 메모 · 짧은 행동 단서. 공략은 플레이로 알아가게 (글로 풀지 않음).
 	# 행동 키워드("LED", "조준선", "그림자" 등)만 강조 색으로 구분.
 	var blurb := RichTextLabel.new()
 	blurb.bbcode_enabled = true
@@ -88,7 +88,7 @@ static func show_card(host: Node, enemy_id: String) -> CanvasLayer:
 	btn.text = "확인"
 	btn.process_mode = Node.PROCESS_MODE_ALWAYS
 	btn.pressed.connect(func() -> void: _close(layer))
-	# ESC로도 닫히게 — 단축키(ui_cancel) 부여. 모달+일시정지 중이라 충돌 없음.
+	# ESC로도 닫히게 · 단축키(ui_cancel) 부여. 모달+일시정지 중이라 충돌 없음.
 	# (단축키는 _unhandled_input보다 먼저 소비 → Stage의 pause 토글로 새지 않음.)
 	var sc := Shortcut.new()
 	var esc_ev := InputEventAction.new()
@@ -103,7 +103,7 @@ static func show_card(host: Node, enemy_id: String) -> CanvasLayer:
 	GameState.arm_focus_with_delay(layer, btn)
 	return layer
 
-# 행동 단서 단어를 노란색으로 강조 — 정보를 글로 풀지 않고 시선만 유도.
+# 행동 단서 단어를 노란색으로 강조 · 정보를 글로 풀지 않고 시선만 유도.
 static func _highlight_keywords(text: String) -> String:
 	var keywords: Array = [
 		"붉게 깜빡", "조준선", "그림자", "빨갛게 깜빡", "방패", "튕겨낸다",

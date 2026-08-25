@@ -1,6 +1,6 @@
 extends Control
 
-# 미션 브리핑 목표물 아이콘 — 회수 대상(핵심 데이터 드라이브)을 보안 링·조준 브래킷과 함께.
+# 미션 브리핑 목표물 아이콘 · 회수 대상(핵심 데이터 드라이브)을 보안 링·조준 브래킷과 함께.
 # 자산 없이 _draw 도형. stage 0 인트로에서 대사 박스의 빈 오른쪽 자리에 표시.
 # 지형 함의 없이 "무엇을 빼오는가"만 보여준다(수직 단면은 횡스크롤과 안 맞아 폐기).
 # 색: 보안 링/조준은 VEIL 시안, 드라이브 코어는 따뜻한 호박색(전리품 강조). 회전·맥동으로 생동.
@@ -30,7 +30,7 @@ func _draw() -> void:
 	var col: Color = COL_VEIL * Color(1, 1, 1, a)
 	var faint: Color = COL_VEIL * Color(1, 1, 1, 0.3 * a)
 
-	# 보안 링 — 동심원 2겹 + 회전 점선 링
+	# 보안 링 · 동심원 2겹 + 회전 점선 링
 	draw_arc(c, r, 0.0, TWO_PI, 48, COL_VEIL * Color(1, 1, 1, 0.4 * a), 1.5, true)
 	draw_arc(c, r * 0.78, 0.0, TWO_PI, 40, faint, 1.0, true)
 	var spin: float = fmod(t * 0.6, TWO_PI)
@@ -40,7 +40,7 @@ func _draw() -> void:
 			var a0: float = spin + float(i) / float(seg) * TWO_PI
 			draw_arc(c, r * 0.90, a0, a0 + TWO_PI / float(seg) * 0.7, 4, COL_VEIL * Color(1, 1, 1, 0.55 * a), 1.5, true)
 
-	# 조준 브래킷 — 네 귀퉁이 ㄱ자
+	# 조준 브래킷 · 네 귀퉁이 ㄱ자
 	var br: float = r * 1.16
 	var bl: float = r * 0.34
 	for sx in [-1.0, 1.0]:
@@ -49,7 +49,7 @@ func _draw() -> void:
 			draw_line(corner, corner - Vector2(sx * bl, 0.0), col, 1.5, true)
 			draw_line(corner, corner - Vector2(0.0, sy * bl), col, 1.5, true)
 
-	# 데이터 드라이브 — 중앙 둥근 직사각형 + 데이터 슬랫 + 맥동 코어
+	# 데이터 드라이브 · 중앙 둥근 직사각형 + 데이터 슬랫 + 맥동 코어
 	var pulse: float = 0.5 + 0.5 * sin(t * 2.0)
 	var dw: float = r * 0.92
 	var dh: float = r * 0.66

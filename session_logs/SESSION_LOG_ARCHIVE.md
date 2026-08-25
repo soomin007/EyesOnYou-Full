@@ -4,7 +4,7 @@
 
 ---
 
-## 2026-04-28 — 프로젝트 초기 설정
+## 2026-04-28 · 프로젝트 초기 설정
 
 `EYES_ON_YOU_v2_spec.md` 기반으로 PRD 작성 + Godot 4.6 프로젝트 뼈대 구축.
 
@@ -22,7 +22,7 @@
 
 ---
 
-## 2026-04-30 — GitHub push + 스프라이트/튜토리얼/설정 1차
+## 2026-04-30 · GitHub push + 스프라이트/튜토리얼/설정 1차
 
 ### 굳어진 결정
 - **Tutorial은 별도 씬, 일회성**: `GameState.tutorial_done`은 `reset()`에서 보존되며 `user://settings.cfg`에 영속화
@@ -50,10 +50,10 @@
 
 ---
 
-## 2026-05-01 — 벡터 캐릭터 + 5단 튜토리얼
+## 2026-05-01 · 벡터 캐릭터 + 5단 튜토리얼
 
 ### 굳어진 결정
-- **벡터 합성 vs PNG**: PNG는 콜리전 박스와 시각이 어긋나고 셰이더로 흰배경 잘라도 외곽선이 거침. `CharacterArt.gd` (Polygon2D 합성, RefCounted + static) 채택 — 콜리전 안쪽에서만 그림. 외곽선 없는 단순 톤이 PRD §9 "코드 생성 미니멀 벡터" 방침과 일치.
+- **벡터 합성 vs PNG**: PNG는 콜리전 박스와 시각이 어긋나고 셰이더로 흰배경 잘라도 외곽선이 거침. `CharacterArt.gd` (Polygon2D 합성, RefCounted + static) 채택 · 콜리전 안쪽에서만 그림. 외곽선 없는 단순 톤이 PRD §9 "코드 생성 미니멀 벡터" 방침과 일치.
 - **레벨업 오버레이 추출**: 인라인 → `LevelUpOverlay.show()`. Stage/Tutorial 둘 다 같은 UI 보장.
 - **레벨업 더미 lazy 스폰**: _ready에서 미리 만들면 사거리 안에서 보이지 않게 처치되는 사고 → `_advance_to(LEVELUP)` 시점에 spawn.
 - **Stage 플랫폼은 단일점프 도달 가능**: 이중점프 없이도 모든 레이아웃 클리어 가능. 이중점프는 더 빠른 루트로 보상.
@@ -61,7 +61,7 @@
 
 ---
 
-## 2026-05-02 — 6맵 SILO-7 + Phase B 시스템 + 적 2종 추가
+## 2026-05-02 · 6맵 SILO-7 + Phase B 시스템 + 적 2종 추가
 
 ### 굳어진 결정
 - **6개 맵 ↔ SILO-7 매핑**: 도시 다양한 장소가 아니라 SILO-7 안의 진입 경로로 재정의 (외곽→옥상→지하→지하철→핵심부→격리 서버실). FULL_STORY 단일 임무 컨셉(OPERATION PALIMPSEST)과 정합.
@@ -75,7 +75,7 @@
 
 ---
 
-## 2026-05-03 — 세계 템플릿 4종 + 보스 SENTINEL + 도전방 + 이스터에그
+## 2026-05-03 · 세계 템플릿 4종 + 보스 SENTINEL + 도전방 + 이스터에그
 
 ### 굳어진 결정
 - **세계 템플릿 4종**: HORIZONTAL / VERTICAL_UP / VERTICAL_DOWN / ARENA. 각 맵이 컨셉에 맞는 템플릿 선택.
@@ -85,23 +85,23 @@
 - **vertical 발판 gap 100~170**: 이중점프 한계 ~190px이라 180+는 도달 불가.
 - **저격수 발판 mid step**: 지면→step→mid 단계화. step 없으면 폭발물로만 잡을 수 있음.
 - **GitHub Pages는 Actions 방식**: 별도 브랜치 안 만들고 Actions API로 직접 배포.
-- **보스 별도 스크립트**: `BossSentinel.gd` 분리 — group "enemy" 등록으로 ARENA enemy_clear에 자연 통합.
+- **보스 별도 스크립트**: `BossSentinel.gd` 분리 · group "enemy" 등록으로 ARENA enemy_clear에 자연 통합.
 - **lab 일반 적 제거**: DESIGN §2.10 "보스 챔버" 정체성 강조.
 - **이스터에그 in-place 시퀀스**: 별도 방 append 대신 페이드 오버레이 + ArchiveOverlay 재생.
 - **블랙아웃 시야**: 정확한 원형 cutout 대신 풀스크린 dim 0.55 + 비네트.
 
 ---
 
-## 2026-05-04 — 적 가장자리 감지 + 보스 페이즈 무적 + Pretendard + 이스터에그 풀스크린 문서
+## 2026-05-04 · 적 가장자리 감지 + 보스 페이즈 무적 + Pretendard + 이스터에그 풀스크린 문서
 
 ### 굳어진 결정
-- **적 가장자리 감지는 raycast**: spawn 시 발판 메타 부여 대신 동적 raycast — 모든 맵 적용 가능 + 발판 변화에도 robust.
+- **적 가장자리 감지는 raycast**: spawn 시 발판 메타 부여 대신 동적 raycast · 모든 맵 적용 가능 + 발판 변화에도 robust.
 - **수직 맵 gap 80 표준**: 1단 점프 한계 104px이라 80은 여유, 분기 도약 140은 1단으로 절대 안 감.
 - **patrol 발판 폭 240+**: 너무 좁으면 ping-pong하다 텔레그래프 거리 안 나옴.
 - **보스 페이즈 무적 1.2s**: 사격 spam 시 freeze 종료 즉시 데미지 들어가 못 인지 → 1.2s + take_damage 무시로 강제 인지.
 - **Pretendard 선택**: NotoSansKR ~16MB 너무 큼. Pretendard subset 1.5MB가 부스 환경 로딩에 적합. OFL 라이선스.
 - **show-don't-tell 원칙 채택**: 모든 텍스트/연출 의사결정의 상위 기준. `docs/design/show_dont_tell.md` 작성.
-- **보스 페이즈 알림 = VEIL**: 큰 영문 배너 대신 VEIL 한 줄 — 캐릭터·메카닉 통합.
+- **보스 페이즈 알림 = VEIL**: 큰 영문 배너 대신 VEIL 한 줄 · 캐릭터·메카닉 통합.
 - **도감은 "관찰 메모"**: blurb 한 줄 + 키워드 색 강조. 공략 글 제거.
 - **자폭 dual-zone**: 단일 반경 2200은 회피 불가 → inner(풀뎀)/outer(1뎀) 거리 보상.
 - **미사일 약한 유도**: 1.4s 유도 후 직진. TURN_RATE 80도/s로 직각 회피 가능, 수직 정지엔 위협.
@@ -110,22 +110,22 @@
 
 ---
 
-## 2026-05-05 — 캐릭터/맵 비주얼 톤업 + VEIL 신뢰도 게이지 + 튜토리얼·맵 폴리시
+## 2026-05-05 · 캐릭터/맵 비주얼 톤업 + VEIL 신뢰도 게이지 + 튜토리얼·맵 폴리시
 
 ### 굳어진 결정
 - **AI 컨셉 = 코드 도형 유지**: 외부 픽셀/벡터 자산 거부, `_filled`/외곽선/디테일 헬퍼로만 톤업. "AI가 만들었다"는 정체성을 비주얼로도 밀기 위함.
 - **5두신 비례**: 4두신(chibi)·8두신(사실적) 사이에서 게임 캐릭터다움 균형. 머리14/상체22/다리16/신발4.
 - **신뢰도 = trust − aggression**: 둘 다 높으면 neutral, 한쪽 우세할 때만 단계가 명확해짐. 두 점수는 결말에 독립적으로 작용.
 - **VEIL 멘트가 추천의 단일 source**: trust/aggression 휴리스틱 대신 `advice.family`로 ★ 마킹 → 멘트와 카드 ★가 항상 같은 카드를 가리킴.
-- **튜토리얼 ↔ 본편 완전 분리**: `start_main_game()`이 skills를 STARTING_SKILLS로 초기화 — 튜토리얼 강제 부여 스킬/XP/레벨이 본편에 안 넘어감.
+- **튜토리얼 ↔ 본편 완전 분리**: `start_main_game()`이 skills를 STARTING_SKILLS로 초기화 · 튜토리얼 강제 부여 스킬/XP/레벨이 본편에 안 넘어감.
 - **비밀 통로 = 더블점프 + 시야 외곽 발판**: 메인 spine 단축으로 줄어든 진행감을 "찾는 재미"로 보상.
 
 ---
 
-## 2026-05-06 — 결말/이스터에그 자막 버그 진짜 원인 + 탈출로 cross-fade + 레버 시스템
+## 2026-05-06 · 결말/이스터에그 자막 버그 진짜 원인 + 탈출로 cross-fade + 레버 시스템
 
 ### 굳어진 결정
-- **버그는 로그로 원인부터**: 결말 C followup 미표시는 choice 라인에서도 `silent_timer`가 누적돼 line_idx가 자동 진행된 게 진짜 원인. watchdog/lockout 우회 시도가 다 실패한 이유 — 디버그 print 없이는 못 잡았음.
+- **버그는 로그로 원인부터**: 결말 C followup 미표시는 choice 라인에서도 `silent_timer`가 누적돼 line_idx가 자동 진행된 게 진짜 원인. watchdog/lockout 우회 시도가 다 실패한 이유 · 디버그 print 없이는 못 잡았음.
 - **CanvasLayer는 부모 modulate를 안 받음**: cross-fade·암전 연출은 CanvasLayer가 아닌 그 안의 Control(`*_root`)에 modulate 적용해야 함.
 - **자막 큐는 paused 전환 직전 purge**: paused 전환 시 SceneTreeTimer가 멈췄다 풀린 뒤 한꺼번에 흘러 outro와 겹침 → 진입 시점에 큐 clear.
 - **interact = attack 키 재사용**: 레버 영역 안에서는 attack 입력을 완전 흡수(별도 interact 키 없음). 영역 밖이면 기존 사격.
@@ -134,19 +134,19 @@
 
 ---
 
-## 2026-05-08 — BGM 매핑 + 크레딧 화면 + 도전방 차폐막 + 디버그 잠금
+## 2026-05-08 · BGM 매핑 + 크레딧 화면 + 도전방 차폐막 + 디버그 잠금
 
 ### 굳어진 결정
 - **BGM은 stage_index가 아닌 route_id로 매핑**: 같은 stage라도 외곽 통로와 시설 내부는 톤이 달라야 함. 시설 진입이 자연스러운 BPM step-up 지점. BgmPlayer=두 AudioStreamPlayer crossfade autoload.
 - **크레딧은 scene/overlay 두 진입점 공통 화면**: 엔딩→크레딧→타이틀(scene) / 설정 탭(overlay, `closed` signal). ESC 한 번으로 닫힘.
-- **ward 레버는 잠긴 문에서 먼 상층 끝**: 의도적 backtracking — "발판→레버 발견→되돌아와 밟기" 두 단계 능동 행동. 5초 hold 방식 폐기.
+- **ward 레버는 잠긴 문에서 먼 상층 끝**: 의도적 backtracking · "발판→레버 발견→되돌아와 밟기" 두 단계 능동 행동. 5초 hold 방식 폐기.
 - **도전방 진입은 발판으로**: 레버("당긴다")보다 발판("들어선다")이 무거운 결정을 가벼운 스텝으로 표현하는 톤에 맞음. 안은 world-space 차폐막(z=9)으로 통째 가림 + 게이트 후 점진 노출.
-- **디버그 모드는 영속화 X**: 타이틀 "snu" 키 시퀀스로 매 실행 해제 — 부스에서 우연히 켠 채 쓰는 일 차단.
-- **사망 화면은 BGM 트랙 유지 + ducking(-12dB)**: 트랙 전환은 분위기가 끊김 — dB만 죽인 먹먹한 톤이 무력감과 맞음.
+- **디버그 모드는 영속화 X**: 타이틀 "snu" 키 시퀀스로 매 실행 해제 · 부스에서 우연히 켠 채 쓰는 일 차단.
+- **사망 화면은 BGM 트랙 유지 + ducking(-12dB)**: 트랙 전환은 분위기가 끊김 · dB만 죽인 먹먹한 톤이 무력감과 맞음.
 
 ---
 
-## 2026-05-09 — SfxPlayer 시스템 + 미구현 스킬 2종 + 탈출로 터널 재설계
+## 2026-05-09 · SfxPlayer 시스템 + 미구현 스킬 2종 + 탈출로 터널 재설계
 
 ### 굳어진 결정
 - **SfxPlayer autoload**: `assets/sfx/<id>(N).{mp3|ogg|wav}` 자동 스캔, variant 무작위, POOL_SIZE=8 round-robin, id별 dB 보정. MP3는 `loop=false` 강제(Godot 기본 true 함정).
@@ -156,7 +156,7 @@
 
 ---
 
-## 2026-05-15 — combat/enemy SFX wire-up 원칙
+## 2026-05-15 · combat/enemy SFX wire-up 원칙
 
 ### 굳어진 결정
 - **발사 1회 = SFX 1회**: `bullet_fire`는 Player._try_attack에서만(Bullet._ready에 넣으면 multishot 5발이 5번 겹침).
@@ -166,27 +166,27 @@
 
 ---
 
-## 2026-05-16 — Patrol 사격+돌진 이중 모드 + positional 호버
+## 2026-05-16 · Patrol 사격+돌진 이중 모드 + positional 호버
 
 ### 굳어진 결정
 - **Patrol = 압박형 이중 모드**: 중거리 사격 + 근접 돌진. 사격 전용은 sniper와 겹침 → 정찰병 정체성을 "사격"이 아닌 "압박"으로. `CHARGE_RANGE=240`으로 거의 항상 돌진, 사격은 보조.
 - **EnemyBullet은 별도 클래스**: Bullet에 enemy flag 추가하면 pierce/tracking/multishot이 죽은 멤버로 남음. 속도 240px/s(Player 900의 27%)로 회피 가능.
 - **Veil 대사는 적 타입 명시 대신 정도·방향 표현**: route 선택에 따라 특정 적 등장이 거짓이 될 수 있음 → "저격수 자리가 많아져요" 식 일반화.
-- **호버만 positional(AudioStreamPlayer2D)**: 전체 positional화는 큰 리팩토링 — "거리 감쇠가 정체성"인 SFX만 개별. AudioListener2D는 Player에 명시 부착(FIXED ARENA 카메라 고정 호환).
+- **호버만 positional(AudioStreamPlayer2D)**: 전체 positional화는 큰 리팩토링 · "거리 감쇠가 정체성"인 SFX만 개별. AudioListener2D는 Player에 명시 부착(FIXED ARENA 카메라 고정 호환).
 
 ---
 
-## 2026-06-06 — paused carry 4중 방어 + 스토리 재설계 외부화
+## 2026-06-06 · paused carry 4중 방어 + 스토리 재설계 외부화
 
 ### 굳어진 결정
 - **paused carry 4중 방어망**: `get_tree().paused`는 SceneTree 전역이라 씬 전환에도 carry → freeze. SceneRouter 전환 직전 해제 + 각 씬 `_ready` 첫 줄 + 오버레이 안전판(`tree_exited`) + 실패 경로 명시 해제로 한 층 누락돼도 회복.
 - **스토리 재설계는 핸드오프 문서로 외부화**: 코드를 보는 Claude Code가 "게임이 강제하는 제약"을 정확히 정리, 창작 이터레이션은 웹이 편함. 갈아엎지 않고 `docs/STORY_HANDOFF.md`로.
-- **em dash 정책**: 캐릭터 대사에서만 제거(톤 가이드), UI 타이포 구분자(`VEIL — ` prefix·라벨·서명)는 디자인이라 유지.
+- **em dash 정책**: 캐릭터 대사에서만 제거(톤 가이드), UI 타이포 구분자(`VEIL · ` prefix·라벨·서명)는 디자인이라 유지.
 - **Bash 커밋 메시지는 heredoc(`<<'MSG'`)으로**: PowerShell here-string 오용으로 제목 깨진 적 있음.
 
 ---
 
-## 2026-06-07 — 위치 효과음 + VeilSight 파일럿(서사 HUD)
+## 2026-06-07 · 위치 효과음 + VeilSight 파일럿(서사 HUD)
 
 ### 굳어진 결정
 - **몰입 부족의 뿌리 = 구조 문제**: VEIL의 "봄"이 전부 플레이 *사이* 텍스트(루트★·스킬★·브리핑·자막)뿐, 플레이 *중* 실연이 0 → v3 역전("이제 요원이 본다")의 baseline 자체가 화면에 없었음.
@@ -198,7 +198,7 @@
 
 ---
 
-## 2026-06-08 — 스킬-적 상성 시스템 + 운영 루틴 도입
+## 2026-06-08 · 스킬-적 상성 시스템 + 운영 루틴 도입
 
 ### 굳어진 결정
 - **폭발물 너프는 데미지+쿨다운 둘 다**: 방패 무시 AoE(상성)는 보존, "올킬 만능"만 제거. 글라이드 정체성 = 공중 제압(저격·드론 상성).
@@ -209,7 +209,7 @@
 
 ---
 
-## 2026-06-09 — 못 잡는 적/함정 VEIL 안내 + 트랩 확산 / shield T3 / 글라이드 게이트
+## 2026-06-09 · 못 잡는 적/함정 VEIL 안내 + 트랩 확산 / shield T3 / 글라이드 게이트
 
 ### 굳어진 결정
 - **회피 전용 식별 = 맵 레벨 플래그(`nest_snipers`)**: 위치 리스트 복제(좌표 매칭 깨지기 쉬움) 대신 "이 맵 저격수는 전부 둥지"를 boolean으로.
@@ -221,7 +221,7 @@
 
 ---
 
-## 2026-06-11 — 감시탑 저격수 완화 + 게이트 오브 차별화
+## 2026-06-11 · 감시탑 저격수 완화 + 게이트 오브 차별화
 
 ### 굳어진 결정
 - **저격수는 엄폐가 아니라 수치로 조정**: 발판 위 적의 하향 사격은 탄 출발점이 벽 밑이라 발판 위 벽으로 못 막음(기하학적 무효) → 둥지 전용(`avoid_only`) 사거리/간격/텔레그래프 완화. 전투 맵 저격수는 보존.
@@ -231,7 +231,7 @@
 
 ---
 
-## 2026-06-12 — 둥지 저격수 스폰 버그 + 공격 강화 재설계
+## 2026-06-12 · 둥지 저격수 스폰 버그 + 공격 강화 재설계
 
 ### 굳어진 결정
 - **위치가 고정 의미인 적은 개수 스케일에서 제외**: risk 배율(×1.5)이 추가 저격수를 `base±120`에 스폰해 64px 둥지 발판을 벗어나 낙하 → 둥지 저격수는 배율 복제 제외.

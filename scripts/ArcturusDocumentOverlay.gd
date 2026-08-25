@@ -1,7 +1,7 @@
 class_name ArcturusDocumentOverlay
 extends Node
 
-# 이스터에그 ARCTURUS 아카이브 — 풀스크린 문서 연출.
+# 이스터에그 ARCTURUS 아카이브 · 풀스크린 문서 연출.
 # 종이 한 장에 위에서부터 줄들이 타이핑되며 나타나고, 카메라(종이)가 자동 스크롤.
 # 시간 정지 + 스페이스/클릭으로 현재 줄 즉시 완성 + 다음 줄로.
 #
@@ -13,8 +13,8 @@ extends Node
 
 signal finished
 
-# 가독 리워크(2026-08-23 사용자 "글씨는 작고 여백만 잔뜩 · 읽기 싫게 생겼다") — 종이 폭·폰트
-# 확대 + 핵심 줄 형광펜 강조("hl": true — 대충 봐도 스토리 흐름이 잡히게).
+# 가독 리워크(2026-08-23 사용자 "글씨는 작고 여백만 잔뜩 · 읽기 싫게 생겼다") · 종이 폭·폰트
+# 확대 + 핵심 줄 형광펜 강조("hl": true · 대충 봐도 스토리 흐름이 잡히게).
 const TYPE_INTERVAL: float = 0.035
 const PAPER_WIDTH: float = 880.0
 const MARGIN_TOP: float = 64.0
@@ -22,7 +22,7 @@ const MARGIN_SIDE: float = 44.0
 const LINE_HEIGHT_BODY: float = 46.0
 const LINE_HEIGHT_TITLE: float = 62.0
 const LINE_HEIGHT_BLANK: float = 20.0
-# 디자인 기준 화면 크기 — show_doc 진입 시 실제 화면(visible_rect)으로 갱신(적응형).
+# 디자인 기준 화면 크기 · show_doc 진입 시 실제 화면(visible_rect)으로 갱신(적응형).
 # const가 아니라 var: 런타임에 현재 해상도/화면비로 덮어쓴다(아래 모든 사용처에 반영).
 var VIEWPORT_W: float = 1280.0
 var VIEWPORT_H: float = 720.0
@@ -41,7 +41,7 @@ var t: float = 0.0
 var pause_after_line: float = 0.0
 var done: bool = false
 var paper_target_y: float = 0.0
-# 다 나온 뒤 사용자 조작 단계 — 위/아래로 스크롤 + 확인 키로 닫기.
+# 다 나온 뒤 사용자 조작 단계 · 위/아래로 스크롤 + 확인 키로 닫기.
 var reading_done: bool = false
 var read_lockout_t: float = 0.0
 const READ_LOCKOUT: float = 0.7
@@ -56,15 +56,15 @@ var started: bool = false
 # _start_typing 콜백 후에도 짧게 더 무시.
 const ENTER_LOCKOUT: float = 0.4
 var enter_lockout_t: float = 0.0
-# 문서 스타일 — "paper"(크림 종이, 기본) / "terminal"(어두운 서버 콘솔 · 2차 피드백:
+# 문서 스타일 · "paper"(크림 종이, 기본) / "terminal"(어두운 서버 콘솔 · 2차 피드백:
 # 서버 로그가 종이 위 파란 형광으로는 로그처럼 안 읽힘 → 터미널 화면을 옮긴 느낌으로).
 # show_doc 호출 전에 세팅한다.
 var style: String = "paper"
-var _kw_color: String = "#0a4a73"   # [[키워드]] 강조색 — 스타일별로 show_doc에서 결정
-# 양식별 등장 연출(5차 피드백 "처음부터 펼쳐져 있지 않게") — 종이는 봉인 펼침, 콘솔은 켜짐.
-var _stamp: PanelContainer = null   # 종이 우상단 스탬프 — 펼침 연출이 끝나며 페이드 인
-var _head_nodes: Array = []         # 종이 레터헤드·괘선 — 접힌 밴드에서 눌린 잔상이 보여 함께 페이드 인
-var _chrome_nodes: Array = []       # 콘솔 타이틀/하단 바 — 켜짐 연출 후 페이드 인
+var _kw_color: String = "#0a4a73"   # [[키워드]] 강조색 · 스타일별로 show_doc에서 결정
+# 양식별 등장 연출(5차 피드백 "처음부터 펼쳐져 있지 않게") · 종이는 봉인 펼침, 콘솔은 켜짐.
+var _stamp: PanelContainer = null   # 종이 우상단 스탬프 · 펼침 연출이 끝나며 페이드 인
+var _head_nodes: Array = []         # 종이 레터헤드·괘선 · 접힌 밴드에서 눌린 잔상이 보여 함께 페이드 인
+var _chrome_nodes: Array = []       # 콘솔 타이틀/하단 바 · 켜짐 연출 후 페이드 인
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -72,7 +72,7 @@ func _ready() -> void:
 func show_doc(input_lines: Array) -> void:
 	SfxPlayer.play("arcturus_enter")
 	lines_data = input_lines
-	# 적응형 — 실제 화면 크기로 기준 갱신 (종이 중앙·하단 안내·스크롤 한계가 화면비 무관).
+	# 적응형 · 실제 화면 크기로 기준 갱신 (종이 중앙·하단 안내·스크롤 한계가 화면비 무관).
 	var vp: Vector2 = get_viewport().get_visible_rect().size
 	VIEWPORT_W = vp.x
 	VIEWPORT_H = vp.y
@@ -92,11 +92,11 @@ func show_doc(input_lines: Array) -> void:
 	paper.size = Vector2(PAPER_WIDTH, _calc_paper_height())
 	paper.modulate.a = 0.0
 	layer.add_child(paper)
-	# paper_target_y 초기값을 시작 position과 동기화 — 안 그러면 0(기본값)으로
+	# paper_target_y 초기값을 시작 position과 동기화 · 안 그러면 0(기본값)으로
 	# lerp되어 페이드인 0.7s 동안 paper가 화면 위로 빠져나가서 제목이 안 보이고
 	# 본문(A 온보딩 등)이 먼저 등장하는 것처럼 보임 (사용자 보고).
 	paper_target_y = MARGIN_TOP
-	# 문서별 양식(3차 피드백 "각 양식에 맞는 그래픽") — paper: 크림 종이+레터헤드+스탬프 /
+	# 문서별 양식(3차 피드백 "각 양식에 맞는 그래픽") · paper: 크림 종이+레터헤드+스탬프 /
 	# terminal: 서버 콘솔 / drive: 회수 드라이브 복호화 뷰어(어두운 보라).
 	var is_term: bool = style == "terminal"
 	var is_drive: bool = style == "drive"
@@ -106,7 +106,7 @@ func show_doc(input_lines: Array) -> void:
 		_kw_color = "#c9a2ff"
 	else:
 		_kw_color = "#0a4a73"
-	# 콘솔 계열 양식은 코딩 폰트(D2Coding, OFL) — 사용자 제안 2026-08-23. 종이는 프리텐다드 유지.
+	# 콘솔 계열 양식은 코딩 폰트(D2Coding, OFL) · 사용자 제안 2026-08-23. 종이는 프리텐다드 유지.
 	var mono: FontFile = null
 	if is_term or is_drive:
 		mono = load("res://assets/fonts/D2Coding.ttf")
@@ -130,7 +130,7 @@ func show_doc(input_lines: Array) -> void:
 	shadow.z_index = -1
 	paper.add_child(shadow)
 	if is_term or is_drive:
-		# 콘솔/뷰어 타이틀 바 — 창 점 3개 + 세션 경로. 화면 밖 스크롤을 따라가지 않게 paper가
+		# 콘솔/뷰어 타이틀 바 · 창 점 3개 + 세션 경로. 화면 밖 스크롤을 따라가지 않게 paper가
 		# 아니라 layer(화면 고정)에 붙인다. 텍스트는 기술 표기(영문 경로)라 대사 검수 대상 아님.
 		var bar := ColorRect.new()
 		bar.color = Color(0.075, 0.095, 0.125, 1.0) if is_term else Color(0.105, 0.075, 0.165, 1.0)
@@ -155,14 +155,14 @@ func show_doc(input_lines: Array) -> void:
 		path_l.size = Vector2(bar.size.x, 22.0)
 		path_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		bar.add_child(path_l)
-		# 은은한 스캔라인 — 4px 간격 수평선(수직 줄무늬 금지 규칙과 별개, CRT 문법은 수평).
+		# 은은한 스캔라인 · 4px 간격 수평선(수직 줄무늬 금지 규칙과 별개, CRT 문법은 수평).
 		var scan := ColorRect.new()
 		scan.color = Color(1, 1, 1, 1)
 		scan.position = paper_visual.position
 		scan.size = paper_visual.size
 		scan.material = _make_scanline_material()
 		paper.add_child(scan)
-		# 콘솔 창 프레임 — 가장자리 1px 라인(4차 피드백 "더 꾸밀 요소"). 스크롤을 따라간다.
+		# 콘솔 창 프레임 · 가장자리 1px 라인(4차 피드백 "더 꾸밀 요소"). 스크롤을 따라간다.
 		var frame := Panel.new()
 		var fr_sb := StyleBoxFlat.new()
 		fr_sb.bg_color = Color(0, 0, 0, 0)
@@ -173,7 +173,7 @@ func show_doc(input_lines: Array) -> void:
 		frame.size = paper_visual.size
 		frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		paper.add_child(frame)
-		# 하단 상태 바 — 세션 정보 + 깜빡이는 블록 커서(터미널 문법). 타이틀 바처럼 화면 고정.
+		# 하단 상태 바 · 세션 정보 + 깜빡이는 블록 커서(터미널 문법). 타이틀 바처럼 화면 고정.
 		# 텍스트는 기술 표기(영문)라 대사 검수 대상 아님.
 		var foot := ColorRect.new()
 		foot.color = bar.color
@@ -208,14 +208,14 @@ func show_doc(input_lines: Array) -> void:
 		ctw.tween_property(cur, "modulate:a", 0.12, 0.5)
 		ctw.tween_property(cur, "modulate:a", 1.0, 0.5)
 	else:
-		# 종이 양식 — 레터헤드(기관명 + 이중 괘선) + 붉은 분류 스탬프. 인사 아카이브 컨셉.
-		# 4차 피드백 "레터헤드와 스탬프가 좀 더 커도 될 것 같다" — 19px/20px로 확대.
+		# 종이 양식 · 레터헤드(기관명 + 이중 괘선) + 붉은 분류 스탬프. 인사 아카이브 컨셉.
+		# 4차 피드백 "레터헤드와 스탬프가 좀 더 커도 될 것 같다" · 19px/20px로 확대.
 		var lh := Label.new()
 		lh.text = "ARCTURUS · PERSONNEL ARCHIVE"
 		lh.add_theme_font_size_override("font_size", 19)
 		lh.add_theme_color_override("font_color", Color(0.33, 0.36, 0.48, 0.9))
 		lh.position = Vector2(0.0, -60.0)
-		lh.modulate.a = 0.0   # 접힌 밴드에서 눌린 잔상 방지 — 펼침 연출과 함께 페이드 인
+		lh.modulate.a = 0.0   # 접힌 밴드에서 눌린 잔상 방지 · 펼침 연출과 함께 페이드 인
 		_head_nodes.append(lh)
 		paper.add_child(lh)
 		var rule := ColorRect.new()
@@ -256,7 +256,7 @@ func show_doc(input_lines: Array) -> void:
 	for entry in lines_data:
 		var d: Dictionary = entry
 		var kind: String = str(d.get("kind", "body"))
-		# RichTextLabel — [[키워드]]만 진청으로 물들인다(줄 전체 형광펜 밴드는 "책 전체에
+		# RichTextLabel · [[키워드]]만 진청으로 물들인다(줄 전체 형광펜 밴드는 "책 전체에
 		# 형광펜" 반려로 폐지, 2026-08-23). 타이핑은 visible_characters로(태그 substr 깨짐 방지).
 		var lbl := RichTextLabel.new()
 		lbl.bbcode_enabled = true
@@ -310,7 +310,7 @@ func show_doc(input_lines: Array) -> void:
 	else:
 		_enter_unfold()
 
-# 종이 등장 v2(2026-08-25 사용자 "펼친다는 느낌이 전혀 아님") — 삼단 접지 편지 문법.
+# 종이 등장 v2(2026-08-25 사용자 "펼친다는 느낌이 전혀 아님") · 삼단 접지 편지 문법.
 # 접힌 팩(상단 면) 아래 가장자리를 봉인 도장이 물고 있고, 봉인이 뜯기면 아랫단이 두 번
 # "젖혀지며" 열린다: 각 단은 뒷면(어두움)이 밝아지며 위 접선(pivot)에서 자라는 원근 눈속임 +
 # 접선 크리스 음영. 다 펼쳐지면 실제 종이로 교차 페이드하고, 접힌 자국이 잠시 남는다.
@@ -320,7 +320,7 @@ func _enter_unfold() -> void:
 	var seg_h: float = 210.0
 	var top_y: float = MARGIN_TOP - 68.0   # paper_visual 윗변(head_room 68)과 정렬
 	var cream: Color = paper_visual.color
-	var wrap := Control.new()   # 가짜 접지 팩 — 교차 페이드 후 통째로 제거
+	var wrap := Control.new()   # 가짜 접지 팩 · 교차 페이드 후 통째로 제거
 	wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	wrap.modulate.a = 0.0
 	layer.add_child(wrap)
@@ -335,7 +335,7 @@ func _enter_unfold() -> void:
 	band_edge.position = Vector2(px, top_y + seg_h)
 	band_edge.size = Vector2(pw, 4.0)
 	wrap.add_child(band_edge)
-	# 아랫단 2·3 — 위 접선 pivot에서 scale.y 0→1로 젖혀진다. 시작은 뒷면 음영(어두운 modulate).
+	# 아랫단 2·3 · 위 접선 pivot에서 scale.y 0→1로 젖혀진다. 시작은 뒷면 음영(어두운 modulate).
 	var segs: Array = []
 	for i in 2:
 		var seg := ColorRect.new()
@@ -346,14 +346,14 @@ func _enter_unfold() -> void:
 		seg.scale = Vector2(1.0, 0.0)
 		seg.modulate = Color(0.72, 0.70, 0.66)
 		wrap.add_child(seg)
-		# 접선 크리스 음영 — 단 상단의 어두운 띠(접혔던 자리).
+		# 접선 크리스 음영 · 단 상단의 어두운 띠(접혔던 자리).
 		var crease := ColorRect.new()
 		crease.color = Color(0.35, 0.32, 0.28, 0.30)
 		crease.position = Vector2.ZERO
 		crease.size = Vector2(pw, 7.0)
 		seg.add_child(crease)
 		segs.append(seg)
-	# 봉인 도장 — 팩 아래 가장자리를 물고 있는 위치. 펼침 시작에 뜯겨 나간다.
+	# 봉인 도장 · 팩 아래 가장자리를 물고 있는 위치. 펼침 시작에 뜯겨 나간다.
 	var seal := PanelContainer.new()
 	var sl_sb := StyleBoxFlat.new()
 	sl_sb.bg_color = Color(0.92, 0.90, 0.84, 1.0)
@@ -375,7 +375,7 @@ func _enter_unfold() -> void:
 	seal.resized.connect(func() -> void: seal.pivot_offset = seal.size / 2.0)
 	wrap.add_child(seal)
 	seal.position = Vector2(VIEWPORT_W * 0.5 - 120.0, top_y + seg_h - 26.0)
-	# 펼친 실제 종이에 남는 접힌 자국 — 잠시 보였다 사라진다(paper 로컬 y = 화면 - MARGIN_TOP).
+	# 펼친 실제 종이에 남는 접힌 자국 · 잠시 보였다 사라진다(paper 로컬 y = 화면 - MARGIN_TOP).
 	var remnants: Array = []
 	for i in 2:
 		var line := ColorRect.new()
@@ -420,7 +420,7 @@ func _enter_unfold() -> void:
 		rt.tween_interval(2.2)
 		rt.tween_property(rn, "modulate:a", 0.0, 1.6)
 
-# 콘솔·뷰어 등장 — 수평 점화선이 번쩍이고 창이 세로로 켜진다(CRT 전원 문법) + 부팅 플리커.
+# 콘솔·뷰어 등장 · 수평 점화선이 번쩍이고 창이 세로로 켜진다(CRT 전원 문법) + 부팅 플리커.
 # 플리커는 저진폭 2회(광과민 고려)이며 화면 효과 옵션이 꺼져 있으면 생략.
 func _enter_power_on() -> void:
 	# 창은 점화선 번쩍임 직후에야 보인다(그 전까지 alpha 0 · 꺼진 화면).
@@ -443,7 +443,7 @@ func _enter_power_on() -> void:
 		tw.tween_property(paper, "modulate:a", 1.0, 0.06)
 		tw.tween_property(paper, "modulate:a", 0.85, 0.05)
 		tw.tween_property(paper, "modulate:a", 1.0, 0.07)
-	# 타이틀/하단 바 — 창이 켜진 뒤 함께 점등.
+	# 타이틀/하단 바 · 창이 켜진 뒤 함께 점등.
 	for c in _chrome_nodes:
 		if c != null and is_instance_valid(c):
 			tw.parallel().tween_property(c, "modulate:a", 1.0, 0.25)
@@ -487,7 +487,7 @@ func _process(delta: float) -> void:
 		return
 	# 종이 부드럽게 스크롤 (현재 줄을 화면 중앙 ~40%에 위치)
 	paper.position.y = lerp(paper.position.y, paper_target_y, SCROLL_LERP)
-	# 페이드인 중엔 typing 진행 X — _start_typing 콜백이 started=true로 바꿔야 시작.
+	# 페이드인 중엔 typing 진행 X · _start_typing 콜백이 started=true로 바꿔야 시작.
 	if not started:
 		return
 	if enter_lockout_t > 0.0:
@@ -572,7 +572,7 @@ func _enter_reading_done() -> void:
 	tw.tween_property(close_hint_label, "modulate:a", 1.0, 0.4)
 
 func _handle_user_scroll(_delta: float) -> void:
-	# 위/아래 hold로 paper_target_y 조정 — 사용자가 다시 읽을 수 있게.
+	# 위/아래 hold로 paper_target_y 조정 · 사용자가 다시 읽을 수 있게.
 	# W/S는 jump 등에 묶여 ui_up/down에 안 붙을 수 있어 물리 키로 직접 체크(사용자: WS로도 스크롤).
 	if Input.is_action_pressed("ui_up") or Input.is_action_pressed("move_left") or Input.is_key_pressed(KEY_W):
 		_scroll_paper(12.0)
@@ -590,14 +590,14 @@ func _scroll_paper(amount: float) -> void:
 func _input(event: InputEvent) -> void:
 	if done:
 		return
-	# 페이드인 중 + 진입 직후 마진 — 이전 화면 점프 키 잔여 입력 차단.
+	# 페이드인 중 + 진입 직후 마진 · 이전 화면 점프 키 잔여 입력 차단.
 	if not started or enter_lockout_t > 0.0:
 		return
-	# 다 읽힌 상태 — 위/아래는 _process polling, 확인 키는 lockout 후 닫기.
+	# 다 읽힌 상태 · 위/아래는 _process polling, 확인 키는 lockout 후 닫기.
 	if reading_done:
 		if read_lockout_t > 0.0:
 			return
-		# 마우스 휠 — 종이 스크롤 (휠 업=위로 거슬러 보기). 사용자: 휠로도 스크롤.
+		# 마우스 휠 · 종이 스크롤 (휠 업=위로 거슬러 보기). 사용자: 휠로도 스크롤.
 		if event is InputEventMouseButton and event.pressed:
 			if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 				_scroll_paper(48.0)
@@ -607,7 +607,7 @@ func _input(event: InputEvent) -> void:
 				_scroll_paper(-48.0)
 				get_viewport().set_input_as_handled()
 				return
-		# 닫기 — 확인 키(Space/Enter)·스킵·공격·좌클릭·화면 탭. jump(W)는 스크롤에 쓰므로 닫기에서 뺀다.
+		# 닫기 · 확인 키(Space/Enter)·스킵·공격·좌클릭·화면 탭. jump(W)는 스크롤에 쓰므로 닫기에서 뺀다.
 		var close_pressed: bool = false
 		if event.is_action_pressed("ui_accept") or event.is_action_pressed("ui_skip") or event.is_action_pressed("attack") or OrientationGuard.is_tap(event):
 			close_pressed = true
@@ -680,7 +680,7 @@ func _exit_tree() -> void:
 	if tree != null:
 		tree.paused = false
 
-# 터미널 스캔라인 — 4px 주기의 은은한 수평선(CRT 문법). 콘솔 창 위에만 깔린다.
+# 터미널 스캔라인 · 4px 주기의 은은한 수평선(CRT 문법). 콘솔 창 위에만 깔린다.
 func _make_scanline_material() -> ShaderMaterial:
 	var sh := Shader.new()
 	sh.code = "shader_type canvas_item;

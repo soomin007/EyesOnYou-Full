@@ -1,9 +1,9 @@
 extends Node
 
-# 인스타 홍보용 스크린샷 하니스 v2 — "게임의 본질"을 자연스러운 프레이밍으로 잡는다.
+# 인스타 홍보용 스크린샷 하니스 v2 · "게임의 본질"을 자연스러운 프레이밍으로 잡는다.
 #  설계 철학(사용자 피드백):
 #   - 줌인 없음. 게임 기본 카메라 그대로(캐릭터는 맥락 속 작게, 레벨/HUD 전체가 보이게).
-#   - VEIL 자막은 지우지 않고 화면의 주인공으로 — 이 게임의 정체성은 VEIL과의 관계다.
+#   - VEIL 자막은 지우지 않고 화면의 주인공으로 · 이 게임의 정체성은 VEIL과의 관계다.
 #   - 억지 액션을 지어내지 말고, 게임 고유 시스템/서사 모먼트를 포착한다:
 #       VEIL 위협 콜아웃 / 첫 조우 도감 카드 / 시야 붕괴(역전) / 보스 / 엔딩 단말기 / 맵 분위기.
 #   - 풀 HUD(스킬 목록·진행도·VEIL 게이지)도 구도의 일부.
@@ -27,7 +27,7 @@ const RICH_SKILLS: Dictionary = {
 }
 
 func _ready() -> void:
-	GameState.persist_blocked = true   # 실사용자 저장 파일 보호(2026-08-24) — 하니스 공통
+	GameState.persist_blocked = true   # 실사용자 저장 파일 보호(2026-08-24) · 하니스 공통
 	DirAccess.make_dir_recursive_absolute(OUT_DIR)
 	_set_high_res()
 	_run.call_deferred()
@@ -42,7 +42,7 @@ func _set_high_res() -> void:
 	win.content_scale_size = Vector2i(1280, 720)
 	win.size = Vector2i(SHOT_W, SHOT_H)
 	win.position = Vector2i(0, 0)
-	# 물리 보간 OFF — 캡처 순간 잔상(반투명/흐릿) 방지.
+	# 물리 보간 OFF · 캡처 순간 잔상(반투명/흐릿) 방지.
 	get_tree().root.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 
 func _run() -> void:
@@ -112,12 +112,12 @@ func _place_player(stage: Node, pos: Vector2, facing: int = 1) -> void:
 		cam.reset_physics_interpolation()
 	await _wait(8)
 
-# VEIL 자막 한 줄(서사). 기존 자동 자막을 비우고 의도한 한 줄만 — 깔끔하게 VEIL을 살린다.
+# VEIL 자막 한 줄(서사). 기존 자동 자막을 비우고 의도한 한 줄만 · 깔끔하게 VEIL을 살린다.
 func _say(stage: Node, text: String) -> void:
 	stage.call("_purge_subtitles")
 	stage.call("_show_veil_subtitle", text, 8.0, false, true)
 
-# 저격수 조준 — 실제 게임처럼 사선(LoS) 트인 경우에만 붉은 조준선(벽 관통 금지).
+# 저격수 조준 · 실제 게임처럼 사선(LoS) 트인 경우에만 붉은 조준선(벽 관통 금지).
 func _aim_if_los(sniper: Node, do_fire: bool = false) -> bool:
 	if sniper == null or not is_instance_valid(sniper):
 		return false
@@ -142,7 +142,7 @@ func _aim_all_snipers(do_fire: bool = false) -> int:
 				n += 1
 	return n
 
-# 캡처 직전 고정 — 무적 점멸로 인한 반투명 차단 + 투사체 정지로 또렷한 프레임.
+# 캡처 직전 고정 · 무적 점멸로 인한 반투명 차단 + 투사체 정지로 또렷한 프레임.
 func _freeze_for_capture(stage: Node) -> void:
 	var p: Node2D = _player()
 	for n in stage.get_children():
@@ -158,7 +158,7 @@ func _freeze_for_capture(stage: Node) -> void:
 			(vis as CanvasItem).modulate.a = 1.0
 		p.set_physics_process(false)
 
-# ─── 1. VEIL과의 만남 — 튜토리얼 인트로(레이더 눈 + 통신 연결 자막) ──
+# ─── 1. VEIL과의 만남 · 튜토리얼 인트로(레이더 눈 + 통신 연결 자막) ──
 func _shot_veil_intro() -> void:
 	get_tree().paused = false
 	GameState.start_main_game()
@@ -171,12 +171,12 @@ func _shot_veil_intro() -> void:
 	await _wait(95)
 	await _capture("veil_intro", tut)
 
-# ─── 2. VEIL이 위협을 짚어준다 — 감시탑, 실제 저격 사선 + VEIL 콜아웃 ──
+# ─── 2. VEIL이 위협을 짚어준다 · 감시탑, 실제 저격 사선 + VEIL 콜아웃 ──
 func _shot_veil_threat() -> void:
 	var stage: Node = await _load_stage("route_watchtower", 2, RICH_SKILLS)
 	if stage == null:
 		return
-	# 중층 정찰단 발판 — 좌측 둥지 저격수가 사선을 가로지른다(기본 카메라, 맥락 전체).
+	# 중층 정찰단 발판 · 좌측 둥지 저격수가 사선을 가로지른다(기본 카메라, 맥락 전체).
 	_place_player(stage, Vector2(620.0, 1148.0), -1)
 	await _wait(8)
 	_aim_all_snipers(false)  # 사선 트인 저격수 조준선
@@ -185,7 +185,7 @@ func _shot_veil_threat() -> void:
 	_freeze_for_capture(stage)
 	await _capture("veil_threat", stage)
 
-# ─── 3. 첫 조우 도감 카드 — 게임이 알아서 띄우는 적 소개 ──────────
+# ─── 3. 첫 조우 도감 카드 · 게임이 알아서 띄우는 적 소개 ──────────
 func _shot_enemy_card() -> void:
 	var stage: Node = await _load_stage("route_watchtower", 2, RICH_SKILLS)
 	if stage == null:
@@ -193,15 +193,15 @@ func _shot_enemy_card() -> void:
 	_place_player(stage, Vector2(620.0, 1148.0), -1)
 	await _wait(8)
 	_aim_all_snipers(false)  # 배경에 저격 사선
-	# 첫 조우 카드(저격수) — 실제 게임의 도감 시스템.
+	# 첫 조우 카드(저격수) · 실제 게임의 도감 시스템.
 	BestiaryOverlay.show_card(stage, "sniper")
 	await _wait(12)
 	await _capture("enemy_card_sniper", stage)
 	get_tree().paused = false  # 카드가 pause했으니 해제
 
-# ─── 4. 시야 붕괴(역전) + 보스 — VEIL이 "이제 안 보여요" ─────────
+# ─── 4. 시야 붕괴(역전) + 보스 · VEIL이 "이제 안 보여요" ─────────
 func _shot_boss_degradation() -> void:
-	GameState.veil_degraded = true  # 시야 붕괴 — 화면이 어두워지고 마커가 무너진다
+	GameState.veil_degraded = true  # 시야 붕괴 · 화면이 어두워지고 마커가 무너진다
 	var stage: Node = await _load_stage("route_lab", 5, RICH_SKILLS)
 	if stage == null:
 		GameState.veil_degraded = false
@@ -227,7 +227,7 @@ func _shot_boss_degradation() -> void:
 	await _capture("boss_sentinel", stage)
 	GameState.veil_degraded = false
 
-# ─── 5. 데이터 센터 — 드론(위) + 저격(같은 층) 동시 고위험 ───────
+# ─── 5. 데이터 센터 · 드론(위) + 저격(같은 층) 동시 고위험 ───────
 func _shot_map_datacenter() -> void:
 	var stage: Node = await _load_stage("route_datacenter", 4, RICH_SKILLS)
 	if stage == null:
@@ -245,12 +245,12 @@ func _shot_map_datacenter() -> void:
 	_freeze_for_capture(stage)
 	await _capture("map_datacenter", stage)
 
-# ─── 6. 냉각 시설 — 증기·드론·게이트·스카이라인(맵 분위기) ───────
+# ─── 6. 냉각 시설 · 증기·드론·게이트·스카이라인(맵 분위기) ───────
 func _shot_map_cooling() -> void:
 	var stage: Node = await _load_stage("route_cooling", 3, RICH_SKILLS)
 	if stage == null:
 		return
-	# XP 발판(1180,440) — 머리 위 드론, 게이트 오브, 도시 배경이 한 화면에.
+	# XP 발판(1180,440) · 머리 위 드론, 게이트 오브, 도시 배경이 한 화면에.
 	_place_player(stage, Vector2(1180.0, 430.0), 1)
 	await _wait(10)
 	_say(stage, "여긴 서버를 식히는 곳이에요. ...저도 이런 데 어딘가 있겠죠. 바닥 증기 조심해요.")
@@ -258,12 +258,12 @@ func _shot_map_cooling() -> void:
 	_freeze_for_capture(stage)
 	await _capture("map_cooling", stage)
 
-# ─── 7. 외벽 옥상 — 밤하늘 아래 수직 등반(맵 분위기) ─────────────
+# ─── 7. 외벽 옥상 · 밤하늘 아래 수직 등반(맵 분위기) ─────────────
 func _shot_map_rooftops() -> void:
 	var stage: Node = await _load_stage("route_rooftops", 0, {"multishot": 1, "dash_boost": 1})
 	if stage == null:
 		return
-	# 분기 옥상(640,2040) 부근 — 등반 동선·발판·별 배경이 자연스럽게.
+	# 분기 옥상(640,2040) 부근 · 등반 동선·발판·별 배경이 자연스럽게.
 	_place_player(stage, Vector2(640.0, 2010.0), 1)
 	await _wait(10)
 	_say(stage, "옥상이 출구예요. 멈추면 저격에 잡혀요. 계속 움직여요.")
@@ -271,7 +271,7 @@ func _shot_map_rooftops() -> void:
 	_freeze_for_capture(stage)
 	await _capture("map_rooftops", stage)
 
-# ─── 8. 루트 분기 — 스토리 stage1(지하철 vs 감시탑, 위험 대비) ──
+# ─── 8. 루트 분기 · 스토리 stage1(지하철 vs 감시탑, 위험 대비) ──
 func _shot_route_fork() -> void:
 	_new_game(1, {}, true)
 	var packed: PackedScene = load("res://scenes/route_map.tscn") as PackedScene
@@ -282,7 +282,7 @@ func _shot_route_fork() -> void:
 	await _wait(44)
 	await _capture("route_fork", rm)
 
-# ─── 9. 스킬트리 — 진행된 빌드 ──────────────────────────────────
+# ─── 9. 스킬트리 · 진행된 빌드 ──────────────────────────────────
 func _shot_skilltree() -> void:
 	_new_game(3, {
 		"fire_boost": 2, "multishot": 2, "glide": 2,
@@ -292,7 +292,7 @@ func _shot_skilltree() -> void:
 	await _wait(26)
 	await _capture("skilltree", o)
 
-# ─── 10. 엔딩 단말기 — ??? 격리 서버실, ONLINE 단말기로 ──────────
+# ─── 10. 엔딩 단말기 · ??? 격리 서버실, ONLINE 단말기로 ──────────
 func _shot_ending_terminal() -> void:
 	_new_game(6, RICH_SKILLS)  # STAGE 7/7
 	var route: Dictionary = _find_route("route_hidden")
@@ -305,7 +305,7 @@ func _shot_ending_terminal() -> void:
 	var stage: Node = packed.instantiate()
 	add_child(stage)
 	await _wait(34)
-	# 켜진(ONLINE) 첫 단말기(x1500) 앞 — 트리거 전 위치(x1340)에서 안내 문구가 보이게.
+	# 켜진(ONLINE) 첫 단말기(x1500) 앞 · 트리거 전 위치(x1340)에서 안내 문구가 보이게.
 	_place_player(stage, Vector2(1340.0, 540.0), 1)
 	await _wait(56)  # 안내 페이드인(1.0s + 0.6s) 경과
 	_freeze_for_capture(stage)

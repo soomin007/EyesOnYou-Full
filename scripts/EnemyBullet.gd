@@ -5,7 +5,7 @@ extends Area2D
 # 플레이어 Bullet과 분리한 이유: collision mask, 색상, 속도, 데미지 규칙이 달라
 # 한 클래스에 분기를 넣기보다 별도 클래스가 깔끔.
 
-# 사용자 피드백(2026-05-16): 360은 회피가 거의 불가능 — 240으로 낮춤.
+# 사용자 피드백(2026-05-16): 360은 회피가 거의 불가능 · 240으로 낮춤.
 # Player bullet 900 대비 27% 속도라 점프/대시로 충분히 피할 수 있는 영역.
 const BASE_SPEED: float = 240.0
 const BASE_LIFETIME: float = 1.6  # 속도 낮춘 만큼 lifetime 늘려 사거리 유지(384px → 384px)
@@ -27,11 +27,11 @@ func _ready() -> void:
 	col.shape = shape
 	add_child(col)
 
-	# 진행 방향으로 회전 — 아래/위/대각 발사에서도 총알이 나아가는 쪽을 향하게(좌우 전용 그림 버그 수정).
+	# 진행 방향으로 회전 · 아래/위/대각 발사에서도 총알이 나아가는 쪽을 향하게(좌우 전용 그림 버그 수정).
 	if velocity != Vector2.ZERO:
 		rotation = velocity.angle()
 
-	# 적 톤(주황) — 플레이어 노랑과 시각적으로 구분. 로컬 +x = 진행 방향.
+	# 적 톤(주황) · 플레이어 노랑과 시각적으로 구분. 로컬 +x = 진행 방향.
 	var trail := ColorRect.new()
 	trail.color = Color(1.0, 0.55, 0.30, 0.55)
 	trail.size = Vector2(16.0, 2.0)

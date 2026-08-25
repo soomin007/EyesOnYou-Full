@@ -7,7 +7,7 @@ extends Area2D
 #
 # 엄폐 게임플레이의 핵심 도구: 총알은 엄폐물에 막히지만 수류탄은 포물선으로 넘겨 숨은 채 먼 적을 친다.
 
-const GRAVITY: float = 1400.0   # Player.GRAVITY와 동일 — 미리보기 궤도와 실제 비행 일치
+const GRAVITY: float = 1400.0   # Player.GRAVITY와 동일 · 미리보기 궤도와 실제 비행 일치
 const FUSE: float = 2.5         # 아무것도 안 맞아도 이 시간 뒤 폭발
 
 var velocity: Vector2 = Vector2.ZERO
@@ -27,7 +27,7 @@ func _ready() -> void:
 	shape.radius = 6.0
 	col.shape = shape
 	add_child(col)
-	# 외형 — 작은 어두운 구체 + 앰버 안전핀
+	# 외형 · 작은 어두운 구체 + 앰버 안전핀
 	var b := ColorRect.new()
 	b.color = Color(0.16, 0.17, 0.14)
 	b.size = Vector2(12.0, 12.0)
@@ -52,7 +52,7 @@ func _physics_process(delta: float) -> void:
 func _on_body_entered(_body: Node) -> void:
 	if _dead:
 		return
-	# 벽/바닥/발판/엄폐물/적 어디든 닿으면 폭발 — 예측 궤도(raycast)와 일치시킴(발판 통과 제거).
+	# 벽/바닥/발판/엄폐물/적 어디든 닿으면 폭발 · 예측 궤도(raycast)와 일치시킴(발판 통과 제거).
 	# (예전엔 원웨이 발판을 통과시켜 "궤도는 발판에서 끊기는데 실탄은 뚫고 감" 불일치가 있었음.)
 	explode()
 
@@ -63,7 +63,7 @@ func explode() -> void:
 	var center: Vector2 = global_position
 	SfxPlayer.play_at("bomb_explode", center)
 	# 반경 내 적을 거리순 최대 max_hits체 (몰살 방지). AoE라 방패 방향 무시(1인자 take_damage).
-	# "enemy" 그룹 + "boss_hittable" 그룹(14-1 거짓 VEIL 등 그룹 밖 보스체) — 폭발이 보스를
+	# "enemy" 그룹 + "boss_hittable" 그룹(14-1 거짓 VEIL 등 그룹 밖 보스체) · 폭발이 보스를
 	# 아예 못 때리던 버그(사용자 보고 2026-08-12) 수정.
 	var in_range: Array = []
 	for n in get_tree().get_nodes_in_group("enemy") + get_tree().get_nodes_in_group("boss_hittable"):
@@ -85,7 +85,7 @@ func explode() -> void:
 	_spawn_blast(center)
 	queue_free()
 
-# 확산 링 — 수류탄이 free돼도 남게 부모(Stage)에 붙인다.
+# 확산 링 · 수류탄이 free돼도 남게 부모(Stage)에 붙인다.
 func _spawn_blast(center: Vector2) -> void:
 	var host: Node = get_parent()
 	if host == null:

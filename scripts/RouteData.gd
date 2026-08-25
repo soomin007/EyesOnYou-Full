@@ -1,7 +1,7 @@
 class_name RouteData
 extends RefCounted
 
-# 25개 맵 — Dead Cells 스타일로 stage_index 별 후보 풀이 다름.
+# 25개 맵 · Dead Cells 스타일로 stage_index 별 후보 풀이 다름.
 #   min_stage / max_stage : 등장 가능 stage 범위 (양 끝 포함)
 #   available_stages       : 명시적 리스트 (있으면 우선, 없으면 min/max 사용)
 #   guaranteed_in_stages   : 해당 stage 풀 빌드 시 항상 포함되는 맵 (셔플 전 fix-slot)
@@ -12,22 +12,22 @@ extends RefCounted
 #   veil_comment / entry_comment 기본 문안 = **중립 전술 보고체**(첫 판 = cold 밴드에서
 #   warm처럼 들리지 않게). warm 밴드에서만 부드러운 변형을 쓰며, 그 문안은
 #   veil_comment_warm / entry_comment_warm 키에 둔다(없으면 기본 폴백 · VeilDialogue.banded 참고).
-#   warm 키는 warm 도달이 가능한 맵(스테이지 4+ 등장)에만 — 막1 전용 맵은 구조적으로 불가(trust 적립 속도).
+#   warm 키는 warm 도달이 가능한 맵(스테이지 4+ 등장)에만 · 막1 전용 맵은 구조적으로 불가(trust 적립 속도).
 #
-# ─── 막 정체성 계약 (단일 소스 = docs/design/act_identity.md) — 새 맵 추가 시 지킬 것 ───
+# ─── 막 정체성 계약 (단일 소스 = docs/design/act_identity.md) · 새 맵 추가 시 지킬 것 ───
 #   막1(침투, s0~2) 팔레트 = **인간 경비만**(patrol/방패병/저격). 드론·자폭병·증기·포탑·레이저는 막2+ 전용.
 #     → 막2 진입의 "기계가 깨어난다" 문턱(첫 드론 반응, B-4)이 성립하려면 막1엔 기계 위협이 없어야 한다.
-#     (현재 막1 맵 8종 전부 drone/bomber [] — 누수 없음. 막1 맵에 drone/bomber 넣지 말 것.)
+#     (현재 막1 맵 8종 전부 drone/bomber [] · 누수 없음. 막1 맵에 drone/bomber 넣지 말 것.)
 #   막1 난이도 램프 = s0 안전(검증 오프너만) / s1 변형(risk≤2) / s2 고조(risk3 watchtower 등). 오프닝 막에
-#     risk3 스파이크 금지 — 새 막1 맵의 등장 stage는 이 램프에 맞춰 배치.
+#     risk3 스파이크 금지 · 새 막1 맵의 등장 stage는 이 램프에 맞춰 배치.
 #   막2(잠입, s3~5) 팔레트 = **기계·함정 도입**(드론/자폭병/증기/포탑/레이저). 위협의 장치화 = 막2 정체성.
 #     램프 = s3 도입(risk2, 기계 입문) / s4 전개(ward ??? 복선 보장) / s5 고조(risk3 substation·relay + blackout
-#     도전 보장). risk3 맵은 막2 첫 stage(s3) 금지 — 문턱 직후 스파이크 방지.
+#     도전 보장). risk3 맵은 막2 첫 stage(s3) 금지 · 문턱 직후 스파이크 방지.
 #   ── 5막 재구조화(2026-07-07) ── 내부 스테이지(0-based):
 #   막3(핵심부, s6~8) = s6~7 전투 풀(datacenter/server_hall/control_corridor + ??? 보장, min6 max7) /
 #     s8 lab SENTINEL 페이크 보스(단일·배타). §7 reveal은 여기서. 처리선택 없이 막4로 계속.
-#   막4(추적, s9~11) = 기존 막2 기믹 맵 B그룹(추격·아레나·엄폐·리듬, min9 max12) — 후반 난이도 램프.
-#   막5(대면, s12~14) = s12 전투(B그룹) / s13 route_core_recovery 회수+처리선택(§8 이주, 단일·배타 —
+#   막4(추적, s9~11) = 기존 막2 기믹 맵 B그룹(추격·아레나·엄폐·리듬, min9 max12) · 후반 난이도 램프.
+#   막5(대면, s12~14) = s12 전투(B그룹) / s13 route_core_recovery 회수+처리선택(§8 이주, 단일·배타 ·
 #     다음 A4에 라이벌 최종 보스가 여기 얹힘) / s14 escape 탈출(단일·배타·마지막). 시야붕괴 onset=막5(is_late_act).
 #     라이벌 VEIL: 재머·거짓 렌더 3타입(위장 적/함정/시선 거짓)이 막3 전투 풀에, reveal이 s8 lab에.
 
@@ -88,12 +88,12 @@ const ALL_ROUTES: Array = [
 		"reward_type": "xp",
 		"hidden": false,
 		"unique": false,
-		# 막1(외곽) 진입 bridge — 외벽 단계 안에서만. 막2부터는 내부 맵.
+		# 막1(외곽) 진입 bridge · 외벽 단계 안에서만. 막2부터는 내부 맵.
 		"min_stage": 1, "max_stage": 2,
 		"tags": ["근접전", "함정", "전투"],
 		"veil_comment": "옛 지하철입니다. 폐역인데 선로는 살아 있습니다. 신호등을 봐 두십시오.",
 		# 하강 진입 한 문장 = 고도 전이 정당화(C안, 2026-08-25). 필터로 지상→지하 전이만 남으니 항상 참.
-		# 열차 규칙은 방2 진입 route_line이 전담(entry는 방1 승강장 홀에서 재생 — 무맥락 검수 FAIL① 수정).
+		# 열차 규칙은 방2 진입 route_line이 전담(entry는 방1 승강장 홀에서 재생 · 무맥락 검수 FAIL① 수정).
 		"entry_comment": "지하로 내려왔습니다. 폐역 승강장입니다. 출구는 안쪽 선로 방향입니다. 경비를 전부 상대할 필요는 없습니다.",
 		"stage_color": Color(0.08, 0.10, 0.14),
 	},
@@ -105,7 +105,7 @@ const ALL_ROUTES: Array = [
 		"reward_type": "xp",
 		"hidden": false,
 		"unique": false,
-		# 드론 첫 등장 — 막2(잠입) 전반.
+		# 드론 첫 등장 · 막2(잠입) 전반.
 		"min_stage": 3, "max_stage": 5,
 		"tags": ["전투", "드론", "함정"],
 		"veil_comment": "냉각 플랜트입니다. 바닥 증기는 타이밍을 보고 지나가십시오. 드론은 위에 떠 있습니다.",
@@ -124,7 +124,7 @@ const ALL_ROUTES: Array = [
 		"reward_type": "recon",
 		"hidden": false,
 		"unique": false,
-		# 막1 고조(B-3 난이도 램프) — 막1 유일 risk3(저격 둥지 3). s2 전용으로 빼 오프닝 막 s1 스파이크 제거.
+		# 막1 고조(B-3 난이도 램프) · 막1 유일 risk3(저격 둥지 3). s2 전용으로 빼 오프닝 막 s1 스파이크 제거.
 		# act_identity.md §2-3: s0 안전 / s1 변형(risk≤2) / s2 고조(이 맵 = 막1 클라이맥스, 노출결).
 		"min_stage": 2, "max_stage": 2,
 		"tags": ["원거리", "전투", "노출"],
@@ -141,7 +141,7 @@ const ALL_ROUTES: Array = [
 		"hidden": false,
 		"unique": false,
 		"min_stage": 3, "max_stage": 5,
-		# 격리 병동은 ??? 맵 복선 트리거 — 막2 풀에 보장(guaranteed).
+		# 격리 병동은 ??? 맵 복선 트리거 · 막2 풀에 보장(guaranteed).
 		"guaranteed_in_stages": [4],
 		"tags": ["우회", "어두운_환경", "은폐"],
 		"veil_comment": "격리 병동입니다. 도면과 다르게 생겼을 겁니다.",
@@ -175,7 +175,7 @@ const ALL_ROUTES: Array = [
 		"reward_type": "",
 		"hidden": false,
 		"unique": false,
-		# 막5 종착(s15=내부14). 본편은 처리별 탈출 4종(아래)이 대체 — 이 원형은 **스토리 모드 전용**
+		# 막5 종착(s15=내부14). 본편은 처리별 탈출 4종(아래)이 대체 · 이 원형은 **스토리 모드 전용**
 		# (STORY_SCHEDULE이 직접 참조). story_only는 본편 풀에서 제외 플래그(replay_support_plan §3.2).
 		"min_stage": 14, "max_stage": 14,
 		"available_stages": [14],
@@ -260,8 +260,8 @@ const ALL_ROUTES: Array = [
 		"reward_type": "record",
 		"hidden": false,
 		"unique": false,
-		# 막3 SENTINEL 페이크 보스(s9=내부8) — 5막: 처치 후 §7 reveal → 막4로 계속(회수/처리선택은 막5로 이주).
-		# 보스 스테이지라 배타 배치(다른 route가 이 인덱스에 겹치면 보스 우회 가능 — 소프트락/스킵 위험).
+		# 막3 SENTINEL 페이크 보스(s9=내부8) · 5막: 처치 후 §7 reveal → 막4로 계속(회수/처리선택은 막5로 이주).
+		# 보스 스테이지라 배타 배치(다른 route가 이 인덱스에 겹치면 보스 우회 가능 · 소프트락/스킵 위험).
 		"min_stage": 8, "max_stage": 8,
 		"tags": ["전투", "드론", "밝은_환경"],
 		"veil_comment": "핵심부입니다. 정면 돌파에 드론 상시 순찰. 그만큼 크게 법니다.",
@@ -297,7 +297,7 @@ const ALL_ROUTES: Array = [
 		"reward_type": "recon",
 		"hidden": true,
 		"unique": true,
-		# 막3 진입 전투 풀의 진실 분기 — 정적 아카이브(VEIL-1 reveal). 클리어 시 truth_seen,
+		# 막3 진입 전투 풀의 진실 분기 · 정적 아카이브(VEIL-1 reveal). 클리어 시 truth_seen,
 		# 엔딩 직행 폐기 → 다음 스테이지로 진행(특수 '진실' 엔딩의 신호).
 		# 5막: 막3 전투 2스테이지(s6-7=내부6-7). 진실 분기가 항상 선택 가능하도록 첫 전투 스테이지에 guaranteed.
 		"min_stage": 6, "max_stage": 7,
@@ -334,7 +334,7 @@ const ALL_ROUTES: Array = [
 		"reward_type": "recon",
 		"hidden": false,
 		"unique": false,
-		# 막1 침투 변형 — s1~2(첫 맵 s0엔 안 둠: 방패병이 첫 맵엔 불합리, 사용자 보고 2026-06-25).
+		# 막1 침투 변형 · s1~2(첫 맵 s0엔 안 둠: 방패병이 첫 맵엔 불합리, 사용자 보고 2026-06-25).
 		"min_stage": 1, "max_stage": 2,
 		"tags": ["우회", "근접전", "어두운_환경"],
 		"veil_comment": "지하 주차장입니다. 셔터가 열릴 때 지나가십시오. 램프가 붉으면 곧 닫힙니다.",
@@ -350,13 +350,13 @@ const ALL_ROUTES: Array = [
 		"reward_type": "xp",
 		"hidden": false,
 		"unique": false,
-		# 막2 고조(난이도 램프) — risk3(저격+드론 동시). 막2 첫 stage(s3) 제외해 문턱 직후 스파이크 제거.
+		# 막2 고조(난이도 램프) · risk3(저격+드론 동시). 막2 첫 stage(s3) 제외해 문턱 직후 스파이크 제거.
 		# act_identity.md §4: s3 도입(r2 기계 입문) / s4 전개 / s5 고조. s4~5 전개·고조 구간에 배치.
 		"min_stage": 4, "max_stage": 5,
 		"tags": ["원거리", "드론", "노출", "전투"],
 		"veil_comment": "변전소입니다. 바닥 방전은 발판 위로 피하십시오. 변압기 위 저격, 머리 위 드론.",
 		"veil_comment_warm": "변전소예요. 바닥 방전은 발판 위로 피해요. 변압기 위 저격, 머리 위 드론.",
-		# 재작성(2026-08-22 사용자 "변압기가 어딨고 왜 뒤에 붙어야 하는데") — 이 맵에 "뒤에 붙는"
+		# 재작성(2026-08-22 사용자 "변압기가 어딨고 왜 뒤에 붙어야 하는데") · 이 맵에 "뒤에 붙는"
 		# 엄폐 문법은 없다. 실제 문법 = 바닥 방전은 발판 위로, 단 위에는 저격이 있다(체류 비용).
 		# EN: "Substation. The floor wires discharge every so often - get up on a deck when they do.
 		#      Snipers hold the high spots, so don't stay up long."
@@ -373,7 +373,7 @@ const ALL_ROUTES: Array = [
 		"reward_type": "record",
 		"hidden": false,
 		"unique": false,
-		# 막2 잠입 혼합 전투 — 시설 내부 단계(s3~5) 풀.
+		# 막2 잠입 혼합 전투 · 시설 내부 단계(s3~5) 풀.
 		"min_stage": 3, "max_stage": 5,
 		"tags": ["근접전", "함정", "전투"],
 		"veil_comment": "실험 구역입니다. 자폭병과 방패병, 천장 포탑까지. 화력이 있으면 수월합니다.",
@@ -423,7 +423,7 @@ const ALL_ROUTES: Array = [
 		"reward_type": "record",
 		"hidden": false,
 		"unique": false,
-		# 막4 램프 s10 전개~막5 s12(act_identity §6): 저격·드론·재머 복합 — s9 도입 금지.
+		# 막4 램프 s10 전개~막5 s12(act_identity §6): 저격·드론·재머 복합 · s9 도입 금지.
 		"min_stage": 10, "max_stage": 12,
 		"tags": ["원거리", "드론", "노출", "전투"],
 		"veil_comment": "중계소입니다. 저격과 드론이 동시에 옵니다. 엄폐는 짧게, 빠르게.",
@@ -472,7 +472,7 @@ const ALL_ROUTES: Array = [
 		"reward_type": "recon",
 		"hidden": false,
 		"unique": false,
-		# 막3 전투 풀(s6-7) — datacenter/server_hall과 같은 통과형. ???(guaranteed)와 함께 선택.
+		# 막3 전투 풀(s6-7) · datacenter/server_hall과 같은 통과형. ???(guaranteed)와 함께 선택.
 		"min_stage": 6, "max_stage": 7,
 		"tags": ["전투", "드론", "원거리"],
 		"veil_comment": "통제실 복도입니다. 드론과 저격이 동시에. 핵심부가 코앞입니다.",
@@ -536,7 +536,7 @@ const ALL_ROUTES: Array = [
 		"reward_type": "xp",
 		"hidden": false,
 		"unique": false,
-		# 막4 램프 s9-10 도입(act_identity §6): 전투 최소 타이밍 학습 — 막4의 순한 문.
+		# 막4 램프 s9-10 도입(act_identity §6): 전투 최소 타이밍 학습 · 막4의 순한 문.
 		"min_stage": 9, "max_stage": 10,
 		"tags": ["이동", "함정"],
 		"veil_comment": "화물 리프트입니다. 발판이 오갑니다. 가장자리에서 잠깐 멈출 때 올라타십시오. 서두를 것 없습니다.",
@@ -553,7 +553,7 @@ const ALL_ROUTES: Array = [
 		"reward_type": "xp",
 		"hidden": false,
 		"unique": false,
-		# 막4 램프 s10 전개~막5 s12(act_identity §6): 저격 레이스 — 재머 금지 맵(블라인드 unfair).
+		# 막4 램프 s10 전개~막5 s12(act_identity §6): 저격 레이스 · 재머 금지 맵(블라인드 unfair).
 		"min_stage": 10, "max_stage": 12,
 		"tags": ["원거리", "이동", "전투"],
 		"veil_comment": "차량 뒤에 붙어 가십시오. 저격에 걸리는 건 넘어갈 때뿐입니다. 엄폐는 맞을수록 부서집니다. 한자리에 오래 머물지 마십시오.",
@@ -570,7 +570,7 @@ const ALL_ROUTES: Array = [
 		"reward_type": "xp",
 		"hidden": false,
 		"unique": false,
-		# 막4 램프 s11 고조~막5 s12(act_identity §6): 추격 절정 — 막4 "추적"의 시그니처. 재머 금지.
+		# 막4 램프 s11 고조~막5 s12(act_identity §6): 추격 절정 · 막4 "추적"의 시그니처. 재머 금지.
 		"min_stage": 11, "max_stage": 12,
 		"tags": ["이동", "노출"],
 		"veil_comment": "뒤가 무너집니다. 멈추지 마십시오. 잔해는 넘고, 계속 앞으로.",
@@ -587,7 +587,7 @@ const ALL_ROUTES: Array = [
 		"reward_type": "record",
 		"hidden": false,
 		"unique": false,
-		# 막5 전투 s12 전용(act_identity §7): "코어 방어" 직후 s13 "코어 회수" — 서사 랠리.
+		# 막5 전투 s12 전용(act_identity §7): "코어 방어" 직후 s13 "코어 회수" · 서사 랠리.
 		"min_stage": 12, "max_stage": 12,
 		"tags": ["전투", "원거리"],
 		"veil_comment": "중앙 코어를 지킵니다. 적이 코어 곁에 오래 머물면 코어가 깎입니다. 넘어오는 걸 밀어내고 자리를 지키십시오.",
@@ -604,7 +604,7 @@ const ALL_ROUTES: Array = [
 		"reward_type": "recon",
 		"hidden": false,
 		"unique": false,
-		# 막4 램프 s9-11(act_identity §6): 리듬 스텔스 — risk3이나 적 2뿐(전투 스파이크 아님)이라 s9 허용.
+		# 막4 램프 s9-11(act_identity §6): 리듬 스텔스 · risk3이나 적 2뿐(전투 스파이크 아님)이라 s9 허용.
 		"min_stage": 9, "max_stage": 11,
 		"tags": ["이동", "노출"],
 		# EN: "Scans sweep the corridor. Beam comes, get to a recess. Beam passes, move up. Find the rhythm."
@@ -641,8 +641,8 @@ const ALL_ROUTES: Array = [
 		"reward_type": "xp",
 		"hidden": false,
 		"unique": false,
-		# 막5 회수 스테이지(s14=내부13) — 14-1 라이벌 보스전(P1 지휘→P2 빙의, MapData rival_boss).
-		# 클리어 후 회수 문서 + 처리 선택(B2, 막3서 이주 — 이후 14-2 터널로 이주 예정).
+		# 막5 회수 스테이지(s14=내부13) · 14-1 라이벌 보스전(P1 지휘→P2 빙의, MapData rival_boss).
+		# 클리어 후 회수 문서 + 처리 선택(B2, 막3서 이주 · 이후 14-2 터널로 이주 예정).
 		# 배타 배치(다른 route가 겹치면 엔드게임 우회 가능).
 		"min_stage": 13, "max_stage": 13,
 		"tags": ["전투"],
@@ -652,7 +652,7 @@ const ALL_ROUTES: Array = [
 	},
 ]
 
-# 스토리 모드 — 5스테이지 고정 스케줄. 드론·도전·??? 맵 모두 빼고 핵심 동선만.
+# 스토리 모드 · 5스테이지 고정 스케줄. 드론·도전·??? 맵 모두 빼고 핵심 동선만.
 # Stage 3 lab 보스 → Stage 4 escape (보스 처치 후 빠져나오는 탈출로).
 # 사용자 의도: 비상탈출로는 보스 잡고 나가는 길.
 const STORY_SCHEDULE: Dictionary = {
@@ -669,7 +669,7 @@ const STORY_SCHEDULE: Dictionary = {
 static func get_route_pool_for_stage(stage_index: int, visited: Array = []) -> Array:
 	if GameState.story_mode:
 		return _get_story_route_pool(stage_index)
-	# 고도 인접 전이 필터(2026-08-25 A안) — 직전 맵이 옥상/탑(high)이면 지하(under) 후보 제외,
+	# 고도 인접 전이 필터(2026-08-25 A안) · 직전 맵이 옥상/탑(high)이면 지하(under) 후보 제외,
 	# 지하였으면 high 제외. "옥상 직후 폐지하철" 같은 공간 비약 차단(사용자 지적). 막1 전용
 	# (elev는 막1 맵에만 달려 있고, 막2+ 내부 맵은 "" = 무제약).
 	var prev_elev: String = _route_elev(GameState.current_route_id)
@@ -686,10 +686,10 @@ static func get_route_pool_for_stage(stage_index: int, visited: Array = []) -> A
 		if _elev_jump(prev_elev, _route_elev_of(route)):
 			elev_cut.append(route)
 			continue
-		# 스토리 전용 원형(비상 탈출로)은 본편 풀에서 제외 — 처리별 4종이 대체.
+		# 스토리 전용 원형(비상 탈출로)은 본편 풀에서 제외 · 처리별 4종이 대체.
 		if bool(route.get("story_only", false)):
 			continue
-		# 처리별 탈출 — disposal 키가 있으면 이번 런의 처리 선택과 일치할 때만(§3.2).
+		# 처리별 탈출 · disposal 키가 있으면 이번 런의 처리 선택과 일치할 때만(§3.2).
 		# 빈 값 폴백은 EndingResolver와 동일하게 extract(정상 흐름에선 s13 터널에서 항상 설정됨).
 		if route.has("disposal"):
 			var want: String = GameState.disposal_choice if GameState.disposal_choice != "" else GameState.DISPOSAL_EXTRACT
@@ -711,7 +711,7 @@ static func get_route_pool_for_stage(stage_index: int, visited: Array = []) -> A
 		pool.append(r)
 		if pool.size() >= pick_count:
 			break
-	# 고도 필터로 후보가 모자라면 걸러낸 후보로 보충 — 선택지 수 보장이 개연성보다 우선.
+	# 고도 필터로 후보가 모자라면 걸러낸 후보로 보충 · 선택지 수 보장이 개연성보다 우선.
 	if pool.size() < pick_count:
 		elev_cut.shuffle()
 		for r in elev_cut:
@@ -722,7 +722,7 @@ static func get_route_pool_for_stage(stage_index: int, visited: Array = []) -> A
 
 static func _get_story_route_pool(stage_index: int) -> Array:
 	var ids: Array = STORY_SCHEDULE.get(stage_index, [])
-	# 스토리 고정 스케줄에도 고도 전이 필터 적용 — 옥상(s0) 뒤 지하철(s1) 같은 비약 조합은
+	# 스토리 고정 스케줄에도 고도 전이 필터 적용 · 옥상(s0) 뒤 지하철(s1) 같은 비약 조합은
 	# 그 판에서 숨긴다. 전부 걸러지면 필터 해제(선택지 0 방지).
 	var prev_elev: String = _route_elev(GameState.current_route_id)
 	var out: Array = []
@@ -738,7 +738,7 @@ static func _get_story_route_pool(stage_index: int) -> Array:
 				break
 	return out if not out.is_empty() else cut
 
-# ─── 고도 밴드(elev) — 막1 공간 개연성 필터 ───
+# ─── 고도 밴드(elev) · 막1 공간 개연성 필터 ───
 static func _route_elev_of(route: Dictionary) -> String:
 	return str(route.get("elev", ""))
 
@@ -790,7 +790,7 @@ static func _stage_in_range(route: Dictionary, stage_index: int) -> bool:
 # 문제: 종전엔 reward가 risk와 사실상 1:1 상관(보상<위험 조합이 1개뿐, 3/3이 42%)이라
 # 두 축이 정보를 못 줬고, "보상 같은데 위험만 높은" 열세 카드 추천 사고까지 났다.
 # 새 규칙:
-#   · 클리어 경험치 = 위험도 그대로(r1=1 … r3=3). 위험할수록 항상 더 번다 — 열세 카드가
+#   · 클리어 경험치 = 위험도 그대로(r1=1 … r3=3). 위험할수록 항상 더 번다 · 열세 카드가
 #     구조적으로 사라진다(위험 증가에 보상이 자동 동행).
 #   · reward_type = 부가 효과 종류. "xp"(경험치 +2) / "record"(체력 1칸 회복, 가득하면 +2 XP ·
 #     2026-08-23 통일: 종전 "기록 회복"의 HP판. id는 route id 함정과 동형이라 유지, 라벨·효과만) /
@@ -814,7 +814,7 @@ static func reward_type_label(t: String) -> String:
 #   ④ steady(무난) → 중간 risk(2 선호, 없으면 저위험).
 # hidden / challenge 루트는 항상 제외. 사유 대사는 종결어미 단조 회피(어투 규칙).
 # 어투 밴드 스윕(2026-08-21): 기본 = 중립 보고체, warm 밴드는 REC_REASON_WARM(부드러운 변형).
-# "first"는 데이터 없는 첫 스테이지 전용이라 항상 cold — warm 풀 불필요.
+# "first"는 데이터 없는 첫 스테이지 전용이라 항상 cold · warm 풀 불필요.
 const REC_REASON: Dictionary = {
 	"first": [
 		"처음이니 무난한 쪽을 권합니다.",
@@ -882,19 +882,19 @@ static func choose_veil_recommendation_with_reason(pool: Array) -> Dictionary:
 		if pool.size() > 0:
 			return {"id": pool[0].get("id", ""), "reason": ""}
 		return {"id": "", "reason": ""}
-	# 후보가 하나뿐인 배타 스테이지(lab s8 · core_recovery s13 · escape s14)엔 고를 게 없다 —
+	# 후보가 하나뿐인 배타 스테이지(lab s8 · core_recovery s13 · escape s14)엔 고를 게 없다 ·
 	# 실력 기반 사유가 강제 진행 맵에 붙으면 모순(사용자 보고 2026-08-12). reason을 비우면
 	# RouteMap이 ★추천 대신 그 맵 고유 veil_comment를 보여준다.
 	if candidates.size() == 1:
 		return {"id": candidates[0].get("id", ""), "reason": ""}
-	# 모드 — 데이터 없으면 first(첫 스테이지), 아니면 실력 tier.
+	# 모드 · 데이터 없으면 first(첫 스테이지), 아니면 실력 tier.
 	var mode: String = GameState.competence_tier()
 	if GameState.recent_stage_hits.is_empty():
 		mode = "first"
-	# ① 안전 우선 — 고전 중이거나 첫 판이면 종류를 따지지 않고 가장 수월한 길.
+	# ① 안전 우선 · 고전 중이거나 첫 판이면 종류를 따지지 않고 가장 수월한 길.
 	if mode == "first" or mode == "struggling":
 		return {"id": _pick_by_risk(candidates, 1).get("id", ""), "reason": _pick_rec_reason(mode)}
-	# ② 필요 기반 — 체력이 깎였고 채울 길이 있으면 그쪽. VEIL이 플레이어 상태를 읽고
+	# ② 필요 기반 · 체력이 깎였고 채울 길이 있으면 그쪽. VEIL이 플레이어 상태를 읽고
 	#    권하는 그림(관측 프레임과 정합).
 	if GameState.player_hp < GameState.effective_max_hp():
 		var rec_routes: Array = []
@@ -903,7 +903,7 @@ static func choose_veil_recommendation_with_reason(pool: Array) -> Dictionary:
 				rec_routes.append(c)
 		if not rec_routes.is_empty():
 			return {"id": _pick_by_risk(rec_routes, 1).get("id", ""), "reason": _pick_rec_reason("record")}
-	# ③ 능숙 — 최고 위험 = 최대 클리어 경험치. 동률이면 xp 종류 우선(부가까지 경험치).
+	# ③ 능숙 · 최고 위험 = 최대 클리어 경험치. 동률이면 xp 종류 우선(부가까지 경험치).
 	if mode == "skilled":
 		var best: Dictionary = candidates[0]
 		var best_s: float = -INF
@@ -916,7 +916,7 @@ static func choose_veil_recommendation_with_reason(pool: Array) -> Dictionary:
 				best_s = s
 				best = route
 		return {"id": best.get("id", ""), "reason": _pick_rec_reason("skilled")}
-	# ④ 무난 — 중간 위험(2) 선호, 없으면 낮은 쪽.
+	# ④ 무난 · 중간 위험(2) 선호, 없으면 낮은 쪽.
 	var mid: Array = []
 	for c in candidates:
 		if int((c as Dictionary).get("risk", 0)) == 2:
@@ -924,7 +924,7 @@ static func choose_veil_recommendation_with_reason(pool: Array) -> Dictionary:
 	var pool2: Array = mid if not mid.is_empty() else candidates
 	return {"id": _pick_by_risk(pool2, 1).get("id", ""), "reason": _pick_rec_reason("steady")}
 
-# risk 정렬 픽 — dir 1 = 최저 위험(동률이면 풀 순서 = 셔플 유지).
+# risk 정렬 픽 · dir 1 = 최저 위험(동률이면 풀 순서 = 셔플 유지).
 static func _pick_by_risk(candidates: Array, dir: int) -> Dictionary:
 	var best: Dictionary = candidates[0]
 	for c in candidates:
@@ -934,7 +934,7 @@ static func _pick_by_risk(candidates: Array, dir: int) -> Dictionary:
 	return best
 
 static func _pick_rec_reason(mode: String) -> String:
-	# warm 밴드면 부드러운 변형 풀 우선(없는 모드는 중립 폴백) — 어투 밴드 스윕.
+	# warm 밴드면 부드러운 변형 풀 우선(없는 모드는 중립 폴백) · 어투 밴드 스윕.
 	var arr: Array = []
 	if GameState.veil_register_band() == "warm":
 		arr = REC_REASON_WARM.get(mode, [])

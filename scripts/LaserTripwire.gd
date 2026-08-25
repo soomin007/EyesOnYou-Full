@@ -1,9 +1,9 @@
 class_name LaserTripwire
 extends Node2D
 
-# 레이저 탐지선 — 플레이어가 가로지르면 같은 trigger_id의 포탑(BulletTrap, triggered 모드)을
+# 레이저 탐지선 · 플레이어가 가로지르면 같은 trigger_id의 포탑(BulletTrap, triggered 모드)을
 # 일제히 발사시킨다. 자신은 총알을 쏘지 않는 순수 탐지기(침투물 분위기의 레이저 detector).
-# 포탑과 분리 배치 — 탐지선을 밟으면 "다른 곳"의 포탑들이 불을 뿜는다.
+# 포탑과 분리 배치 · 탐지선을 밟으면 "다른 곳"의 포탑들이 불을 뿜는다.
 
 const COL_LASER: Color = Color(1.0, 0.28, 0.24)
 const COL_ALARM: Color = Color(1.0, 0.5, 0.2)

@@ -28,7 +28,7 @@ const LEVELUP_DUMMY_A: Vector2 = Vector2(2350.0, GROUND_Y)
 const LEVELUP_DUMMY_B: Vector2 = Vector2(2520.0, GROUND_Y)
 const LEVELUP_TRIGGER_X: float = 2200.0
 
-# 스킬 구간: 레벨업에서 고른 스킬을 직접 시험. 더미 2마리 — 가까이 붙어 있어
+# 스킬 구간: 레벨업에서 고른 스킬을 직접 시험. 더미 2마리 · 가까이 붙어 있어
 # AOE/관통 등 효과를 자연스럽게 체감. 패시브여도 그냥 사격으로 처리 가능.
 const SKILL_DUMMY_A: Vector2 = Vector2(2820.0, GROUND_Y)
 const SKILL_DUMMY_B: Vector2 = Vector2(2920.0, GROUND_Y)
@@ -77,7 +77,7 @@ var goal_reached: bool = false
 var pause_overlay: CanvasLayer
 var settings_overlay: Control
 
-# VEIL 존재감 — 조작만 가르치던 튜토리얼에 게임의 분위기·인물(VEIL)·배경(SILO-7)을 도입.
+# VEIL 존재감 · 조작만 가르치던 튜토리얼에 게임의 분위기·인물(VEIL)·배경(SILO-7)을 도입.
 # 우상단에 살아있는 VEIL 눈(BriefingVisual) + 단계마다 VEIL이 직접 말로 안내(자막).
 var veil_layer: CanvasLayer
 var veil_sub_box: VBoxContainer
@@ -105,17 +105,17 @@ func _ready() -> void:
 	_build_camera()
 	_build_signs()
 	_build_jump_pickup()
-	# attack_dummy는 ATTACK 단계 진입 시점에 spawn — 점프 단계 미리 죽이는 사고 방지.
+	# attack_dummy는 ATTACK 단계 진입 시점에 spawn · 점프 단계 미리 죽이는 사고 방지.
 	_build_spike_zone()
 	_build_barrier()
 	_build_goal()
 	_build_hud()
 	_refresh_hud()
 	_build_veil_presence()
-	# 모바일 가상 패드 — 터치 기기에서만(player가 Player.gd라 이동/점프/사격/대시/스킬 그대로 동작).
+	# 모바일 가상 패드 · 터치 기기에서만(player가 Player.gd라 이동/점프/사격/대시/스킬 그대로 동작).
 	if OrientationGuard.is_touch_device():
 		add_child(TouchControls.new())
-	# 어투 아크의 출발점 — 튜토리얼은 첫 접촉이라 가장 차갑고 격식 있는 격식체(~습니다).
+	# 어투 아크의 출발점 · 튜토리얼은 첫 접촉이라 가장 차갑고 격식 있는 격식체(~습니다).
 	# 후반으로 갈수록 ~해요체로 풀린다(친근함). 동시에 SILO-7/요원/작전이라는 세계를 도입.
 	_veil_say("통신 연결됐습니다. 요원, 여기는 훈련 구역입니다. 실전에 들어가기 전에 조작을 익혀두십시오.", 5.0)
 
@@ -213,7 +213,7 @@ func _build_attack_section() -> void:
 	add_child(arena)
 
 func _build_levelup_section() -> void:
-	# 푸른 톤의 레벨업 아레나 — 더미 2마리만 들어가도록 폭 줄임 (스킬 구간과 분리)
+	# 푸른 톤의 레벨업 아레나 · 더미 2마리만 들어가도록 폭 줄임 (스킬 구간과 분리)
 	var arena := ColorRect.new()
 	arena.color = Color(0.30, 0.55, 0.85, 0.10)
 	arena.position = Vector2(2200.0, GROUND_Y - 80.0)
@@ -279,18 +279,18 @@ func _make_platform(x: float, y: float, w: float) -> void:
 # ─── 표지판 / HUD ──────────────────────────────────────────────
 
 func _build_signs() -> void:
-	# show-don't-tell — 키캡(둥근 박스 + 큰 글자) + 한 단어. 부연 설명은 환경/연출에 맡김.
+	# show-don't-tell · 키캡(둥근 박스 + 큰 글자) + 한 단어. 부연 설명은 환경/연출에 맡김.
 	# 이중 점프는 PLATFORM_3가 1단 한계 위에 있어 자연 학습되므로 별도 안내 안 함.
 	sign_move = _make_keycap_sign(["A", "D"], ["←", "→"], "이동", Vector2(280.0, GROUND_Y - 200.0))
 	# 점프는 W 와 SPACE 둘 다 가능 (패드는 A 한 버튼).
 	sign_jump = _make_keycap_sign(["W", "SPACE"], ["A"], "점프", Vector2(950.0, GROUND_Y - 280.0))
-	# 플랫폼 아래쪽에 표시 — JUMP_PICKUP(초록 마름모, y=270)이 위에 있어서
+	# 플랫폼 아래쪽에 표시 · JUMP_PICKUP(초록 마름모, y=270)이 위에 있어서
 	# 위쪽에 두면 겹침. 발판(y=310) 아래 y=400에 배치 → 위에서 내려보면 명확.
 	sign_drop = _make_keycap_sign(["S"], ["↓"], "내려가기", Vector2(JUMP_PLATFORM_3.x, JUMP_PLATFORM_3.y + 90.0))
-	# 사격 표지는 키보드 모드에서 "마우스 좌클릭 + J" 두 입력이 동등함을 보여줘야 함 — 마우스 픽토그램 포함.
+	# 사격 표지는 키보드 모드에서 "마우스 좌클릭 + J" 두 입력이 동등함을 보여줘야 함 · 마우스 픽토그램 포함.
 	sign_attack = _make_attack_sign_dynamic([GameState.action_label("attack", "J")], ["X", "RT"], "사격", Vector2(1750.0, GROUND_Y - 200.0))
 	sign_dash = _make_keycap_sign([GameState.action_label("dash", "K")], ["B"], "대시", Vector2(SPIKE_X_START + 100.0, GROUND_Y - 200.0))
-	# 레벨업 표지는 "스킬 획득" 알림용으로만 사용 — 진입 안내는 오버레이가 직접 함.
+	# 레벨업 표지는 "스킬 획득" 알림용으로만 사용 · 진입 안내는 오버레이가 직접 함.
 	sign_levelup = Label.new()
 	sign_levelup.add_theme_font_size_override("font_size", 17)
 	sign_levelup.add_theme_color_override("font_color", Color(0.95, 0.92, 0.55))
@@ -339,7 +339,7 @@ func _populate_keycap_hbox(hbox: HBoxContainer, kb_keys: Array, pad_keys: Array,
 	for c in hbox.get_children():
 		c.queue_free()
 	var is_pad: bool = GameState.is_pad_mode()
-	# 사격 표지는 키보드 모드에서만 마우스 좌클릭 픽토그램 + 슬래시 + J 키캡 — 두 입력 동등함을
+	# 사격 표지는 키보드 모드에서만 마우스 좌클릭 픽토그램 + 슬래시 + J 키캡 · 두 입력 동등함을
 	# 한 줄에 표현. 패드 모드에선 X / RT 두 패드 버튼만 표시.
 	if with_mouse and not is_pad:
 		hbox.add_child(_make_mouse_icon(true))
@@ -351,7 +351,7 @@ func _populate_keycap_hbox(hbox: HBoxContainer, kb_keys: Array, pad_keys: Array,
 		hbox.add_child(slash)
 	var keys: Array = pad_keys if is_pad else kb_keys
 	for k in keys:
-		# allow_pad_style=true는 패드 모드일 때만 — 키보드 "A"/"B" 같은 글자가 Xbox A/B 색으로
+		# allow_pad_style=true는 패드 모드일 때만 · 키보드 "A"/"B" 같은 글자가 Xbox A/B 색으로
 		# 잘못 표시되던 버그(사용자 보고: AD 이동 표지 키보드 모드에서도 A가 초록 둥근 버튼) 차단.
 		hbox.add_child(_make_keycap(str(k), is_pad))
 
@@ -396,7 +396,7 @@ func _make_attack_sign_dynamic(kb_keys: Array, pad_keys: Array, label_text: Stri
 	holder.add_child(l)
 	return holder
 
-# 사격 표지 — 마우스 그림(좌버튼만 빨강) + 보조 키 J 키캡 + 한 단어.
+# 사격 표지 · 마우스 그림(좌버튼만 빨강) + 보조 키 J 키캡 + 한 단어.
 func _make_attack_sign(pos: Vector2) -> Control:
 	var holder := Control.new()
 	holder.position = pos - Vector2(160, 60)
@@ -410,7 +410,7 @@ func _make_attack_sign(pos: Vector2) -> Control:
 	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	holder.add_child(hbox)
 	hbox.add_child(_make_mouse_icon(true))
-	# "또는" 의미의 슬래시 — 한 글자만으로 두 입력 동등함을 표현
+	# "또는" 의미의 슬래시 · 한 글자만으로 두 입력 동등함을 표현
 	var slash := Label.new()
 	slash.text = "/"
 	slash.add_theme_font_size_override("font_size", 22)
@@ -428,14 +428,14 @@ func _make_attack_sign(pos: Vector2) -> Control:
 	holder.add_child(l)
 	return holder
 
-# 마우스 픽토그램 — Panel 본체 + 좌/우 버튼 영역 + 휠 점.
+# 마우스 픽토그램 · Panel 본체 + 좌/우 버튼 영역 + 휠 점.
 # highlight_left=true면 좌버튼만 빨강 강조 (사격 입력 안내용).
 func _make_mouse_icon(highlight_left: bool) -> Control:
 	var w: float = 40.0
 	var h: float = 56.0
 	var holder := Control.new()
 	holder.custom_minimum_size = Vector2(w, h)
-	# 본체 — 위쪽 모서리 둥글게, 아래쪽도 살짝 둥글게.
+	# 본체 · 위쪽 모서리 둥글게, 아래쪽도 살짝 둥글게.
 	var body := Panel.new()
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0.12, 0.14, 0.18, 0.95)
@@ -449,7 +449,7 @@ func _make_mouse_icon(highlight_left: bool) -> Control:
 	body.position = Vector2(0, 0)
 	body.size = Vector2(w, h)
 	holder.add_child(body)
-	# 좌버튼 영역 (좌상단 1/4) — highlight 시 빨강
+	# 좌버튼 영역 (좌상단 1/4) · highlight 시 빨강
 	if highlight_left:
 		var lb := Panel.new()
 		var lb_sb := StyleBoxFlat.new()
@@ -493,7 +493,7 @@ func _make_keycap(text: String, allow_pad_style: bool = true) -> Control:
 	box.add_theme_stylebox_override("panel", sb)
 	var l := Label.new()
 	l.text = text
-	# 키캡 글자 — "SHIFT"/"좌클릭"처럼 긴 라벨도 들어갈 수 있어 폭에 맞춰 줄어듦.
+	# 키캡 글자 · "SHIFT"/"좌클릭"처럼 긴 라벨도 들어갈 수 있어 폭에 맞춰 줄어듦.
 	var fs: int = 22 if text.length() <= 2 else 16
 	l.add_theme_font_size_override("font_size", fs)
 	l.add_theme_color_override("font_color", Color(0.96, 0.96, 0.96))
@@ -605,7 +605,7 @@ func _build_veil_presence() -> void:
 	veil_layer = CanvasLayer.new()
 	veil_layer.layer = 20
 	add_child(veil_layer)
-	# 우상단 VEIL 눈 — "당신을 본다"의 시각적 존재(BriefingVisual 재사용, 자체 애니메이션).
+	# 우상단 VEIL 눈 · "당신을 본다"의 시각적 존재(BriefingVisual 재사용, 자체 애니메이션).
 	var eye := Control.new()
 	eye.set_script(load("res://scripts/BriefingVisual.gd"))
 	eye.set_anchors_preset(Control.PRESET_TOP_RIGHT)
@@ -624,7 +624,7 @@ func _build_veil_presence() -> void:
 	cap.position = Vector2(-96.0 - 30.0, 128.0)
 	cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	veil_layer.add_child(cap)
-	# 하단 중앙 자막 스택 — Stage._show_veil_subtitle과 동일 톤(시안 글자 + 다크 pill).
+	# 하단 중앙 자막 스택 · Stage._show_veil_subtitle과 동일 톤(시안 글자 + 다크 pill).
 	veil_sub_box = VBoxContainer.new()
 	veil_sub_box.alignment = BoxContainer.ALIGNMENT_CENTER
 	veil_sub_box.anchor_left = 0.0
@@ -666,7 +666,7 @@ func _veil_say(line: String, dur: float) -> void:
 	var type_time: float = clampf(float(line.length()) * 0.016, 0.2, 0.85)
 	var type_tw := l.create_tween()
 	type_tw.tween_interval(0.15)
-	# 큐빅 in-out — Stage 자막과 동일(시작·끝 완속, 중간 가속 · 2026-08-25).
+	# 큐빅 in-out · Stage 자막과 동일(시작·끝 완속, 중간 가속 · 2026-08-25).
 	type_tw.tween_method(func(v: float) -> void:
 		if is_instance_valid(l):
 			l.visible_characters = int(v)
@@ -752,7 +752,7 @@ func _on_pickup_taken(body: Node) -> void:
 	_advance_to(Step.ATTACK)
 
 func _build_attack_dummy() -> void:
-	# ATTACK 단계 진입 직전 lazy spawn — 점프 단계에 미리 등장하면 사용자가 도달해서
+	# ATTACK 단계 진입 직전 lazy spawn · 점프 단계에 미리 등장하면 사용자가 도달해서
 	# 사격 트리거가 무력화되는 버그(사용자 보고) 차단.
 	attack_dummy = TutorialDummy.new()
 	add_child(attack_dummy)
@@ -793,7 +793,7 @@ func _spawn_orb(pos: Vector2) -> void:
 	orb.reset_physics_interpolation()
 
 func _build_spike_zone() -> void:
-	# 가시 — Stage._build_spike와 동일 스타일(미니 플랫폼 베이스 + 모서리 캡 + 그림자 절반).
+	# 가시 · Stage._build_spike와 동일 스타일(미니 플랫폼 베이스 + 모서리 캡 + 그림자 절반).
 	# 지면(GROUND_Y)에 박힌 형태. 체인 X.
 	var w: float = SPIKE_X_END - SPIKE_X_START
 	var x_start: float = SPIKE_X_START
@@ -845,7 +845,7 @@ func _build_spike_zone() -> void:
 	cap_r.position = Vector2(base_x + base_w - 1.0, base_top + 3.0)
 	cap_r.size = Vector2(3.0, 5.0)
 	add_child(cap_r)
-	# 가시 — 그림자 + 본체. 베이스 안으로 살짝 묻힘.
+	# 가시 · 그림자 + 본체. 베이스 안으로 살짝 묻힘.
 	var spike_color: Color = Color(0.95, 0.30, 0.30)
 	var spike_dark: Color = Color(0.55, 0.16, 0.18)
 	for x in range(int(x_start) + 12, int(x_end), 24):
@@ -944,7 +944,7 @@ func _advance_to(next: int) -> void:
 			_veil_say("전방 장애물. 대시로 통과하십시오.", 3.5)
 		Step.DONE:
 			_veil_say("점검 완료입니다. 요원이 저를 믿을수록, 제가 더 많이 도와드릴 수 있습니다.\n...SILO-7로 진입합니다. 행운을 빕니다, 요원.", 5.5)
-			# 골 빛이 충분한 시각 유도 — 별도 안내문 없음.
+			# 골 빛이 충분한 시각 유도 · 별도 안내문 없음.
 			if barrier != null:
 				barrier.queue_free()
 				barrier = null
@@ -977,8 +977,8 @@ func _on_xp_collected(leveled_up: bool) -> void:
 
 func _show_levelup() -> void:
 	get_tree().paused = true
-	# 튜토리얼은 폭발물 스킬 단일 강제 — 액티브 스킬 사용법 학습 목적.
-	# VEIL 멘트로 "튜토리얼이라 잠깐 빌려준다 — 본편엔 안 들어가요" 명시.
+	# 튜토리얼은 폭발물 스킬 단일 강제 · 액티브 스킬 사용법 학습 목적.
+	# VEIL 멘트로 "튜토리얼이라 잠깐 빌려준다 · 본편엔 안 들어가요" 명시.
 	# 본편 진입 시 GameState.start_main_game()이 skills를 STARTING_SKILLS로 초기화함.
 	var explosive_card: Dictionary = SkillTreeData.make_card("explosive", 1)
 	var advice: Dictionary = {
@@ -994,15 +994,15 @@ func _on_levelup_picked(picked_id: String) -> void:
 	_update_levelup_sign(picked_id)
 	_advance_to(Step.SKILL)
 
-# 스킬 표지판 — 레벨업에서 고른 스킬에 따라 키캡(액티브) / 안내문(패시브)을 동적으로 만든다.
+# 스킬 표지판 · 레벨업에서 고른 스킬에 따라 키캡(액티브) / 안내문(패시브)을 동적으로 만든다.
 # Active: 키캡(스킬 키 또는 마우스 우클릭) + "스킬"
-# Passive: 텍스트 라벨 — "자동 적용 — 마음껏 처리해요"
+# Passive: 텍스트 라벨 · "자동 적용 · 마음껏 처리해요"
 func _build_skill_sign() -> void:
 	if sign_skill != null:
 		return  # 이미 만들었음
 	var pos: Vector2 = Vector2(2880.0, GROUND_Y - 220.0)
 	if skill_picked_id == "":
-		# 안전망 — 스킬 미선택 시 그냥 사격으로 진행
+		# 안전망 · 스킬 미선택 시 그냥 사격으로 진행
 		sign_skill = _make_text_sign("두 명 더 처리해요", pos)
 		add_child(sign_skill)
 		return
@@ -1032,7 +1032,7 @@ func _build_skill_sign() -> void:
 		sign_skill = _make_text_sign("[%s] 자동 적용, 처리하면 진행" % sname, pos)
 	add_child(sign_skill)
 
-# 한 줄 안내문 표지 — 키캡 없는 짧은 문구. 패시브 스킬 안내 등에 사용.
+# 한 줄 안내문 표지 · 키캡 없는 짧은 문구. 패시브 스킬 안내 등에 사용.
 func _make_text_sign(text: String, pos: Vector2) -> Control:
 	var holder := Control.new()
 	holder.position = pos - Vector2(180, 22)
@@ -1053,7 +1053,7 @@ func _make_text_sign(text: String, pos: Vector2) -> Control:
 func _spawn_skill_dummies() -> void:
 	for pos in [SKILL_DUMMY_A, SKILL_DUMMY_B]:
 		var d := TutorialDummy.new()
-		# 총으로는 안 죽고 스킬(폭발물)로만 처치되도록 — 스킬 사용법 학습 강제.
+		# 총으로는 안 죽고 스킬(폭발물)로만 처치되도록 · 스킬 사용법 학습 강제.
 		d.skill_only = true
 		add_child(d)
 		d.global_position = pos
@@ -1125,7 +1125,7 @@ func _on_goal_reached(body: Node) -> void:
 func _finish_tutorial() -> void:
 	GameState.tutorial_done = true
 	GameState.save_settings()
-	# reset()이 아니라 start_main_game() — 튜토리얼에서 고른 스킬 보존
+	# reset()이 아니라 start_main_game() · 튜토리얼에서 고른 스킬 보존
 	GameState.start_main_game()
 	get_tree().change_scene_to_file.call_deferred(SceneRouter.BRIEFING)
 

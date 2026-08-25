@@ -12,7 +12,7 @@ var full_text: String = ""
 var revealed: int = 0
 var t: float = 0.0
 var done: bool = false
-# 진입 직후 1초 입력 lockout — 사망 직전 점프 연타가 다음 화면을 자동 advance하는 사고 방지.
+# 진입 직후 1초 입력 lockout · 사망 직전 점프 연타가 다음 화면을 자동 advance하는 사고 방지.
 var input_lockout_t: float = GameState.INPUT_LOCKOUT_DURATION
 
 func _ready() -> void:
@@ -21,11 +21,11 @@ func _ready() -> void:
 	title_label.text = "MISSION FAILED"
 	speaker_label.text = "VEIL"
 	full_text = VeilDialogue.get_death_briefing(GameState.death_count, GameState.followed_veil_last_choice)
-	# 첫 사망에만 다회차 hint — 너무 적극적이지 않게, VEIL 톤으로 슬쩍.
+	# 첫 사망에만 다회차 hint · 너무 적극적이지 않게, VEIL 톤으로 슬쩍.
 	if GameState.death_count == 1:
-		# 어투 밴드 스윕(2026-08-21): 첫 사망 = 사실상 cold 밴드 — 중립 보고체.
+		# 어투 밴드 스윕(2026-08-21): 첫 사망 = 사실상 cold 밴드 · 중립 보고체.
 		full_text += "\n\n...요원, 다른 결말도 있을지 모릅니다."
-	# 재개 지점 고지(2026-08-23 통일) — 사망 = 그 막 첫 스테이지부터. 어디서 다시 서는지는
+	# 재개 지점 고지(2026-08-23 통일) · 사망 = 그 막 첫 스테이지부터. 어디서 다시 서는지는
 	# 반드시 화면에 명시(시스템 브래킷 문법). register_death가 이미 후퇴를 마친 뒤라
 	# current_stage = 재개 지점이다. 보스전은 같은 자리 처음부터.
 	if not GameState.story_mode and not GameState.playground_active:
@@ -37,7 +37,7 @@ func _ready() -> void:
 	stats_label.text = "사망 횟수  %d  /  도달 스테이지  %d" % [GameState.death_count, GameState.current_stage + 1]
 	text_label.text = ""
 	hint_label.text = ""
-	# BGM 그대로 두되 살짝 먹먹하게 — 트랙 전환 없이 -12dB ducking.
+	# BGM 그대로 두되 살짝 먹먹하게 · 트랙 전환 없이 -12dB ducking.
 	# 재시도 시 stage._ready에서 set_ducked(false)로 복원.
 	BgmPlayer.set_ducked(true)
 	GameState.input_kind_changed.connect(_on_input_kind_changed)
@@ -89,7 +89,7 @@ func _restart_stage() -> void:
 	if GameState.story_mode or GameState.playground_active:
 		get_tree().change_scene_to_file.call_deferred(SceneRouter.STAGE)
 		return
-	# 14-1 보스전 사망 = 항상 같은 자리 P1부터(2026-08-15 사용자 확정). 사망 경로 한정 —
+	# 14-1 보스전 사망 = 항상 같은 자리 P1부터(2026-08-15 사용자 확정). 사망 경로 한정 ·
 	# 연습장 페이즈 직행·_init_rival_boss 체크포인트 분기는 그대로 쓴다.
 	if GameState.current_route_id == "route_core_recovery":
 		GameState.rival_phase_reached = 0

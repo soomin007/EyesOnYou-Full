@@ -1,6 +1,6 @@
 extends Control
 
-# 포스터 v2 렌더 하니스 — PosterCanvasV2를 포스터 해상도 SubViewport에 담아 그리고 PNG로 캡처한다.
+# 포스터 v2 렌더 하니스 · PosterCanvasV2를 포스터 해상도 SubViewport에 담아 그리고 PNG로 캡처한다.
 # 생성 전용 실행: godot --path . res://scenes/poster_v2.tscn --gen  → 2종 저장 후 자동 종료.
 #   ① 기본 1240×1754  ② 2배 고해상 2480×3508 (A4 ~300dpi, 인쇄용)
 # 일반 실행: S=다시 저장, ESC=종료(미리보기 확인용).

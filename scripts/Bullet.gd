@@ -10,15 +10,15 @@ const BASE_LIFETIME: float = 0.55
 var dir: int = 1
 var damage: int = 1
 var pierce: bool = false
-# fire_boost 티어 — 총알 외형(크기·색·잔상)으로 사격 성장 가시화. Player._spawn_bullet에서 전달.
+# fire_boost 티어 · 총알 외형(크기·색·잔상)으로 사격 성장 가시화. Player._spawn_bullet에서 전달.
 var style_tier: int = 0
 var speed_mult: float = 1.0
 var lifetime_mult: float = 1.0
 var lifetime: float = BASE_LIFETIME
 var hit_enemies: Array = []
-# 부채꼴 발사용 — 0이면 수평. radian, dir 기준 위/아래로 벌림.
+# 부채꼴 발사용 · 0이면 수평. radian, dir 기준 위/아래로 벌림.
 var angle: float = 0.0
-# 추적 — 가장 가까운 적 방향으로 휨. multishot T3=약한 추적(기본값), glide T3=강한 유도(값 상향).
+# 추적 · 가장 가까운 적 방향으로 휨. multishot T3=약한 추적(기본값), glide T3=강한 유도(값 상향).
 var tracking: bool = false
 const TRACKING_BLEND: float = 0.03  # 매 프레임 현재 방향과 타깃 방향을 lerp하는 비율
 const TRACKING_MAX_ANGLE: float = 0.21  # ~12도. 이전 25도는 보스전 밸런스 붕괴로 축소.
@@ -48,19 +48,19 @@ func _ready() -> void:
 	var body_h: float = 4.0
 	var trail_w: float = 20.0
 	var trail_h: float = 2.0
-	if style_tier >= 1:                       # 사격 강화 — 더 크고 밝은 주황 탄
+	if style_tier >= 1:                       # 사격 강화 · 더 크고 밝은 주황 탄
 		col_body = Color(1.0, 0.72, 0.32, 1.0)
 		col_trail = Color(1.0, 0.62, 0.28, 0.6)
 		body_w = 12.0
 		body_h = 5.0
-	if style_tier >= 2:                       # 속사 — 긴 잔상
+	if style_tier >= 2:                       # 속사 · 긴 잔상
 		trail_w = 32.0
 		col_trail.a = 0.7
-	if pierce:                                # 관통(사격강화 T3) — 길쭉한 트레이서
+	if pierce:                                # 관통(사격강화 T3) · 길쭉한 트레이서
 		body_w = 18.0
 		body_h = 3.0
 		trail_w = max(trail_w, 34.0)
-	if tracking and tracking_blend >= 0.1:    # 유도(활강 T3) — 시안 틴트 + 길쭉(약한 추적과 구분)
+	if tracking and tracking_blend >= 0.1:    # 유도(활강 T3) · 시안 틴트 + 길쭉(약한 추적과 구분)
 		col_body = Color(0.55, 0.95, 1.0, 1.0)
 		col_trail = Color(0.5, 0.88, 1.0, 0.7)
 		body_w = max(body_w, 16.0)
@@ -82,7 +82,7 @@ func _ready() -> void:
 	add_child(bullet)
 
 func _process(delta: float) -> void:
-	# 진행 벡터 — 수평 베이스(dir) + 각도(angle) 적용. 시각적 회전은 생략(스프라이트가
+	# 진행 벡터 · 수평 베이스(dir) + 각도(angle) 적용. 시각적 회전은 생략(스프라이트가
 	# 작아 어색하지 않음).
 	if tracking:
 		_apply_tracking(delta)
@@ -109,7 +109,7 @@ func _apply_tracking(delta: float) -> void:
 	# 새 angle 계산: 진행 방향(+dir 쪽)에서 dy/dx 비율로 기울기.
 	var target_angle: float = atan2(dy, abs(dx))
 	target_angle = clamp(target_angle, -tracking_max_angle, tracking_max_angle)
-	# 프레임 보정 지수 블렌드 — 상수 비율을 프레임마다 곱하면 수렴 속도가 렌더 fps에 비례한다
+	# 프레임 보정 지수 블렌드 · 상수 비율을 프레임마다 곱하면 수렴 속도가 렌더 fps에 비례한다
 	# (144Hz 모니터에서 유도가 60Hz 대비 ~2.4배 강해지던 실결함, 2026-08-25).
 	# 60fps 기준 tracking_blend와 같은 체감을 임의 fps에서 유지.
 	var blend: float = 1.0 - pow(1.0 - tracking_blend, delta * 60.0)
@@ -143,7 +143,7 @@ func _on_body_entered(body: Node) -> void:
 		hit_enemies.append(body)
 		# 명중/디플렉트 SFX는 Enemy.take_damage 안에서 방패 막힘 분기를 보고 결정.
 		if body.has_method("take_damage"):
-			# bullet의 진행 방향(dir)을 전달 — 방패 판정에 사용. 위치(global_position.x)는
+			# bullet의 진행 방향(dir)을 전달 · 방패 판정에 사용. 위치(global_position.x)는
 			# 충돌 시점에 enemy 안쪽으로 이미 들어가 있어 부호가 어긋날 수 있음.
 			# 반환 true = 방패에 막힘 → 관통이어도 탄 소멸("막혔는데 뒤가 죽는" 모순 차단
 			# 2026-08-21 사용자 지적). 반환 없는 take_damage(보스류)는 null이라 무시.
@@ -165,13 +165,13 @@ func _on_body_entered(body: Node) -> void:
 		SfxPlayer.play_at("bullet_impact_wall", global_position)
 		queue_free()
 	elif body is StaticBody2D:
-		# 부서지는 엄폐물(차량)은 내 탄에도 갉힌다(2026-08-21 사용자 "왜 적 탄에만 부서지냐" —
+		# 부서지는 엄폐물(차량)은 내 탄에도 갉힌다(2026-08-21 사용자 "왜 적 탄에만 부서지냐" ·
 		# 규칙 일관성: 탄이면 갉는다). 내 엄폐를 아끼는 것도, 일부러 사선을 여는 것도 판단이 된다.
 		if body.has_method("hit_by_bullet"):
 			body.call("hit_by_bullet")   # 자체 SFX·균열 처리
 			queue_free()
 			return
-		# 벽/바닥 충돌 — 사라짐. 경계벽·바닥은 "수직 벽"이 아니라 impact SFX 생략.
+		# 벽/바닥 충돌 · 사라짐. 경계벽·바닥은 "수직 벽"이 아니라 impact SFX 생략.
 		var skip_sfx: bool = body.is_in_group("boundary_wall") or body.is_in_group("ground")
 		if not skip_sfx:
 			SfxPlayer.play_at("bullet_impact_wall", global_position)

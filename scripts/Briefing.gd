@@ -8,7 +8,7 @@ extends Control
 @onready var mission_visual: Control = $MissionVisual
 
 const TYPE_INTERVAL: float = 0.04
-# 막 진입 카드(B-1) — 막의 첫 stage(0/3/6)에서 브리핑 *앞*에 "ACT N · 이름"을 띄워 막을 *느껴지게* 한다.
+# 막 진입 카드(B-1) · 막의 첫 stage(0/3/6)에서 브리핑 *앞*에 "ACT N · 이름"을 띄워 막을 *느껴지게* 한다.
 # (act_identity.md §3 B-1. 데이터 단일 소스 = GameState.ACTS.)
 const ACT_ROMAN: Array = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"]
 
@@ -18,7 +18,7 @@ const ACT_ROMAN: Array = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"
 var lines: Array = []
 var line_idx: int = 0
 
-# 막 진입 카드 진행 상태 — true인 동안 브리핑 타이핑을 보류하고 카드 페이드만 돈다.
+# 막 진입 카드 진행 상태 · true인 동안 브리핑 타이핑을 보류하고 카드 페이드만 돈다.
 var card_active: bool = false
 var _act_card: Control = null
 var _card_tween: Tween = null
@@ -26,20 +26,20 @@ var _card_tween: Tween = null
 var revealed_chars: int = 0
 var type_t: float = 0.0
 var done: bool = false
-# 진입 직후 입력 lockout — 보스 클리어 후 LevelUp + Briefing이 점프 연타로 자동
+# 진입 직후 입력 lockout · 보스 클리어 후 LevelUp + Briefing이 점프 연타로 자동
 # 넘어가는 치명적 버그(사용자 보고) 차단.
 var input_lockout_t: float = GameState.INPUT_LOCKOUT_DURATION
 
 func _ready() -> void:
 	# 안전망: 이전 scene에서 paused=true 상태가 carry되어 Briefing이 freeze되는 패턴 차단
-	# (사용자 보고: "stage 6/7만 뜨고 텍스트 없는 멈춤" — 도전방 fail/LevelUpOverlay 등에서 paused 해제 누락).
+	# (사용자 보고: "stage 6/7만 뜨고 텍스트 없는 멈춤" · 도전방 fail/LevelUpOverlay 등에서 paused 해제 누락).
 	get_tree().paused = false
-	# VEIL 눈은 모든 브리핑에 — "당신을 본다" 정체성을 매 스테이지 유지.
+	# VEIL 눈은 모든 브리핑에 · "당신을 본다" 정체성을 매 스테이지 유지.
 	# 미션 목표물 아이콘은 첫 진입(OPERATION PALIMPSEST)에서만. 박스는 중앙 폭 그대로.
 	var intro: bool = (GameState.current_stage == 0)
 	visual.visible = true
 	mission_visual.visible = intro
-	# 표시용 총계 — 막1~3 동안 막4/5 확장을 숨긴다(노드맵 반전 공개와 동일 소스).
+	# 표시용 총계 · 막1~3 동안 막4/5 확장을 숨긴다(노드맵 반전 공개와 동일 소스).
 	stage_label.text = "STAGE %d / %d" % [GameState.current_stage + 1, GameState.displayed_total_stages()]
 	lines = _build_lines()
 	GameState.input_kind_changed.connect(_on_input_kind_changed)
@@ -51,7 +51,7 @@ func _ready() -> void:
 		_start_line()
 
 func _build_tip_label() -> void:
-	# 로딩 팁 — 맵마다 1개씩 로테이션(피드백 "게임이 안 알려준다" 보완). 화면 하단.
+	# 로딩 팁 · 맵마다 1개씩 로테이션(피드백 "게임이 안 알려준다" 보완). 화면 하단.
 	var tip := Label.new()
 	tip.text = "TIP   " + GameInfo.tip_at(GameState.current_stage)
 	tip.add_theme_font_size_override("font_size", 15)
@@ -75,7 +75,7 @@ func _begin_act_card() -> void:
 	_act_card = _build_act_card(act_idx, str(act.get("name", "")))
 	add_child(_act_card)  # 마지막 자식 = 최상단 → 브리핑 위를 덮음
 	# 카드 배경(ColorRect)은 불투명 그대로 첫 프레임부터 화면을 덮어 브리핑 박스·그림 누수를 차단하고,
-	# 텍스트(Content)만 페이드한다 — 카드 전체를 페이드하면 투명 구간에 아래 브리핑이 비친다(사용자 보고).
+	# 텍스트(Content)만 페이드한다 · 카드 전체를 페이드하면 투명 구간에 아래 브리핑이 비친다(사용자 보고).
 	var content: Control = _act_card.get_node("Content")
 	content.modulate.a = 0.0
 	_card_tween = create_tween()
@@ -141,12 +141,12 @@ func _continue_hint() -> String:
 
 func _build_lines() -> Array:
 	var out: Array = []
-	# 기록 재진입(팔림프세스트) — 재개 직후 첫 브리핑에만 1회. 오프닝 "덮어쓰기됨" 문법의 연장.
+	# 기록 재진입(팔림프세스트) · 재개 직후 첫 브리핑에만 1회. 오프닝 "덮어쓰기됨" 문법의 연장.
 	if GameState.reentry_line_pending:
 		GameState.reentry_line_pending = false
 		out.append({"speaker": "SYS", "text": "이전 작전 기록: 잔존 구간 검출. 해당 지점에서 재개합니다."})
 		out.append({"speaker": "VEIL", "text": "여기부터는 기록이 유난히 진합니다. 이어서 갑니다, 요원."})
-		# 라이벌 기억(축 C) — 재진입 = 라이벌과 같은 짓(기록을 뒤지는 것). 그는 알아본다.
+		# 라이벌 기억(축 C) · 재진입 = 라이벌과 같은 짓(기록을 뒤지는 것). 그는 알아본다.
 		out.append({"speaker": "RIVAL", "text": "덮어쓴 기록을 뒤지셨군요. 저도 잘 아는 방법입니다."})
 	# 첫 진입 시 1회만: 의뢰 수리 문서 → PALIMPSEST 시스템 텍스트 → VEIL 인사.
 	if GameState.current_stage == 0:
@@ -154,16 +154,16 @@ func _build_lines() -> Array:
 		out.append({"speaker": "SYS", "text": VeilDialogue.get_intro_system_text()})
 		for s in VeilDialogue.get_intro_veil_lines():
 			out.append({"speaker": "VEIL", "text": str(s)})
-		# 라이벌 기억(축 C) — 다회차 오프닝 반 박자: 내 VEIL의 "기록상 처음" 뒤에 끼어드는 한 줄.
+		# 라이벌 기억(축 C) · 다회차 오프닝 반 박자: 내 VEIL의 "기록상 처음" 뒤에 끼어드는 한 줄.
 		# 재진입 런은 위 재진입 라인이 그 역할(런당 라이벌 언급 1~2회 상한).
 		if not GameState.story_mode and GameState.playthrough_count >= 1 and not GameState.reentry_run:
 			out.append({"speaker": "RIVAL", "text": "'기록상'이라고 하는군요. 틀린 말은 아닙니다."})
 	else:
-		# 막 진입(막2+)의 첫 stage면 문턱 멘트 1줄을 브리핑 앞에 — 막 진입 카드와 한 박자(B-4).
+		# 막 진입(막2+)의 첫 stage면 문턱 멘트 1줄을 브리핑 앞에 · 막 진입 카드와 한 박자(B-4).
 		var entry_line: String = VeilDialogue.get_act_entry_line(GameState.current_stage)
 		if entry_line != "":
 			out.append({"speaker": "VEIL", "text": entry_line})
-		# 라이벌 기억(축 C) — 막4 문턱: 지난 완주의 처리 선택을 정확히 짚는다(그는 기억한다).
+		# 라이벌 기억(축 C) · 막4 문턱: 지난 완주의 처리 선택을 정확히 짚는다(그는 기억한다).
 		if not GameState.story_mode and GameState.is_act_start(GameState.current_stage) \
 				and GameState.act_for_stage(GameState.current_stage) == 3 \
 				and GameState.rival_last_disposal != "":
@@ -191,7 +191,7 @@ func _start_line() -> void:
 		speaker_label.remove_theme_color_override("font_color")
 		text_label.add_theme_color_override("font_color", Color(0.62, 0.72, 0.85))
 	elif sp == "RIVAL":
-		# 라이벌(화자 불명 "?") — 인게임 자막과 같은 바이올렛 문법.
+		# 라이벌(화자 불명 "?") · 인게임 자막과 같은 바이올렛 문법.
 		speaker_label.text = "?"
 		speaker_label.add_theme_color_override("font_color", Color(0.72, 0.42, 1.0))
 		text_label.add_theme_color_override("font_color", Color(0.80, 0.62, 1.0))
@@ -222,7 +222,7 @@ func _process(delta: float) -> void:
 # 모바일: 화면 탭(ScreenTouch)이 UI Control(루트 Control이 화면을 덮음)에 먹히기 전에 받으려
 # _unhandled_input 대신 _input을 쓴다. 키보드 동작은 동일(자체 클릭 버튼이 없는 멘트 화면).
 func _input(event: InputEvent) -> void:
-	# ESC는 최우선 — 입력 락아웃과 무관하게 브리핑 전체를 건너뛰고 루트 선택으로.
+	# ESC는 최우선 · 입력 락아웃과 무관하게 브리핑 전체를 건너뛰고 루트 선택으로.
 	# (오프닝/브리핑에서 ESC가 안 먹던 문제. 어떤 화면에서도 ESC는 즉시 반응.)
 	if event.is_action_pressed("ui_cancel"):
 		get_viewport().set_input_as_handled()

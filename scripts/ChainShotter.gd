@@ -1,8 +1,8 @@
 extends Node
 
-# 방 체인 스크린샷 하니스(2026-08-18, room_chain_expansion 검증용) — rid+stage+segment 단위로
+# 방 체인 스크린샷 하니스(2026-08-18, room_chain_expansion 검증용) · rid+stage+segment 단위로
 # Stage를 띄워 분위기 컷을 저장한다. 배경 신설 검증([[new-map-always-full-background]])에
-# 배치마다 재사용. 실행(창모드 · 반드시 무음으로 — 사용자 작업 중 소리 노출 방지):
+# 배치마다 재사용. 실행(창모드 · 반드시 무음으로 · 사용자 작업 중 소리 노출 방지):
 #   godot --path . --audio-driver Dummy --resolution 1280x720 res://scenes/chain_shotter.tscn
 # TARGETS만 바꿔 쓰면 된다. x를 주면 플레이어를 그 x로 옮겨 방 중반 배경을 담는다.
 
@@ -10,7 +10,7 @@ const STAGE_SCENE: String = "res://scenes/stage.tscn"
 const OUT_DIR: String = "res://poster_out/chain_shots"
 
 const TARGETS: Array = [
-	# 배치 4(2026-08-22) — 신설 배경 검증(응축기·함정 통로는 1차 실행에서 캡처 완료).
+	# 배치 4(2026-08-22) · 신설 배경 검증(응축기·함정 통로는 1차 실행에서 캡처 완료).
 	{"rid": "route_freight_lift", "stage": 9, "seg": 1, "x": 1300.0},
 	{"rid": "route_freight_lift", "stage": 9, "seg": 2, "x": 1400.0},
 	{"rid": "route_car_cover", "stage": 10, "seg": 1, "x": 1200.0},
@@ -18,7 +18,7 @@ const TARGETS: Array = [
 ]
 
 func _ready() -> void:
-	GameState.persist_blocked = true   # 실사용자 저장 파일 보호(2026-08-24) — 하니스 공통
+	GameState.persist_blocked = true   # 실사용자 저장 파일 보호(2026-08-24) · 하니스 공통
 	DirAccess.make_dir_recursive_absolute(OUT_DIR)
 	_run.call_deferred()
 
@@ -45,7 +45,7 @@ func _capture(rid: String, stage_idx: int, seg: int, px: float, extra_wait: int 
 		return
 	GameState.disposal_choice = "destroy"   # 탈출 4종 캡처용(일반 맵엔 무해)
 	GameState.record_route_choice(route, "")
-	GameState.current_segment = seg   # record_route_choice 뒤에 — 체인 방 선택
+	GameState.current_segment = seg   # record_route_choice 뒤에 · 체인 방 선택
 	var stage: Node = (load(STAGE_SCENE) as PackedScene).instantiate()
 	add_child(stage)
 	await _wait(30)

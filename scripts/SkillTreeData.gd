@@ -1,7 +1,7 @@
 class_name SkillTreeData
 extends RefCounted
 
-# 스킬 트리 — 3계열 × 여러 라인 × 3티어.
+# 스킬 트리 · 3계열 × 여러 라인 × 3티어.
 # 플레이어가 한 라인에 보유한 티어는 GameState.skills[line_id]에 정수로 저장 (0=미보유, 1/2/3=보유 티어).
 # 같은 라인의 다음 티어는 이전 티어 보유 시에만 후보 등장.
 
@@ -9,7 +9,7 @@ const FAMILY_COMBAT: String = "전투"
 const FAMILY_MOBILITY: String = "이동"
 const FAMILY_SURVIVAL: String = "생존"
 
-# 계열 색 — 단일 소스. 스킬 트리 텍스트·아이콘·카드가 모두 이 값을 참조해 한 계열은 한 색으로 보인다.
+# 계열 색 · 단일 소스. 스킬 트리 텍스트·아이콘·카드가 모두 이 값을 참조해 한 계열은 한 색으로 보인다.
 const FAMILY_COLORS: Dictionary = {
 	FAMILY_COMBAT: Color(0.97, 0.58, 0.48),
 	FAMILY_MOBILITY: Color(0.55, 0.82, 0.97),

@@ -573,7 +573,7 @@
   `_sewers_inflow()/_sewers_junction()` 각 `route_lines`
 
 어투 밴드 스윕(2026-08-21): veil 줄 기본 = 중립 보고체("text"). warm 밴드 전용 변형이 있는 줄만
-`text_warm`(아래 "· warm" 행)으로 병기 — 없으면 기본 폴백. rival 줄은 라이벌 고유 말투 유지.
+`text_warm`(아래 "· warm" 행)으로 병기 · 없으면 기본 폴백. rival 줄은 라이벌 고유 말투 유지.
 
 | 맵 · 화자 | KO | EN |
 |---|---|---|

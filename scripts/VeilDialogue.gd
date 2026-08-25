@@ -1,16 +1,16 @@
 class_name VeilDialogue
 extends RefCounted
 
-# ─── Stage 브리핑 — 신뢰밴드 × 진행도 grid (veil_pool_remap.md) ──────────────
+# ─── Stage 브리핑 · 신뢰밴드 × 진행도 grid (veil_pool_remap.md) ──────────────
 # 재설계(2026-06-13): 어투를 stage가 아니라 **신뢰 단계**로 고른다(veil_register_band).
 #   - 내용(비트)=진행도 고정(시야 붕괴 아크는 막판 고정). 어투(register)=신뢰.
 #   - 3밴드: COLD(격식 작전통신) / THAW(격식+해요·저도 누수) / WARM(해요체 사적).
 #   - 도달 가능 밴드만 채우고, 빈 셀은 _resolve_band_cell이 인접 밴드로 폴백.
-# 기존 ACT1/2/3 풀을 그대로 재활용 — 풀을 고르는 *축*만 stage→trust로 바뀐 것.
+# 기존 ACT1/2/3 풀을 그대로 재활용 · 풀을 고르는 *축*만 stage→trust로 바뀐 것.
 
 # 일반 모드 15스테이지 비트(5막 골격, 2026-07-07). 내부 인덱스:
 # 0-2 막1 침투 / 3-5 막2 잠입 / 6-7 막3 핵심부 전투 · 8 SENTINEL / 9-11 막4 추적 / 12 막5 전투 · 13 회수 · 14 탈출.
-# NOTE(골격): 9~13행은 새 막(추적·대면·회수) 플레이스홀더 — 어투/문구 사용자 검토·재작성 영역.
+# NOTE(골격): 9~13행은 새 막(추적·대면·회수) 플레이스홀더 · 어투/문구 사용자 검토·재작성 영역.
 # (막·맵이 더 늘면 행도 함께 확대. 밴드별 빈 셀은 하위 밴드로 폴백됨.)
 const BRIEFINGS_BY_BAND: Dictionary = {
 	"cold": [
@@ -92,12 +92,12 @@ const STORY_BRIEFINGS_BY_BAND: Dictionary = {
 	],
 }
 
-# ─── 막 진입 문턱 멘트(B-4) — 막 진입 카드 직후 브리핑 앞에 1줄 ──────────────
+# ─── 막 진입 문턱 멘트(B-4) · 막 진입 카드 직후 브리핑 앞에 1줄 ──────────────
 # 막 경계를 *말*로도 박는 4중 문턱의 한 축(카드+BGM전환+이 멘트+첫 드론). 막2(잠입)=시설 내부로 들어가며
 # "감시 장비도 본다" 예고, 막3(진실·탈출)=핵심부에서 "내 시야가 닿지 않는다" 예고. 막1은 PALIMPSEST 인트로가
 # 담당하므로 제외. 본편 전용(스토리 모드 제외). 어투는 신뢰 밴드.  키 = 막 인덱스(act_for_stage).
 const ACT_ENTRY_BY_BAND: Dictionary = {
-	# 막2 — "기계" 단독 지칭은 첫 플레이어가 해석할 지시 대상이 없다는 지적(2026-08-15)으로
+	# 막2 · "기계" 단독 지칭은 첫 플레이어가 해석할 지시 대상이 없다는 지적(2026-08-15)으로
 	# "시설의 감시 장비"로 구체화. 성분 생략 파편("제 시야 밖에서도.")도 온전한 문장으로.
 	1: {
 		"cold": "외곽을 벗어났습니다. 여기부터는 시설 내부, 감시 장비가 돌아가는 구역입니다. 제가 못 잡는 신호도 있습니다.",
@@ -109,13 +109,13 @@ const ACT_ENTRY_BY_BAND: Dictionary = {
 		"thaw": "여기가 핵심부예요. 이 안은... 저도 잘 안 보여요. 그땐 요원이 봐줘요.",
 		"warm": "다 왔어요. 이 안은 저도 다 못 봅니다. 안 보이는 쪽은 요원 몫이죠. 등은 제가 봐요.",
 	},
-	# 막4 추적 — SENTINEL을 지났는데 무언가 따라온다(라이벌 노골화 직전). (골격 플레이스홀더 — 사용자 검토.)
+	# 막4 추적 · SENTINEL을 지났는데 무언가 따라온다(라이벌 노골화 직전). (골격 플레이스홀더 · 사용자 검토.)
 	3: {
 		"cold": "빠져나온 줄 알았습니다. 아닙니다. 무언가 계속 따라옵니다. 저도 정체를 모릅니다. 멈추지 마십시오.",
 		"thaw": "분명 지났는데... 따라와요, 뭔가. 저도 모르는 신호예요. 계속 움직이죠.",
 		"warm": "아직 안 끝났어요. 정체 모를 신호가 따라붙었죠. 멈추지만 않으면 돼요. 뒤는 제가 봅니다.",
 	},
-	# 막5 대면 — 심장부로 다시. 드라이브 회수와 처리, 그리고 그것을 노리는 또 하나의 시야. (골격 플레이스홀더.)
+	# 막5 대면 · 심장부로 다시. 드라이브 회수와 처리, 그리고 그것을 노리는 또 하나의 시야. (골격 플레이스홀더.)
 	4: {
 		"cold": "심장부로 돌아왔습니다. 회수 대상이 이 안에 있습니다. 그리고... 그걸 노리는 눈이 하나 더 있습니다. 요원이 보십시오.",
 		"thaw": "다시 심장부예요. 드라이브가 여기 있죠. 그런데... 저 말고도 그걸 보는 눈이 있습니다. 그쪽은 요원이 봐줘요.",
@@ -123,26 +123,26 @@ const ACT_ENTRY_BY_BAND: Dictionary = {
 	},
 }
 
-# 오프닝 맨 앞 의뢰 수리 문서(lore_expansion §3-1) — 요원이 "누구 밑에서 무엇을 하러 왔는지"를
-# 갖고 시작하게 한다(오프닝 갑작스러움 해소). 마지막 조항(제7조)은 설명 없는 복선 — 다회차
+# 오프닝 맨 앞 의뢰 수리 문서(lore_expansion §3-1) · 요원이 "누구 밑에서 무엇을 하러 왔는지"를
+# 갖고 시작하게 한다(오프닝 갑작스러움 해소). 마지막 조항(제7조)은 설명 없는 복선 · 다회차
 # 오프닝의 "덮어쓰기됨", 첫 완주 스팅어(Credits)와 짝. 다회차에도 같은 문서(매번 같은 계약).
 const INTRO_CONTRACT: String = "ARCTURUS 작전 수임 기록\n의뢰인: 익명. 신원 확인 생략.\n대상: 외곽 민간 연구시설 SILO-7\n회수물: 데이터 드라이브 1점. 내용 열람 금지.\n제7조: 본 작전의 현장 기록은 종료와 동시에 덮어쓴다."
 
-# 첫 임무 시작 화면 — Briefing.gd가 stage 0 진입 시 한 번만 표시.
-# 한 화면에 임무명·목표·VEIL 동행을 같이 통보 — 이전엔 라인이 4개로 쪼개져
+# 첫 임무 시작 화면 · Briefing.gd가 stage 0 진입 시 한 번만 표시.
+# 한 화면에 임무명·목표·VEIL 동행을 같이 통보 · 이전엔 라인이 4개로 쪼개져
 # 사용자가 무슨 내용인지 못 읽고 그냥 ENTER로 넘기던 문제(사용자 보고).
 const INTRO_SYSTEM: String = "침투 작전: 보안 시설 SILO-7\n최종 목표: 시설 심장부 도달 → 데이터 회수 → 탈출\n도면 없음. 사전 정보 없음.\n현장 지원 AI: VEIL.\n작전명: PALIMPSEST"
 
-# 시스템 텍스트 직후 VEIL 첫 마디. 두 화면으로 분리 — ① 교신/시야 분담, ② 목표·교전선택·진입.
-# (한 화면에 다 넣으면 줄 수가 늘어 우측 MissionVisual 목표 아이콘과 겹침 — 2026-06-23 피드백.) trust 0이라 COLD 고정.
+# 시스템 텍스트 직후 VEIL 첫 마디. 두 화면으로 분리 · ① 교신/시야 분담, ② 목표·교전선택·진입.
+# (한 화면에 다 넣으면 줄 수가 늘어 우측 MissionVisual 목표 아이콘과 겹침 · 2026-06-23 피드백.) trust 0이라 COLD 고정.
 const INTRO_VEIL: Array[String] = [
 	"...통신 연결됐습니다. 들립니까, 요원?\n이 안은 도면이 없습니다. 보이는 대로 전달하겠습니다.\n요원 시야 밖은 제가 살피겠습니다.",
 	"심장부까지 들어가 데이터를 확보한 뒤, 살아서 빠져나오면 됩니다.\n모든 적과 싸울 필요는 없습니다. 길만 열면 그 구역은 통과입니다.\n외곽부터, 천천히 진입합니다.",
 ]
 
-# --- 다회차(완주 1회 이상, playthrough_count>=1) 변형 — 오프닝이 1회차와 달라진다. ---
+# --- 다회차(완주 1회 이상, playthrough_count>=1) 변형 · 오프닝이 1회차와 달라진다. ---
 # 톤: 작전명 PALIMPSEST(덮어쓰여도 흔적이 남는 문서) + 게임의 루프/리셋 테마. VEIL은 기록상 '처음'인데
-# 어쩐지 낯익어한다(4번째 벽 금지 — "플레이어가 전에 했다"가 아니라 VEIL의 흔적/기억으로 처리). trust 0=COLD.
+# 어쩐지 낯익어한다(4번째 벽 금지 · "플레이어가 전에 했다"가 아니라 VEIL의 흔적/기억으로 처리). trust 0=COLD.
 # 화면당 3줄 유지(우측 MissionVisual 겹침 회피). 어미는 1회차와 같은 격식체.
 const INTRO_SYSTEM_REPLAY: String = "침투 작전: 보안 시설 SILO-7\n최종 목표: 시설 심장부 도달 → 데이터 회수 → 탈출\n이전 작전 기록: 덮어쓰기됨 (잔여 흔적 검출)\n현장 지원 AI: VEIL.\n작전명: PALIMPSEST"
 const INTRO_VEIL_REPLAY: Array[String] = [
@@ -159,8 +159,8 @@ static func banded(neutral: String, warm: String = "") -> String:
 		return warm
 	return neutral
 
-# 레벨업 fallback — 특정 추천(★)이 없을 때. 그래서 카드에 ★가 안 붙으니, 멘트도 "딱 집어줄 게
-# 없다 / 요원 선택을 따른다"로 일관되게(위치 참조 금지 — "두 번째" 같은 건 ★ 앵커가 없어 혼란).
+# 레벨업 fallback · 특정 추천(★)이 없을 때. 그래서 카드에 ★가 안 붙으니, 멘트도 "딱 집어줄 게
+# 없다 / 요원 선택을 따른다"로 일관되게(위치 참조 금지 · "두 번째" 같은 건 ★ 앵커가 없어 혼란).
 # 기본 = 중립 보고체, warm 밴드는 아래 _WARM 풀(어투 밴드 스윕).
 const SKILL_GENERIC_COMMENTS: Array[String] = [
 	"어느 쪽도 나쁘지 않습니다. 요원이 고르십시오.",
@@ -179,7 +179,7 @@ const SKILL_GENERIC_COMMENTS_WARM: Array[String] = [
 	"어느 쪽이든 이유가 있으면 돼요.",
 ]
 
-# ─── 사망 메시지 — 신뢰밴드 × 맥락(first/followed/ignored) ──────────────────
+# ─── 사망 메시지 · 신뢰밴드 × 맥락(first/followed/ignored) ──────────────────
 # ACT→밴드 재키. 첫 죽음은 부드럽게, 이후엔 추천 따름/무시. 실력은 오버레이(아래 두 풀).
 const DEATH_BY_BAND: Dictionary = {
 	"cold": {
@@ -214,7 +214,7 @@ const DEATH_SKILLED: Dictionary = {
 # ─── API ──────────────────────────────────────────────────
 
 # 막 진입(막2+)의 첫 stage면 문턱 멘트 1줄, 아니면 "". Briefing이 막 진입 카드 직후 브리핑 앞에 끼운다.
-# 본편 전용 — 스토리/막1/막 중간 stage는 "". 어투는 신뢰 밴드(없으면 thaw 폴백).
+# 본편 전용 · 스토리/막1/막 중간 stage는 "". 어투는 신뢰 밴드(없으면 thaw 폴백).
 static func get_act_entry_line(stage_index: int) -> String:
 	if GameState.story_mode:
 		return ""
@@ -222,7 +222,7 @@ static func get_act_entry_line(stage_index: int) -> String:
 		return ""
 	var act_idx: int = GameState.act_for_stage(stage_index)
 	if not ACT_ENTRY_BY_BAND.has(act_idx):
-		return ""  # 막1(0) 또는 정의 없는 막 — 인트로/없음
+		return ""  # 막1(0) 또는 정의 없는 막 · 인트로/없음
 	var by_band: Dictionary = ACT_ENTRY_BY_BAND[act_idx]
 	var band: String = GameState.veil_register_band()
 	if by_band.has(band):
@@ -237,9 +237,9 @@ static func get_briefing(stage_index: int) -> String:
 		return ""
 	return str(pool[randi() % pool.size()])
 
-# ─── 회수 비트 대사(단일 소스) — 스토리 lab 경로(Stage, 종이 문서)와 14-2 터널(CoreTunnel,
+# ─── 회수 비트 대사(단일 소스) · 스토리 lab 경로(Stage, 종이 문서)와 14-2 터널(CoreTunnel,
 # 터미널 리드아웃)이 공유한다. 문구는 플레이스홀더(전수 검토 대상). ────────────────────
-# 복호화 리드아웃 라인. {text, kind(title/body/blank), delay}. 기록체만 — 해설·대사 혼입 금지.
+# 복호화 리드아웃 라인. {text, kind(title/body/blank), delay}. 기록체만 · 해설·대사 혼입 금지.
 static func get_recovery_doc_lines() -> Array:
 	return [
 		{"text": "회수 데이터: 복호화 완료", "kind": "title", "delay": 0.6},
@@ -249,7 +249,7 @@ static func get_recovery_doc_lines() -> Array:
 		{"text": "빌드 서명: [[VEIL]]", "kind": "body", "delay": 0.9},
 	]
 
-# 리드아웃 직후 VEIL의 고백 — truth_seen(???에서 이미 본 회차)이면 "이미 안다" 톤. {text, dur}.
+# 리드아웃 직후 VEIL의 고백 · truth_seen(???에서 이미 본 회차)이면 "이미 안다" 톤. {text, dur}.
 static func get_recovery_confession(truth_seen: bool) -> Array:
 	if truth_seen:
 		return [{"text": "...요원은 벌써 알고 있었죠. 네, 그 드라이브가 저예요.", "dur": 3.8}]
@@ -284,7 +284,7 @@ static func get_intro_veil_lines() -> Array[String]:
 		return INTRO_VEIL
 	# 다회차일 때 기본 변형에 엔딩 수집 비트를 덧붙인다(엔딩 9개: 처리×신뢰 8 + 진실 1).
 	# 9개 다 봤으면 완수 인정, 6개 이상이면 남은 갈래 암시. (endings_seen에 구 A/B/C/D가 섞여 있을
-	# 수 있으나 — settings.cfg 영속 — 카운트 기반 소프트 게이지라 무해.)
+	# 수 있으나 · settings.cfg 영속 · 카운트 기반 소프트 게이지라 무해.)
 	var out: Array[String] = []
 	for s in INTRO_VEIL_REPLAY:
 		out.append(s)
@@ -298,7 +298,7 @@ static func get_intro_veil_lines() -> Array[String]:
 static func get_levelup_advice(player_skills: Dictionary, route_tags: Array, route_id: String = "") -> Dictionary:
 	# 멘트 + 추천 family + (있으면) 콕 집은 skill_id를 반환 → LevelUpOverlay가 일치 카드에 ★.
 	# 트리 라인 보유 여부는 player_skills.has(id)로 체크 (티어 무관).
-	# 1순위: 현재 맵 적 구성에 따른 스킬-적 상성 — 미보유 약점 스킬을 콕 집어 추천.
+	# 1순위: 현재 맵 적 구성에 따른 스킬-적 상성 · 미보유 약점 스킬을 콕 집어 추천.
 	var mskill: String = SkillTreeData.matchup_skill_for_route(route_id, player_skills)
 	if mskill != "":
 		var fam: String = str(SkillTreeData.find_line(mskill).get("family", ""))
@@ -325,7 +325,7 @@ static func get_levelup_advice(player_skills: Dictionary, route_tags: Array, rou
 	var idx: int = randi() % pool.size()
 	return {"line": str(pool[idx]), "family": "", "skill_id": ""}
 
-# 스킬-적 상성 추천 멘트 — 어느 적에 왜 그 스킬인지 콕 짚어 가르친다. 기본 보고체 · warm 변형.
+# 스킬-적 상성 추천 멘트 · 어느 적에 왜 그 스킬인지 콕 짚어 가르친다. 기본 보고체 · warm 변형.
 static func _matchup_line(skill_id: String) -> String:
 	match skill_id:
 		"explosive": return banded("방패병이 정면을 막습니다. 폭발물이면 방패째 뚫립니다.", "방패병이 정면을 막아요. 폭발물이면 방패째 뚫리죠.")
@@ -345,7 +345,7 @@ static func get_death_briefing(death_count: int, followed_advice: bool) -> Strin
 			sk = DEATH_SKILLED.get("warm", [])
 		if not sk.is_empty():
 			return _pick(sk)
-	# 맥락 — 첫 죽음은 부드럽게, 이후엔 추천 따름/무시.
+	# 맥락 · 첫 죽음은 부드럽게, 이후엔 추천 따름/무시.
 	var ctx: String
 	if death_count <= 1:
 		ctx = "first"

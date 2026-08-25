@@ -1,11 +1,11 @@
 extends Node
 
-# 접근성 오버레이 — autoload. scene 전환에도 살아남아 전 화면에 일괄 적용한다.
-#   · 화면 밝기 (blend mode 오버레이 — 셰이더 불필요, GL Compatibility/웹 안전)
+# 접근성 오버레이 · autoload. scene 전환에도 살아남아 전 화면에 일괄 적용한다.
+#   · 화면 밝기 (blend mode 오버레이 · 셰이더 불필요, GL Compatibility/웹 안전)
 #   · 효과음 자막 (SfxPlayer.sfx_played 구독 → 의미 있는 효과음을 텍스트로)
 # 색약 모드는 화면 post-process 셰이더가 필요해 별도 단계에서 추가 예정(layer 120 자리 예약).
 #
-# 레이어: 밝기 post-process = 120 (게임/HUD/오버레이 위), 자막 = 125 (항상 그 위 — 가독성 유지).
+# 레이어: 밝기 post-process = 120 (게임/HUD/오버레이 위), 자막 = 125 (항상 그 위 · 가독성 유지).
 # 값의 단일 진실은 GameState (settings.cfg 영속). apply()가 GameState를 읽어 반영.
 
 # ─── 밝기 ─────────────────────────────────────────────
@@ -23,10 +23,10 @@ const CAPTION_FADE: float = 0.6
 const CAPTION_MAX: int = 4
 const CAPTION_DEDUP_WINDOW: float = 0.5  # 같은 자막 연속 발생 시 새 줄 대신 타이머만 리셋
 
-# 자막을 띄울 의미 있는 효과음만 매핑. 빈번한 잡음(발소리/사격/UI음/XP)은 제외 —
+# 자막을 띄울 의미 있는 효과음만 매핑. 빈번한 잡음(발소리/사격/UI음/XP)은 제외 ·
 # 무음 플레이 시 "안 보이는 위협 / 중요한 상태 변화"를 글로 알리는 게 목적.
 const CAPTION_MAP: Dictionary = {
-	# 적 행동 — 화면 밖/소리로만 예고되는 위협
+	# 적 행동 · 화면 밖/소리로만 예고되는 위협
 	"enemy_patrol_fire": "[적 사격]",
 	"enemy_sniper_charge": "[저격 조준]",
 	"enemy_sniper_fire": "[저격 발사]",
@@ -34,14 +34,14 @@ const CAPTION_MAP: Dictionary = {
 	"enemy_bomber_beep": "[자폭 카운트다운]",
 	"enemy_bomber_explode": "[자폭 폭발]",
 	"enemy_death": "[적 처치]",
-	# 보스 — 누가 하는 공격인지 분명하게 "보스" 접두.
+	# 보스 · 누가 하는 공격인지 분명하게 "보스" 접두.
 	"boss_phase_change": "[보스 단계 전환]",
 	"boss_missile_launch": "[보스 미사일 발사]",
 	"boss_self_destruct_alarm": "[보스 자폭 경보]",
 	"boss_self_destruct_disarm": "[보스 자폭 해제]",
 	"boss_death": "[보스 파괴]",
 	"boss_alert_text": "[보스 경고]",
-	# 폭발물 / 투사체 (bomb_throw는 보스 전용 — 보스 폭탄)
+	# 폭발물 / 투사체 (bomb_throw는 보스 전용 · 보스 폭탄)
 	"bomb_throw": "[보스 폭탄 투척]",
 	"bomb_explode": "[폭발]",
 	"bullet_deflect_shield": "[방패에 튕김]",

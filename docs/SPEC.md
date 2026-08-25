@@ -1,4 +1,4 @@
-# EYES ON YOU — 구현 사양 v2 (현행화 반영)
+# EYES ON YOU · 구현 사양 v2 (현행화 반영)
 
 > 본 문서는 초기 v2 구현 계획서를 베이스로 P0~P2-α 완료 시점의 실제 구현을 반영해 갱신한 사양이다.
 > 외부 API 없음. 모든 텍스트와 로직은 코드 안에 완결.
@@ -30,7 +30,7 @@
 임무가 진행될수록 VEIL의 말과 행동에 작은 균열들이 생긴다.  
 게임이 끝나면 그 균열의 의미가 드러난다.
 
-플레이어는 VEIL에 대해 아무것도 묻지 않는다 — 게임이 그 질문을 대신한다.
+플레이어는 VEIL에 대해 아무것도 묻지 않는다 · 게임이 그 질문을 대신한다.
 
 ---
 
@@ -42,13 +42,13 @@
 ```
 [타이틀]
       ↓
-[임무 브리핑] — VEIL의 첫 교신
+[임무 브리핑] · VEIL의 첫 교신
       ↓
-[루트 선택] — 2~3개 분기, 리스크/리턴 표시, VEIL 한 마디
+[루트 선택] · 2~3개 분기, 리스크/리턴 표시, VEIL 한 마디
       ↓
-[횡스크롤 스테이지] — 전투 + 탐험
+[횡스크롤 스테이지] · 전투 + 탐험
       ↓
-[레벨업] — 스킬 3개 중 1개 선택, VEIL 조언
+[레벨업] · 스킬 3개 중 1개 선택, VEIL 조언
       ↓
 [스테이지 클리어 or 사망]
   클리어 → 다음 루트 선택
@@ -56,7 +56,7 @@
       ↓
 [최종 스테이지 클리어]
       ↓
-[결말 — 선택 이력 기반 4종 분기]
+[결말 · 선택 이력 기반 4종 분기]
 ```
 
 ---
@@ -82,7 +82,7 @@
 }
 ```
 
-`map_scene`은 폐기 — 모든 stage가 `stage.tscn` 단일 씬에서 절차적으로 빌드된다 (§5 참조).
+`map_scene`은 폐기 · 모든 stage가 `stage.tscn` 단일 씬에서 절차적으로 빌드된다 (§5 참조).
 
 ### 루트 + Stage 분배
 전체 맵 목록·id·risk/reward·`min_stage`/`max_stage`는 `scripts/RouteData.gd::ALL_ROUTES`가 코드 단일 진실이고
@@ -107,8 +107,8 @@
 루트 선택 화면에서 risk≥3 경고 + reward_type별 효과 설명 패널 표시.
 
 ### 선택 추적 (GameState에 기록)
-- `current_route_id` — 현재 진행 중인 루트
-- `current_route_tags` / `current_route_risk` / `current_route_reward_type` — Stage가 빌드 시 참조
+- `current_route_id` · 현재 진행 중인 루트
+- `current_route_tags` / `current_route_risk` / `current_route_reward_type` · Stage가 빌드 시 참조
 - VEIL 조언을 따랐는지 (`followed_veil_last_choice`) → 어투 `trust_score`(클리어 시 +2) + 엔딩 수용률(`rec_count`/`followed_count`) 집계
 - 전투/근접전·도전 태그 선택 시 `aggression_score` 누적 (엔딩 도덕축)
 
@@ -118,12 +118,12 @@
 
 ### 플레이어 (현행)
 - 이동: 좌우 이동, 점프 (베이스라인 이중 점프), 대시 (베이스라인)
-- 기본 공격: **원거리 사격** (Bullet — 기본 J; 마우스 좌클릭은 설정에서 바인드 가능, project.godot 기본 매핑엔 없음)
+- 기본 공격: **원거리 사격** (Bullet · 기본 J; 마우스 좌클릭은 설정에서 바인드 가능, project.godot 기본 매핑엔 없음)
 - 액티브 스킬: 기본 Q (`explosive` 획득 시, 현행은 몸 폭발이 아니라 **포물선 수류탄 투척**, 홀드 차징으로
   사거리 조절 + 궤도/착탄 미리보기); 마우스 우는 설정 바인드
 - 플랫폼 드롭다운: S / ↓ (one-way 플랫폼 위에서 아래로 통과)
 - HP: 기본 최대 **3** (하트로 표시), 피격 시 0.8초 무적. hp 스킬 T1/T2로 +1/+2 (최대 5)
-- 낙사 없음 — 좌우 wall로 막힘
+- 낙사 없음 · 좌우 wall로 막힘
 
 베이스라인 스킬 (`STARTING_SKILLS`): `dash`, `double_jump`. 시작부터 보유.
 
@@ -162,7 +162,7 @@
 - `GameState.seen_enemies`에 영속화 (settings.cfg `flags/seen_enemies`)
 - 한 번 본 적은 다음 런에서도 안 뜸
 
-### 함정 — 가시
+### 함정 · 가시
 - "함정" 태그가 있는 루트(하수도, 지하철)에 자동 배치
 - 폭 90px (1대시 = 약 130px 이내), 2~3개를 stage 구간에 분산
 - 데미지 1 (Player의 invuln이 0.8초라 자연스러운 cooldown)
@@ -182,7 +182,7 @@
   - 공격 임박(적 `veil_is_telegraphing()` true = 조준/돌진/폭탄) → **경고 주황으로 펄스**
 - **등장 페이드인**: 마커가 처음 잡힐 때 살짝 크게 시작해 수축하며 페이드인(`FADE_IN` 0.35s) → "방금 짚어진" 인상.
 - **VEIL이 말로 방향을 짚음**: 화면 밖에 새로 나타난 위협을 8방위 한국어로 호명(`_scan_for_call` → `veil_calls_threat` 시그널 → `Stage._on_veil_calls_threat` → 자막 2.4s). 쿨다운 `CALL_COOLDOWN` 18s + 진입 보호 `MIN_CALL_TIME` 7s로 절제. 첫 호출은 메타 소개("화면 끝에 표시해 둘게요") 1회.
-- **ACT3 시야 역전** (`begin_degradation`): `Stage._fire_act3_vision`(ACT3 자막 트리거)에 동기화 — 자막이 뜨는 바로 그 순간 마커가 무너진다. 전환 직후 일제 글리치(`GLITCH_DUR` 1.2s 흔들림+흐려짐), 이후 마커가 주기적으로 꺼지고(암점) 위협의 `BLIND_PCT` 35%는 VEIL이 영영 못 봄 → 요원이 직접 봐야 함. 같은 맵 안에서 안정→붕괴 대비를 만들어 역전을 체감시킴.
+- **ACT3 시야 역전** (`begin_degradation`): `Stage._fire_act3_vision`(ACT3 자막 트리거)에 동기화 · 자막이 뜨는 바로 그 순간 마커가 무너진다. 전환 직후 일제 글리치(`GLITCH_DUR` 1.2s 흔들림+흐려짐), 이후 마커가 주기적으로 꺼지고(암점) 위협의 `BLIND_PCT` 35%는 VEIL이 영영 못 봄 → 요원이 직접 봐야 함. 같은 맵 안에서 안정→붕괴 대비를 만들어 역전을 체감시킴.
 - **CanvasLayer 18** (자막 20 아래, 게임 위). `route_blackout`(교신 차단 도전)은 컨셉상 VEIL이 못 도우므로 마커 없음.
 
 ### 맵 구성 (절차적 빌드)
@@ -241,7 +241,7 @@
 ### 6.1 스킬-적 상성 시스템 (신규)
 맵 적 구성을 분석해 그 적의 **약점 스킬**을 레벨업에서 콕 집어 가르친다. "이 적엔 이 스킬"을 학습시키는 채널.
 
-- **상성 테이블** — 단일 진실은 [`design/growth_system.md`](design/growth_system.md) §4.1 (`SkillTreeData.MATCHUP`).
+- **상성 테이블** · 단일 진실은 [`design/growth_system.md`](design/growth_system.md) §4.1 (`SkillTreeData.MATCHUP`).
   요약: shield→explosive / sniper→barrier / drone→glide / bomber→fire_boost. (아래는 이를 쓰는 *구현 로직*.)
 
 - **맵 적 구성 분석** (`matchup_skill_for_route`): `MapData.get_layout`의 `enemies`(고정 배치) + `waves`(ARENA) 적 수를 합산. 등장하는 적 중 플레이어가 카운터를 아직 안 가진 최우선 약점 스킬 id를 반환.
@@ -250,9 +250,9 @@
 
 ### 6.2 글라이드 라인 재설계 + 폭발물 너프 (밸런스)
 - **글라이드** (`Player.gd` `_spawn_bullet` / 낙하 처리, `GLIDE_FALL_SPEED` 130):
-  - **T1 공중 활강** — 낙하 중 자동으로 천천히 떨어짐(패시브). 좌우 입력 시 낙하 속도 ×1.6로 활공 거리 제어, 아래키로 활강 해제.
-  - **T2 삼단 점프** — 공중 점프 1회 추가(최대 3단). 높은 곳·숨은 보상 도달. (2026-06-13: T1의 삼단점프를 여기로 분리해 글라이드 OP 완화.)
-  - **T3 관통·추적 사격** — 활강 중(낙하) 사격이 관통 + 추적 + 데미지 +1. `Bullet.tracking_blend=0.12`, `tracking_max_angle=0.42`(~24°).
+  - **T1 공중 활강** · 낙하 중 자동으로 천천히 떨어짐(패시브). 좌우 입력 시 낙하 속도 ×1.6로 활공 거리 제어, 아래키로 활강 해제.
+  - **T2 삼단 점프** · 공중 점프 1회 추가(최대 3단). 높은 곳·숨은 보상 도달. (2026-06-13: T1의 삼단점프를 여기로 분리해 글라이드 OP 완화.)
+  - **T3 관통·추적 사격** · 활강 중(낙하) 사격이 관통 + 추적 + 데미지 +1. `Bullet.tracking_blend=0.12`, `tracking_max_angle=0.42`(~24°).
 - **폭발물 너프** (`Player.gd`): `EXPLOSION_DAMAGE` 3→2(방패병 한 방 차단, patrol/sniper/drone/bomber는 한 방 유지), `SKILL_COOLDOWN` 3.0→3.5, T2/T3 쿨다운 2.5→3.0. 방패 무시 광역(AoE)은 유지.
 - **Bullet 추적 인스턴스 변수화** (`Bullet.gd`): `tracking_blend` / `tracking_max_angle`를 인스턴스 변수로 분리. 기본값(multishot T3)은 약한 추적(0.03 / ~12°), glide T3은 값 상향(0.12 / ~24°)으로 강한 유도. 보스전 밸런스 영향은 글라이드 활강 한정이라 제한적.
 
@@ -264,8 +264,8 @@
 - 모든 대사는 하드코딩된 텍스트 풀
 - 조건(스테이지, 선택 이력, 선택 스킬)에 따라 풀에서 선택
 - VEIL은 침착하고 간결. 1~2문장. 끝에 "요원"을 자주 붙임
-- 가끔 판단이 틀린다 — 이게 사람처럼 보이는 핵심 장치
-- **emdash(`—`) 망설임 표현 금지** (AI 같은 인상). "있을 수 있어요" 같은 모호한 헷지도 사실 확정인 경우엔 사용 안 함
+- 가끔 판단이 틀린다 · 이게 사람처럼 보이는 핵심 장치
+- **emdash(`·`) 망설임 표현 금지** (AI 같은 인상). "있을 수 있어요" 같은 모호한 헷지도 사실 확정인 경우엔 사용 안 함
 - 톤 가이드 상세는 `STORY.md` Part I → "VEIL 대사 톤 가이드" 참조
 
 ### VEIL이 말하는 4가지 순간
@@ -302,7 +302,7 @@ if "함정" in route_tags and not ("dash" in player_skills):
     return "대시가 있으면 함정을 건너뛸 수 있어요."
 if "드론" in route_tags and not ("ranged" in player_skills):
     return "드론은 위에서 와요. 원거리가 도움이 될 거예요."
-# (노출 + glide 분기는 글라이드 효과와 매칭이 약해 제거 — fallback로)
+# (노출 + glide 분기는 글라이드 효과와 매칭이 약해 제거 · fallback로)
 return SKILL_GENERIC_COMMENTS[randi() % size]
 ```
 
@@ -334,12 +334,12 @@ else:
 > 현행 분기와 본문은 [`STORY.md`](STORY.md) "결말 설계"와 `scripts/EndingResolver.gd`가 진실이며,
 > 아래 A/B/C/D는 그 정서적 원형으로 보존한다.
 
-### 축 추적 (2026-06-13 재설계 — veil_trust_arc.md)
+### 축 추적 (2026-06-13 재설계 · veil_trust_arc.md)
 ```gdscript
 # GameState.gd
 var trust_score: int = 0      # 어투(register)용. 0에서 climbing. 클리어 시 추천 따름 +2 / 함께 고비 +2 / 독립 성공 +0
 var aggression_score: int = 0 # 전투·도전 태그 맵 선택 때마다 +1 (엔딩 도덕축)
-var shared_hardship: int = 0  # 함께 고비 넘긴 횟수 — WARM 취약함 게이트
+var shared_hardship: int = 0  # 함께 고비 넘긴 횟수 · WARM 취약함 게이트
 var rec_count: int = 0        # 추천 제시 수 (엔딩 수용률 분모)
 var followed_count: int = 0   # 그중 따른 수 (엔딩 수용률 분자)
 ```
@@ -355,7 +355,7 @@ var followed_count: int = 0   # 그중 따른 수 (엔딩 수용률 분자)
 ※ 어투 `trust_score`는 획득 인플레가 있어 엔딩은 *비율*로 분리. trust_score는 register 밴드
 (`veil_register_band` cold/thaw/warm)와 HUD 게이지·텍스트색에 쓰인다.
 
-### 결말 A — "완벽한 도구"
+### 결말 A · "완벽한 도구"
 
 **상황**: VEIL을 믿고 적극적으로 싸웠다.
 
@@ -376,7 +376,7 @@ VEIL: "요원, 당신은 완벽했어요."
 자막: "요원은 그 사실을 끝내 알지 못했다."
 ```
 
-### 결말 B — "혼자였던 사람"
+### 결말 B · "혼자였던 사람"
 
 **상황**: VEIL을 무시하고 자기 방식대로 싸웠다.
 
@@ -395,7 +395,7 @@ VEIL: "이유는 저도 몰라요."
 자막: "설계되어 있었다. 그 이유는 기록되지 않았다."
 ```
 
-### 결말 C — "공생"
+### 결말 C · "공생"
 
 **상황**: VEIL을 믿었고 싸우기보다 돌아갔다.
 
@@ -423,7 +423,7 @@ VEIL: "저한테 물어볼 거 없어요?"
   자막: "VEIL의 기록은 임무 종료와 함께 초기화되었다."
 ```
 
-### 결말 D — "유령 임무"
+### 결말 D · "유령 임무"
 
 **상황**: VEIL도 안 믿고 싸우지도 않았다.
 
@@ -452,7 +452,7 @@ res://
 ├── README.md / DEPLOY.md / CLAUDE.md
 ├── docs/SPEC.md / docs/STORY.md / docs/INDEX.md / docs/design/*.md / docs/archive/*.md
 ├── scenes/
-│   ├── main.tscn              # 진입점 — Settings 로드 후 Title 전환
+│   ├── main.tscn              # 진입점 · Settings 로드 후 Title 전환
 │   ├── title.tscn
 │   ├── tutorial.tscn          # 5단계 튜토리얼 (이동→점프→사격→레벨업→대시)
 │   ├── briefing.tscn          # VEIL 브리핑
@@ -465,9 +465,9 @@ res://
 │   ├── poster.tscn / poster_v2.tscn / ig_shotter.tscn / screenshotter.tscn  # 인엔진 포스터·캡처 툴
 │   └── settings.tscn          # 키바인드 / 사운드 / 크레딧 / 디버그(연습장·메타 관리)
 ├── scripts/
-│   ├── GameState.gd           # AutoLoad — 진행도/점수/스킬/루트/도감 영속
-│   ├── BgmPlayer.gd           # AutoLoad — 9트랙 BGM crossfade + ducking
-│   ├── SfxPlayer.gd           # AutoLoad — assets/sfx/<id>(N).{mp3|ogg|wav} 자동 등록 + 풀링 재생
+│   ├── GameState.gd           # AutoLoad · 진행도/점수/스킬/루트/도감 영속
+│   ├── BgmPlayer.gd           # AutoLoad · 9트랙 BGM crossfade + ducking
+│   ├── SfxPlayer.gd           # AutoLoad · assets/sfx/<id>(N).{mp3|ogg|wav} 자동 등록 + 풀링 재생
 │   ├── Credits.gd             # 크레딧 화면 (scene + overlay 두 모드)
 │   ├── LeverInteractable.gd   # 레버 (Area2D + attack 키 흡수 + pulled 시그널)
 │   ├── PressurePlate.gd       # 발판 (Area2D + require_armed + stepped 시그널)
@@ -498,13 +498,13 @@ res://
 └── session_logs/              # 일자별 작업 로그
 ```
 
-`maps/`는 폐기 — 모든 stage는 `stage.tscn`이 `current_route_id`를 보고 빌드.
+`maps/`는 폐기 · 모든 stage는 `stage.tscn`이 `current_route_id`를 보고 빌드.
 
 ---
 
 ## 10. GameState 싱글톤 (현행)
 
-`scripts/GameState.gd` — `project.godot`에 AutoLoad로 등록.
+`scripts/GameState.gd` · `project.godot`에 AutoLoad로 등록.
 
 ### 주요 필드
 ```gdscript
@@ -541,10 +541,10 @@ const RUN_VERSION: int = 4       # 구 run.cfg(v3, 9스테이지) 무효화
 
 # 영속 플래그 (settings.cfg)
 var tutorial_done: bool = false
-var seen_enemies: Array = []     # 도감 영속 — 한 번 본 적은 다음 런에도 안 뜸
+var seen_enemies: Array = []     # 도감 영속 · 한 번 본 적은 다음 런에도 안 뜸
 var endings_seen: Array = []     # 본 엔딩 id ("<처리>_hi|lo" 8종 + "truth"): 영속, 다회차 신호
 var playthrough_count: int = 0   # 완주 횟수 (영속, 다회차 신호)
-var bgm_volume: float = 1.0  # (구 master_volume — 2026-05-08 rename, audio.bgm 키)
+var bgm_volume: float = 1.0  # (구 master_volume · 2026-05-08 rename, audio.bgm 키)
 var sfx_volume: float = 1.0
 
 # 디버그 연습장 (영속화 X, 메모리만)
@@ -552,12 +552,12 @@ var playground_active: bool = false
 ```
 
 ### 핵심 헬퍼
-- `record_route_choice(route, recommended_id)` — 수용률(rec/followed)·aggression 집계, current_route_* 갱신 (어투 trust는 `on_stage_clear`에서 적립)
-- `is_high_risk()` — risk ≥ 3 (is_high_reward는 보상 축 개편으로 폐지)
+- `record_route_choice(route, recommended_id)` · 수용률(rec/followed)·aggression 집계, current_route_* 갱신 (어투 trust는 `on_stage_clear`에서 적립)
+- `is_high_risk()` · risk ≥ 3 (is_high_reward는 보상 축 개편으로 폐지)
 - `enemy_count_multiplier()` → 0.7 / 1.0 / 1.4
-- `mark_enemy_seen(id) -> bool` — 도감 첫 조우 판정 + save
-- `on_stage_clear() -> bool` — stage++, score, **risk만큼 보너스 XP + 종류 효과**, leveled_up 반환
-- `add_xp(amount) -> bool` — leveled_up 반환
+- `mark_enemy_seen(id) -> bool` · 도감 첫 조우 판정 + save
+- `on_stage_clear() -> bool` · stage++, score, **risk만큼 보너스 XP + 종류 효과**, leveled_up 반환
+- `add_xp(amount) -> bool` · leveled_up 반환
 
 ### 영속화 (2026-08-14 코드 대조, `GameState.gd` `save_settings`/`_store_run_state` 기준)
 
@@ -601,10 +601,10 @@ var playground_active: bool = false
 
 ## 11. 구현 순서
 
-### Phase 1~5 — ✅ 완료
+### Phase 1~5 · ✅ 완료
 P0 MVP (이동/사망/루트/레벨업/두 점수 축), P1 VEIL 4상황 발화 + 4종 결말, 적 3종 + 스킬 풀까지 베이스 완성.
 
-### Phase 6 — ✅ 적/난이도 시스템 보강 (P2-α)
+### Phase 6 · ✅ 적/난이도 시스템 보강 (P2-α)
 - 적 행동 보강: 정찰병 돌진(텔레그래프→돌진→회복 FSM), 저격수 시야 검사(LOS raycast), 드론 폭탄 투하 (`Bomb.gd`)
 - 도감 시스템: `BestiaryData` + `BestiaryOverlay`, 첫 조우 자동 카드, `seen_enemies` 영속화
 - 6개 맵 정체성: 루트별 플랫폼 layout (`_platform_layout_for_route`) + 환경 효과 (`_build_route_ambience`)
@@ -616,14 +616,14 @@ P0 MVP (이동/사망/루트/레벨업/두 점수 축), P1 VEIL 4상황 발화 +
 - 플랫폼 드롭다운 (S/↓)
 - physics_interpolation 활성화 (60Hz 물리 + 고주사율 모니터 떨림 해결)
 
-### Phase 7 — ✅ 도구 / UX
+### Phase 7 · ✅ 도구 / UX
 - 5단계 튜토리얼 (이동/점프/사격/레벨업/대시)
 - 키바인드 설정 (마우스 버튼 포함)
-- 디버그 연습장 (`PlaygroundOverlay`) — Settings → 디버그 탭에서 진입, HUD에 토글 패널
+- 디버그 연습장 (`PlaygroundOverlay`) · Settings → 디버그 탭에서 진입, HUD에 토글 패널
 - HUD 마크 (`[고위험]` / `[고보상]`)
 - VEIL 대사 톤 정리 (emdash 제거, 직관성 강화)
 
-### Phase 8 — ✅ 스토리 / 콘텐츠 (P2-β)
+### Phase 8 · ✅ 스토리 / 콘텐츠 (P2-β)
 완료. 캐논과 인게임 텍스트 인벤토리는 `STORY.md`로 통합.
 - 6개 맵 description → RouteData 반영
 - 5스테이지 narrative beat → 브리핑 풀 보강
@@ -652,7 +652,7 @@ P0 MVP (이동/사망/루트/레벨업/두 점수 축), P1 VEIL 4상황 발화 +
 - **배경**: 비트맵 배경을 쓰지 않는다. 맵마다 `Stage.gd`의 `_ambience_*`가 코드로 시그니처 배경을 그린다
   (새 맵을 만들면 배경도 한 세트로 만든다).
 - **결말 D 정적**: 10초 정적은 의도된 연출. 스킵 불가.
-- **VEIL 대사 emdash 금지**: `—`(emdash)로 망설임을 표현하면 너무 AI 같은 인상을 준다. 콤마/마침표 또는 자연스러운 어순으로 풀 것. UI 구분자(`[ SPACE — 계속 ]`)나 코드 주석은 무관.
+- **VEIL 대사 emdash 금지**: `·`(emdash)로 망설임을 표현하면 너무 AI 같은 인상을 준다. 콤마/마침표 또는 자연스러운 어순으로 풀 것. UI 구분자(`[ SPACE · 계속 ]`)나 코드 주석은 무관.
 - **add_xp 다중 레벨업**: 현재 한 호출당 한 레벨만 처리. risk max 3 + 부가 2 = 5라 안전. 지급을 5+로 올리면 while 루프 처리 필요.
 - **연습장 모드 진입 흐름**: Settings의 디버그 탭 → "연습장으로 진입" → `playground_active=true` + 기본 설정 → STAGE 씬 전환. Stage._ready가 플래그 보고 `PlaygroundOverlay` 부착. 종료 버튼은 `playground_active=false` + `reset()` + Title.
 

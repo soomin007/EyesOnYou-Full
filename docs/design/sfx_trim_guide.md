@@ -3,13 +3,13 @@
 ElevenLabs SFX는 종종 앞뒤에 짧은 무음/노이즈 꼬리가 붙어 나옴. 게임 액션에
 바로 들리지 않거나 미세하게 늦게 들리면 이 무음이 원인.
 
-## 우선 — 그냥 한 번 들어보기
+## 우선 · 그냥 한 번 들어보기
 
 대부분의 ElevenLabs 짧은 SFX는 무음이 50~150ms 수준이라 빠른 액션
 게임에서는 거의 인지가 안 됨. **먼저 게임 안에서 한 번 플레이해보고**, 거슬리면
 아래 방법 중 하나로 trim.
 
-## 방법 1 — Audacity (무료 GUI, 가장 추천)
+## 방법 1 · Audacity (무료 GUI, 가장 추천)
 
 1. 다운로드: https://www.audacityteam.org/  (Windows 설치 파일)
 2. 파일 열기: `File → Open` → `assets/sfx/<id>.mp3`
@@ -26,12 +26,12 @@ ElevenLabs SFX는 종종 앞뒤에 짧은 무음/노이즈 꼬리가 붙어 나�
 - 시작 무음만 잘라도 충분. 끝부분은 페이드아웃이라 거의 안 거슬림.
 - 여러 파일 한꺼번에 처리하려면 `File → Open` 후 각 트랙을 별도 창으로 작업.
 
-## 방법 2 — ffmpeg one-liner (CLI 친한 사람용)
+## 방법 2 · ffmpeg one-liner (CLI 친한 사람용)
 
 PowerShell에서 `assets/sfx` 폴더에서:
 
 ```powershell
-# 단일 파일 — 시작/끝 무음 자동 제거
+# 단일 파일 · 시작/끝 무음 자동 제거
 ffmpeg -i player_jump.mp3 -af "silenceremove=start_periods=1:start_silence=0.05:start_threshold=-50dB:detection=peak,areverse,silenceremove=start_periods=1:start_silence=0.05:start_threshold=-50dB:detection=peak,areverse" -y player_jump_trimmed.mp3
 
 # 결과 확인 후 원본 덮어쓰기
@@ -40,13 +40,13 @@ mv player_jump_trimmed.mp3 player_jump.mp3
 
 ffmpeg 없으면 `winget install ffmpeg` (Windows 11) 또는 https://ffmpeg.org/.
 
-## 방법 3 — 그냥 두기 (실전 권장)
+## 방법 3 · 그냥 두기 (실전 권장)
 
 게임 안에서 효과음은 다른 시각/물리 피드백과 함께 들리고, 50ms 무음은 거의
 체감 안 됨. 특히:
-- `player_jump` / `player_dash` — 즉각성 중요. 거슬리면 trim.
-- `player_step` — 발걸음. 약간 늦어도 자연스러움.
-- `player_hurt` / `player_death` — 임팩트 SFX. 약간 늦어도 OK.
+- `player_jump` / `player_dash` · 즉각성 중요. 거슬리면 trim.
+- `player_step` · 발걸음. 약간 늦어도 자연스러움.
+- `player_hurt` / `player_death` · 임팩트 SFX. 약간 늦어도 OK.
 
 ## SfxPlayer가 자동 처리하는 것
 

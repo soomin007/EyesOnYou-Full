@@ -1,10 +1,10 @@
 class_name BestiaryData
 extends RefCounted
 
-# 적 도감 — 첫 조우 시 BestiaryOverlay가 이 데이터를 카드로 표시.
+# 적 도감 · 첫 조우 시 BestiaryOverlay가 이 데이터를 카드로 표시.
 # id는 Enemy._enemy_id() 반환값과 일치해야 함.
 
-# 도감은 "관찰 메모" 톤 — 행동 단서만 짧게 적고, 공략은 플레이로 알아가게.
+# 도감은 "관찰 메모" 톤 · 행동 단서만 짧게 적고, 공략은 플레이로 알아가게.
 # (사용자 디자인 방향: 글로 명시 설명 < 체험으로 체득)
 const ENEMIES: Dictionary = {
 	"patrol": {
@@ -35,7 +35,7 @@ const ENEMIES: Dictionary = {
 		"name": "호출병",
 		"blurb": "직접 싸우지 않는다. 안테나에 신호가 퍼지면 곧 증원이 온다. 불려 온 병력은 잡아도 얻는 게 없다. 먼저 끊는 쪽이 이득.",
 	},
-	# 엘리트(라이벌의 군대) — 타입 무관 단일 카드. 첫 조우 시 기반 타입 카드가 우선(Enemy._check_first_encounter).
+	# 엘리트(라이벌의 군대) · 타입 무관 단일 카드. 첫 조우 시 기반 타입 카드가 우선(Enemy._check_first_encounter).
 	"elite": {
 		"name": "강화 개체",
 		"blurb": "보랏빛 계급장을 단 개체. 다른 신호를 받는다. 더 빠르고, 더 오래 버틴다. 상대하는 법은 같다.",

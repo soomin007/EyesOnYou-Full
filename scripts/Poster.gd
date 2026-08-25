@@ -1,6 +1,6 @@
 extends Control
 
-# 포스터 렌더 하니스 — PosterCanvas를 정확한 포스터 해상도의 SubViewport에 담아 그리고,
+# 포스터 렌더 하니스 · PosterCanvas를 정확한 포스터 해상도의 SubViewport에 담아 그리고,
 # 화면엔 창 비율에 맞춰 미리보기를 띄우며, PNG로 캡처해 저장한다.
 # 생성 전용 실행: godot --path . res://scenes/poster.tscn --gen  → 4종 저장 후 자동 종료.
 #   ① 기본 1240×1754  ② 2배 고해상 2480×3508(A4 ~300dpi, 인쇄용)  ③ 썸네일 150  ④ 썸네일 300
@@ -59,7 +59,7 @@ func _save() -> void:
 	DirAccess.make_dir_recursive_absolute("res://poster_out")
 	_save_image(_grab(_sv), OUT_PATH)
 
-# 2배 고해상 — 별도 2배 SubViewport에 PosterCanvas를 scale 2로 그려 진짜 2배 해상도 렌더.
+# 2배 고해상 · 별도 2배 SubViewport에 PosterCanvas를 scale 2로 그려 진짜 2배 해상도 렌더.
 func _save_hires() -> void:
 	var sv2: SubViewport = SubViewport.new()
 	sv2.size = Vector2i(PW * 2, PH * 2)
@@ -75,7 +75,7 @@ func _save_hires() -> void:
 	_save_image(_grab(sv2), OUT_PATH_2X)
 	sv2.queue_free()
 
-# 정사각 썸네일 — 600 렌더 후 150/300 다운스케일.
+# 정사각 썸네일 · 600 렌더 후 150/300 다운스케일.
 func _save_thumbs() -> void:
 	var svt: SubViewport = SubViewport.new()
 	svt.size = Vector2i(THUMB_RENDER, THUMB_RENDER)

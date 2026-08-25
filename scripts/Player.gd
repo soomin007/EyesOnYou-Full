@@ -17,66 +17,66 @@ const DASH_COOLDOWN: float = 0.7
 const INVULN_AFTER_HIT: float = 0.8
 const SKILL_COOLDOWN: float = 3.5  # explosive 재사용 대기 (너프: 3.0→3.5, "만능" 억제)
 
-# 수류탄 투척(explosive 스킬) — 몸에서 터지는 근접기 대신 포물선 투척으로 재설계(엄폐 뒤에서 먼 적 타격).
+# 수류탄 투척(explosive 스킬) · 몸에서 터지는 근접기 대신 포물선 투척으로 재설계(엄폐 뒤에서 먼 적 타격).
 # 홀드로 사거리 차징(0→최대), 놓으면 투척. 궤도/착탄/폭발반경 미리보기를 그린다.
 const GRENADE_CHARGE_TIME: float = 1.1   # 0 → 최대 사거리까지 홀드 시간 (제어 여유 위해 0.8→1.1로 완화)
 const GRENADE_MIN_SPEED: float = 430.0
 const GRENADE_MAX_SPEED: float = 840.0
-const GRENADE_LAUNCH_ANGLE: float = 0.98  # rad(~56°) — 엄폐물을 넘기는 로브 각도(고정)
+const GRENADE_LAUNCH_ANGLE: float = 0.98  # rad(~56°) · 엄폐물을 넘기는 로브 각도(고정)
 const DROP_THROUGH_DURATION: float = 0.25  # 플랫폼 통과 예외 유지 시간
 
 # 점프 입력 관용(플랫포머 표준). coyote = 가장자리에서 막 떨어진 직후에도 지상 점프 허용,
 # jump buffer = 착지 직전 누른 점프 입력을 기억해 착지 순간 발동. 둘 다 "분명 점프했는데
-# 안 올라가짐"(2차 피드백 다수) 해소용 — 원인은 docs/design/known_issues.md 참조.
+# 안 올라가짐"(2차 피드백 다수) 해소용 · 원인은 docs/design/known_issues.md 참조.
 const COYOTE_TIME: float = 0.05
 const JUMP_BUFFER_TIME: float = 0.10
 
-# 충전형 방패(barrier) — SkillTreeData.barrier 라인.
+# 충전형 방패(barrier) · SkillTreeData.barrier 라인.
 # T1: 10초 충전 후 1회 피격 무효 / T2: 6초 충전 / T3: 무효 직후 0.6s 무적.
 const BARRIER_CHARGE_T1: float = 10.0
 const BARRIER_CHARGE_T2: float = 6.0
 const BARRIER_INVULN_T3: float = 0.6
 
-# 비상 부활(shield) — SkillTreeData.shield 라인. T1 1회 부활 / T2 부활 HP 2 / T3 재충전.
+# 비상 부활(shield) · SkillTreeData.shield 라인. T1 1회 부활 / T2 부활 HP 2 / T3 재충전.
 # (이름은 barrier "에너지 방어막"과 헷갈리지 않게 "부활"로 통일.)
-const SHIELD_RECHARGE_TIME: float = 30.0  # T3 — 부활 소진 후 이 시간 뒤 재무장
+const SHIELD_RECHARGE_TIME: float = 30.0  # T3 · 부활 소진 후 이 시간 뒤 재무장
 
 const ATTACK_MUZZLE_X: float = 13.0
-const ATTACK_MUZZLE_Y: float = -31.0  # 총구 높이 — 5두신 비례 재조정 후 새 손목 위치
+const ATTACK_MUZZLE_Y: float = -31.0  # 총구 높이 · 5두신 비례 재조정 후 새 손목 위치
 const EXPLOSION_RADIUS: float = 180.0
 # 너프: 3→2. 방패병(HP3)을 한 방에 못 죽이게 해 "모든 적 올킬 만능"을 깬다. 단 방패 무시 AoE라
 # 정면 못 뚫는 방패병에 여전히 유효(2뎀×2) + patrol·sniper·drone·bomber는 한 방 유지 → 군집/방패 상성 보존.
 const EXPLOSION_DAMAGE: int = 2
-# 1회 폭발이 타격하는 최대 적 수 — 뭉친 적을 한 방에 몰살하는 문제(사용자: 감시탑 발판에서 전멸)
+# 1회 폭발이 타격하는 최대 적 수 · 뭉친 적을 한 방에 몰살하는 문제(사용자: 감시탑 발판에서 전멸)
 # 방지. 가장 가까운 적부터 이 수만큼만. 군집 처리는 되되 "올킬"은 막는다.
 const MAX_EXPLOSION_HITS: int = 3
 
 var facing: int = 1
 var attack_cd: float = 0.0
-# 사격 중 이동 감속(2026-08-20) — "손을 떼는 게 손해"이던 무지성 홀드를 뒤집는다. 발사마다
+# 사격 중 이동 감속(2026-08-20) · "손을 떼는 게 손해"이던 무지성 홀드를 뒤집는다. 발사마다
 # 짧은 감속 창이 갱신돼 홀드 연사 중엔 지속 감속, 손을 떼면 곧 풀 스피드로 복귀.
 # fire_boost T2는 감속을 완화(옛 "사격 후 가속"은 이 감속과 정면 모순이라 재설계).
 const _FIRE_SLOW_DURATION: float = 0.45  # 쿨다운(0.42)보다 살짝 길어 홀드 중 끊김 없이 이어짐
 const _FIRE_SLOW_MULT: float = 0.7
 const _FIRE_SLOW_MULT_T2: float = 0.85
 var fire_slow_t: float = 0.0
-# hp T3 "피격 슬로모" — 피격 시 짧게 Engine.time_scale 감소.
+# hp T3 "피격 슬로모" · 피격 시 짧게 Engine.time_scale 감소.
 const _HIT_SLOWMO_DURATION: float = 0.35
 const _HIT_SLOWMO_SCALE: float = 0.4
 var slowmo_active: bool = false
 var jumps_used: int = 0
 var shots_fired: int = 0   # 이 스테이지 발포 수(스테이지마다 새 Player라 0에서 시작). 평화주의 이스터에그 판정.
-# 이스터에그 — 숨은 대체 색(스킨). 잠금 해제 시 visual.modulate로 시안 틴트 적용.
+# 이스터에그 · 숨은 대체 색(스킨). 잠금 해제 시 visual.modulate로 시안 틴트 적용.
 # 플래시(부활 등)가 visual.modulate를 리셋할 때 흰색이 아니라 이 값으로 되돌려 스킨이 유지되게 한다.
 const ALT_SKIN_TINT: Color = Color(0.68, 1.0, 1.22)
 var _skin_tint: Color = Color(1, 1, 1)
 var _coyote_t: float = 0.0       # 바닥을 떠난 뒤 지상 점프가 아직 유효한 잔여 시간
 var _jump_buffer_t: float = 0.0  # 착지 직전 누른 점프 입력을 기억하는 잔여 시간
-# 환경 레버 — Area2D body_entered 시 LeverInteractable이 직접 세팅한다.
+# 환경 레버 · Area2D body_entered 시 LeverInteractable이 직접 세팅한다.
 # attack 입력이 사격 대신 레버 당기기로 흡수된다.
 var nearby_lever: Node = null
 var dash_timer: float = 0.0
-# 대시 분사·잔상(2026-08-23 사용자 "정지 상태의 파란 선이 잔상 같아 이상하다") — 발목 노즐
+# 대시 분사·잔상(2026-08-23 사용자 "정지 상태의 파란 선이 잔상 같아 이상하다") · 발목 노즐
 # 글로우는 움직일 때만(속도 비례·대시 만개), dash_boost 보유 대시엔 실제 잔상 고스트를 남긴다.
 var _dash_glow_nodes: Array = []   # CharacterArt "dash_jet_glow" 그룹 캐시(스킬 갱신 시 재수집)
 var _ghost_cd: float = 0.0
@@ -84,7 +84,7 @@ var _skid_cd: float = 0.0          # 스키드 먼지 재발화 방지(그래픽
 var dash_cd: float = 0.0
 var skill_cd: float = 0.0
 var invuln: float = 0.0
-# 대피 칸 숨기(2026-08-22 사용자 안: "뒤로 숨는 공간" + 능동 입력) — Stage가 hide_zone을
+# 대피 칸 숨기(2026-08-22 사용자 안: "뒤로 숨는 공간" + 능동 입력) · Stage가 hide_zone을
 # 매 물리틱 세팅(칠해진 칸 x밴드 안), 칸 안에서 ▼ 홀드 + 이동 입력 없음이면 hiding.
 # 몸을 뒤 공간으로 물리는 연출(작아지고 어두워짐)은 _update_visual의 _hide_k 램프가 담당.
 # 빔(SweepBeam)·열차(TrainHazard)의 세이프 판정 조건 = 밴드 안 + hiding.
@@ -115,14 +115,14 @@ var _grenade_charge: float = 0.0
 var _aim_preview: Node2D = null
 
 var visual: Node2D
-var torso: Node2D = null      # CharacterArt가 만든 Torso 컨테이너 — idle bob에 사용
-var arm_front: Node2D = null  # 앞팔/총 — 사격 시 반동 회전, 이동 시 흔들림
-var leg_l: Node2D = null      # 왼다리 — 가랑이 origin. walk swing.
+var torso: Node2D = null      # CharacterArt가 만든 Torso 컨테이너 · idle bob에 사용
+var arm_front: Node2D = null  # 앞팔/총 · 사격 시 반동 회전, 이동 시 흔들림
+var leg_l: Node2D = null      # 왼다리 · 가랑이 origin. walk swing.
 var leg_r: Node2D = null      # 오른다리
 var anim_t: float = 0.0       # 시각 애니메이션 누적 시간(sin bob 위상)
 var muzzle_flash: ColorRect
 
-# explosive T3 — 2회 충전. 사용 시 charges -1, cd 끝나면 +1 누적.
+# explosive T3 · 2회 충전. 사용 시 charges -1, cd 끝나면 +1 누적.
 var skill_charges: int = 1
 var skill_max_charges: int = 1
 
@@ -131,7 +131,7 @@ var barrier_ready: bool = false
 var barrier_charge_t: float = 0.0
 var barrier_indicator: Node2D = null
 
-# shield(비상 부활) T3 재충전 상태 — 부활 소진 후 recharge_t 동안 비무장, 0 도달 시 재무장.
+# shield(비상 부활) T3 재충전 상태 · 부활 소진 후 recharge_t 동안 비무장, 0 도달 시 재무장.
 # (T1/T2는 GameState.skills에서 erase되어 1회용이라 이 상태를 안 씀.)
 var shield_spent: bool = false
 var shield_recharge_t: float = 0.0
@@ -150,14 +150,14 @@ func refresh_alt_skin() -> void:
 func _ready() -> void:
 	add_to_group("player")
 	z_index = 2
-	# 명시 AudioListener2D — default listener는 active Camera2D인데, ARENA(보스전)에선
+	# 명시 AudioListener2D · default listener는 active Camera2D인데, ARENA(보스전)에선
 	# 카메라가 월드 중앙 고정이라 거리 감쇠가 플레이어 기준이 아니게 됨. listener를
 	# 플레이어에 묶으면 카메라 모드와 무관하게 positional audio가 플레이어 위치 기준.
 	var listener := AudioListener2D.new()
 	add_child(listener)
 	listener.make_current()
 	visual = CharacterArt.build_player(self)
-	# 이스터에그 — 대체 색 잠금 해제 + 설정에서 켜져 있을 때만 시안 틴트 적용(visual.modulate).
+	# 이스터에그 · 대체 색 잠금 해제 + 설정에서 켜져 있을 때만 시안 틴트 적용(visual.modulate).
 	# 이후 플래시 리셋도 이 값으로. 토글 = 설정 그래픽 탭(해금 시에만 노출).
 	if GameState.alt_skin_unlocked and GameState.alt_skin_enabled and visual != null:
 		_skin_tint = ALT_SKIN_TINT
@@ -168,7 +168,7 @@ func _ready() -> void:
 		leg_l = torso.get_node_or_null("LegL")
 		leg_r = torso.get_node_or_null("LegR")
 	_refresh_skill_charges()
-	# 스킬 부착물(파우치·윙 등) — 초기 1회 + 스킬 변경 시 갱신(성장 가시화).
+	# 스킬 부착물(파우치·윙 등) · 초기 1회 + 스킬 변경 시 갱신(성장 가시화).
 	CharacterArt.attach_player_skill_parts(torso, GameState.skills)
 	_collect_dash_glows()
 	if not GameState.skills_changed.is_connected(_on_skills_changed):
@@ -180,7 +180,7 @@ func _ready() -> void:
 	muzzle_flash.position = Vector2(ATTACK_MUZZLE_X, ATTACK_MUZZLE_Y - 4.0)
 	muzzle_flash.visible = false
 	add_child(muzzle_flash)
-	# barrier indicator — 머리 위 점, 충전 완료 시 푸른빛 펄스. 사용자
+	# barrier indicator · 머리 위 점, 충전 완료 시 푸른빛 펄스. 사용자
 	# 사용자: 동심원이 허벅지에 작게 그려짐 → 캐릭터 전체(28x56)를 감싸는
 	# 세로 긴 타원으로. 본체 가운데 y=-28 부근 + 상하 반경 32, 좌우 반경 22.
 	barrier_indicator = Node2D.new()
@@ -213,23 +213,23 @@ const _STEP_INTERVAL: float = 0.32
 var _step_t: float = 0.0
 
 func _physics_process(delta: float) -> void:
-	# 지난 프레임의 최종 수평 속도 — 스키드(급정지) 감지는 입력 처리 "전" 값이어야 한다
+	# 지난 프레임의 최종 수평 속도 · 스키드(급정지) 감지는 입력 처리 "전" 값이어야 한다
 	# (이동이 입력 직결이라 입력을 끊는 프레임엔 velocity.x가 이미 0).
 	var prev_vx: float = velocity.x
 	_tick_timers(delta)
 	_handle_input(delta)
 	_apply_gravity(delta)
-	var fall_v: float = velocity.y   # 착지 먼지용 — move_and_slide가 지우기 전의 낙하 속도
+	var fall_v: float = velocity.y   # 착지 먼지용 · move_and_slide가 지우기 전의 낙하 속도
 	move_and_slide()
 	var on_floor_now: bool = is_on_floor()
-	# 착지 SFX — 공중에서 지면으로 전이된 순간 한 번. 짧은 hop은 step과 비슷해서
+	# 착지 SFX · 공중에서 지면으로 전이된 순간 한 번. 짧은 hop은 step과 비슷해서
 	# 발이 떴던 시간이 있을 때만(=jumps_used > 0 또는 _was_on_floor false) 의미.
 	if on_floor_now and not _was_on_floor:
 		SfxPlayer.play("player_land")
-		# 착지 먼지(그래픽 패키지 1차) — 낙하 속도 비례. 잔걸음 hop(느린 착지)은 무먼지.
+		# 착지 먼지(그래픽 패키지 1차) · 낙하 속도 비례. 잔걸음 hop(느린 착지)은 무먼지.
 		if fall_v > 380.0:
 			Fx.land_dust(get_parent(), global_position, clampf((fall_v - 380.0) / 620.0, 0.25, 1.0))
-	# 스키드 먼지 — 달리다 입력을 끊으면 속도가 즉시 0이라(입력 직결 이동) 그 프레임이 급정지.
+	# 스키드 먼지 · 달리다 입력을 끊으면 속도가 즉시 0이라(입력 직결 이동) 그 프레임이 급정지.
 	if on_floor_now and _was_on_floor and absf(prev_vx) > 190.0 and absf(velocity.x) < 40.0 \
 			and dash_timer <= 0.0 and _skid_cd <= 0.0:
 		_skid_cd = 0.3
@@ -247,7 +247,7 @@ func _physics_process(delta: float) -> void:
 		# (사용자 보고: "0.5초 뒤에도 더블점프됨"). 더블점프 1회는 남아 공중 리커버리는 유지.
 		if _coyote_t <= 0.0 and jumps_used == 0:
 			jumps_used = 1
-	# 발걸음 SFX — 지면에서 충분한 속도로 이동 중일 때만 일정 간격으로.
+	# 발걸음 SFX · 지면에서 충분한 속도로 이동 중일 때만 일정 간격으로.
 	if on_floor_now and absf(velocity.x) > 30.0:
 		_step_t += delta
 		if _step_t >= _STEP_INTERVAL:
@@ -258,7 +258,7 @@ func _physics_process(delta: float) -> void:
 	anim_t += delta
 	_update_visual()
 
-# 대시 시각(2026-08-23) — ① 발목 노즐 글로우: 정지 0 · 이동 속도 비례 은은 · 대시 만개
+# 대시 시각(2026-08-23) · ① 발목 노즐 글로우: 정지 0 · 이동 속도 비례 은은 · 대시 만개
 # ② 잔상 고스트: dash_boost 보유 대시 동안 0.045s 간격으로 몸 실루엣이 시안으로 남았다 흩어짐.
 func _update_dash_visuals(delta: float) -> void:
 	var target_a: float = 0.0
@@ -272,7 +272,7 @@ func _update_dash_visuals(delta: float) -> void:
 		if is_instance_valid(g):
 			var ci := g as CanvasItem
 			ci.modulate.a = move_toward(ci.modulate.a, target_a, delta * 9.0)
-	# 대시 끝자락(잔여 0.05s 미만)엔 안 남긴다 — 대시 직후 낙하하면 마지막 잔상이 허공에
+	# 대시 끝자락(잔여 0.05s 미만)엔 안 남긴다 · 대시 직후 낙하하면 마지막 잔상이 허공에
 	# 걸려 "캐릭터 위에 남는 버그"로 읽혔다(연습장 실플레이 2026-08-23). 페이드도 짧게.
 	if dash_timer > 0.05 and GameState.get_skill_tier("dash_boost") >= 1:
 		_ghost_cd -= delta
@@ -288,7 +288,7 @@ func _spawn_dash_ghost() -> void:
 	var stage_parent := get_parent()
 	if stage_parent == null:
 		return
-	# duplicate(0) = 스크립트·그룹·시그널 없이 순수 그림만 — dash_jet_glow 그룹 오염 방지.
+	# duplicate(0) = 스크립트·그룹·시그널 없이 순수 그림만 · dash_jet_glow 그룹 오염 방지.
 	var ghost := visual.duplicate(0) as Node2D
 	if ghost == null:
 		return
@@ -302,7 +302,7 @@ func _spawn_dash_ghost() -> void:
 	tw.tween_property(ghost, "modulate:a", 0.0, 0.13)
 	tw.tween_callback(ghost.queue_free)
 
-# CharacterArt가 붙인 dash_jet_glow 파트 재수집 — 스킬 부착물 갱신 때마다.
+# CharacterArt가 붙인 dash_jet_glow 파트 재수집 · 스킬 부착물 갱신 때마다.
 func _collect_dash_glows() -> void:
 	_dash_glow_nodes.clear()
 	var tree := get_tree()
@@ -324,21 +324,21 @@ func _tick_timers(delta: float) -> void:
 		dash_cd -= delta
 	if skill_cd > 0.0:
 		skill_cd -= delta
-		# 쿨다운 종료 — charges 미만이면 +1 (T3 2회 충전).
+		# 쿨다운 종료 · charges 미만이면 +1 (T3 2회 충전).
 		if skill_cd <= 0.0 and skill_charges < skill_max_charges:
 			skill_charges += 1
 			if skill_charges < skill_max_charges:
 				skill_cd = get_skill_cd_max()  # 다음 충전 시작
 	if invuln > 0.0:
 		invuln -= delta
-	# 숨기 램프 — 스냅 없이 물러났다 나온다(연속 감쇠).
+	# 숨기 램프 · 스냅 없이 물러났다 나온다(연속 감쇠).
 	_hide_k = move_toward(_hide_k, 1.0 if hiding else 0.0, delta * 7.0)
 	if muzzle_flash != null and muzzle_flash.visible:
 		muzzle_flash.modulate.a = max(0.0, muzzle_flash.modulate.a - delta * 7.0)
 		if muzzle_flash.modulate.a <= 0.05:
 			muzzle_flash.visible = false
 			muzzle_flash.modulate.a = 1.0
-	# shield T3 재충전 — 소진 상태에서 시간 경과 후 재무장(보호 복귀를 플래시로 알림).
+	# shield T3 재충전 · 소진 상태에서 시간 경과 후 재무장(보호 복귀를 플래시로 알림).
 	if shield_spent:
 		shield_recharge_t -= delta
 		if shield_recharge_t <= 0.0:
@@ -355,14 +355,14 @@ func _tick_barrier(delta: float) -> void:
 	if barrier_indicator != null:
 		barrier_indicator.visible = true
 	if barrier_ready:
-		# 충전 완료 — 사용자 피드백: 충전 중 색 정도로 연하게. 펄스 폭도 작게.
+		# 충전 완료 · 사용자 피드백: 충전 중 색 정도로 연하게. 펄스 폭도 작게.
 		if barrier_indicator != null:
 			var pulse: float = 0.40 + 0.10 * sin(Time.get_ticks_msec() * 0.004)
 			barrier_indicator.modulate.a = pulse
 			var s: float = 1.0 + 0.06 * sin(Time.get_ticks_msec() * 0.005)
 			barrier_indicator.scale = Vector2(s, s)
 		return
-	# 충전 진행 — 사용자 피드백: 충전 중에는 안 보임.
+	# 충전 진행 · 사용자 피드백: 충전 중에는 안 보임.
 	var charge_max: float = BARRIER_CHARGE_T2 if GameState.get_skill_tier("barrier") >= 2 else BARRIER_CHARGE_T1
 	barrier_charge_t += delta
 	if barrier_indicator != null:
@@ -391,7 +391,7 @@ func _handle_input(delta: float) -> void:
 		var dash_speed_mult: float = 1.3 if GameState.get_skill_tier("dash_boost") >= 2 else 1.0
 		velocity.x = float(facing) * DASH_SPEED * dash_speed_mult
 	else:
-		# 사격 감속 — 발사 직후 창 동안 이동 ×0.7(fire_boost T2는 ×0.85). 홀드 연사 = 지속 감속.
+		# 사격 감속 · 발사 직후 창 동안 이동 ×0.7(fire_boost T2는 ×0.85). 홀드 연사 = 지속 감속.
 		# 대시 분기가 위에서 우선이라 대시 회피는 감속과 무관(사격 중 탈출 수단 보존).
 		var move_mult: float = 1.0
 		if fire_slow_t > 0.0:
@@ -416,13 +416,13 @@ func _handle_input(delta: float) -> void:
 	# 전투 차단(연출/??? 방) 진입 시 진행 중인 수류탄 차징 취소.
 	if GameState.restrict_combat_input and _charging:
 		_cancel_grenade_charge()
-	# 전투 입력 제한 (??? 맵에서) — 이동/점프만 허용
+	# 전투 입력 제한 (??? 맵에서) · 이동/점프만 허용
 	if not GameState.restrict_combat_input:
 		# 레버 영역 내에서는 attack 입력이 사격 대신 레버 당기기에만 쓰임 (꾹 누름 사격도 차단).
 		if nearby_lever != null and is_instance_valid(nearby_lever):
 			if Input.is_action_just_pressed("attack") and nearby_lever.has_method("try_pull"):
 				nearby_lever.try_pull()
-		# 공격 — 꾹 누르면 쿨다운마다 자동 연발. _try_attack이 cd 체크해 자체 무시.
+		# 공격 · 꾹 누르면 쿨다운마다 자동 연발. _try_attack이 cd 체크해 자체 무시.
 		elif Input.is_action_pressed("attack"):
 			_try_attack()
 		if Input.is_action_just_pressed("dash"):
@@ -441,9 +441,9 @@ func _handle_input(delta: float) -> void:
 			# 수류탄 차징 중 ▼ = 투척 취소(충전/쿨다운 소모 없음). 각도 고정이라 ▼가 비어 취소로 씀.
 			_cancel_grenade_charge()
 		else:
-			# 바닥: 원웨이 발판 통과. (공중 ▼는 비어 있음 — 활강은 점프 홀드 방식이라 취소 키 불필요.)
+			# 바닥: 원웨이 발판 통과. (공중 ▼는 비어 있음 · 활강은 점프 홀드 방식이라 취소 키 불필요.)
 			_try_drop_through()
-	# 대피 칸 숨기 — 칸 안 + 지상 + ▼ 홀드 + 이동/대시/넉백 없음. 이동 입력이 자연스럽게 푼다.
+	# 대피 칸 숨기 · 칸 안 + 지상 + ▼ 홀드 + 이동/대시/넉백 없음. 이동 입력이 자연스럽게 푼다.
 	hiding = hide_zone and is_on_floor() and Input.is_action_pressed("move_down") \
 		and dir == 0.0 and dash_timer <= 0.0 and _knockback_t <= 0.0
 
@@ -456,7 +456,7 @@ func _try_drop_through() -> void:
 		var collider: Object = c.get_collider()
 		if collider is Node and (collider as Node).is_in_group("platform"):
 			add_collision_exception_with(collider)
-			# process_always=true — paused 상태(LevelUp 등) 중에도 timer 진행되어
+			# process_always=true · paused 상태(LevelUp 등) 중에도 timer 진행되어
 			# collision_exception이 dangling 안 되도록 (이전엔 paused 중 fire 안 돼 다음 씬으로 carry 위험).
 			get_tree().create_timer(DROP_THROUGH_DURATION, true).timeout.connect(
 				func() -> void:
@@ -472,11 +472,11 @@ func _try_jump() -> bool:
 	var max_jumps: int = 1
 	if GameState.has_skill("double_jump"):
 		max_jumps += 1
-	# 글라이드 T2 — 공중 점프 1회 추가(최대 3단; 높은 곳·숨은 보상 도달). 재설계(2026-06-13):
+	# 글라이드 T2 · 공중 점프 1회 추가(최대 3단; 높은 곳·숨은 보상 도달). 재설계(2026-06-13):
 	# T1은 활강만, 삼단점프는 T2로 분리(T1에 활강+삼단점프 둘 다라 글라이드 가치가 과했음).
 	if GameState.get_skill_tier("glide") >= 2:
 		max_jumps += 1
-	# 지상 점프 — 바닥이거나, 가장자리에서 막 떨어진 직후(coyote, 아직 공중 점프 미사용).
+	# 지상 점프 · 바닥이거나, 가장자리에서 막 떨어진 직후(coyote, 아직 공중 점프 미사용).
 	if is_on_floor() or (_coyote_t > 0.0 and jumps_used == 0):
 		velocity.y = JUMP_VELOCITY
 		jumps_used = 1
@@ -486,7 +486,7 @@ func _try_jump() -> bool:
 		return true
 	elif jumps_used < max_jumps:
 		# 공중 점프는 "설정"이라, 첫 점프로 더 빠르게 상승 중(t<~0.03s)에 누르면 속도가 *깎여* 높이를
-		# 잃었다(피드백: "너무 빨리 누르면 못 올라감"). min으로 현재 상승보다 느려지지 않게 — 일찍 눌러도
+		# 잃었다(피드백: "너무 빨리 누르면 못 올라감"). min으로 현재 상승보다 느려지지 않게 · 일찍 눌러도
 		# 손해 없음(최대 높이·글라이드 게이트 calibration 불변). 정점 근처에서 누르면 종전대로 풀 부스트.
 		velocity.y = min(velocity.y, JUMP_VELOCITY * 0.92)
 		jumps_used += 1
@@ -516,7 +516,7 @@ func _try_attack() -> void:
 	var fb_tier: int = GameState.get_skill_tier("fire_boost")
 	var cd_mult: float = 0.70 if fb_tier >= 2 else 1.0
 	attack_cd = ATTACK_COOLDOWN * cd_mult
-	shots_fired += 1   # 이스터에그(평화주의) 판정용 — 이 스테이지에서 발포했는가
+	shots_fired += 1   # 이스터에그(평화주의) 판정용 · 이 스테이지에서 발포했는가
 	GameState.profile_note_shot(not is_on_floor(), _nearest_enemy_dist())
 	fire_slow_t = _FIRE_SLOW_DURATION  # 사격 감속 창 갱신(티어 무관 · T2는 배율만 완화)
 	_show_muzzle_flash()
@@ -541,11 +541,11 @@ func _spawn_bullet(idx: int, total: int) -> void:
 	b.damage = 2 if fb_tier >= 1 else 1  # T0=1, T1+=2 고정
 	b.pierce = fb_tier >= 3
 	b.style_tier = fb_tier               # 총알 외형 분기용 (성장 가시화)
-	# multishot T3 — 사거리 연장(총알 수명 +45%). 추적은 반려(2026-08-15 사용자) — 유도는
+	# multishot T3 · 사거리 연장(총알 수명 +45%). 추적은 반려(2026-08-15 사용자) · 유도는
 	# glide T3의 정체성이라 중복이었고, 오연사는 "부채꼴을 더 멀리"가 어울린다.
 	if GameState.get_skill_tier("multishot") >= 3:
 		b.lifetime_mult = maxf(b.lifetime_mult, 1.45)
-	# glide T3 — *공중에 떠 있는 동안* 사격이 적을 강하게 유도 + 데미지(2026-08-15 사용자:
+	# glide T3 · *공중에 떠 있는 동안* 사격이 적을 강하게 유도 + 데미지(2026-08-15 사용자:
 	# 활강 중 한정 → 공중 전체로 확장. 홀드 활강과 조건이 얽혀 발동 창이 너무 좁아지는 것 방지).
 	# '관통'은 사격강화 T3 전담, 활강 T3는 '유도(homing)'가 정체성(중복 제거, 2026-06-15).
 	# A안 곱 차단(2026-08-18 봇 실측 후 사용자 결정): 유도는 **중앙탄 1발에만**. 오연사 전 발
@@ -555,9 +555,9 @@ func _spawn_bullet(idx: int, total: int) -> void:
 	if gl_tier >= 3 and not is_on_floor() and idx * 2 == total - 1:
 		b.damage += 1
 		b.tracking = true
-		b.tracking_blend = 0.12      # 약한 추적(0.03)보다 강하게 — "완전 유도" 체감
+		b.tracking_blend = 0.12      # 약한 추적(0.03)보다 강하게 · "완전 유도" 체감
 		b.tracking_max_angle = 0.42  # ~24도
-	# 부채꼴 — 가운데를 0으로 양 끝으로 10°씩 벌림.
+	# 부채꼴 · 가운데를 0으로 양 끝으로 10°씩 벌림.
 	# T1(3발): -10°/0/+10°. T2(5발): -20/-10/0/+10/+20.
 	if total > 1:
 		var step: float = deg_to_rad(10.0)
@@ -607,7 +607,7 @@ func _try_dash() -> void:
 		iframe += 0.15
 	invuln = max(invuln, iframe)
 
-# 수류탄 차징 시작 — 충전이 있어야 시작(없으면 무시).
+# 수류탄 차징 시작 · 충전이 있어야 시작(없으면 무시).
 func _begin_grenade_charge() -> void:
 	_refresh_skill_charges()  # 티어 변경(레벨업 직후) 반영
 	if skill_charges <= 0:
@@ -617,13 +617,13 @@ func _begin_grenade_charge() -> void:
 	_ensure_aim_preview()
 	_update_aim_preview()
 
-# 차징 취소(전투 차단 등) — 충전 소모/투척 없이 미리보기만 정리.
+# 차징 취소(전투 차단 등) · 충전 소모/투척 없이 미리보기만 정리.
 func _cancel_grenade_charge() -> void:
 	_charging = false
 	_grenade_charge = 0.0
 	_clear_aim_preview()
 
-# 투척 — 충전 1 소모, 쿨다운 시작, 차징한 사거리로 Grenade 생성.
+# 투척 · 충전 1 소모, 쿨다운 시작, 차징한 사거리로 Grenade 생성.
 func _throw_grenade() -> void:
 	_charging = false
 	_clear_aim_preview()
@@ -653,7 +653,7 @@ func _grenade_launch_velocity() -> Vector2:
 func _grenade_blast_radius() -> float:
 	return EXPLOSION_RADIUS * (1.3 if GameState.get_skill_tier("explosive") >= 2 else 1.0)
 
-# 조준 궤도 미리보기 — 월드 원점(0,0)에 붙은 Node2D가 _draw_aim을 호출.
+# 조준 궤도 미리보기 · 월드 원점(0,0)에 붙은 Node2D가 _draw_aim을 호출.
 class _AimPreview extends Node2D:
 	var player: Player = null
 	func _draw() -> void:
@@ -722,7 +722,7 @@ func _refresh_skill_charges() -> void:
 		if new_max == 2 and skill_charges < new_max and skill_cd <= 0.0:
 			skill_charges = new_max
 
-# 스킬 티어 변경(레벨업) 시 — 충전 수와 캐릭터 부착물 외형을 함께 갱신.
+# 스킬 티어 변경(레벨업) 시 · 충전 수와 캐릭터 부착물 외형을 함께 갱신.
 func _on_skills_changed() -> void:
 	_refresh_skill_charges()
 	if torso != null:
@@ -730,7 +730,7 @@ func _on_skills_changed() -> void:
 		_collect_dash_glows()
 		_play_skill_acquire_flash()
 
-# 스킬 획득/티어업 순간을 눈에 띄게 — 캐릭터에 밝은 확산 링 + 본체 섬광.
+# 스킬 획득/티어업 순간을 눈에 띄게 · 캐릭터에 밝은 확산 링 + 본체 섬광.
 # 레벨업은 일시정지 중 skills_changed가 오므로, 일반(pausable) tween이면 오버레이가
 # 닫히고 게임이 재개되는 순간 자연히 재생된다(부착물 변화에 시선을 끈다).
 func _play_skill_acquire_flash() -> void:
@@ -757,7 +757,7 @@ func _play_skill_acquire_flash() -> void:
 	tw.tween_property(line, "default_color:a", 0.0, 0.45)
 	tw.set_parallel(false)
 	tw.tween_callback(ring.queue_free)
-	# 본체 섬광 — torso.modulate는 다른 곳에서 안 건드려 충돌 없음(피격은 visual.modulate).
+	# 본체 섬광 · torso.modulate는 다른 곳에서 안 건드려 충돌 없음(피격은 visual.modulate).
 	if torso != null:
 		var ft := torso.create_tween()
 		ft.tween_property(torso, "modulate", Color(1.6, 1.6, 1.8), 0.08)
@@ -767,9 +767,9 @@ func _apply_gravity(delta: float) -> void:
 	if is_on_floor():
 		return
 	velocity.y = min(velocity.y + GRAVITY * delta, MAX_FALL_SPEED)
-	# 공중 활강 — 낙하 중 *점프 키를 누르고 있는 동안*만 천천히 떨어진다(홀드 방식,
+	# 공중 활강 · 낙하 중 *점프 키를 누르고 있는 동안*만 천천히 떨어진다(홀드 방식,
 	# 2026-08-15 사용자: 자동+아래키 래치 방식 반려 → 홀드로 복귀). 놓으면 즉시 원래 속도.
-	# T3=공중 유도 — 효과는 _spawn_bullet. 공중 제압 라인(상성: 저격수·드론).
+	# T3=공중 유도 · 효과는 _spawn_bullet. 공중 제압 라인(상성: 저격수·드론).
 	var glide_tier: int = GameState.get_skill_tier("glide")
 	if glide_tier >= 1 and velocity.y > 0.0 and Input.is_action_pressed("jump"):
 		var fall_speed: float = GLIDE_FALL_SPEED
@@ -779,17 +779,17 @@ func _apply_gravity(delta: float) -> void:
 		velocity.y = min(velocity.y, fall_speed)
 
 func take_hit(amount: int) -> void:
-	# 0뎀 타격은 피격이 아니다 — 보스 자폭 반경(700px) 밖처럼 거리 감쇠로 0뎀이 된 경우,
+	# 0뎀 타격은 피격이 아니다 · 보스 자폭 반경(700px) 밖처럼 거리 감쇠로 0뎀이 된 경우,
 	# barrier 소모·hit 카운트가 일어나면 안 됨(사용자 보고: 노란 원 밖인데 방어막이 벗겨짐).
 	if amount <= 0:
 		return
 	if GameState.debug_invincible and GameState.playground_active:
-		return   # 디버그 무적 — 연습장에서만 적용(일반 모드엔 영향 없음). 데미지·피격카운트·barrier 스킵
+		return   # 디버그 무적 · 연습장에서만 적용(일반 모드엔 영향 없음). 데미지·피격카운트·barrier 스킵
 	if clear_protect:
 		return   # 클리어 연출 중: 피해·피격카운트·barrier 전부 스킵(위 var 주석)
 	if invuln > 0.0:
 		return
-	# 실력 추적 — invuln을 통과한 실제 타격마다 1회 카운트(barrier 흡수·스토리 무피해 포함).
+	# 실력 추적 · invuln을 통과한 실제 타격마다 1회 카운트(barrier 흡수·스토리 무피해 포함).
 	# i-frame 동안의 연타는 1회로 묶여 "맞은 횟수"로 읽힘. VEIL 적응형 추천이 사용.
 	GameState.register_hit()
 	# barrier 충전 완료 상태면 1회 무효화 + 충전 리셋. T3는 후속 무적.
@@ -804,19 +804,19 @@ func take_hit(amount: int) -> void:
 		emit_signal("damaged")  # 화면 플래시·shake 트리거 (시각 피드백 유지)
 		return
 	GameState.damage_player(amount)
-	# 피격 스파크(그래픽 패키지 1차) — 붉은 계열로 적 타격과 구분.
+	# 피격 스파크(그래픽 패키지 1차) · 붉은 계열로 적 타격과 구분.
 	Fx.hit_sparks(get_parent(), global_position + Vector2(0, -24.0), 0, Fx.PLAYER_HURT)
 	SfxPlayer.play("player_hurt")
 	# hp T2 = 피격 후 1s 무적 (기본 0.8보다 길게).
 	# hp T3 = 추가로 짧은 슬로모션 (Engine.time_scale 감속).
 	var hp_tier: int = GameState.get_skill_tier("hp")
-	# max() — 신호 핸들러(예: 도전방 _challenge_fail)가 더 긴 invuln을 set한 케이스 보존.
+	# max() · 신호 핸들러(예: 도전방 _challenge_fail)가 더 긴 invuln을 set한 케이스 보존.
 	# 이전 코드는 직접 대입이라 핸들러가 emit 안에서 set한 5.0이 보존됐지만, 순서가 바뀌어도 안전하게.
 	invuln = max(invuln, 1.0 if hp_tier >= 2 else INVULN_AFTER_HIT)
 	if hp_tier >= 3:
 		_trigger_hit_slowmo()
 	emit_signal("damaged")
-	# 비상 부활 — T1: HP 1로 부활, T2: HP 2로 부활. T3: 라인 유지 + 30s 후 재무장.
+	# 비상 부활 · T1: HP 1로 부활, T2: HP 2로 부활. T3: 라인 유지 + 30s 후 재무장.
 	# T1/T2는 발동 시 라인 erase(1회용), T3는 shield_spent로 비무장 두었다가 recharge로 재무장.
 	var sh_tier: int = GameState.get_skill_tier("shield")
 	if GameState.is_dead() and sh_tier >= 1 and not shield_spent:
@@ -824,7 +824,7 @@ func take_hit(amount: int) -> void:
 		_show_shield_flash()
 		emit_signal("revived")
 		if sh_tier >= 3:
-			# T3 재충전 — 라인을 소비하지 않고 비무장으로 두었다가 SHIELD_RECHARGE_TIME 후 재무장.
+			# T3 재충전 · 라인을 소비하지 않고 비무장으로 두었다가 SHIELD_RECHARGE_TIME 후 재무장.
 			shield_spent = true
 			shield_recharge_t = SHIELD_RECHARGE_TIME
 		else:
@@ -834,7 +834,7 @@ func take_hit(amount: int) -> void:
 		SfxPlayer.play("player_death")
 		emit_signal("died")
 
-# hp T3 — 피격 시 짧은 슬로모. Engine.time_scale 0.4로 감속, 0.35s 후 1.0 복원.
+# hp T3 · 피격 시 짧은 슬로모. Engine.time_scale 0.4로 감속, 0.35s 후 1.0 복원.
 # 실시간 타이머(ignore_time_scale=true)로 슬로모 안에서도 정확히 0.35s 후 해제.
 # 이미 슬로모 중에 또 피격되면 무시 (중첩 방지).
 func _trigger_hit_slowmo() -> void:
@@ -851,7 +851,7 @@ func _end_hit_slowmo() -> void:
 
 func _exit_tree() -> void:
 	# scene 전환 도중 슬로모가 활성된 채 player가 free되면 다음 씬도 0.4 배속이 됨.
-	# 안전판 — player가 트리에서 빠질 때 무조건 1.0 복원.
+	# 안전판 · player가 트리에서 빠질 때 무조건 1.0 복원.
 	if slowmo_active or not is_equal_approx(Engine.time_scale, 1.0):
 		Engine.time_scale = 1.0
 		slowmo_active = false
@@ -859,7 +859,7 @@ func _exit_tree() -> void:
 	_clear_aim_preview()
 
 func _show_shield_flash() -> void:
-	# 방어막 발동 — 강한 흰 플래시 + 확장하는 후광 (한 번에 인지되도록 강화).
+	# 방어막 발동 · 강한 흰 플래시 + 확장하는 후광 (한 번에 인지되도록 강화).
 	if visual != null:
 		visual.modulate = Color(3.5, 3.5, 4.0)
 		create_tween().tween_property(visual, "modulate", _skin_tint, 0.6)
@@ -878,7 +878,7 @@ func _show_shield_flash() -> void:
 	tw.tween_property(halo, "scale", Vector2(3.4, 3.4), 0.55)
 	tw.tween_property(halo, "modulate:a", 0.0, 0.55)
 	tw.chain().tween_callback(halo.queue_free)
-	# 두 번째 후광 (살짝 늦게 따라옴 — 섬광 느낌)
+	# 두 번째 후광 (살짝 늦게 따라옴 · 섬광 느낌)
 	var halo2 := Polygon2D.new()
 	halo2.color = Color(0.85, 0.95, 1.0, 0.5)
 	halo2.polygon = PackedVector2Array(pts)
@@ -899,7 +899,7 @@ func _update_visual() -> void:
 		visual.modulate.a = 0.4 if int(invuln * 20.0) % 2 == 0 else 1.0
 	else:
 		visual.modulate.a = 1.0
-	# 숨기 연출 — 뒤 공간으로 물러난 몸: 약간 작아지고(원근) 어두워진다(칸 그늘).
+	# 숨기 연출 · 뒤 공간으로 물러난 몸: 약간 작아지고(원근) 어두워진다(칸 그늘).
 	# 플레이어 비주얼의 modulate RGB는 다른 데서 안 써 안전(피격은 invuln 알파 점멸만).
 	var hide_shrink: float = 1.0 - 0.13 * _hide_k
 	visual.scale.x = (-1.0 if facing < 0 else 1.0) * hide_shrink
@@ -908,7 +908,7 @@ func _update_visual() -> void:
 	visual.modulate.r = hide_dark
 	visual.modulate.g = hide_dark
 	visual.modulate.b = hide_dark
-	# 자세 — Torso의 작은 y bob + ArmFront 회전으로 정적 인상 완화.
+	# 자세 · Torso의 작은 y bob + ArmFront 회전으로 정적 인상 완화.
 	# scale.x로 좌우 반전돼도 child rotation은 시각적으로 자동 미러됨.
 	if torso == null:
 		return
@@ -928,7 +928,7 @@ func _update_visual() -> void:
 	elif moving:
 		bob = sin(anim_t * 14.0) * 1.4
 		arm_rot = sin(anim_t * 14.0) * 0.10
-		# 달리기 전경 기울임(그래픽 패키지 1차) — 속도 비례 앞쏠림, 대시는 더 깊게.
+		# 달리기 전경 기울임(그래픽 패키지 1차) · 속도 비례 앞쏠림, 대시는 더 깊게.
 		# scale.x 반전으로 좌우 자동 미러(위 주석과 동일 원리).
 		lean = 0.07 * clampf(absf(velocity.x) / SPEED, 0.0, 1.0)
 		if dash_timer > 0.0:
@@ -936,7 +936,7 @@ func _update_visual() -> void:
 	else:
 		bob = sin(anim_t * 3.0) * 0.6
 		arm_rot = sin(anim_t * 3.0) * 0.03
-	# 사격 직후 반동 — attack_cd가 max에서 0으로 줄어드는 동안 팔이 위로 튀었다 내려옴.
+	# 사격 직후 반동 · attack_cd가 max에서 0으로 줄어드는 동안 팔이 위로 튀었다 내려옴.
 	var max_cd: float = get_attack_cd_max()
 	if attack_cd > 0.0 and max_cd > 0.0:
 		var t: float = clamp(attack_cd / max_cd, 0.0, 1.0)
@@ -945,7 +945,7 @@ func _update_visual() -> void:
 	torso.rotation = lean
 	if arm_front != null:
 		arm_front.rotation = arm_rot
-	# 다리 — 가랑이 origin인 LegL/LegR을 회전시켜 보행/점프 자세.
+	# 다리 · 가랑이 origin인 LegL/LegR을 회전시켜 보행/점프 자세.
 	var leg_l_rot: float = 0.0
 	var leg_r_rot: float = 0.0
 	if grounded:
@@ -954,7 +954,7 @@ func _update_visual() -> void:
 			leg_l_rot = -swing
 			leg_r_rot = swing
 	else:
-		# 점프/낙하 — 한쪽 다리 앞 한쪽 뒤로 살짝(running jump 자세).
+		# 점프/낙하 · 한쪽 다리 앞 한쪽 뒤로 살짝(running jump 자세).
 		# 양다리가 같은 방향이면 어색하니 비대칭으로.
 		leg_l_rot = -0.22
 		leg_r_rot = 0.10

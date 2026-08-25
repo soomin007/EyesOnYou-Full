@@ -25,7 +25,7 @@ const H_RIGHT: float = 1700.0
 var axis: String = "x"
 var speed: float = 210.0
 var max_gap: float = 700.0
-# 캡 추격 속도 상한 — 이전엔 max_gap 초과 시 벽을 플레이어 뒤로 *즉시 스냅*해서, 대시 순간 벽이
+# 캡 추격 속도 상한 · 이전엔 max_gap 초과 시 벽을 플레이어 뒤로 *즉시 스냅*해서, 대시 순간 벽이
 # 플레이어 속도를 그대로 미러링하는 게 들켰다(사용자 체감 2026-08-10 "대시 쓰니 같이 빨리 옴").
 # 상한 속도로만 따라붙는다. 수평 기본 340(달리기 240 대비), 수직은 cfg로 낮춰 잡는다(등반은 느리므로).
 var catchup: float = 340.0
@@ -37,12 +37,12 @@ var _stop_active: bool = false
 var _halted: bool = false
 var _edge: float = -300.0         # 선두(치명) edge의 월드 좌표(axis에 따라 x 또는 y)
 var _dmg_cd: float = 0.0
-# y_up 시각 · 낙하 잔해(시각 전용, 피해 없음) — "위에서 떨어져 아래에 쌓인다"를 만든다
+# y_up 시각 · 낙하 잔해(시각 전용, 피해 없음) · "위에서 떨어져 아래에 쌓인다"를 만든다
 # (2026-08-18 사용자 "가시가 올라오는 이상한 느낌" · 톱니 경계 폐지의 짝).
 var _debris: Array = []           # {x, y, vy, w, h}
 var _debris_t: float = 0.0
 var _puffs: Array = []            # {x, t} · 착탄 분진
-# y_up 맥동 — 붕괴는 일정한 속도로 올라오지 않는다. 위층이 버티다 한 번에 내려앉는다
+# y_up 맥동 · 붕괴는 일정한 속도로 올라오지 않는다. 위층이 버티다 한 번에 내려앉는다
 # (사용자 2026-08-19: "등속으로 쭉 올라오니 무너진 게 차오르는 느낌이 전혀 안 난다").
 # 버팀(거의 정지) → 붕락(굉음·흔들림과 함께 훅) 반복 · 한 주기 평균 속도는 speed 그대로라
 # 밸런스(등반 여유·max_gap)는 건드리지 않고 체감만 바꾼다.
@@ -121,7 +121,7 @@ func _surge_factor(delta: float) -> float:
 # 붕락 시작 · 굉음 + 화면 흔들림 + 잔해 한 무더기. "위에서 무너져 내려 쌓였다"는 인과를
 # 소리와 진동으로 먼저 알리고, 그 결과로 표면이 올라온다.
 func _on_surge_start() -> void:
-	# 폭탄 소스 재활용이지만 낮고 느리게(pitch 0.68) — 플레이어 폭탄과 소리로 구분
+	# 폭탄 소스 재활용이지만 낮고 느리게(pitch 0.68) · 플레이어 폭탄과 소리로 구분
 	# (2026-08-21 사용자 "낙석 소리가 내 폭탄 소리랑 똑같아 위화감").
 	SfxPlayer.play("bomb_explode", -9.0, 0.68)
 	var st: Node = get_tree().get_first_node_in_group("stage")
@@ -177,7 +177,7 @@ func _tick_debris_x(delta: float) -> void:
 	_puffs = keep_p
 
 func _spawn_debris_x() -> void:
-	# 선두 언저리(-30~+190)의 천장에서 떨어져 바닥에 박힌다 — "무너지며 전진"의 인과.
+	# 선두 언저리(-30~+190)의 천장에서 떨어져 바닥에 박힌다 · "무너지며 전진"의 인과.
 	_debris.append({
 		"x": _edge + randf_range(-30.0, 190.0),
 		"y": randf_range(-380.0, -160.0),
@@ -222,8 +222,8 @@ func _draw() -> void:
 	if axis == "x":
 		# 삼켜진 어두운 영역(선두 왼쪽 전부)
 		draw_rect(Rect2(Vector2(-4200.0, V_TOP), Vector2(4200.0, V_BOT - V_TOP)), Color(0.05, 0.04, 0.05, 0.97))
-		# 선두 = 무너져 쌓인 잔해 더미 실루엣(2026-08-21 톱니 폐지 — "쫓아오는 가시 벽"으로
-		# 읽혔다 · y_up 문법 이식). 결정적 해시로 덩어리 변주 — 매 프레임 동일(지글거림 방지).
+		# 선두 = 무너져 쌓인 잔해 더미 실루엣(2026-08-21 톱니 폐지 · "쫓아오는 가시 벽"으로
+		# 읽혔다 · y_up 문법 이식). 결정적 해시로 덩어리 변주 · 매 프레임 동일(지글거림 방지).
 		var y: float = V_TOP
 		var k: int = 0
 		while y < V_BOT:
@@ -233,7 +233,7 @@ func _draw() -> void:
 			var tone: float = 0.12 + fposmod(hsh * 3.17, 1.0) * 0.08
 			draw_rect(Rect2(Vector2(-8.0, y), Vector2(cw + 8.0, ch)), Color(tone + 0.04, tone, tone * 0.9, 1.0))
 			draw_rect(Rect2(Vector2(cw - 2.0, y), Vector2(2.5, ch)), Color(0.38, 0.32, 0.28, 0.75))
-			# 더미 틈의 잔불 — 드문 주황 점(y_up과 동일 어휘).
+			# 더미 틈의 잔불 · 드문 주황 점(y_up과 동일 어휘).
 			if fposmod(hsh * 11.7, 1.0) < 0.22:
 				draw_rect(Rect2(Vector2(cw * 0.35, y + ch * 0.4), Vector2(5.0, 4.0)), Color(0.85, 0.38, 0.14, 0.7))
 			y += ch + 4.0
@@ -255,7 +255,7 @@ func _draw() -> void:
 		# 삼켜진 어두운 영역(선두 아래 전부).
 		draw_rect(Rect2(Vector2(H_LEFT, 0.0), Vector2(H_RIGHT - H_LEFT, 4600.0)), Color(0.05, 0.04, 0.05, 0.97))
 		# 선두 = 쌓인 잔해 더미 실루엣(2026-08-18 재작업 · 등간격 톱니는 "올라오는 가시"로
-		# 읽혔다). 결정적 해시로 덩어리 폭·높이 변주 — 매 프레임 동일(지글거림 방지).
+		# 읽혔다). 결정적 해시로 덩어리 폭·높이 변주 · 매 프레임 동일(지글거림 방지).
 		var x: float = H_LEFT
 		var k: int = 0
 		while x < H_RIGHT:
@@ -265,7 +265,7 @@ func _draw() -> void:
 			var tone: float = 0.12 + fposmod(hsh * 3.17, 1.0) * 0.08
 			draw_rect(Rect2(Vector2(x, -ch), Vector2(cw, ch + 10.0)), Color(tone + 0.04, tone, tone * 0.9, 1.0))
 			draw_rect(Rect2(Vector2(x, -ch), Vector2(cw, 2.5)), Color(0.38, 0.32, 0.28, 0.75))
-			# 더미 틈의 잔불(소각 여파) — 드문 주황 점.
+			# 더미 틈의 잔불(소각 여파) · 드문 주황 점.
 			if fposmod(hsh * 11.7, 1.0) < 0.22:
 				draw_rect(Rect2(Vector2(x + cw * 0.4, -ch * 0.4), Vector2(5.0, 4.0)), Color(0.85, 0.38, 0.14, 0.7))
 			x += cw + 6.0 + fposmod(hsh * 5.3, 1.0) * 24.0
@@ -275,7 +275,7 @@ func _draw() -> void:
 			var d: Dictionary = d0
 			draw_rect(Rect2(Vector2(float(d["x"]), float(d["y"]) - _edge - float(d["h"])),
 				Vector2(float(d["w"]), float(d["h"]))), Color(0.22, 0.19, 0.17, 0.95))
-		# 착탄 분진 퍼프 — 확장하며 사라지는 원.
+		# 착탄 분진 퍼프 · 확장하며 사라지는 원.
 		for q0 in _puffs:
 			var q: Dictionary = q0
 			var qt: float = float(q["t"]) / 0.5

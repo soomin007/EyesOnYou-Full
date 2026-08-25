@@ -4,7 +4,7 @@ extends RefCounted
 # 레벨업 시 다음 티어 후보를 굴린다. 각 라인에서 보유 티어 +1이 다음 후보.
 # 이미 T3까지 찍은 라인은 후보에서 제외. 베이스라인은 트리 외라 후보에 안 뜸.
 
-# owned: GameState.skills (Dictionary[String, int] — line_id → 보유 티어 0~3).
+# owned: GameState.skills (Dictionary[String, int] · line_id → 보유 티어 0~3).
 # route_id가 주어지면 현재 맵의 적 약점 스킬(상성)을 후보에 있을 때 첫 슬롯으로 보장해 출현↑.
 static func roll_choices(owned: Dictionary, count: int = 3, route_id: String = "") -> Array:
 	var available: Array = []
@@ -19,7 +19,7 @@ static func roll_choices(owned: Dictionary, count: int = 3, route_id: String = "
 		if not card.is_empty():
 			available.append(card)
 	available.shuffle()
-	# 상성 가중 — 현재 맵 약점 스킬이 후보에 있으면 셔플 후 첫 슬롯으로 끌어와 픽에 보장.
+	# 상성 가중 · 현재 맵 약점 스킬이 후보에 있으면 셔플 후 첫 슬롯으로 끌어와 픽에 보장.
 	var mskill: String = SkillTreeData.matchup_skill_for_route(route_id, owned)
 	if mskill != "":
 		for i in available.size():
@@ -29,7 +29,7 @@ static func roll_choices(owned: Dictionary, count: int = 3, route_id: String = "
 					available[i] = available[0]
 					available[0] = c
 				break
-	# 저체력 가중(갤러리 제안 2026-08-25) — 체력이 1/3 이하일 때 레벨업하면 최대 체력 카드가
+	# 저체력 가중(갤러리 제안 2026-08-25) · 체력이 1/3 이하일 때 레벨업하면 최대 체력 카드가
 	# 절반 확률로 후보 3장에 끼어든다. 보장이 아니라 가중("조금 더 높은 확률") · 마지막 슬롯과
 	# 교체라 상성 보장 슬롯(0)과 충돌하지 않는다.
 	if GameState.player_hp <= maxi(1, int(ceil(float(GameState.effective_max_hp()) / 3.0))) \

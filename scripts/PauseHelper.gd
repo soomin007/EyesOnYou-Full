@@ -5,14 +5,14 @@ static func build(_owner: Node, on_resume: Callable, on_settings: Callable, on_t
 	var layer := CanvasLayer.new()
 	layer.layer = 50
 	layer.process_mode = Node.PROCESS_MODE_ALWAYS
-	# 일시정지 동안 BGM 덕킹(-12dB 먹먹) — 사망 화면과 동일 문법(사용자 지적 2026-08-12:
-	# 일시정지에 덕킹 부재). 해제는 tree_exited 훅 — 계속하기/설정/타이틀 등 어떤 경로로
+	# 일시정지 동안 BGM 덕킹(-12dB 먹먹) · 사망 화면과 동일 문법(사용자 지적 2026-08-12:
+	# 일시정지에 덕킹 부재). 해제는 tree_exited 훅 · 계속하기/설정/타이틀 등 어떤 경로로
 	# 닫혀도(씬 전환 포함) 레이어가 트리를 떠나는 순간 원복이 보장된다(paused 안전판과 동형).
 	BgmPlayer.set_ducked(true)
 	layer.tree_exited.connect(func() -> void:
 		var tree := Engine.get_main_loop() as SceneTree
 		if tree == null or tree.root == null:
-			return   # 앱 종료 중 — autoload가 먼저 해제됐을 수 있음
+			return   # 앱 종료 중 · autoload가 먼저 해제됐을 수 있음
 		var bgm := tree.root.get_node_or_null("BgmPlayer")
 		if bgm != null:
 			bgm.set_ducked(false)
@@ -44,7 +44,7 @@ static func build(_owner: Node, on_resume: Callable, on_settings: Callable, on_t
 	btn_resume.pressed.connect(on_resume)
 	v.add_child(btn_resume)
 
-	# 스킬 트리 열람 — 전체 트리(라인 점증)를 일시정지 중 확인. 자체 완결 오버레이라
+	# 스킬 트리 열람 · 전체 트리(라인 점증)를 일시정지 중 확인. 자체 완결 오버레이라
 	# 콜백 불필요(layer 위에 직접 얹고 스스로 닫힘). paused는 건드리지 않음.
 	var btn_tree := _make_button("스킬 트리")
 	btn_tree.pressed.connect(func() -> void: SkillTreeOverlay.open(layer))

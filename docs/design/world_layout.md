@@ -13,10 +13,10 @@
 
 | 항목 | 결정 |
 |------|------|
-| 3.1 세계 형태 | **B안** — 4템플릿 (HORIZONTAL / VERTICAL_UP / VERTICAL_DOWN / ARENA) |
-| 3.2 특수 방 | **기존 11맵 전환 + 숨은 트리거** — 핵심부=보스, 격리병동 내 이스터에그 트리거 |
-| 3.3 보스 메커닉 | **기존 적 조합 + 3페이즈** — 신규 적 타입 없음 |
-| 3.4 도전 방 룰 | **30초 + 노 데미지** — 실패 페널티 없음, 클리어 보상 XP +5 |
+| 3.1 세계 형태 | **B안** · 4템플릿 (HORIZONTAL / VERTICAL_UP / VERTICAL_DOWN / ARENA) |
+| 3.2 특수 방 | **기존 11맵 전환 + 숨은 트리거** · 핵심부=보스, 격리병동 내 이스터에그 트리거 |
+| 3.3 보스 메커닉 | **기존 적 조합 + 3페이즈** · 신규 적 타입 없음 |
+| 3.4 도전 방 룰 | **30초 + 노 데미지** · 실패 페널티 없음, 클리어 보상 XP +5 |
 | 3.5 진입 조건 | 보스/도전=항상 보임, 이스터에그=격리 병동 레버+발판 트리거(숨김) |
 | 3.6 부스 환경 | 이스터에그 1분, 도전 방 2분, 보스 3분 이내 |
 
@@ -26,7 +26,7 @@
 
 ### HORIZONTAL
 ```
-world_size:      Vector2(4400, 720)  [기본값 — 변경 없음]
+world_size:      Vector2(4400, 720)  [기본값 · 변경 없음]
 player_start:    Vector2(140, 540)
 goal_pos:        Vector2(4320, 540)
 camera:          가로 follow (현행 유지)
@@ -38,7 +38,7 @@ camera:          가로 follow (현행 유지)
 ```
 world_size:      Vector2(1280, 3200)
 player_start:    Vector2(640, 3050)   [하단 중앙]
-goal_pos:        Vector2(640, 160)    [상단 중앙 — Area2D 트리거]
+goal_pos:        Vector2(640, 160)    [상단 중앙 · Area2D 트리거]
 camera:          세로 follow (y축 추적, x는 고정 중앙)
 camera_limits:   left=0, right=1280, top=-200, bottom=3400
 진행 방향:       아래→위
@@ -74,7 +74,7 @@ camera_limits:   전체 맵 고정
 
 ## 2. 맵별 세계 형태 + 좌표 명세
 
-### 2.1 외곽 진입로 (back_alley) — HORIZONTAL
+### 2.1 외곽 진입로 (back_alley) · HORIZONTAL
 
 ```
 world_size:   (4400, 720)
@@ -82,7 +82,7 @@ start:        (140, 540)
 goal:         (4320, 540)
 camera:       가로 follow
 
-특이사항: 짧아도 됨 — 튜토리얼급이라 실제 유효 길이 2400px.
+특이사항: 짧아도 됨 · 튜토리얼급이라 실제 유효 길이 2400px.
           goal을 (2400, 540)으로 당기거나, 맵을 짧게 리사이즈해도 됨.
           → 확정: world_size (2800, 720), goal (2680, 540)
 
@@ -100,15 +100,15 @@ platform layout (새 좌표계):
 
 ---
 
-### 2.2 외벽 옥상 (rooftops) — VERTICAL_UP
+### 2.2 외벽 옥상 (rooftops) · VERTICAL_UP
 
 ```
 world_size:   (1280, 3200)
 start:        (640, 3050)
-goal:         Area2D at (640, 160) — 상단 도달 시 클리어
+goal:         Area2D at (640, 160) · 상단 도달 시 클리어
 camera:       세로 follow
 
-층 구조 (y값 — 위가 작음):
+층 구조 (y값 · 위가 작음):
   지상층 y=3000~3100:  patrol 구역. 올라가는 발판 시작.
   저층  y=2400:        옥상 1단. patrol 2마리.
   중층  y=1700:        옥상 2단. patrol + sniper 1마리. 분기 시작.
@@ -146,7 +146,7 @@ platform layout:
   [x=640, y=280, w=200]    # 골 직전
 
 일방통행:
-  고층(y=1000) 이후 좌우 루트 합류 — 이후 단일 경로
+  고층(y=1000) 이후 좌우 루트 합류 · 이후 단일 경로
   고층→중층 낙하 가능, 중층→고층 재진입 불가 (y=1200 이후 좌측 발판 없음)
 
 적 spawn:
@@ -161,7 +161,7 @@ platform layout:
 
 ---
 
-### 2.3 지하 인입로 (sewers) — VERTICAL_DOWN
+### 2.3 지하 인입로 (sewers) · VERTICAL_DOWN
 
 ```
 world_size:   (1280, 2400)
@@ -169,7 +169,7 @@ start:        (640, 160)
 goal:         Area2D at (640, 2250)
 camera:       세로 follow
 
-층 구조 (y값 — 아래가 큼):
+층 구조 (y값 · 아래가 큼):
   진입 y=200:     지상. 좁은 맨홀 진입.
   상층 y=600:     하수도 상부. 분기 시작.
   중층 y=1200:    좌측=넓은 통로(적 많음) / 우측=좁은 파이프(함정)
@@ -222,20 +222,20 @@ platform layout:
 
 ---
 
-### 2.4 폐쇄 지하철 (subway) — HORIZONTAL (변형)
+### 2.4 폐쇄 지하철 (subway) · HORIZONTAL (변형)
 
 ```
 world_size:   (5600, 480)   [매우 긴 가로, 낮은 천장 강조]
 start:        (140, 380)
 goal:         (5480, 380)
 camera:       가로 follow
-천장 y:       100           [실제 콜리전 천장 — 이중점프 시 천장 닿음]
+천장 y:       100           [실제 콜리전 천장 · 이중점프 시 천장 닿음]
 
 특이사항: 천장이 낮아서 점프 높이가 제한됨 (이중점프 해도 y=100 천장에 닿음).
           열차 지붕(y=220)과 지면(y=420) 2층 구조.
 
 platform layout:
-  # 열차 지붕 (y=220) — 3개 객차
+  # 열차 지붕 (y=220) · 3개 객차
   [x=600,  y=220, w=700]   # 1번 객차
   [x=1600, y=220, w=700]   # 2번 객차
   [x=2700, y=220, w=700]   # 3번 객차
@@ -267,20 +267,20 @@ platform layout:
 
 ---
 
-### 2.5 냉각 시설 (cooling) — HORIZONTAL (2026-06-14 전면 리뉴얼)
+### 2.5 냉각 시설 (cooling) · HORIZONTAL (2026-06-14 전면 리뉴얼)
 
 > ⚠️ **세로 등반 → 가로 냉각 통로로 전면 교체.** 서사 훅: 서버(=VEIL 하드웨어)를 식히는 냉각 플랜트.
 > 시그니처 해저드 = **증기 분출구**(`SteamVent.gd`, 바닥에서 주기 분출). 드론 주력(상성=글라이드) +
 > 고립 글라이드 게이트(삼단점프 전용). 라이브 좌표는 `MapData._cooling()` 참조. 아래 옛 VERTICAL 블록은 폐기.
 
 ```
-(폐기 — 옛 VERTICAL_UP 레이아웃)
+(폐기 · 옛 VERTICAL_UP 레이아웃)
 world_size:   (1280, 3200)
 start:        (640, 3050)
 goal:         Area2D at (640, 160)
 camera:       세로 follow
 
-특이사항: 파이프 구조 — 좌우로 지그재그하며 위로 올라감.
+특이사항: 파이프 구조 · 좌우로 지그재그하며 위로 올라감.
           냉각탑 파이프 사이 점프. 공간 좁아 드론이 위협적.
 
 platform layout:
@@ -290,7 +290,7 @@ platform layout:
   [x=880, y=2200, w=180]   # 우측
   [x=260, y=1900, w=180]   # 좌측
   [x=860, y=1600, w=180]   # 우측
-  [x=280, y=1300, w=180]   # 좌측 — 분기점
+  [x=280, y=1300, w=180]   # 좌측 · 분기점
   ## 분기: 여기서 좌측(안전 계단) / 우측(파이프 직등)
   ## 우측 파이프 (빠름, 드론 밀집)
   [x=900, y=1100, w=80]
@@ -323,7 +323,7 @@ platform layout:
 
 ---
 
-### 2.6 감시탑 (watchtower) — VERTICAL_UP
+### 2.6 감시탑 (watchtower) · VERTICAL_UP
 
 ```
 world_size:   (1280, 3200)
@@ -358,7 +358,7 @@ platform layout:
   [x=520, y=1800, w=200]
   [x=560, y=1600, w=180]   # 분기점 2 (내부)
 
-  # 지하 통로 루트 (y=2800→ 하강 후 상승 — HORIZONTAL 섹션)
+  # 지하 통로 루트 (y=2800→ 하강 후 상승 · HORIZONTAL 섹션)
   # 지하 통로는 y=2900 고정 가로 구간으로 처리 (x=200~1080)
   [x=200, y=2900, w=880]   # 지하 통로 (단일 평면)
   # 통로 끝에서 계단으로 합류
@@ -392,7 +392,7 @@ platform layout:
 
 ---
 
-### 2.7 격리 병동 (ward) — HORIZONTAL (이스터에그 트리거 포함)
+### 2.7 격리 병동 (ward) · HORIZONTAL (이스터에그 트리거 포함)
 
 ```
 world_size:   (4400, 720)
@@ -403,11 +403,11 @@ camera:       가로 follow
 특이사항:
   - 주 통로: 좁은 복도 지면 이동. 방패병이 막음.
   - 환기구 우회: y=420 상단 통로. 대시 없으면 갭 통과 어려움.
-  - 잠긴 문 visual at (2000, 540) — ACCESS DENIED 라벨 + 빨간 LED 펄스.
-  - 잠긴 문 앞 발판 at (2000, 596) — require_armed. 처음엔 회색 비활성.
-  - 레버 at (2900, 388) — 맵 끝 상층 플랫폼 위. 당기면 발판 청색 활성.
+  - 잠긴 문 visual at (2000, 540) · ACCESS DENIED 라벨 + 빨간 LED 펄스.
+  - 잠긴 문 앞 발판 at (2000, 596) · require_armed. 처음엔 회색 비활성.
+  - 레버 at (2900, 388) · 맵 끝 상층 플랫폼 위. 당기면 발판 청색 활성.
   - 발판 step → ARCTURUS 아카이브 시퀀스(시간 정지 + 풀스크린 문서).
-  - VEIL 복선 트리거 at x=900 — "이 구역은 오래됐어요."
+  - VEIL 복선 트리거 at x=900 · "이 구역은 오래됐어요."
 
 platform layout:
   # 환기구 우회 (y=420)
@@ -435,7 +435,7 @@ platform layout:
 이스터에그 트리거 (레버 + 발판 두 단계):
   잠긴 문: visual + 첫 접근 Area2D at x=2000.
   발판: PressurePlate(require_armed=true) at (2000, 596).
-  레버: LeverInteractable at (2900, 388) — 상층 플랫폼 위.
+  레버: LeverInteractable at (2900, 388) · 상층 플랫폼 위.
   흐름: 첫 접근 시 VEIL "그쪽은 임무 범위 밖이에요. / 그 문, 도면에는 없어요." (1회).
         → 맵 끝까지 가서 레버 당김 → 발판 활성("뭔가 풀렸어요. 잠긴 문 앞 발판 위로.").
         → 발판 step → ARCTURUS 시퀀스.
@@ -447,12 +447,12 @@ platform layout:
 
 ---
 
-### 2.8 데이터 센터 (datacenter) — ARENA
+### 2.8 데이터 센터 (datacenter) · ARENA
 
 ```
 world_size:   (1920, 900)
 start:        (200, 760)
-goal:         없음 — 적 전원 처치 시 클리어 (또는 타이머 60초)
+goal:         없음 · 적 전원 처치 시 클리어 (또는 타이머 60초)
 camera:       고정 전체
 
 특이사항:
@@ -461,7 +461,7 @@ camera:       고정 전체
   드론이 천장 근처 자유 이동.
 
 platform layout:
-  # 서버 랙 (y=560 — 지면에서 점프 1회로 올라감)
+  # 서버 랙 (y=560 · 지면에서 점프 1회로 올라감)
   [x=200,  y=560, w=280]   # 랙 1
   [x=600,  y=560, w=280]   # 랙 2
   [x=1000, y=560, w=280]   # 랙 3
@@ -494,7 +494,7 @@ platform layout:
 
 ---
 
-### 2.9 비상 탈출로 (escape) — HORIZONTAL
+### 2.9 비상 탈출로 (escape) · HORIZONTAL
 
 ```
 world_size:   (3800, 720)   [터널 + 야경 두 구간]
@@ -506,14 +506,14 @@ camera:       가로 follow
           ambience(2026-05-09 재설계):
             - 콘크리트 터널 walls(z=-10)이 x = -200 ~ _TUNNEL_END_X(1600)까지만.
               그 너머는 wall 없음 → 도시 야경 자연 노출. cross-fade 폐지.
-            - 터널 끝 직전(_TUNNEL_END_X - 120)에 EXIT 표지판 — 비상 녹색 본체,
+            - 터널 끝 직전(_TUNNEL_END_X - 120)에 EXIT 표지판 · 비상 녹색 본체,
               "EXIT →" 라벨, 깜빡 비상등 톤.
             - 도시 야경 3-layer parallax(scroll_factor):
                 far(0.15)  = 하늘 + 별 + 먼 빌딩 실루엣
                 mid(0.45)  = 메인 빌딩 + 창문 점광원
                 near(0.80) = 가까운 키 큰 빌딩
             - layer.position.x = camera.get_screen_center_position().x * (1 - sf).
-              limit clamped 좌표 사용 — 맵 끝에서 카메라 멈추면 parallax도 멈춤.
+              limit clamped 좌표 사용 · 맵 끝에서 카메라 멈추면 parallax도 멈춤.
             - BGM 페이드아웃: player.x ≥ _TUNNEL_END_X부터 STAGE_LENGTH까지
               lerp(0, -60dB). 터널 통과 순간부터 점진 감쇠, 골 도달 시 거의 무음.
               BgmPlayer.set_extra_attenuation_db(db) 사용. 트랙 전환(엔딩 진입) 시
@@ -534,7 +534,7 @@ platform layout:
 
 적 spawn (2026-05-09 단순화):
   patrol:  (600, 600), (1100, 600)   [둘 다 터널 안]
-  drone:   없음   [이전 (1600, 100) 제거 — 터널 출구가 어수선해짐]
+  drone:   없음   [이전 (1600, 100) 제거 · 터널 출구가 어수선해짐]
   → 터널 빠져나오면 적 없는 야경. "숨 고르기" 톤.
 
 보상: 기본 (risk=1)
@@ -542,12 +542,12 @@ platform layout:
 
 ---
 
-### 2.10 핵심부 (lab) — ARENA (보스 방)
+### 2.10 핵심부 (lab) · ARENA (보스 방)
 
 ```
 world_size:   (1920, 900)
 start:        (200, 760)
-goal:         없음 — 보스 처치 시 클리어
+goal:         없음 · 보스 처치 시 클리어
 camera:       고정 전체
 
 보스: SENTINEL
@@ -556,17 +556,17 @@ camera:       고정 전체
   크기: 64×64px (일반 드론의 2배)
   > 정확한 HP·페이즈 경계·자폭 타이밍은 코드(`BossSentinel.gd` HP_MAX/HP_PHASE2/HP_PHASE3/HP_SELF_DESTRUCT)가 진실.
 
-  [페이즈 1 — HP 24~16]
+  [페이즈 1 · HP 24~16]
   행동: 느린 순찰(가로 왕복) + 주기적 하향 폭격(1.5s 간격)
   텔레그래프: 폭탄 발사 전 0.5s 붉은 점 표시
   이동 속도: 일반 드론의 0.7배
 
-  [페이즈 2 — HP 16~8] (HP 16 이하 전환)
+  [페이즈 2 · HP 16~8] (HP 16 이하 전환)
   행동: 순찰 속도 1.5배 + 플레이어 추적(느슨하게) + 폭격 간격 1.0s
   신규: 측면 미사일 2발 발사 (수평으로 날아옴, 텔레그래프 0.3s)
   텔레그래프: 미사일 발사 전 날개(암) 빨간색 깜빡임
 
-  [페이즈 3 — HP 8~0] (HP 8 이하 전환)
+  [페이즈 3 · HP 8~0] (HP 8 이하 전환)
   행동: 플레이어 적극 추적 + 자폭 카운트다운
   자폭 카운트다운: HP 5 이하 시 약 3.6초 카운트 시작(스토리는 HP 2), 화면 전체 경고
   → 시간 안에 처치 못하면 광역 데미지 3 (즉사 수준)
@@ -602,7 +602,7 @@ platform layout:
 
 ---
 
-### 2.11 ??? (hidden) — HORIZONTAL (유지)
+### 2.11 ??? (hidden) · HORIZONTAL (유지)
 
 ```
 world_size:   (4400, 720)
@@ -618,23 +618,23 @@ camera:       가로 follow
 
 ### 2.x A2 확장 맵 (좌표 진실 = MapData.gd)
 
-본편 A2 분량 확대로 추가/합류한 맵. 상세 좌표는 `MapData.gd`가 진실 — 여기선 역할만.
+본편 A2 분량 확대로 추가/합류한 맵. 상세 좌표는 `MapData.gd`가 진실 · 여기선 역할만.
 
-- **서버 회랑 (server_hall) — HORIZONTAL, 막3 전투 s6**: datacenter와 같은 적(드론+저격) 통과형 회랑. 핵심부 직전.
-- **지하 주차장 (parking_lot) — HORIZONTAL, 막1 s0~1**: 차량/기둥 엄폐 + 방패병 1 도입. s0 선택지를 2→3으로.
-- **변전소 (substation) — HORIZONTAL, 막2 s3~5**: 변압기 위 저격 + 머리 위 드론. 노출 전투(server_hall 막2 변형).
-- **실험 구역 (testing_grounds) — HORIZONTAL, 막2 s3~5**: 자폭병·방패병 혼합 + 관측 발판 밑 하향 포탑(함정).
-- **철거 구역 (demolition_zone) — HORIZONTAL, 막1 s1~2**: 2방 체인(2026-08-20). 방1 철거 가로(잔해 엄폐 + 방패병 + 갭 상향 포탑 · 낙석 학습) → 방2 파쇄 마당(낙석 잦음 + 적도 맞음 = 유인 처치 · 크레인/캐노피 배경).
-- **배수 펌프장 (pump_station) — HORIZONTAL, 막1 s1~2**: 파이프 위 저격 노출. 사선 끊으며 전진.
-- **통신 중계소 (relay_station) — HORIZONTAL, 막2 s3~5**: 중계기 위 저격 + 머리 위 드론 동시 압박(고위험).
-- **물류 창고 (warehouse) — HORIZONTAL, 막2 s3~5**: 컨테이너 엄폐 + 방패병·자폭병 혼합 근접.
-- **보안 검문소 (checkpoint) — HORIZONTAL, 막2 s3~5**: 검문선(트립와이어) 건드리면 앞쪽 포탑 일제 발사(subway 패턴).
-- **통제실 회랑 (control_corridor) — HORIZONTAL, 막3 전투 s6**: server_hall 계열(드론+저격) 4번째 s6 선택지. ???는 s6 guaranteed로 유지.
-- **응축기 구역 (condenser) — HORIZONTAL, 막2 s3~5**: 증기 분출구 타이밍 + 드론(cooling 자매, 글라이드 게이트 없는 순수 통과형).
-- **외곽 순찰로 (perimeter) — HORIZONTAL, 막1 s0~2**: 저밀도 traversal(전투 가벼움). 전투-중심 맵들과 대비되는 호흡.
-- **함정 통로 (gauntlet) — HORIZONTAL, 막2 s3~5**: 적 최소 + 상·하향 포탑·트립와이어 다수. 함정 내비게이션.
+- **서버 회랑 (server_hall) · HORIZONTAL, 막3 전투 s6**: datacenter와 같은 적(드론+저격) 통과형 회랑. 핵심부 직전.
+- **지하 주차장 (parking_lot) · HORIZONTAL, 막1 s0~1**: 차량/기둥 엄폐 + 방패병 1 도입. s0 선택지를 2→3으로.
+- **변전소 (substation) · HORIZONTAL, 막2 s3~5**: 변압기 위 저격 + 머리 위 드론. 노출 전투(server_hall 막2 변형).
+- **실험 구역 (testing_grounds) · HORIZONTAL, 막2 s3~5**: 자폭병·방패병 혼합 + 관측 발판 밑 하향 포탑(함정).
+- **철거 구역 (demolition_zone) · HORIZONTAL, 막1 s1~2**: 2방 체인(2026-08-20). 방1 철거 가로(잔해 엄폐 + 방패병 + 갭 상향 포탑 · 낙석 학습) → 방2 파쇄 마당(낙석 잦음 + 적도 맞음 = 유인 처치 · 크레인/캐노피 배경).
+- **배수 펌프장 (pump_station) · HORIZONTAL, 막1 s1~2**: 파이프 위 저격 노출. 사선 끊으며 전진.
+- **통신 중계소 (relay_station) · HORIZONTAL, 막2 s3~5**: 중계기 위 저격 + 머리 위 드론 동시 압박(고위험).
+- **물류 창고 (warehouse) · HORIZONTAL, 막2 s3~5**: 컨테이너 엄폐 + 방패병·자폭병 혼합 근접.
+- **보안 검문소 (checkpoint) · HORIZONTAL, 막2 s3~5**: 검문선(트립와이어) 건드리면 앞쪽 포탑 일제 발사(subway 패턴).
+- **통제실 회랑 (control_corridor) · HORIZONTAL, 막3 전투 s6**: server_hall 계열(드론+저격) 4번째 s6 선택지. ???는 s6 guaranteed로 유지.
+- **응축기 구역 (condenser) · HORIZONTAL, 막2 s3~5**: 증기 분출구 타이밍 + 드론(cooling 자매, 글라이드 게이트 없는 순수 통과형).
+- **외곽 순찰로 (perimeter) · HORIZONTAL, 막1 s0~2**: 저밀도 traversal(전투 가벼움). 전투-중심 맵들과 대비되는 호흡.
+- **함정 통로 (gauntlet) · HORIZONTAL, 막2 s3~5**: 적 최소 + 상·하향 포탑·트립와이어 다수. 함정 내비게이션.
 
-(맵 25개 — A2 양산 1차. 30+까지는 추가 가능하나, VERTICAL/ARENA 변주는 완주 가능성·페이싱 검증 위해 플레이테스트와 병행 권장.)
+(맵 25개 · A2 양산 1차. 30+까지는 추가 가능하나, VERTICAL/ARENA 변주는 완주 가능성·페이싱 검증 위해 플레이테스트와 병행 권장.)
 
 ---
 
@@ -642,7 +642,7 @@ camera:       가로 follow
 
 > **이건 추천/출현 로직(코드)이지 적 배치 변경이 아니다.** 위 §2의 맵 좌표·적 spawn은
 > 그대로다. 아래는 "이 맵에 어떤 적이 많으니 이 스킬을 권한다"를 한눈에 보는 참고표.
-> 단일 진실은 `SkillTreeData.MATCHUP` (코드) — 표가 어긋나면 코드를 따른다.
+> 단일 진실은 `SkillTreeData.MATCHUP` (코드) · 표가 어긋나면 코드를 따른다.
 
 적별 약점 스킬(shield→explosive / sniper→barrier / drone→glide / bomber→fire_boost)의 단일 진실은
 [`growth_system.md`](growth_system.md) §4.1 (`SkillTreeData.MATCHUP`). 아래는 그 맵별 적용만 본다.
@@ -651,17 +651,17 @@ camera:       가로 follow
 
 | 맵 | 주력 적 | 권장 스킬 |
 |----|--------|----------|
-| back_alley | patrol | (기본기 — 특화 없음) |
+| back_alley | patrol | (기본기 · 특화 없음) |
 | rooftops | patrol, **sniper** | barrier |
 | sewers | patrol, **bomber** | fire_boost |
 | subway | patrol, **sniper, shield** | barrier / explosive |
 | cooling | patrol, **drone** | glide |
 | watchtower | patrol, **sniper** | barrier |
 | ward | patrol, **bomber, shield** | fire_boost / explosive |
-| datacenter (ARENA) | 전 종류 웨이브 | 상황별 — sniper엔 barrier, drone엔 glide, shield엔 explosive |
-| escape | patrol | (숨 고르기 — 특화 없음) |
+| datacenter (ARENA) | 전 종류 웨이브 | 상황별 · sniper엔 barrier, drone엔 glide, shield엔 explosive |
+| escape | patrol | (숨 고르기 · 특화 없음) |
 | lab (보스) | SENTINEL 단독 | 보스 전용 (상성 표 비적용) |
-| blackout (도전) | patrol, bomber, **drone** | (1 hit fail — 회피 위주) |
+| blackout (도전) | patrol, bomber, **drone** | (1 hit fail · 회피 위주) |
 
 > 동작 방식: 레벨업 카드(추천 ★)와 출현 가중이 `matchup_skill_for_route()`를 공유한다.
 > 현재 맵에 등장하는 적 중 **플레이어가 아직 카운터 스킬을 안 가진** 최우선 약점 스킬을
@@ -671,7 +671,7 @@ camera:       가로 follow
 
 ## 3. 특수 방 컨셉 시트
 
-### 3.1 이스터에그 방 — "ARCTURUS 아카이브"
+### 3.1 이스터에그 방 · "ARCTURUS 아카이브"
 
 ```
 진입 조건:
@@ -690,29 +690,29 @@ camera:       고정
   3개의 단말기. 각각 ARCTURUS 내부 문서 단편.
   단말기 내용 (타자기 효과):
 
-  단말기 A — 신입 직원 온보딩 문서 (일부만):
+  단말기 A · 신입 직원 온보딩 문서 (일부만):
     "ARCTURUS에 오신 것을 환영합니다.
      본사는 공식적으로 존재하지 않습니다.
      모든 임무는 기록되지 않습니다.
      질문하지 마세요. 결과만 내세요.
-     — 인사팀 (인사팀도 공식적으로 존재하지 않습니다)"
+     · 인사팀 (인사팀도 공식적으로 존재하지 않습니다)"
 
-  단말기 B — VEIL 프로젝트 초기 회의록 (일부):
+  단말기 B · VEIL 프로젝트 초기 회의록 (일부):
     "회의 참석자: [REDACTED], [REDACTED], [REDACTED]
      주제: VEIL 감정 모듈 탑재 여부
      결론: 탑재 보류. 불필요한 복잡성.
      비고: VEIL-2가 감정 모듈 없이도 이상 반응을 보인 것에 대해
            추가 조사 예정.
-           — [REDACTED]"
+           · [REDACTED]"
 
-  단말기 C — 요원 평가 내부 메모 (플레이어의 이번 임무 기록):
+  단말기 C · 요원 평가 내부 메모 (플레이어의 이번 임무 기록):
     "요원 코드: [REDACTED]
      임무: PALIMPSEST
      현재 상태: 진행 중
      VEIL과의 협조도: [측정 중]
      비고: 요원이 이 문서를 읽고 있다면
            이미 임무 범위를 벗어난 것임.
-           — 감시팀"
+           · 감시팀"
 
 소요 시간: 약 1분
 VEIL 반응 (진입 후):
@@ -725,19 +725,19 @@ VEIL 반응 (진입 후):
 
 ---
 
-### 3.2 도전 방 — "블랙아웃 런"
+### 3.2 도전 방 · "블랙아웃 런"
 
 ```
 진입 조건:
   Stage 4 루트 선택 화면에서 [도전] 뱃지 루트 선택.
   맵에 진입한 직후 입구 게이트(StaticBody 차폐) + 차폐막(world-space 패널)이
-  도전방 내부를 완전히 가린다 — 플레이어는 들어가기 전에 안에 무엇이 있는지 모름.
+  도전방 내부를 완전히 가린다 · 플레이어는 들어가기 전에 안에 무엇이 있는지 모름.
   입구 발판(170, 595) step → 도전 시작.
 
 진입 연출 (`_start_challenge_run`):
-  1) 게이트 visual fade + 차폐막 fade — 0.9s 동안 안이 점차 드러남.
+  1) 게이트 visual fade + 차폐막 fade · 0.9s 동안 안이 점차 드러남.
   2) 사이렌 빨강 플래시 2회 (CanvasLayer overlay).
-  3) challenge_dark_layer fade-in — 강 dim + 가장자리 비네트.
+  3) challenge_dark_layer fade-in · 강 dim + 가장자리 비네트.
   4) 타이머 HUD + "BLACKOUT RUN / 30초 안에 골 도달 / 한 대만 맞아도 실패" 배너.
 
 world_size:   (2400, 720)
@@ -745,12 +745,12 @@ camera:       가로 follow
 제한:
   - 타이머 30초 (challenge_time)
   - 피격 1회로 즉시 실패 (1 hit fail)
-  - 실패해도 stage 진행에 영향 없음 (그냥 스킵 — 페널티 X)
+  - 실패해도 stage 진행에 영향 없음 (그냥 스킵 · 페널티 X)
 
 특이사항:
   맵 전체가 어두움 (challenge_dark_layer). 플레이어 주변 좁은 원형만 인지 가능.
   적은 patrol 5 + bomber 1 + drone 2 (MapData 기반).
-  지면 가시 4구간 — 발판 갭 정렬 (480/950/1500/2050, y=594).
+  지면 가시 4구간 · 발판 갭 정렬 (480/950/1500/2050, y=594).
   입구 전 VEIL 사전 경고: "이 안은 통신이 끊겨요. 발판 밟으면 시작이에요. /
   한 대만 맞아도 끝." 활성 후엔 교신 끊김(VEIL 안내 없음).
 
@@ -787,9 +787,9 @@ VEIL:
 
 보강: 런마다 단말기 중 1개를 추가 단말기 풀에서 랜덤 교체.
 
-추가 단말기 풀 (3개 — 각 런에 1개만 등장):
+추가 단말기 풀 (3개 · 각 런에 1개만 등장):
 
-[추가 단말기 X — VEIL-1의 첫 임무 기록]
+[추가 단말기 X · VEIL-1의 첫 임무 기록]
   "요원 코드: A-07
    임무: [REDACTED]
    VEIL-1 판단: 요원 희생 후 임무 완수 권고.
@@ -797,7 +797,7 @@ VEIL:
    비고: VEIL-1이 이것을 오류로 인식하지 않음.
          개발팀 재검토 예정."
 
-[추가 단말기 Y — VEIL-2의 마지막 교신 로그]
+[추가 단말기 Y · VEIL-2의 마지막 교신 로그]
   "VEIL-2: 요원이 살 확률이 12%예요.
    ARCTURUS: 임무 계속.
    VEIL-2: 임무 중단을 권고해요.
@@ -805,12 +805,12 @@ VEIL:
    VEIL-2: 중단.
    ARCTURUS: [접속 종료]"
 
-[추가 단말기 Z — 익명 클라이언트 메시지]
+[추가 단말기 Z · 익명 클라이언트 메시지]
   "이 데이터를 바깥으로 내보내주세요.
    보상은 이미 지불했어요.
    VEIL이 누구인지 알게 되면
    요원도 이해할 거예요.
-   — [SENDER UNKNOWN]"
+   · [SENDER UNKNOWN]"
 
 구현:
   첫 방문: 기존 3개 고정 (VEIL-1, VEIL-2, VEIL 고백)

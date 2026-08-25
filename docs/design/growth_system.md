@@ -1,4 +1,4 @@
-# 성장 시스템 설계 — 확정안 + 구현 계획
+# 성장 시스템 설계 · 확정안 + 구현 계획
 
 > 이전 `PROPOSAL_growth_system.md` (초안 제안) + `REPLY_growth_system_v2.md` (사용자 결정) 통합본.
 > **설계 의도(라인 구성·상성·역할 분리)의 단일 소스**는 계속 이 문서다.
@@ -14,13 +14,13 @@
 
 | 결정 | 값 |
 |---|---|
-| 시스템 형태 | **A안 — 티어형 스킬 트리** |
+| 시스템 형태 | **A안 · 티어형 스킬 트리** |
 | 스테이지 수 | **5 → 7** |
 | 맵 수 | **6 → 11** |
 | `XP_PER_LEVEL` | **5 → 8** |
 | trust/aggression 임계값 | **3 → 4** |
 | 계열 분류 | **전투 / 이동 / 생존** 3계열 × 3티어 |
-| trust/aggression 결합 강도 | **약 — VEIL 추천 표시만** (잠금 없음) |
+| trust/aggression 결합 강도 | **약 · VEIL 추천 표시만** (잠금 없음) |
 | 튜토리얼 처리 | **튜토리얼 픽은 항상 T1**, 풀도 T1만 |
 | `GameState.skills` 자료형 | `Array[String]` → `Dictionary[String, int]` (id → tier) |
 | 도감(`seen_enemies`) | 별개 유지 |
@@ -46,14 +46,14 @@ T2 폭발물+           (반경 +30%, 쿨다운 3.0s)
 T3 이중 충전          (2회 충전)
 ```
 > **폭발물 너프 (2026-06)**: `EXPLOSION_DAMAGE` 3→2, T1 쿨다운 3.0→3.5s, T2/T3 쿨다운 2.5→3.0s.
-> 방패병(HP3)을 한 방에 못 죽이게 해 "모든 적 올킬 만능"을 깬다. 단 **방패 무시 광역은 유지** —
+> 방패병(HP3)을 한 방에 못 죽이게 해 "모든 적 올킬 만능"을 깬다. 단 **방패 무시 광역은 유지** ·
 > 정면 못 뚫는 방패병에 여전히 유효(2뎀×2 타격), patrol/sniper/drone/bomber는 한 방 유지.
 > → **방패병·군집 상성은 보존, 올킬 만능만 제거**. (코드: `Player.gd` `EXPLOSION_DAMAGE`/`SKILL_COOLDOWN`/`get_skill_cd_max`.)
 
 ### 이동 계열
 ```
-T1 공중 활강          (낙하 시 자동으로 천천히 떨어짐 — 패시브)
-T2 삼단 점프          (공중 점프 1회 추가 — 최대 3단; 2026-06-13 T1에서 분리)
+T1 공중 활강          (낙하 시 자동으로 천천히 떨어짐 · 패시브)
+T2 삼단 점프          (공중 점프 1회 추가 · 최대 3단; 2026-06-13 T1에서 분리)
 T3 유도 사격          (공중 사격 중 중앙탄 1발만 유도 + 그 탄 데미지 +1; A안 곱 차단 2026-08-18)
 
 T1 대시 강화         (쿨다운 -20%)
@@ -85,7 +85,7 @@ T3 부활 재충전        (30s 후 재무장)
 
 ---
 
-## 3. 맵 — 11개 확정
+## 3. 맵 · 11개 확정
 
 | ID | 이름 | 위치 | ACT | risk | reward | 특징 |
 |----|------|------|-----|------|--------|------|
@@ -133,9 +133,9 @@ T3 부활 재충전        (30s 후 재무장)
 
 > 실제 구현은 trust/aggression이 아니라 **상성/태그 기반**(§4.1, `get_levelup_advice`)으로 ★ 추천을 정한다.
 > 아래 옛 설계는 미사용. 2026-06-13부터 추천 앞에 **실력별 lead-in**만 붙는다
-> (struggling="이건 꼭." / skilled="필요하면," — `VeilDialogue.levelup_leadin`). trust는 어투 색/밴드에만 관여.
+> (struggling="이건 꼭." / skilled="필요하면," · `VeilDialogue.levelup_leadin`). trust는 어투 색/밴드에만 관여.
 
-- ~~trust 높음 → 이동/생존 뱃지 / aggression 높음 → 전투 뱃지~~ (폐기 — 상성/태그 추천으로 대체)
+- ~~trust 높음 → 이동/생존 뱃지 / aggression 높음 → 전투 뱃지~~ (폐기 · 상성/태그 추천으로 대체)
 - 잠금 없음. 추천 무시 가능.
 - aggression 임계값: 엔딩용 4 (엔딩 신뢰축은 2026-06-13부터 추천 수용률 ≥50%).
 
@@ -154,9 +154,9 @@ trust/aggression 추천과 별개로, **현재 맵의 적 구성**을 보고 약
 | `bomber`(폭격) | `fire_boost` | 붙기 전에 빠른 처치 |
 
 **두 갈래로 작동** (같은 표 공유):
-- **B — 레벨업 추천 ★**: 현재 맵에 등장하는 적 중 플레이어가 **아직 카운터 스킬을 안 가진** 최우선
+- **B · 레벨업 추천 ★**: 현재 맵에 등장하는 적 중 플레이어가 **아직 카운터 스킬을 안 가진** 최우선
   약점 스킬을 `skill_id` 단위로 강조 (line 단위 추천, 티어 무관).
-- **C — 출현 가중**: `SkillSystem.roll_choices`가 그 약점 스킬이 후보 풀에 있으면 셔플 후
+- **C · 출현 가중**: `SkillSystem.roll_choices`가 그 약점 스킬이 후보 풀에 있으면 셔플 후
   **첫 슬롯으로 끌어와** 픽 등장을 보장 (강제 잠금 아님, 출현 확률만 ↑).
 
 **공통 헬퍼**: `SkillTreeData.matchup_skill_for_route(route_id, player_skills) -> String`
@@ -189,7 +189,7 @@ trust/aggression 추천과 별개로, **현재 맵의 적 구성**을 보고 약
 
 ## 7. 사전 메모 (잊지 말 것)
 
-### 7.1 풀 크기 동적 클램프 — 이미 구현됨
+### 7.1 풀 크기 동적 클램프 · 이미 구현됨
 - `SkillSystem.roll_choices`: `for i in min(count, available.size())` (line 31)
 - `RouteData.get_route_pool_for_stage`: `var pick_count: int = min(available.size(), 3 if stage_index >= 1 else 2)` (line 90)
 
@@ -206,57 +206,57 @@ trust/aggression 추천과 별개로, **현재 맵의 적 구성**을 보고 약
 ### 7.4 `Callable.bind` 파라미터 순서
 - Godot 4 `Callable.bind`는 인자를 **뒤에** 추가. 신호가 emit하는 인자가 항상 앞.
 - 새 Area2D 트리거 추가 시 핸들러 시그니처는 `(body, area)` 순.
-- 이미 코드에서 한 번 버그 났음(2026-05-02 세션 3) — 같은 실수 반복 금지.
+- 이미 코드에서 한 번 버그 났음(2026-05-02 세션 3) · 같은 실수 반복 금지.
 
 ---
 
 ## 8. 구현 계획 (작업 순서)
 
-### Phase B — 성장 시스템 (스토리/맵과 독립)
+### Phase B · 성장 시스템 (스토리/맵과 독립)
 
 **B-1 데이터 정의** ✅ 완료 (commit 64dcbd1)
-- [x] `scripts/SkillTreeData.gd` 신규 — 계열/티어 데이터 + lookup 헬퍼
-- [x] `scripts/GameState.gd` — `skills: Array` → `skills: Dictionary` 마이그레이션
-- [x] `scripts/SkillSystem.gd` — `roll_choices` 티어 prereq, `find_by_id` 위임
+- [x] `scripts/SkillTreeData.gd` 신규 · 계열/티어 데이터 + lookup 헬퍼
+- [x] `scripts/GameState.gd` · `skills: Array` → `skills: Dictionary` 마이그레이션
+- [x] `scripts/SkillSystem.gd` · `roll_choices` 티어 prereq, `find_by_id` 위임
 
 **B-2 효과 + UI** ✅ 완료 (commit ec368b2)
-- [x] `scripts/Player.gd` — 각 라인 효과 티어 분기 (T1/T2/T3)
-- [x] `scripts/LevelUpOverlay.gd` — 카드 [family · T#] 헤더 + VEIL 추천 표시
-- [x] `scripts/GameState.gd` — high-risk 루트 적 처치 XP +50%, XP_PER_LEVEL 8
+- [x] `scripts/Player.gd` · 각 라인 효과 티어 분기 (T1/T2/T3)
+- [x] `scripts/LevelUpOverlay.gd` · 카드 [family · T#] 헤더 + VEIL 추천 표시
+- [x] `scripts/GameState.gd` · high-risk 루트 적 처치 XP +50%, XP_PER_LEVEL 8
 
 **B-3 밸런스 패스 (2026-06)** ✅ 완료
-- [x] `scripts/SkillTreeData.gd` / `scripts/Player.gd` — 글라이드 라인 재설계 (활강 T1 / 관통 사격 T2 / 유도 사격 T3)
-- [x] `scripts/Bullet.gd` — `tracking_blend`/`tracking_max_angle` 분리 (multishot 약한 추적 vs glide T3 강한 유도)
-- [x] `scripts/Player.gd` / `scripts/SkillTreeData.gd` — 폭발물 너프 (EXPLOSION_DAMAGE 2, 쿨다운 3.5/3.0s, desc 동기화)
-- [x] `scripts/SkillTreeData.gd` `MATCHUP` + `matchup_skill_for_route` / `scripts/SkillSystem.gd` — 스킬-적 상성 (추천 ★ + 출현 가중)
+- [x] `scripts/SkillTreeData.gd` / `scripts/Player.gd` · 글라이드 라인 재설계 (활강 T1 / 관통 사격 T2 / 유도 사격 T3)
+- [x] `scripts/Bullet.gd` · `tracking_blend`/`tracking_max_angle` 분리 (multishot 약한 추적 vs glide T3 강한 유도)
+- [x] `scripts/Player.gd` / `scripts/SkillTreeData.gd` · 폭발물 너프 (EXPLOSION_DAMAGE 2, 쿨다운 3.5/3.0s, desc 동기화)
+- [x] `scripts/SkillTreeData.gd` `MATCHUP` + `matchup_skill_for_route` / `scripts/SkillSystem.gd` · 스킬-적 상성 (추천 ★ + 출현 가중)
 
-### Phase C — 맵 + 스테이지 확장
+### Phase C · 맵 + 스테이지 확장
 
 **C-1 데이터/규칙** ✅ 완료 (commit da74ea4)
-- [x] `scripts/RouteData.gd` — min/max_stage/unique/guaranteed_in_stages, 11개 맵
-- [x] `scripts/RouteMap.gd` — route_history 필터
-- [x] `scripts/GameState.gd` — TOTAL_STAGES=7, SCORE_THRESHOLD=4
+- [x] `scripts/RouteData.gd` · min/max_stage/unique/guaranteed_in_stages, 11개 맵
+- [x] `scripts/RouteMap.gd` · route_history 필터
+- [x] `scripts/GameState.gd` · TOTAL_STAGES=7, SCORE_THRESHOLD=4
 - [x] 신규 5개 맵 ambience 임시 매핑
 
 **C-2 신규 맵 layout** ✅ 완료
-- [x] `scripts/Stage.gd` — 5개 맵 platform layout
-- [x] `scripts/Stage.gd` — 5개 맵 ambience (cooling/watchtower/ward/datacenter/escape)
+- [x] `scripts/Stage.gd` · 5개 맵 platform layout
+- [x] `scripts/Stage.gd` · 5개 맵 ambience (cooling/watchtower/ward/datacenter/escape)
 
 **C-3 내러티브** ✅ 완료
-- [x] `scripts/VeilDialogue.gd` — Stage 5/6 브리핑 풀 추가, ACT 매핑 재정렬
-- [x] `scripts/Stage.gd` — 격리 병동 복선 트리거 (route_ward 진입 시)
-- [x] `scripts/Stage.gd` — 잠긴 문 톤 보강 (크기 ↑, LED 펄스, ACCESS DENIED 라벨, 후광, 추가 대사)
+- [x] `scripts/VeilDialogue.gd` · Stage 5/6 브리핑 풀 추가, ACT 매핑 재정렬
+- [x] `scripts/Stage.gd` · 격리 병동 복선 트리거 (route_ward 진입 시)
+- [x] `scripts/Stage.gd` · 잠긴 문 톤 보강 (크기 ↑, LED 펄스, ACCESS DENIED 라벨, 후광, 추가 대사)
 
 ### 인게임 검증 / 후속 polish 항목
 - [ ] 새 빌드 평균 레벨업 횟수 측정 (XP_PER_LEVEL=8이 너무 빡빡한지)
 - [ ] 7스테이지 완주 시간이 8~15분 안에 들어오는지
 - [ ] 격리 병동 복선 → ??? 맵 발견 흐름이 "아, 그거였구나" 연결되는지
-- [x] glide T3 — 폐기된 "사격 패널티 제거"(no-op) 대신 **유도 사격**으로 재구현 (`Player._spawn_bullet` 활강 분기 + `Bullet.tracking`)
-- [x] explosive T3 (2회 충전) — `Player.skill_charges`/`_refresh_skill_charges`로 구현
-- [x] hp T3 (피격 슬로모) — `Player._trigger_hit_slowmo` 구현 (실시간 타이머로 슬로모 내 정확 해제)
-- [x] multishot T3 (약한 추적) — `Bullet.tracking` 기본값으로 구현
-- [x] shield T3 (부활 재충전) — 구현(2026-06-09). T1/T2는 발동 시 `skills.erase`(1회용), **T3는 라인 유지 + `shield_spent`로 비무장 두었다가 `SHIELD_RECHARGE_TIME`(30s) 후 재무장**(`Player.take_hit`/`_tick_timers`, 재무장 시 `_show_shield_flash`로 알림). HUD "부활" 슬롯에 재충전 남은 초 표시. 맵 전환 시 Player 재생성으로 자연 재무장(T3 = "다시 돌아오는 부활" 판타지와 일치). 용어 통일: shield 라인은 "부활"(barrier "에너지 방어막"과 구분).
-- [x] barrier 라인(에너지 방어막) — 트리 desc/효과 대조 완료(2026-06-08): T1 10초 충전→1회 무효(`BARRIER_CHARGE_T1`), T2 6초 단축(`BARRIER_CHARGE_T2`), T3 무효 직후 0.6초 무적(`BARRIER_INVULN_T3`). 셋 다 `Player._tick_barrier`/`take_hit`와 desc 일치. 불일치 없음.
+- [x] glide T3 · 폐기된 "사격 패널티 제거"(no-op) 대신 **유도 사격**으로 재구현 (`Player._spawn_bullet` 활강 분기 + `Bullet.tracking`)
+- [x] explosive T3 (2회 충전) · `Player.skill_charges`/`_refresh_skill_charges`로 구현
+- [x] hp T3 (피격 슬로모) · `Player._trigger_hit_slowmo` 구현 (실시간 타이머로 슬로모 내 정확 해제)
+- [x] multishot T3 (약한 추적) · `Bullet.tracking` 기본값으로 구현
+- [x] shield T3 (부활 재충전) · 구현(2026-06-09). T1/T2는 발동 시 `skills.erase`(1회용), **T3는 라인 유지 + `shield_spent`로 비무장 두었다가 `SHIELD_RECHARGE_TIME`(30s) 후 재무장**(`Player.take_hit`/`_tick_timers`, 재무장 시 `_show_shield_flash`로 알림). HUD "부활" 슬롯에 재충전 남은 초 표시. 맵 전환 시 Player 재생성으로 자연 재무장(T3 = "다시 돌아오는 부활" 판타지와 일치). 용어 통일: shield 라인은 "부활"(barrier "에너지 방어막"과 구분).
+- [x] barrier 라인(에너지 방어막) · 트리 desc/효과 대조 완료(2026-06-08): T1 10초 충전→1회 무효(`BARRIER_CHARGE_T1`), T2 6초 단축(`BARRIER_CHARGE_T2`), T3 무효 직후 0.6초 무적(`BARRIER_INVULN_T3`). 셋 다 `Player._tick_barrier`/`take_hit`와 desc 일치. 불일치 없음.
 
 ---
 

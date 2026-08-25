@@ -8,7 +8,7 @@ extends Node2D
 # 광과민: 점멸 없음 · 마커는 램프로 진해진다.
 #
 # 2026-08-20 확장(사용자 "기믹 활용 없음"):
-#  - 적도 맞는다(ENEMY_DAMAGE 3) — 유인 처치 전술 성립. 환경 처치 규약(env_killed = XP·점수
+#  - 적도 맞는다(ENEMY_DAMAGE 3) · 유인 처치 전술 성립. 환경 처치 규약(env_killed = XP·점수
 #    없음)은 열차(TrainHazard)와 동형.
 #  - 발판 착지(2026-08-23 개정 · "관통이 맞아?" 반려): 덩이는 낙하선 위 최상단 발판에서
 #    부서진다(관통 폐지). 발판 위 캠퍼는 여전히 위협, 발판 아래는 엄폐처. 마커도 착지면에만.
@@ -22,7 +22,7 @@ const TELE_DUR: float = 0.9
 const FALL_SPEED: float = 1050.0
 const IMPACT_DUR: float = 0.5
 const CHUNK_R: float = 20.0
-const ENEMY_DAMAGE: int = 3   # 무거운 덩이 — 정찰/자폭/저격 즉사, 방패병도 크게
+const ENEMY_DAMAGE: int = 3   # 무거운 덩이 · 정찰/자폭/저격 즉사, 방패병도 크게
 
 var x_min: float = 400.0
 var x_max: float = 1200.0
@@ -30,16 +30,16 @@ var interval: float = 5.5
 var damage: int = 1
 var ground_y: float = 600.0
 var top_y: float = -40.0
-# 낙하선이 지나는 발판들 [{x_min, x_max, y}] — 예고 그림자를 그 표면에도 그린다.
+# 낙하선이 지나는 발판들 [{x_min, x_max, y}] · 예고 그림자를 그 표면에도 그린다.
 var mark_platforms: Array = []
 
 var _state: int = S.IDLE
 var _t: float = 0.0
 var _drop_x: float = 0.0
 var _chunk_y: float = 0.0
-var _land_y: float = 600.0          # 이번 낙하의 착지면 — 낙하선 위 최상단 발판 or 지면
+var _land_y: float = 600.0          # 이번 낙하의 착지면 · 낙하선 위 최상단 발판 or 지면
 var _hit_done: bool = false
-var _hit_enemies: Dictionary = {}   # 이번 낙하에 이미 맞은 적(instance_id) — 중복 타격 방지
+var _hit_enemies: Dictionary = {}   # 이번 낙하에 이미 맞은 적(instance_id) · 중복 타격 방지
 
 func setup(cfg: Dictionary, g_y: float, plats: Array = []) -> void:
 	x_min = float(cfg.get("x_min", x_min))
@@ -71,7 +71,7 @@ func _physics_process(delta: float) -> void:
 					var px: float = (p as Node2D).global_position.x
 					if px > x_min and px < x_max and randf() < 0.5:
 						_drop_x = clampf(px + randf_range(-90.0, 90.0), x_min, x_max)
-				# 착지면 = 낙하선 위 최상단 발판(없으면 지면) — 발판 관통 폐지(2026-08-23 사용자
+				# 착지면 = 낙하선 위 최상단 발판(없으면 지면) · 발판 관통 폐지(2026-08-23 사용자
 				# "관통이 맞아?"). 덩이는 첫 표면에서 부서진다: 발판 위 = 여전히 위협(캠핑 대책
 				# 유지), 발판 아래 = 엄폐처("발판은 짧은 회피 고지" 맵 설계와 정합).
 				_land_y = ground_y
@@ -112,7 +112,7 @@ func _check_hit() -> void:
 			p.call("take_hit", damage)
 			SfxPlayer.play_at("spike_hit", pos)
 
-# 적 타격(2026-08-20) — 그림자 밑으로 유인해 잡는 전술. TrainHazard._check_enemy_hits와 동형:
+# 적 타격(2026-08-20) · 그림자 밑으로 유인해 잡는 전술. TrainHazard._check_enemy_hits와 동형:
 # 환경 처치는 env_killed 표식으로 XP·점수를 주지 않는다(해저드로 얻는 것은 안전이지 경험치가
 # 아니다 · 2026-08-19 사용자). 치명이 아니면 표식 즉시 해제.
 func _check_enemy_hits() -> void:
@@ -120,7 +120,7 @@ func _check_enemy_hits() -> void:
 		if not is_instance_valid(e) or not (e is Node2D):
 			continue
 		var en := e as Node2D
-		# 일반 Enemy만 — "enemy" 그룹에는 BossSentinel·TutorialDummy도 있다. 속성 없는 노드에
+		# 일반 Enemy만 · "enemy" 그룹에는 BossSentinel·TutorialDummy도 있다. 속성 없는 노드에
 		# bool(null) 크래시(2026-08-20 lab 잔해에서 실측) + 보스가 자기 잔해에 맞는 설계 오류 차단.
 		if en.get("enemy_type") == null:
 			continue
@@ -143,7 +143,7 @@ func _draw() -> void:
 		S.TELE:
 			var k: float = _t / TELE_DUR
 			# 착지면 그림자 마커 · 낙하점이 점점 진해진다(회피 정보의 본체). 관통 폐지 후 마커는
-			# 실제 착지면(최상단 발판 or 지면) 한 곳 — 그 아래는 안전이라 경고도 없다(정직한 예고).
+			# 실제 착지면(최상단 발판 or 지면) 한 곳 · 그 아래는 안전이라 경고도 없다(정직한 예고).
 			draw_set_transform(Vector2(_drop_x, _land_y - 3.0), 0.0, Vector2(1.0, 0.30))
 			draw_circle(Vector2.ZERO, 26.0, Color(0.0, 0.0, 0.0, 0.15 + 0.30 * k))
 			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
@@ -163,7 +163,7 @@ func _draw() -> void:
 			draw_polyline(pts, Color(0.28, 0.26, 0.23), 2.0, true)
 		S.IMPACT:
 			var k2: float = 1.0 - _t / IMPACT_DUR
-			# 잔해 더미 + 먼지 퍼프(페이드) — 착지면 위에.
+			# 잔해 더미 + 먼지 퍼프(페이드) · 착지면 위에.
 			var rp := PackedVector2Array([
 				Vector2(_drop_x - 24.0, _land_y), Vector2(_drop_x - 8.0, _land_y - 14.0),
 				Vector2(_drop_x + 10.0, _land_y - 10.0), Vector2(_drop_x + 24.0, _land_y)])

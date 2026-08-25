@@ -1,7 +1,7 @@
 class_name Interference
 extends Node
 
-# 통신 중계소 시그니처 · 전파 간섭 펄스(무해) — 주기적으로 VEIL 마커·위협 콜이 흐려진다.
+# 통신 중계소 시그니처 · 전파 간섭 펄스(무해) · 주기적으로 VEIL 마커·위협 콜이 흐려진다.
 # 재머(국소·상시·파괴 가능)의 시간판: 전역이지만 지나간다. 시각은 VeilSight 마커 알파에만
 # 작용(광과민: 점멸 없음, 0.6s 램프로 흐려졌다 돌아온다). 정찰 보상(recon)은 관통(VeilSight).
 # 사용: MapData "interference" = {"period": 평시 s, "blur": 간섭 유지 s, "lever_stops": bool}.
@@ -11,7 +11,7 @@ const RAMP: float = 0.6
 
 var period: float = 10.0
 var blur: float = 2.4
-var sight: Node = null      # VeilSight — Stage가 주입
+var sight: Node = null      # VeilSight · Stage가 주입
 var _t: float = 0.0
 var _halted: bool = false
 var _pulsing: bool = false  # 펄스 시작 블립 1회용
@@ -21,9 +21,9 @@ func setup(cfg: Dictionary, sight_ref: Node) -> void:
 	blur = maxf(float(cfg.get("blur", 2.4)), 0.8)
 	sight = sight_ref
 	add_to_group("interference")
-	_t = period * 0.55   # 첫 펄스를 이르게 — 방에 들어와서 곧 규칙을 배운다
+	_t = period * 0.55   # 첫 펄스를 이르게 · 방에 들어와서 곧 규칙을 배운다
 
-# 레버(송신 차단기)로 간섭 종료 — 이후 이 방에서 다시 오지 않는다.
+# 레버(송신 차단기)로 간섭 종료 · 이후 이 방에서 다시 오지 않는다.
 func halt() -> void:
 	_halted = true
 	_apply(0.0)

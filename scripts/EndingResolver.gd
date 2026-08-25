@@ -1,7 +1,7 @@
 class_name EndingResolver
 extends RefCounted
 
-# 막3 엔딩 9개(B3) — 처리(반출/파기/은닉/잔류) × 신뢰(유대/불신) 8개 + 진실 특수 1개.
+# 막3 엔딩 9개(B3) · 처리(반출/파기/은닉/잔류) × 신뢰(유대/불신) 8개 + 진실 특수 1개.
 #  - 처리 = GameState.disposal_choice (lab 보스 후 DisposalChoiceOverlay 선택). 단일 소스 = GameState.DISPOSAL_*.
 #  - 신뢰 = VEIL 추천 수용률(followed/rec ≥ 0.5)의 이진값. 어투 trust(climbing)와 분리해 획득 인플레에 강건.
 #    호출부는 분자로 GameState.effective_followed()(라이벌 유인 추종 감점 반영)를 넘긴다(2026-08-14 가중치).
@@ -135,9 +135,9 @@ static func get_ending_lines(ending: String, _explored_lore: bool = true) -> Arr
 			]
 	return []
 
-# 에필로그(엔딩별 1챕터) — 탈출(escape) 클리어 직후 검은 화면 위 VEIL의 "빠져나온 직후" 한 호흡.
+# 에필로그(엔딩별 1챕터) · 탈출(escape) 클리어 직후 검은 화면 위 VEIL의 "빠져나온 직후" 한 호흡.
 # 처리(disposal) 결과를 반영해 ENDING 씬 본문으로 자연스럽게 잇는다. 라인 = 평문 String 배열.
-# (문구 전부 플레이스홀더 — 사용자 검토. 구 "데이터 회수했어요 임무 완수" 단일 에필로그의 처리-모순 해소.)
+# (문구 전부 플레이스홀더 · 사용자 검토. 구 "데이터 회수했어요 임무 완수" 단일 에필로그의 처리-모순 해소.)
 static func get_epilogue_lines(ending: String) -> Array:
 	match ending:
 		"extract_hi":
@@ -160,7 +160,7 @@ static func get_epilogue_lines(ending: String) -> Array:
 			return ["밖이에요. 다 알고도 여기까지 왔네요.", "다음번엔... 아니, 아니에요. 가세요."]
 	return ["끝났어요, 요원.", "수고 많았습니다."]
 
-# (레거시) 구 2축 엔딩의 '있어요/없어요' 분기 followup — 현 9엔딩은 choice 라인을 안 써서 미사용.
+# (레거시) 구 2축 엔딩의 '있어요/없어요' 분기 followup · 현 9엔딩은 choice 라인을 안 써서 미사용.
 # Ending.gd 컴파일 호환을 위해 시그니처만 유지. 사용자 대사 패스에서 진실 엔딩 선택 비트로 재활용 가능.
 static func get_ending_c_followup(_asked: bool, _explored_lore: bool = true) -> Array:
 	return []

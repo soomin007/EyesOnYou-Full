@@ -1,4 +1,4 @@
-# 배포 자동화 — GitHub Pages
+# 배포 자동화 · GitHub Pages
 
 `git push origin main` 하면 자동으로 빌드되어 `https://<user>.github.io/EyesOnYou/`에 올라가는 환경.
 
@@ -14,7 +14,7 @@
 4. 우측 옵션 패널에서 **Variant → Thread Support** 체크 **해제** (중요!)
    - 이유: GitHub Pages는 SharedArrayBuffer 헤더 못 보내서, Threads 켠 export는 작동 안 함.
    - 단일 스레드 export는 성능 살짝 떨어지지만 이 게임 규모에선 체감 없음.
-5. **Export Path**: `build/index.html` (또는 비워둬도 됨 — 워크플로가 지정)
+5. **Export Path**: `build/index.html` (또는 비워둬도 됨 · 워크플로가 지정)
 6. 좌하단 **Save Presets** 또는 그냥 창 닫으면 자동 저장됨
 7. 결과: 프로젝트 루트에 `export_presets.cfg` 파일 생성됨
 
@@ -63,7 +63,7 @@ deploy job:
 https://<user>.github.io/EyesOnYou/ 에서 서빙
 ```
 
-별도 gh-pages 브랜치가 만들어지지 않음 — Actions API로 직접 Pages에 push.
+별도 gh-pages 브랜치가 만들어지지 않음 · Actions API로 직접 Pages에 push.
 
 ---
 
@@ -96,7 +96,7 @@ https://<user>.github.io/EyesOnYou/ 에서 서빙
 
 ## Manual Export (Godot 에디터에서 직접 빌드할 때)
 
-> **평소엔 manual export 할 일 없음** — `git push origin main`만 하면 GitHub Actions가 자동 빌드/배포한다.
+> **평소엔 manual export 할 일 없음** · `git push origin main`만 하면 GitHub Actions가 자동 빌드/배포한다.
 > Manual은 itch.io 업로드용이나 로컬에서 빌드 결과 확인할 때만.
 
 ### 핵심 룰: Export Path를 반드시 `build/index.html`로

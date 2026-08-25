@@ -19,17 +19,17 @@ signal veil_calls_threat(text: String)
 var player: Node2D = null
 
 const DETECT_RADIUS: float = 1400.0           # 이 안의 위협을 VEIL이 본다 (≈ 화면 한 칸)
-# 정찰 보상 활성(이 스테이지 한정) — _ready에서 GameState 캡처.
+# 정찰 보상 활성(이 스테이지 한정) · _ready에서 GameState 캡처.
 # 재정의(2026-08-21 사용자 승인): 반경 확대(구 2.5배) 폐지 → 숨은 요소 표시("recon_poi" 그룹 =
 # 레버·비밀 칸·미리 놓인 보급품)를 청색 POI 마커로 짚는다. 재밍·간섭·붕괴 관통은 유지
 # (사전 좌표 확보 서사). 음성 위협 콜은 근접 밴드 규칙(240px) 그대로.
 var _recon: bool = false
-const POI: Color = Color(0.55, 0.85, 0.95)    # 정찰 POI — ARCTURUS 청색(레버 hint glow와 통일)
-# 전파 간섭 펄스(중계소 · Interference가 매 틱 세팅) — 0~1, 마커 알파를 깎는다. recon은 관통.
+const POI: Color = Color(0.55, 0.85, 0.95)    # 정찰 POI · ARCTURUS 청색(레버 hint glow와 통일)
+# 전파 간섭 펄스(중계소 · Interference가 매 틱 세팅) · 0~1, 마커 알파를 깎는다. recon은 관통.
 var interference: float = 0.0
-const CALM: Color = Color(0.42, 0.86, 1.0)    # 평시 — VEIL 시안 (자막 색과 통일감)
-const WARN: Color = Color(1.0, 0.55, 0.22)    # 공격 임박 — 경고 주황
-const RIVAL: Color = Color(0.80, 0.34, 0.98)  # 재머 마커 — 라이벌 바이올렛(안티-VEIL, rival_veil_concept §5)
+const CALM: Color = Color(0.42, 0.86, 1.0)    # 평시 · VEIL 시안 (자막 색과 통일감)
+const WARN: Color = Color(1.0, 0.55, 0.22)    # 공격 임박 · 경고 주황
+const RIVAL: Color = Color(0.80, 0.34, 0.98)  # 재머 마커 · 라이벌 바이올렛(안티-VEIL, rival_veil_concept §5)
 const EDGE_MARGIN: float = 24.0               # 화면 밖 화살표가 가장자리에서 떨어지는 여백 (피드백: 더 붙게 48→24)
 # 존재감 1차 패스(2026-08-21 사용자 "플레이 중 마커가 눈에 잘 안 들어온다" · 승인 방향 ⓐ):
 # 크기 17→20 · 선 1.6→2.2 · 평시 알파 0.62→0.78 + 등장 핑 링 + 위험 이중 링. 재머·간섭·정찰
@@ -38,15 +38,15 @@ const RETICLE_R: float = 20.0
 const FADE_IN: float = 0.5                     # 마커가 "그어지는" 등장 시간(스트로크 연출, 인지 강화 ②)
 const CALL_COOLDOWN: float = 18.0             # VEIL이 말로 짚는 최소 간격 (노이즈 방지)
 const CALL_BAND: float = 240.0                # 위협 콜 대상 = 화면 밖 이 거리 이내(조우 직전만 말로)
-const MIN_CALL_TIME: float = 7.0             # 맵 진입 멘트 보호 — 이 전엔 말 안 함
+const MIN_CALL_TIME: float = 7.0             # 맵 진입 멘트 보호 · 이 전엔 말 안 함
 const GLITCH_DUR: float = 1.2                # 역전 순간 일제 붕괴 연출 길이
-const BLIND_PCT: int = 50                    # degradation 중 VEIL이 영영 못 보는 위협 비율(%) — 페널티 강화
+const BLIND_PCT: int = 50                    # degradation 중 VEIL이 영영 못 보는 위협 비율(%) · 페널티 강화
 
-# 화면 비네트 — 적 수가 적어 마커만으론 약하니 화면 전체로 "VEIL의 봄/안 봄"을 항상 체감시킨다.
+# 화면 비네트 · 적 수가 적어 마커만으론 약하니 화면 전체로 "VEIL의 봄/안 봄"을 항상 체감시킨다.
 # 기본: 테두리에 은은한 VEIL 시안(함께 본다). degradation: 어둡게 + 안쪽으로 좁아짐(시야 축소 = 페널티).
-const VIG_RADIUS_FAR: float = 0.55            # 기본 — 반경 큼(얇은 가장자리 테두리)
-const VIG_RADIUS_NEAR: float = 0.32           # degradation — 반경 작음(중앙만 보이는 시야 축소)
-const VIG_CALM_A: float = 0.10                # 기본 시안 테두리 알파 (은은하게 — 너무 진하지 않게)
+const VIG_RADIUS_FAR: float = 0.55            # 기본 · 반경 큼(얇은 가장자리 테두리)
+const VIG_RADIUS_NEAR: float = 0.32           # degradation · 반경 작음(중앙만 보이는 시야 축소)
+const VIG_CALM_A: float = 0.10                # 기본 시안 테두리 알파 (은은하게 · 너무 진하지 않게)
 const VIG_DARK_A: float = 0.66                # degradation 검정 비네트 알파
 
 var _t: float = 0.0
@@ -68,7 +68,7 @@ func _ready() -> void:
 	_fit_to_viewport()
 	get_viewport().size_changed.connect(_fit_to_viewport)
 	_build_vignette()
-	# 정찰 보상(reward_type "recon") — 이 스테이지 한정: 숨은 요소(POI) 표시 +
+	# 정찰 보상(reward_type "recon") · 이 스테이지 한정: 숨은 요소(POI) 표시 +
 	# 재밍·붕괴 블라인드 관통. GameState 플래그를 _ready에서 캡처(degraded와 동형 패턴).
 	_recon = GameState.veilsight_recon_active
 	# 이전 맵에서 이미 시야가 붕괴했다면 이 맵도 처음부터 어두운 상태로(전환 애니 없이 즉시).
@@ -81,7 +81,7 @@ func _fit_to_viewport() -> void:
 	position = Vector2.ZERO
 	size = get_viewport_rect().size
 
-# 화면 비네트 — 셰이더로 픽셀 단위 계산(텍스처 업스케일 밴딩 없음 + 디더).
+# 화면 비네트 · 셰이더로 픽셀 단위 계산(텍스처 업스케일 밴딩 없음 + 디더).
 # 기본=시안 테두리(VEIL이 함께 본다), degradation=검정 + 반경 축소(시야 좁아짐). vig 유니폼이 전환.
 func _build_vignette() -> void:
 	_vignette = ColorRect.new()
@@ -105,7 +105,7 @@ func _update_vignette(delta: float) -> void:
 	var jam: float = _player_jam_intensity()
 	var deg_target: float = 1.0 if _is_degraded() else 0.0
 	var target: float = max(deg_target, jam)
-	# 재밍 진입은 빠르게 붕괴시킨다 — 통과 중(빠르게 지나감)에도 확실히 어두워지게(피드백: 옅은 틴트만 보였음).
+	# 재밍 진입은 빠르게 붕괴시킨다 · 통과 중(빠르게 지나감)에도 확실히 어두워지게(피드백: 옅은 틴트만 보였음).
 	var rate: float = 1.4
 	if target > _vig and jam > deg_target:
 		rate = 5.0
@@ -116,10 +116,10 @@ func _update_vignette(delta: float) -> void:
 	var violet: float = clamp(jam - deg_target, 0.0, 1.0)
 	var dc: Color = Color(0.0, 0.0, 0.02, VIG_DARK_A).lerp(Color(0.09, 0.01, 0.14, 0.92), violet)
 	_vig_mat.set_shader_parameter("dark_color", dc)
-	# 저-vig 색(calm_color)도 재밍 땐 어둠으로 당긴다 — 안 그러면 낮은 강도에서 시안(평시 VEIL색) 비네트가
+	# 저-vig 색(calm_color)도 재밍 땐 어둠으로 당긴다 · 안 그러면 낮은 강도에서 시안(평시 VEIL색) 비네트가
 	# 오히려 진해져 "VEIL이 강해진" 느낌이 든다(피드백). 재밍은 시안 단계를 건너뛰고 처음부터 어둡게.
 	var base_calm: Color = Color(CALM.r, CALM.g, CALM.b, VIG_CALM_A)
-	# smoothstep으로 재밍 들자마자(violet 0.10 이내) 시안→어둠 완료 — 테두리에서 시안이 강해지는 순간 제거(피드백).
+	# smoothstep으로 재밍 들자마자(violet 0.10 이내) 시안→어둠 완료 · 테두리에서 시안이 강해지는 순간 제거(피드백).
 	var cc: Color = base_calm.lerp(Color(0.09, 0.01, 0.14, VIG_DARK_A * 0.6), smoothstep(0.0, 0.10, violet))
 	_vig_mat.set_shader_parameter("calm_color", cc)
 	# 재밍은 시야를 훨씬 더 조인다(사용자: "확 줄어들어야"). 자연 붕괴(0.32)보다 작은 반경. 완전 근접(violet=1)
@@ -135,7 +135,7 @@ func _update_vignette(delta: float) -> void:
 		pc = Vector2(0.5, 0.5).lerp(Vector2(sp.x / vsize.x, sp.y / vsize.y), _vig)
 	_vig_mat.set_shader_parameter("vig_center", pc)
 
-# ACT3 자막("여기서부터는 잘 안 보여요")과 동기 호출 — 그 순간 마커가 무너진다.
+# ACT3 자막("여기서부터는 잘 안 보여요")과 동기 호출 · 그 순간 마커가 무너진다.
 func begin_degradation() -> void:
 	if _degrade_t >= 0.0:
 		return
@@ -153,7 +153,7 @@ func _process(delta: float) -> void:
 	_update_vignette(delta)
 	queue_redraw()
 
-# 활성(미파괴) 재머 목록 — 마커 소등/서사 반응 판정용. group "jammer".
+# 활성(미파괴) 재머 목록 · 마커 소등/서사 반응 판정용. group "jammer".
 func _active_jammers() -> Array:
 	var out: Array = []
 	for j in get_tree().get_nodes_in_group("jammer"):
@@ -175,11 +175,11 @@ func _player_jam_intensity() -> float:
 		var r: float = 340.0
 		if jn.has_method("jam_radius"):
 			r = jn.call("jam_radius")
-		# 반경 대부분을 "붕괴"로 평탄화 — 바깥 35%만 감쇠. 통과 중에도 확실히 붕괴에 든다(피드백).
+		# 반경 대부분을 "붕괴"로 평탄화 · 바깥 35%만 감쇠. 통과 중에도 확실히 붕괴에 든다(피드백).
 		out = max(out, clamp((r - jn.global_position.distance_to(ppos)) / (r * 0.35), 0.0, 1.0))
 	return out
 
-# 적이 어떤 활성 재머의 반경 안인가 — 그 안 적은 VEIL이 못 봐서 마커를 그리지 않는다(플레이어 위치 무관).
+# 적이 어떤 활성 재머의 반경 안인가 · 그 안 적은 VEIL이 못 봐서 마커를 그리지 않는다(플레이어 위치 무관).
 func _enemy_in_jam(en: Node2D, jammers: Array) -> bool:
 	if jammers.is_empty():
 		return false
@@ -193,7 +193,7 @@ func _enemy_in_jam(en: Node2D, jammers: Array) -> bool:
 			return true
 	return false
 
-# 재밍 필드에 처음 들어서면 VEIL이 1회 반응(작가성) — "여기는 제 시야가 안 닿아요".
+# 재밍 필드에 처음 들어서면 VEIL이 1회 반응(작가성) · "여기는 제 시야가 안 닿아요".
 func _scan_for_jam() -> void:
 	if _jam_intro_called or player == null or not is_instance_valid(player):
 		return
@@ -229,7 +229,7 @@ func _scan_for_call() -> void:
 	if _player_jam_intensity() > 0.35:
 		return   # 재밍 구역 안 = VEIL 없음 → 말로도 못 짚는다
 	if interference > 0.5 and not _recon:
-		return   # 간섭 펄스 절정 — 마커와 같이 음성도 잠깐 끊긴다(무해 · 지나간다)
+		return   # 간섭 펄스 절정 · 마커와 같이 음성도 잠깐 끊긴다(무해 · 지나간다)
 	var xform: Transform2D = get_viewport().get_canvas_transform()
 	var view: Vector2 = get_viewport_rect().size
 	var ppos: Vector2 = player.global_position
@@ -244,21 +244,21 @@ func _scan_for_call() -> void:
 			continue
 		var id: int = en.get_instance_id()
 		if _seen.has(id):
-			continue   # 이미 본 위협 — 새로 짚을 게 없음
+			continue   # 이미 본 위협 · 새로 짚을 게 없음
 		if en.is_in_group("jammer"):
 			continue   # 재머 = VEIL 맹점(§1). 마커도 없고 말로도 안 짚는다
 		if en.has_meta("no_marker"):
-			continue   # 14-1 P3 무표시 위협(§7.2) — 거짓 VEIL이 가린 신호. 말로도 못 짚는다
+			continue   # 14-1 P3 무표시 위협(§7.2) · 거짓 VEIL이 가린 신호. 말로도 못 짚는다
 		var spos: Vector2 = xform * wpos
 		var off: bool = spos.x < 0.0 or spos.x > view.x or spos.y < 0.0 or spos.y > view.y
-		# 곧 보일 것만 말로 짚는다(화면 밖 CALL_BAND px 이내) — 감지 반경(1400) 전체를 짚으면
+		# 곧 보일 것만 말로 짚는다(화면 밖 CALL_BAND px 이내) · 감지 반경(1400) 전체를 짚으면
 		# 플레이어가 볼 수 없는 것을 너무 미리 처리해 대사가 헛돈다(2026-08-15 실플레이 지적).
 		# 멀리 있는 위협은 화살표(시각)가 계속 담당하고, 말은 조우 직전에 붙는다.
 		var near_view: bool = spos.x > -CALL_BAND and spos.x < view.x + CALL_BAND \
 			and spos.y > -CALL_BAND and spos.y < view.y + CALL_BAND
 		if off and near_view:
 			_call_threat(spos, view * 0.5)
-			return   # 한 번에 하나만 — _seen 등록은 _draw가 한다
+			return   # 한 번에 하나만 · _seen 등록은 _draw가 한다
 
 func _call_threat(spos: Vector2, center: Vector2) -> void:
 	_last_call_t = _t
@@ -266,7 +266,7 @@ func _call_threat(spos: Vector2, center: Vector2) -> void:
 	# 어투를 신뢰 밴드로 맞춘다(단일 문자열이라 코드 분기). degraded는 항상 막판=WARM.
 	var band: String = GameState.veil_register_band()
 	var line: String
-	# 소개 멘트는 런당 1회(GameState 플래그) — 인스턴스 변수(맵당 재생성)였을 땐 맵마다
+	# 소개 멘트는 런당 1회(GameState 플래그) · 인스턴스 변수(맵당 재생성)였을 땐 맵마다
 	# 첫 위협에서 재생돼 "뜬금없이 자주 나온다"는 피드백(2026-08-14).
 	if not GameState.veilsight_intro_shown:
 		GameState.veilsight_intro_shown = true
@@ -316,7 +316,7 @@ func _draw() -> void:
 	var center: Vector2 = view * 0.5
 	var ppos: Vector2 = player.global_position
 	var degraded: bool = _is_degraded()
-	# 역전 순간 일제 붕괴 — 전환 직후 잠깐 전체 마커가 강하게 흔들리고 흐려진다.
+	# 역전 순간 일제 붕괴 · 전환 직후 잠깐 전체 마커가 강하게 흔들리고 흐려진다.
 	var glitch: float = 0.0
 	if degraded:
 		var since: float = _t - _degrade_t
@@ -340,11 +340,11 @@ func _draw() -> void:
 		if not _seen.has(id):
 			_seen[id] = _t
 		if en.is_in_group("jammer"):
-			continue   # 재머 = VEIL 맹점(§1). 마커 없음 — 밝은 본체+필드 링으로 직접 보인다
+			continue   # 재머 = VEIL 맹점(§1). 마커 없음 · 밝은 본체+필드 링으로 직접 보인다
 		if en.has_meta("no_marker"):
-			continue   # 14-1 P3 무표시 위협(§7.2) — 거짓 VEIL이 신호를 가림. 스프라이트로만 보인다
+			continue   # 14-1 P3 무표시 위협(§7.2) · 거짓 VEIL이 신호를 가림. 스프라이트로만 보인다
 		if _enemy_in_jam(en, jammers) and not _recon:
-			continue   # 재밍 구역 안 적은 VEIL이 못 봄 — 마커 없음. 정찰 보상은 관통(사전 좌표 확보 서사)
+			continue   # 재밍 구역 안 적은 VEIL이 못 봄 · 마커 없음. 정찰 보상은 관통(사전 좌표 확보 서사)
 		# degradation 중 일부 위협은 VEIL이 영영 못 본다 = 요원이 직접 봐야 함 (역전의 실물)
 		if degraded and (id % 100) < BLIND_PCT and not _recon:
 			continue
@@ -371,20 +371,20 @@ func _draw() -> void:
 			jitter = Vector2(sin(_t * 37.0 + float(id)), cos(_t * 41.0 + float(id))) * 6.0 * glitch
 		var spos: Vector2 = xform * wpos + jitter
 		var on_screen: bool = spos.x >= 0.0 and spos.x <= view.x and spos.y >= 0.0 and spos.y <= view.y
-		# ① 런 첫 마커 서명(인지 강화 2026-08-14) — 첫 표식 옆에 1회 "VEIL" 태그를 붙여
+		# ① 런 첫 마커 서명(인지 강화 2026-08-14) · 첫 표식 옆에 1회 "VEIL" 태그를 붙여
 		# 마커·화살표가 시스템 UI가 아니라 VEIL의 행동임을 못박는다. 소개 대사와 별개의 시각 서명.
-		# 화면 안 마커에만 — 화면 밖 화살표에 붙이면 서명 순간을 플레이어가 못 본다(2026-08-15 지적).
+		# 화면 안 마커에만 · 화면 밖 화살표에 붙이면 서명 순간을 플레이어가 못 본다(2026-08-15 지적).
 		if not GameState.veilsight_tag_shown and on_screen:
 			GameState.veilsight_tag_shown = true
 			_tag_id = id
 			_tag_until = _t + 2.4
 		if on_screen:
-			# 화면 안 — 평시에도 읽히게, 위험할 땐 확실하게(존재감 1차 패스 2026-08-21).
+			# 화면 안 · 평시에도 읽히게, 위험할 땐 확실하게(존재감 1차 패스 2026-08-21).
 			var rc: Color = col
 			rc.a *= (1.0 if danger else 0.78) * alpha_mul
 			_draw_reticle(spos, rc, danger, appear)
 		else:
-			# 화면 밖 — VEIL의 봄이 빛나는 곳. 또렷하게.
+			# 화면 밖 · VEIL의 봄이 빛나는 곳. 또렷하게.
 			var ec: Color = col
 			ec.a *= alpha_mul
 			_draw_edge_arrow(spos, center, view, ec)
@@ -393,21 +393,21 @@ func _draw() -> void:
 				clampf(spos.x, EDGE_MARGIN + 26.0, view.x - EDGE_MARGIN - 64.0),
 				clampf(spos.y, EDGE_MARGIN + 34.0, view.y - EDGE_MARGIN - 16.0))
 			_draw_veil_tag(anchor, alpha_mul)
-	# 사라진 적 정리 (메모리 — _seen 무한 증가 방지)
+	# 사라진 적 정리 (메모리 · _seen 무한 증가 방지)
 	if _seen.size() > alive.size():
 		for k in _seen.keys():
 			if not alive.has(k):
 				_seen.erase(k)
-	# ── 정찰 POI 마커(보상 재정의 2026-08-21) — 숨은 요소(레버·비밀 칸·미리 놓인 보급품)를
+	# ── 정찰 POI 마커(보상 재정의 2026-08-21) · 숨은 요소(레버·비밀 칸·미리 놓인 보급품)를
 	# 청색으로 짚는다. 거리 제한 없음(사전 정찰 데이터 서사) + 재밍·간섭 관통(alpha 감쇠 없이).
-	# 화면 밖은 가장자리의 작은 속빈 다이아 점 — 위협 화살표(삼각형)와 문법을 갈라 혼동 방지.
+	# 화면 밖은 가장자리의 작은 속빈 다이아 점 · 위협 화살표(삼각형)와 문법을 갈라 혼동 방지.
 	if _recon:
 		for p in get_tree().get_nodes_in_group("recon_poi"):
 			if not (p is Node2D) or not is_instance_valid(p):
 				continue
 			var pn: Node2D = p as Node2D
 			if pn.is_in_group("lever") and (pn.get("locked") or pn.get("active")):
-				continue   # 이미 당긴 레버 — 발견이 끝난 요소는 짚지 않는다
+				continue   # 이미 당긴 레버 · 발견이 끝난 요소는 짚지 않는다
 			var pspos: Vector2 = xform * pn.global_position
 			var on_scr: bool = pspos.x >= 0.0 and pspos.x <= view.x and pspos.y >= 0.0 and pspos.y <= view.y
 			if on_scr:
@@ -415,8 +415,8 @@ func _draw() -> void:
 			else:
 				_draw_poi_edge_dot(pspos, view)
 
-# 정찰 POI — 화면 안: 작은 다이아 윤곽 + 중심점 + 느린 맥동(점멸 아님 · 광과민 배려).
-# 위협 마커(20px 시안/주황)보다 작고 차분한 청색 — "위험"이 아니라 "챙길 것"으로 읽히게.
+# 정찰 POI · 화면 안: 작은 다이아 윤곽 + 중심점 + 느린 맥동(점멸 아님 · 광과민 배려).
+# 위협 마커(20px 시안/주황)보다 작고 차분한 청색 · "위험"이 아니라 "챙길 것"으로 읽히게.
 func _draw_poi_marker(pos: Vector2) -> void:
 	var pulse: float = 0.72 + 0.18 * sin(_t * 2.6)
 	var r: float = 11.0 + 1.5 * sin(_t * 2.6)
@@ -428,7 +428,7 @@ func _draw_poi_marker(pos: Vector2) -> void:
 	draw_polyline(pts, col, 1.6)
 	draw_circle(pos, 2.2, Color(POI.r, POI.g, POI.b, pulse * 0.9))
 
-# 정찰 POI — 화면 밖: 가장자리에 작은 속빈 다이아 점(방향만 · 위협 화살표와 구분).
+# 정찰 POI · 화면 밖: 가장자리에 작은 속빈 다이아 점(방향만 · 위협 화살표와 구분).
 func _draw_poi_edge_dot(spos: Vector2, view: Vector2) -> void:
 	var edge: Vector2 = Vector2(
 		clamp(spos.x, EDGE_MARGIN, view.x - EDGE_MARGIN),
@@ -442,7 +442,7 @@ func _draw_poi_edge_dot(spos: Vector2, view: Vector2) -> void:
 	draw_polyline(pts, col, 1.4)
 
 func _draw_reticle(pos: Vector2, col: Color, danger: bool, appear: float) -> void:
-	# 등장 시 살짝 크게 시작해 수축 — 짚어지는 동작감.
+	# 등장 시 살짝 크게 시작해 수축 · 짚어지는 동작감.
 	var grow: float = 1.0 + (1.0 - appear) * 0.35
 	var r: float = (RETICLE_R + (4.0 if danger else 0.0)) * grow
 	var pts: PackedVector2Array = PackedVector2Array([
@@ -453,22 +453,22 @@ func _draw_reticle(pos: Vector2, col: Color, danger: bool, appear: float) -> voi
 		pos + Vector2(0.0, -r),
 	])
 	var width: float = 2.6 if danger else 2.2
-	# 등장 핑 — 짚는 순간 퍼지는 옅은 링(1회성 · 존재감 1차 패스). 광과민: 점멸 아님, 단조 확장.
+	# 등장 핑 · 짚는 순간 퍼지는 옅은 링(1회성 · 존재감 1차 패스). 광과민: 점멸 아님, 단조 확장.
 	if appear < 1.0:
 		var ping_a: float = (1.0 - appear) * 0.35
 		draw_arc(pos, r * (1.0 + (1.0 - appear) * 1.2), 0.0, TAU, 28,
 			Color(col.r, col.g, col.b, ping_a), 1.5, true)
-	# 위험 이중 링 — 경고 주황 마커는 바깥 링이 하나 더 둘러져 한눈에 "임박"으로 읽힌다.
+	# 위험 이중 링 · 경고 주황 마커는 바깥 링이 하나 더 둘러져 한눈에 "임박"으로 읽힌다.
 	if danger:
 		draw_arc(pos, r + 6.0, 0.0, TAU, 30, Color(col.r, col.g, col.b, col.a * 0.5), 1.5, true)
 		draw_circle(pos, 3.0, Color(col.r, col.g, col.b, col.a * 0.6))
-	# 등장 중엔 한 획씩 그어지는 스트로크(인지 강화 ② — "시스템 표시"가 아니라 "누가 그려줌").
+	# 등장 중엔 한 획씩 그어지는 스트로크(인지 강화 ② · "시스템 표시"가 아니라 "누가 그려줌").
 	if appear < 1.0:
 		_draw_partial_polyline(pts, appear, col, width)
 	else:
 		draw_polyline(pts, col, width)
 
-# 폴리라인을 전체 길이의 f(0~1) 비율까지만 그린다 — 손으로 긋는 등장 연출.
+# 폴리라인을 전체 길이의 f(0~1) 비율까지만 그린다 · 손으로 긋는 등장 연출.
 func _draw_partial_polyline(pts: PackedVector2Array, f: float, col: Color, width: float) -> void:
 	var total: float = 0.0
 	for i in pts.size() - 1:
@@ -489,7 +489,7 @@ func _draw_partial_polyline(pts: PackedVector2Array, f: float, col: Color, width
 	if out.size() >= 2:
 		draw_polyline(out, col, width)
 
-# 런 첫 마커 서명 — 마커 옆 짧은 연결선 + "VEIL" 텍스트. 마지막 0.6s 동안 페이드아웃.
+# 런 첫 마커 서명 · 마커 옆 짧은 연결선 + "VEIL" 텍스트. 마지막 0.6s 동안 페이드아웃.
 func _draw_veil_tag(anchor: Vector2, alpha_mul: float) -> void:
 	var a: float = clampf((_tag_until - _t) / 0.6, 0.0, 1.0) * clampf(alpha_mul * 1.6, 0.0, 1.0)
 	if a <= 0.02:
@@ -514,7 +514,7 @@ func _draw_edge_arrow(spos: Vector2, center: Vector2, view: Vector2, col: Color)
 		return
 	dir = dir.normalized()
 	var perp: Vector2 = Vector2(-dir.y, dir.x)
-	# 확대(존재감 1차 패스 2026-08-21) — 화면 밖 화살표는 VEIL의 핵심 가치라 더 커도 된다.
+	# 확대(존재감 1차 패스 2026-08-21) · 화면 밖 화살표는 VEIL의 핵심 가치라 더 커도 된다.
 	var tip: Vector2 = edge + dir * 17.0
 	var a: Vector2 = edge - dir * 7.0 + perp * 11.0
 	var b: Vector2 = edge - dir * 7.0 - perp * 11.0

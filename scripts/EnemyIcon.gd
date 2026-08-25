@@ -1,7 +1,7 @@
 class_name EnemyIcon
 extends Control
 
-# 적 도감(조우 카드)용 절차적 아이콘 — 자산 없이 _draw 도형. enemy_id별 알아보기 쉬운 글리프.
+# 적 도감(조우 카드)용 절차적 아이콘 · 자산 없이 _draw 도형. enemy_id별 알아보기 쉬운 글리프.
 # 도감이 전부 텍스트라 "텍스트→그래픽" 방향으로 한 장씩 그림을 곁들인다.
 
 var enemy_id: String = ""
@@ -24,7 +24,7 @@ func _draw() -> void:
 		"caller": _caller(c, r)
 		_: _generic(c, r)
 
-# 정찰병 — 머리 LED + 좌우 순찰 화살표
+# 정찰병 · 머리 LED + 좌우 순찰 화살표
 func _patrol(c: Vector2, r: float) -> void:
 	var col := Color(0.93, 0.64, 0.46)
 	var head: Vector2 = c + Vector2(0.0, -r * 0.22)
@@ -35,7 +35,7 @@ func _patrol(c: Vector2, r: float) -> void:
 	draw_colored_polygon(_arrow(Vector2(c.x - r * 0.45, y), Vector2(c.x - r * 0.7, y), 5.0), col)
 	draw_colored_polygon(_arrow(Vector2(c.x + r * 0.45, y), Vector2(c.x + r * 0.7, y), 5.0), col)
 
-# 저격수 — 스코프 십자선 + 레이저
+# 저격수 · 스코프 십자선 + 레이저
 func _sniper(c: Vector2, r: float) -> void:
 	var col := Color(0.96, 0.43, 0.43)
 	draw_arc(c, r * 0.62, 0.0, TAU, 30, col, 2.5, true)
@@ -44,7 +44,7 @@ func _sniper(c: Vector2, r: float) -> void:
 	draw_circle(c, r * 0.1, col)
 	draw_line(c, c + Vector2(r * 1.0, r * 0.5), Color(1.0, 0.3, 0.3, 0.85), 1.5, true)
 
-# 공습 드론 — 쿼드콥터(중앙 + 4 로터)
+# 공습 드론 · 쿼드콥터(중앙 + 4 로터)
 func _drone(c: Vector2, r: float) -> void:
 	var col := Color(0.56, 0.8, 0.96)
 	draw_circle(c, r * 0.2, col)
@@ -54,7 +54,7 @@ func _drone(c: Vector2, r: float) -> void:
 		draw_line(c, rotor, col, 2.0, true)
 		draw_arc(rotor, r * 0.22, 0.0, TAU, 14, col, 1.5, true)
 
-# 자폭병 — 폭탄 + 퓨즈 + 경고 펄스 링
+# 자폭병 · 폭탄 + 퓨즈 + 경고 펄스 링
 func _bomber(c: Vector2, r: float) -> void:
 	var col := Color(0.97, 0.62, 0.35)
 	var body: Vector2 = c + Vector2(0.0, r * 0.15)
@@ -63,7 +63,7 @@ func _bomber(c: Vector2, r: float) -> void:
 	draw_line(c + Vector2(0.0, -r * 0.35), c + Vector2(r * 0.28, -r * 0.72), col, 2.0, true)
 	draw_circle(c + Vector2(r * 0.28, -r * 0.72), r * 0.11, Color(1.0, 0.74, 0.35))
 
-# 방패병 — 큰 방패 + 중앙 보스
+# 방패병 · 큰 방패 + 중앙 보스
 func _shield(c: Vector2, r: float) -> void:
 	var col := Color(0.73, 0.81, 0.91)
 	var pts := PackedVector2Array([
@@ -72,7 +72,7 @@ func _shield(c: Vector2, r: float) -> void:
 	draw_polyline(_closed(pts), col, 2.5, true)
 	draw_circle(c + Vector2(0.0, -r * 0.1), r * 0.17, col)
 
-# 교란기 — 방출 마스트 + 소등 반경(점선 링, 바이올렛)
+# 교란기 · 방출 마스트 + 소등 반경(점선 링, 바이올렛)
 func _jammer(c: Vector2, r: float) -> void:
 	var col := Color(0.75, 0.50, 0.95)
 	draw_line(c + Vector2(0.0, r * 0.5), c + Vector2(0.0, -r * 0.4), col, 2.5, true)
@@ -83,7 +83,7 @@ func _jammer(c: Vector2, r: float) -> void:
 		var a1: float = float(i + 1) / float(segs) * TAU
 		draw_arc(c, r * 0.72, a0, a1, 6, Color(0.72, 0.42, 1.0, 0.8), 1.5, true)
 
-# 호출병 — 안테나 + 퍼지는 신호 호(앰버, "부르는 중")
+# 호출병 · 안테나 + 퍼지는 신호 호(앰버, "부르는 중")
 func _caller(c: Vector2, r: float) -> void:
 	var col := Color(1.0, 0.64, 0.22)
 	var base: Vector2 = c + Vector2(-r * 0.1, r * 0.7)

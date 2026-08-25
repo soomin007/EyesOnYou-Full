@@ -35,7 +35,7 @@ func _ready() -> void:
 	fuse_dot.position = Vector2(-2, -10)
 	fuse_dot.size = Vector2(4, 3)
 	add_child(fuse_dot)
-	# 투척 SFX는 spawner에서 호출 — 드론은 enemy_drone_drop, 보스는 bomb_throw.
+	# 투척 SFX는 spawner에서 호출 · 드론은 enemy_drone_drop, 보스는 bomb_throw.
 	# 자동 재생하면 두 사운드가 겹치고 보스/드론 구분이 안 됨.
 
 func _process(delta: float) -> void:

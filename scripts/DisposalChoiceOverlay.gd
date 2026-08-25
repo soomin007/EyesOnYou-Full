@@ -3,11 +3,11 @@ extends RefCounted
 
 # 막3 핵심부(lab) 보스 처치 + 데이터 회수 연출 직후 호출. 회수한 드라이브(=VEIL 소스코드)를
 # 어떻게 "처리"할지 4지선다 → on_picked.call(disposal_id) 후 오버레이 자동 정리.
-# 구조는 LevelUpOverlay 복제(같은 카드 UI/포커스/SFX/paused 안전판) — 선택 항목만 고정 4종.
+# 구조는 LevelUpOverlay 복제(같은 카드 UI/포커스/SFX/paused 안전판) · 선택 항목만 고정 4종.
 # 대사 문구는 플레이스홀더(사용자 검토 대기). 선택지 정의 단일 소스 = GameState.DISPOSAL_*.
 
-# 4종 처리 — id / 이름 / 한 줄 설명 / 카드 강조색. (문구는 플레이스홀더)
-# 런타임 지역으로 둔다(_choices) — id가 GameState.DISPOSAL_*(오토로드 멤버)라 const 컨텍스트엔 못 넣음.
+# 4종 처리 · id / 이름 / 한 줄 설명 / 카드 강조색. (문구는 플레이스홀더)
+# 런타임 지역으로 둔다(_choices) · id가 GameState.DISPOSAL_*(오토로드 멤버)라 const 컨텍스트엔 못 넣음.
 static func _choices() -> Array:
 	return [
 		{"id": GameState.DISPOSAL_EXTRACT, "name": "반출", "desc": "의뢰대로 드라이브를 외부로 가지고 나간다.", "color": Color(0.95, 0.78, 0.42)},
@@ -27,7 +27,7 @@ static func show(host: Node, on_picked: Callable) -> CanvasLayer:
 		if tree != null:
 			tree.paused = false
 	)
-	# 시간정지(자체) — RefCounted라 get_tree()가 없어 메인 루프로 직접 설정.
+	# 시간정지(자체) · RefCounted라 get_tree()가 없어 메인 루프로 직접 설정.
 	var tree0 := Engine.get_main_loop() as SceneTree
 	if tree0 != null:
 		tree0.paused = true
@@ -54,7 +54,7 @@ static func show(host: Node, on_picked: Callable) -> CanvasLayer:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(title)
 
-	# VEIL 한 마디 — 신뢰 톤색으로.
+	# VEIL 한 마디 · 신뢰 톤색으로.
 	var veil_lbl := Label.new()
 	# 어투 밴드 스윕(2026-08-21): 기본 = 중립 보고체, warm만 부드럽게.
 	veil_lbl.text = "VEIL   " + VeilDialogue.banded("요원이 정하십시오. 어느 쪽이든, 받아들이겠습니다.", "요원이 정하세요. 어느 쪽이든, 받아들일게요.")

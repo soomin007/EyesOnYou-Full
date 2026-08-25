@@ -24,7 +24,7 @@
 기존 시리즈 = 진행할수록 BPM 상승(Glass Protocol → Cold Gear → Cold Wire → Chrome Grit).
 막4/5는 단순히 더 빠른 곡이 아니라 같은 산업 전자 톤에 이질감(디튠·글리치·정전기)을 섞은 변절 파트.
 
-### 곡 1 · 막4 추적(pursuit) — 핵심, 피드백의 직접 응답
+### 곡 1 · 막4 추적(pursuit) · 핵심, 피드백의 직접 응답
 
 - 곡명 후보: **Broken Wire**(추천: Cold Wire가 침식당해 돌아온다는 서사) / Violet Vector / Static Chase
 - 정서(act_identity §6): 멈추면 잡힌다, 판이 무너진다, 내 눈도 온전치 않다. 보스보다 무겁기보다 빠르고 쫓기는 결.
@@ -50,7 +50,7 @@
 ## 3. 파일 스펙
 
 - **mp3 유지**(기존 9곡 전부 mp3 48kHz, BgmPlayer가 AudioStreamMP3 분기로 루프). Suno 출력도 mp3.
-- 커버 아트 제거: `ffmpeg -i in.mp3 -vn -c:a copy out.mp3`(기존 9곡 전부 mjpeg 커버 내장 확인 —
+- 커버 아트 제거: `ffmpeg -i in.mp3 -vn -c:a copy out.mp3`(기존 9곡 전부 mjpeg 커버 내장 확인 ·
   기존분 일괄 제거는 별도 용량 다이어트 건).
 - 음량: BASE_DB -8.0 기준. volumedetect로 Cold Wire·Chrome Grit과 비교, ±2dB 넘으면 volume= 보정.
 - 루프: 네이티브 loop=true(끝→처음 즉시 점프)라 페이드아웃 아웃트로를 마디 경계에서 트림이 핵심.

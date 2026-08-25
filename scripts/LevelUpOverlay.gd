@@ -4,7 +4,7 @@ extends RefCounted
 # 레벨업 시 호출. 스킬 3장 중 1장 선택 → on_picked.call(picked_id) 실행 후 오버레이 자동 정리.
 # Stage / Tutorial 양쪽에서 동일하게 사용.
 
-# 만렙(모든 라인 T3) 오버플로 보상 카드의 특수 id — _finish가 add_skill 대신 grant_overflow_reward.
+# 만렙(모든 라인 T3) 오버플로 보상 카드의 특수 id · _finish가 add_skill 대신 grant_overflow_reward.
 const OVERFLOW_PICK_ID: String = "__overflow"
 
 static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks: Array = []) -> CanvasLayer:
@@ -20,7 +20,7 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 		advice_skill_id = str((advice as Dictionary).get("skill_id", ""))
 	elif advice is String:
 		advice_line = advice as String
-	# 픽 산출을 UI보다 먼저 — 만렙(모든 라인 T3)이면 스킬 카드가 0장이라 조용히 닫혔고, 레벨업이
+	# 픽 산출을 UI보다 먼저 · 만렙(모든 라인 T3)이면 스킬 카드가 0장이라 조용히 닫혔고, 레벨업이
 	# 무보상으로 보였다(사용자 보고 2026-08-10). 오버플로 보상 카드 1장으로 대체한다.
 	var overflow_mode: bool = false
 	var picks: Array
@@ -31,7 +31,7 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 		if picks.size() == 0:
 			overflow_mode = true
 			# 카드 종류는 GameState.grant_overflow_reward 우선순위와 동일하게 산출: 최대 체력 →
-			# 응급 처치(회복 여지) → 점수 폴백(가득일 때만 — 점수가 빈 보상으로 읽힌 피드백 2026-08-11).
+			# 응급 처치(회복 여지) → 점수 폴백(가득일 때만 · 점수가 빈 보상으로 읽힌 피드백 2026-08-11).
 			if GameState.has_overflow_hp_room():
 				picks = [{"id": OVERFLOW_PICK_ID, "name": "예비 장갑", "family": "", "tier": 0,
 					"desc": "모든 스킬이 최고 단계예요. 최대 체력이 1 올라요."}]
@@ -42,7 +42,7 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 				picks = [{"id": OVERFLOW_PICK_ID, "name": "전술 기록", "family": "", "tier": 0,
 					"desc": "모든 스킬이 최고 단계예요. 점수를 %d 더 받아요. 점수는 화면 오른쪽 위에 보여요." % GameState.OVERFLOW_SCORE_BONUS}]
 	if overflow_mode:
-		# 만렙 상태에선 추천 멘트가 가리킬 스킬 카드가 없다 — 혼란 방지로 멘트/추천 생략.
+		# 만렙 상태에선 추천 멘트가 가리킬 스킬 카드가 없다 · 혼란 방지로 멘트/추천 생략.
 		advice_line = ""
 		advice_family = ""
 		advice_skill_id = ""
@@ -82,7 +82,7 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(title)
 
-	# VEIL 신뢰도 게이지 — 카드 위에 5단계 점으로 표시.
+	# VEIL 신뢰도 게이지 · 카드 위에 5단계 점으로 표시.
 	# 신뢰도 따라 색이 바뀌어 플레이어와 VEIL의 관계가 매 선택에 보이게.
 	var gauge := Label.new()
 	gauge.text = "VEIL 신뢰   " + GameState.veil_trust_gauge_dots()
@@ -92,7 +92,7 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 	v.add_child(gauge)
 
 	if advice_line != "":
-		# 신뢰도는 폰트 색(veil_tone_color)으로 표현. prefix는 안 붙임 — 실력 lead-in을
+		# 신뢰도는 폰트 색(veil_tone_color)으로 표현. prefix는 안 붙임 · 실력 lead-in을
 		# 위협 문장 앞에 붙이면 "필요하면, 저격수가 노려요"처럼 어색해 폐지(플레이테스트 피드백).
 		var advice_label := Label.new()
 		advice_label.text = "VEIL   " + advice_line
@@ -108,12 +108,12 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 	v.add_child(hb)
 
 	if picks.size() == 0:
-		# 안전판 — forced_picks가 비는 등 예외 경로(일반 만렙은 위에서 오버플로 카드로 대체됨).
+		# 안전판 · forced_picks가 비는 등 예외 경로(일반 만렙은 위에서 오버플로 카드로 대체됨).
 		host.add_child(layer)
 		_finish(layer, "", on_picked)
 		return layer
 
-	# VEIL 추천 — 멘트가 가리키는 family를 그대로 따라 표시. 멘트와 ★가 어긋나지
+	# VEIL 추천 · 멘트가 가리키는 family를 그대로 따라 표시. 멘트와 ★가 어긋나지
 	# 않게 단일 source(advice.family)로 통일. family가 없으면(generic 멘트) 추천 없음.
 	var recommended_families: Array = []
 	if advice_family != "":
@@ -124,7 +124,7 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 		var sid: String = str(skill.get("id", ""))
 		var family: String = str(skill.get("family", ""))
 		var tier: int = int(skill.get("tier", 1))
-		# 상성 추천(skill_id 지정)이면 그 스킬만 ★ — family 폴백이면 해당 계열 전체.
+		# 상성 추천(skill_id 지정)이면 그 스킬만 ★ · family 폴백이면 해당 계열 전체.
 		var is_recommended: bool
 		if advice_skill_id != "":
 			is_recommended = (sid == advice_skill_id)
@@ -137,7 +137,7 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 		btn.pressed.connect(func() -> void: _finish(layer, sid, on_picked))
 		btn.focus_entered.connect(SfxPlayer.play.bind("ui_focus", 0.0))
 
-		# 카드 내용 — 아이콘 + 텍스트를 버튼 위에 얹는다. 자식은 mouse IGNORE라
+		# 카드 내용 · 아이콘 + 텍스트를 버튼 위에 얹는다. 자식은 mouse IGNORE라
 		# 클릭·키보드 포커스는 그대로 버튼이 받는다(포커스 네비/SFX 보존).
 		var content := VBoxContainer.new()
 		content.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -166,7 +166,7 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 		name_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		content.add_child(name_lbl)
 
-		# 티어 pip(●●○) — "T2" 텍스트 대신 시각화. 새 스킬이 아니라 *레벨업*임을 한눈에(피드백:
+		# 티어 pip(●●○) · "T2" 텍스트 대신 시각화. 새 스킬이 아니라 *레벨업*임을 한눈에(피드백:
 		# "T1/T2 말고 동그라미 n개로"). 채운 동그라미=이번에 도달할 티어 / 빈 동그라미=남은 상위 티어.
 		if sid != OVERFLOW_PICK_ID:
 			var _line: Dictionary = SkillTreeData.find_line(sid)
@@ -204,7 +204,7 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 
 		btn.add_child(content)
 		hb.add_child(btn)
-	# 전체 스킬 트리 보기 — 픽 3장만으론 안 보이는 라인 점증(T2·T3)을 확인하고 결정.
+	# 전체 스킬 트리 보기 · 픽 3장만으론 안 보이는 라인 점증(T2·T3)을 확인하고 결정.
 	# 자체 완결 오버레이를 layer 위에 얹고 스스로 닫힘. paused 유지.
 	var tree_btn := Button.new()
 	tree_btn.text = "전체 스킬 트리 보기"
@@ -222,7 +222,7 @@ static func show(host: Node, advice: Variant, on_picked: Callable, forced_picks:
 
 static func _finish(layer: CanvasLayer, picked_id: String, on_picked: Callable) -> void:
 	if picked_id == OVERFLOW_PICK_ID:
-		# 만렙 오버플로 보상 — 스킬 대신 예비 장갑(최대 HP +1) → 응급 처치(회복) → 점수 폴백.
+		# 만렙 오버플로 보상 · 스킬 대신 예비 장갑(최대 HP +1) → 응급 처치(회복) → 점수 폴백.
 		SfxPlayer.play("skill_pick")
 		GameState.grant_overflow_reward()
 	elif picked_id != "":

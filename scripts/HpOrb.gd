@@ -1,10 +1,10 @@
 extends Node2D
 
-# HP 회복 픽업 — 분기 보상으로 맵에 미리 배치된다 (적 처치 드롭 아님).
+# HP 회복 픽업 · 분기 보상으로 맵에 미리 배치된다 (적 처치 드롭 아님).
 # 플레이어가 가까이 오면 잡아당겨 흡수, HP 1 회복.
 
 const PICKUP_RANGE: float = 200.0
-# 흡인 가속 — ExpOrb와 동일 손맛(2026-08-20 "빨려들어왔으면").
+# 흡인 가속 · ExpOrb와 동일 손맛(2026-08-20 "빨려들어왔으면").
 const ATTRACT_SPEED_START: float = 300.0
 const ATTRACT_ACCEL: float = 2400.0
 const ATTRACT_SPEED_MAX: float = 1300.0

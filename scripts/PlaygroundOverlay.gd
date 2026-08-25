@@ -1,7 +1,7 @@
 class_name PlaygroundOverlay
 extends Node
 
-# 디버그 연습장 패널 — Stage._ready에서 playground_active일 때만 부착.
+# 디버그 연습장 패널 · Stage._ready에서 playground_active일 때만 부착.
 # 토글 버튼은 항상 떠 있고, 패널은 클릭 시 펼쳐짐.
 # 항목을 누르면 GameState 값을 갱신하고 scene을 reload.
 
@@ -18,7 +18,7 @@ const ENDING_ESCAPES: Array = [
 	{"rid": "route_escape",         "label": "원형(스토리)", "disposal": ""},
 ]
 
-# 스킬 라인 — 연습장에서 티어 자유 조정용(짧은 라벨).
+# 스킬 라인 · 연습장에서 티어 자유 조정용(짧은 라벨).
 const SKILL_LINES: Array = [
 	{"id": "fire_boost", "label": "사격강화"},
 	{"id": "multishot",  "label": "다중사격"},
@@ -70,7 +70,7 @@ func _toggle_panel() -> void:
 func _open_panel() -> void:
 	open = true
 	toggle_button.text = "▲ 연습장 [F1]"
-	# 열려 있는 동안 일시정지 — 화살표/Enter로 패널을 조작해도 뒤의 플레이어가 움직이지 않게
+	# 열려 있는 동안 일시정지 · 화살표/Enter로 패널을 조작해도 뒤의 플레이어가 움직이지 않게
 	# (키보드 내비 지원). 닫기/reload/이탈 모든 경로에서 해제(known_issues paused carry 참조).
 	get_tree().paused = true
 	panel = PanelContainer.new()
@@ -86,7 +86,7 @@ func _open_panel() -> void:
 	panel.add_theme_stylebox_override("panel", style)
 	layer.add_child(panel)
 
-	# 행이 늘며 패널이 720px 화면 밖으로 넘치는 재발 방지(과거 스킬 8줄 사례와 동형 — 하단
+	# 행이 늘며 패널이 720px 화면 밖으로 넘치는 재발 방지(과거 스킬 8줄 사례와 동형 · 하단
 	# 버튼이 안 보인다는 보고 2026-08-12). 전체를 스크롤 박스에 담고 포커스를 따라 자동 스크롤.
 	var outer := ScrollContainer.new()
 	outer.custom_minimum_size = Vector2(700, 560)
@@ -174,17 +174,17 @@ func _open_panel() -> void:
 	exit_btn.add_theme_font_size_override("font_size", 13)
 	exit_btn.pressed.connect(_on_exit)
 	v.add_child(exit_btn)
-	# 키보드 내비 — 첫 버튼 포커스(화살표/Tab 이동 · Enter 실행 · 포커스 따라 자동 스크롤).
+	# 키보드 내비 · 첫 버튼 포커스(화살표/Tab 이동 · Enter 실행 · 포커스 따라 자동 스크롤).
 	if first14 != null:
 		first14.call_deferred("grab_focus")
 
 func _on_invincible_toggled(on: bool) -> void:
-	# 무적은 연습장에서만 효과가 있다(Player.take_hit이 playground_active로 가드) — 일반 모드엔 영향 없음.
+	# 무적은 연습장에서만 효과가 있다(Player.take_hit이 playground_active로 가드) · 일반 모드엔 영향 없음.
 	GameState.debug_invincible = on
 
 func _on_force_elite_toggled(on: bool) -> void:
 	# 실런은 확률 램프(s9 5%→s12 30%)라 엘리트 전 타입을 못 만날 수 있다(2026-08-11 피드백).
-	# 연습장 한정 강제 승격 — 켠 뒤 맵을 다시 진입하면 적용. 재머/둥지 저격수/위장·시선 거짓
+	# 연습장 한정 강제 승격 · 켠 뒤 맵을 다시 진입하면 적용. 재머/둥지 저격수/위장·시선 거짓
 	# 제외는 실런과 동일(Stage._spawn_enemy 가드). 일반 모드엔 영향 없음(playground_active 가드).
 	GameState.debug_force_elite = on
 
@@ -213,8 +213,8 @@ func _build_stage_row() -> HBoxContainer:
 		hb.add_child(b)
 	return hb
 
-# 루트 목록 — RouteData.ALL_ROUTES 전체를 **막(Act)별로 그룹화**해 스크롤 박스에 보인다.
-# 막 경계는 GameState.ACTS(act_for_stage) 단일 소스에서 파생 — 맵이 늘거나 막이 추가돼도 자동 정렬.
+# 루트 목록 · RouteData.ALL_ROUTES 전체를 **막(Act)별로 그룹화**해 스크롤 박스에 보인다.
+# 막 경계는 GameState.ACTS(act_for_stage) 단일 소스에서 파생 · 맵이 늘거나 막이 추가돼도 자동 정렬.
 # 라이벌 VEIL 요소(재머/위장/reveal)가 있는 맵은 바이올렛으로 강조 + 툴팁에 상세(사용자: "정돈해서 보여줘").
 func _build_route_section() -> HBoxContainer:
 	var hb := HBoxContainer.new()
@@ -229,7 +229,7 @@ func _build_route_section() -> HBoxContainer:
 	sc.follow_focus = true
 	var vb := VBoxContainer.new()
 	vb.add_theme_constant_override("separation", 8)
-	# 막별 버킷 — min_stage가 속한 막으로 분류. min_stage 없는 특수(도전방 등)는 별도.
+	# 막별 버킷 · min_stage가 속한 막으로 분류. min_stage 없는 특수(도전방 등)는 별도.
 	var buckets: Array = []
 	for _i in GameState.ACTS.size():
 		buckets.append([])
@@ -251,7 +251,7 @@ func _build_route_section() -> HBoxContainer:
 			buckets[ai].append(route)
 		else:
 			special.append(route)
-	# 각 막 섹션 — 헤더(막 이름 + 스테이지 범위) + 그 막 맵 그리드.
+	# 각 막 섹션 · 헤더(막 이름 + 스테이지 범위) + 그 막 맵 그리드.
 	var acc: int = 0
 	for ai in GameState.ACTS.size():
 		var adef: Dictionary = GameState.ACTS[ai]
@@ -267,7 +267,7 @@ func _build_route_section() -> HBoxContainer:
 	hb.add_child(sc)
 	return hb
 
-# 한 막 섹션 — 헤더 라벨 + 그 막에 속한 맵 버튼 그리드(5열).
+# 한 막 섹션 · 헤더 라벨 + 그 막에 속한 맵 버튼 그리드(5열).
 func _route_act_section(header: String, routes: Array) -> VBoxContainer:
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 4)
@@ -288,7 +288,7 @@ func _route_act_section(header: String, routes: Array) -> VBoxContainer:
 		b.custom_minimum_size = Vector2(104, 28)
 		b.add_theme_font_size_override("font_size", 12)
 		b.clip_text = true
-		# 툴팁 — id·위험/보상·태그(+라이벌 요소). 이름만으론 안 보이는 정보.
+		# 툴팁 · id·위험/보상·태그(+라이벌 요소). 이름만으론 안 보이는 정보.
 		var rival: String = _route_rival_info(rid)
 		var tip: String = "%s\nrisk %d · %s" % [rid, int(route.get("risk", 1)), RouteData.reward_type_label(str(route.get("reward_type", "")))]
 		if rival != "":
@@ -303,7 +303,7 @@ func _route_act_section(header: String, routes: Array) -> VBoxContainer:
 	col.add_child(grid)
 	return col
 
-# 맵에 배치된 라이벌 VEIL 요소를 MapData 레이아웃에서 파생(단일 소스 — 새 배치도 자동 반영).
+# 맵에 배치된 라이벌 VEIL 요소를 MapData 레이아웃에서 파생(단일 소스 · 새 배치도 자동 반영).
 func _route_rival_info(rid: String) -> String:
 	var layout: Dictionary = MapData.get_layout(rid)
 	var parts: Array = []
@@ -356,7 +356,7 @@ func _build_risk_reward_row() -> HBoxContainer:
 		hb.add_child(b2)
 	return hb
 
-# 스킬 라인 한 줄 — 0/1/2/3 티어 버튼(현재 티어는 disabled로 표시).
+# 스킬 라인 한 줄 · 0/1/2/3 티어 버튼(현재 티어는 disabled로 표시).
 func _build_skill_row(line_id: String, label_text: String) -> HBoxContainer:
 	var hb := HBoxContainer.new()
 	hb.add_theme_constant_override("separation", 6)
@@ -375,7 +375,7 @@ func _build_skill_row(line_id: String, label_text: String) -> HBoxContainer:
 
 # 스킬을 스킬트리와 동일한 3계열(전투/이동/생존)로 묶어 세 열로 배치한다.
 # 8줄 세로 나열이 패널을 화면 밖으로 밀어 "연습장 종료" 버튼이 안 보이던 문제도 함께 해소(사용자 보고).
-# 계열 구분·색은 SkillTreeData(FAMILY_*/FAMILY_COLORS) 단일 소스를 참조 — 스킬트리 화면과 일관.
+# 계열 구분·색은 SkillTreeData(FAMILY_*/FAMILY_COLORS) 단일 소스를 참조 · 스킬트리 화면과 일관.
 func _build_skill_families() -> HBoxContainer:
 	# id → family 매핑(SkillTreeData 단일 소스).
 	var fam_of: Dictionary = {}
@@ -387,7 +387,7 @@ func _build_skill_families() -> HBoxContainer:
 	for fam in [SkillTreeData.FAMILY_COMBAT, SkillTreeData.FAMILY_MOBILITY, SkillTreeData.FAMILY_SURVIVAL]:
 		var col := VBoxContainer.new()
 		col.add_theme_constant_override("separation", 6)
-		# 계열 헤더 — FAMILY_COLORS 색으로 스킬트리와 동일한 계열 식별.
+		# 계열 헤더 · FAMILY_COLORS 색으로 스킬트리와 동일한 계열 식별.
 		var head := Label.new()
 		head.text = str(fam)
 		head.add_theme_font_size_override("font_size", 12)
@@ -402,7 +402,7 @@ func _build_skill_families() -> HBoxContainer:
 		cols.add_child(col)
 	return cols
 
-# 시야 붕괴(veil_degraded) 토글 — ACT3 진입 경고/붕괴 톤 대사·비네트를 연습장에서 테스트.
+# 시야 붕괴(veil_degraded) 토글 · ACT3 진입 경고/붕괴 톤 대사·비네트를 연습장에서 테스트.
 func _on_veil_degraded_cb(on: bool) -> void:
 	GameState.veil_degraded = on
 	_reload()
@@ -468,7 +468,7 @@ func _on_stage_pressed(idx: int) -> void:
 func _on_route_pressed(rid: String) -> void:
 	GameState.current_route_id = rid
 	GameState.current_segment = 0   # 방 체인 · 디버그 점프는 항상 첫 방부터
-	# 맵 선택 시 그 맵의 기본 위험/보상/스테이지로 자동 설정(직관적 테스트 — 사용자 요청).
+	# 맵 선택 시 그 맵의 기본 위험/보상/스테이지로 자동 설정(직관적 테스트 · 사용자 요청).
 	# (이후 Risk/Reward/스테이지 행에서 따로 미세조정 가능.)
 	for r in RouteData.ALL_ROUTES:
 		var route: Dictionary = r
@@ -488,7 +488,7 @@ func _on_reward_type_pressed(t: String) -> void:
 	GameState.current_route_reward_type = t
 	_reload()
 
-# 스킬 티어 직접 지정 — 0이면 해제. hp는 add_skill의 max_hp 즉시효과를 재현.
+# 스킬 티어 직접 지정 · 0이면 해제. hp는 add_skill의 max_hp 즉시효과를 재현.
 func _set_skill_tier(id: String, n: int) -> void:
 	if n <= 0:
 		GameState.skills.erase(id)
@@ -512,7 +512,7 @@ func _on_skill_all(n: int) -> void:
 	_reload()
 
 func _on_tunnel_proto() -> void:
-	# 14-2 코어 대면 터널 프로토(rival_veil_concept §7.1) — 손맛 검증용 진입.
+	# 14-2 코어 대면 터널 프로토(rival_veil_concept §7.1) · 손맛 검증용 진입.
 	# 플래그 누수 차단: 터널의 모든 퇴장 경로는 Title(reset)로 가지만, 여기서도 미리 끈다.
 	GameState.playground_active = false
 	SceneRouter.go(get_tree(), SceneRouter.CORE_TUNNEL)
@@ -532,7 +532,7 @@ func _on_ending_escape(rid: String, disposal: String) -> void:
 			break
 	_reload()
 
-# 14-1 보스 페이즈 직행(0=P1 1=P2 2=P3) — 체크포인트 경로(_init_rival_boss)가 해당 페이즈부터 연다.
+# 14-1 보스 페이즈 직행(0=P1 1=P2 2=P3) · 체크포인트 경로(_init_rival_boss)가 해당 페이즈부터 연다.
 func _on_ch14_phase(phase: int) -> void:
 	GameState.current_route_id = "route_core_recovery"
 	GameState.current_segment = 0
@@ -543,7 +543,7 @@ func _on_ch14_phase(phase: int) -> void:
 	GameState.rival_phase_reached = phase
 	_reload()
 
-# 14-2 실런 비트(목격→리드아웃→고백→처리 선택) 테스트 — 선택 후 탈출 브리핑으로 이어지니
+# 14-2 실런 비트(목격→리드아웃→고백→처리 선택) 테스트 · 선택 후 탈출 브리핑으로 이어지니
 # 확인이 끝나면 일시정지 → 처음으로로 빠져나오면 된다(Title reset이 플래그를 정리).
 func _on_tunnel_live() -> void:
 	GameState.playground_active = false
@@ -562,8 +562,8 @@ func _on_exit() -> void:
 	SceneRouter.go(get_tree(), SceneRouter.TITLE)
 
 func _reload() -> void:
-	# Stage scene을 다시 로드 — _ready에서 새 GameState 값으로 빌드.
+	# Stage scene을 다시 로드 · _ready에서 새 GameState 값으로 빌드.
 	# playground_active가 true이므로 패널도 다시 부착됨.
-	# paused는 SceneTree 전역이라 reload에도 carry된다 — 패널 열림 상태에서 눌리므로 반드시 해제.
+	# paused는 SceneTree 전역이라 reload에도 carry된다 · 패널 열림 상태에서 눌리므로 반드시 해제.
 	get_tree().paused = false
 	get_tree().reload_current_scene()

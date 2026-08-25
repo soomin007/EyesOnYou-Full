@@ -23,15 +23,15 @@ var silent_timer: float = 0.0
 var hold_progress: float = 0.0
 var hold_hint: Label
 var hold_progress_bar: ColorRect
-# 입력 락아웃 — 진입 후 1초 동안 ui_skip/jump 입력 무시. 점프 연타 사고 방지.
+# 입력 락아웃 · 진입 후 1초 동안 ui_skip/jump 입력 무시. 점프 연타 사고 방지.
 var input_lockout_t: float = GameState.INPUT_LOCKOUT_DURATION
-# 안전판 — _process가 어떤 이유로든 typing을 시작 못 하면 2초 후 첫 줄을 강제 표시.
+# 안전판 · _process가 어떤 이유로든 typing을 시작 못 하면 2초 후 첫 줄을 강제 표시.
 # (사용자 보고: "결말 C 제목만 나오고 그 아래 비어있음" 추적용 fallback.)
 var stall_watchdog_t: float = 0.0
-# 씬 전환 이중 발화 가드 — ESC 연타/홀드 완료가 같은 프레임에 겹쳐도 전환은 1회만.
+# 씬 전환 이중 발화 가드 · ESC 연타/홀드 완료가 같은 프레임에 겹쳐도 전환은 1회만.
 var _leaving: bool = false
 
-# 씬 전환은 deferred — 입력 콜백 안 동기 전환은 크래시 경로(2026-08-20 크레딧 사건과 동형).
+# 씬 전환은 deferred · 입력 콜백 안 동기 전환은 크래시 경로(2026-08-20 크레딧 사건과 동형).
 func _goto_credits() -> void:
 	if _leaving:
 		return
@@ -42,14 +42,14 @@ func _ready() -> void:
 	# 안전망: 이전 scene에서 paused가 carry되어 Ending이 freeze되는 패턴 차단.
 	get_tree().paused = false
 	# 막3 엔딩 9개(B3): 처리(disposal) × 신뢰(수용률) + 진실(truth_seen) → 엔딩 id.
-	# 분자는 유효 수용(라이벌 유인 추종 감점 반영) — 게이지(veil_trust_gauge_dots)와 동일 소스.
+	# 분자는 유효 수용(라이벌 유인 추종 감점 반영) · 게이지(veil_trust_gauge_dots)와 동일 소스.
 	ending_id = EndingResolver.resolve(GameState.disposal_choice, GameState.truth_seen, GameState.effective_followed(), GameState.rec_count)
-	# 런 완주 1회 처리 — 본 엔딩 기록(엔딩 모으기/리플레이 토대) + 완주 카운트 + 진행 저장(run.cfg) 삭제.
+	# 런 완주 1회 처리 · 본 엔딩 기록(엔딩 모으기/리플레이 토대) + 완주 카운트 + 진행 저장(run.cfg) 삭제.
 	GameState.record_ending(ending_id)
 	title_label.text = "MISSION COMPLETE"
 	sub_title_label.text = "결말  %s" % EndingResolver.get_ending_title(ending_id)
 	var truth_mark: String = "   |   진실  ●" if GameState.truth_seen else ""
-	# 런 정산(2026-08-15 사용자 제안) — 시간·피격·처치·스킬을 결말과 함께 남긴다.
+	# 런 정산(2026-08-15 사용자 제안) · 시간·피격·처치·스킬을 결말과 함께 남긴다.
 	var skill_names: Array = []
 	for sid in GameState.skills:
 		if SkillTreeData.BASELINE.has(str(sid)):
@@ -64,9 +64,9 @@ func _ready() -> void:
 		GameState.death_count, GameState.score, truth_mark,
 		GameState.run_time_text(), GameState.hits_taken, GameState.kills_total, skill_line
 	]
-	# 맵별 소요 실측 — 페이싱 진단용 콘솔 기록(웹 콘솔에서도 회수 가능).
+	# 맵별 소요 실측 · 페이싱 진단용 콘솔 기록(웹 콘솔에서도 회수 가능).
 	print("[RUN] 총 %s · 맵별 소요: %s" % [GameState.run_time_text(), " / ".join(GameState.stage_time_log)])
-	# 파일로도 누적(2026-08-18) — 세션 밖 도구(봇 캘리브레이션·페이싱 밴드 검증)가 읽는다.
+	# 파일로도 누적(2026-08-18) · 세션 밖 도구(봇 캘리브레이션·페이싱 밴드 검증)가 읽는다.
 	# 데스크톱 한정 유효(웹 user://는 브라우저 저장소).
 	var run_line: String = "[RUN] %s | ending=%s | total=%s | hits=%d kills=%d score=%d deaths=%d | maps: %s\n" % [
 		Time.get_datetime_string_from_system(), ending_id, GameState.run_time_text(),
@@ -85,19 +85,19 @@ func _ready() -> void:
 	var explored_lore: bool = GameState.hidden_visit_count > 0 or GameState.visited_arcturus
 	lines = EndingResolver.get_ending_lines(ending_id, explored_lore)
 	if lines.is_empty():
-		push_warning("[Ending] lines is EMPTY for ending_id='%s' — fallback line 표시" % ending_id)
-		# 안전판 — 빈 결말이면 최소한 마무리 한 줄 보여주기.
+		push_warning("[Ending] lines is EMPTY for ending_id='%s' · fallback line 표시" % ending_id)
+		# 안전판 · 빈 결말이면 최소한 마무리 한 줄 보여주기.
 		lines = [{"speaker": "VEIL", "text": "임무 종료. 수고했어요, 요원.", "delay": 3.0}]
 	choice_box.visible = false
 	hint_label.text = ""
 	text_label.text = ""
-	# 진실 엔딩 — 정적·노이즈 분위기(구 결말 D 연출 재사용). "다 알고도" 톤에 맞음.
+	# 진실 엔딩 · 정적·노이즈 분위기(구 결말 D 연출 재사용). "다 알고도" 톤에 맞음.
 	if ending_id == EndingResolver.ENDING_TRUTH:
 		title_label.modulate.a = 0.3
 		sub_title_label.modulate.a = 0.3
 		_setup_ending_d_atmosphere()
 	_build_hold_hint()
-	# 엔딩별 BGM — 9엔딩을 ending_a~d 4트랙으로 매핑(BgmPlayer는 4트랙뿐).
+	# 엔딩별 BGM · 9엔딩을 ending_a~d 4트랙으로 매핑(BgmPlayer는 4트랙뿐).
 	BgmPlayer.play("ending_" + EndingResolver.get_ending_bgm_letter(ending_id))
 	_start_line()
 
@@ -109,7 +109,7 @@ func _on_input_kind_changed(_kind: String) -> void:
 		hold_hint.text = _hold_hint_text()
 
 func _build_hold_hint() -> void:
-	# 우측 하단 안내 — 시퀀스 완료 후에만 표시. SPACE를 3초간 누르고 있어야 타이틀로 이동.
+	# 우측 하단 안내 · 시퀀스 완료 후에만 표시. SPACE를 3초간 누르고 있어야 타이틀로 이동.
 	var layer := CanvasLayer.new()
 	layer.layer = 10
 	add_child(layer)
@@ -141,7 +141,7 @@ func _build_hold_hint() -> void:
 	box.add_child(bg)
 
 func _setup_ending_d_atmosphere() -> void:
-	# 진실 엔딩 분위기 — 아주 미세한 정적 노이즈. (구 결말 D 연출 재사용.) 진폭을 더 낮춰
+	# 진실 엔딩 분위기 · 아주 미세한 정적 노이즈. (구 결말 D 연출 재사용.) 진폭을 더 낮춰
 	# "번쩍거림"이 아니라 잔잔한 static으로 (사용자 보고 2026-06-25: 번쩍거림 + VEIL이 말하는데
 	# 우상단 "VEIL: ..." 정적 표시가 떠 모순 → 그 표시 제거, 노이즈 진폭/속도 완화).
 	var noise_layer := CanvasLayer.new()
@@ -159,7 +159,7 @@ func _setup_ending_d_atmosphere() -> void:
 	noise_tw.tween_property(noise, "modulate:a", 0.45, 2.0)
 
 func _start_line() -> void:
-	# 매 새 라인마다 watchdog reset — 첫 라인뿐 아니라 followup·이후 라인 모두 보호.
+	# 매 새 라인마다 watchdog reset · 첫 라인뿐 아니라 followup·이후 라인 모두 보호.
 	stall_watchdog_t = 0.0
 	if line_idx >= lines.size():
 		_on_sequence_done()
@@ -188,7 +188,7 @@ func _color_for_speaker(sp: String) -> void:
 func _process(delta: float) -> void:
 	if input_lockout_t > 0.0:
 		input_lockout_t -= delta
-	# Stall watchdog — typing이 시작되지 않으면 짧은 시간 후 강제 표시.
+	# Stall watchdog · typing이 시작되지 않으면 짧은 시간 후 강제 표시.
 	# 매 _start_line에서 reset되므로 모든 라인에 대해 보호 작동.
 	if not sequence_complete and not waiting_choice and lines.size() > 0 and revealed == 0 and not typing_done:
 		stall_watchdog_t += delta
@@ -243,7 +243,7 @@ func _process(delta: float) -> void:
 			text_label.text = prefix + full.substr(0, revealed)
 		return
 	if line.get("choice", false):
-		# choice 라인은 사용자가 선택할 때까지 진행 멈춤 — silent_timer로 자동 line_idx
+		# choice 라인은 사용자가 선택할 때까지 진행 멈춤 · silent_timer로 자동 line_idx
 		# 진행되어 _on_sequence_done이 먼저 호출되던 버그(사용자 보고: choice 누른 뒤
 		# followup 안 나옴) 차단.
 		if not waiting_choice:
@@ -274,19 +274,19 @@ func _show_choice() -> void:
 func _pick_choice(asked: bool) -> void:
 	waiting_choice = false
 	choice_box.visible = false
-	# 이전 choice 버튼 명시 정리 — 잔재 노드가 layout에 영향 주는 일 차단.
+	# 이전 choice 버튼 명시 정리 · 잔재 노드가 layout에 영향 주는 일 차단.
 	for c in choice_box.get_children():
 		c.queue_free()
 	var explored_lore: bool = GameState.hidden_visit_count > 0 or GameState.visited_arcturus
 	lines = EndingResolver.get_ending_c_followup(asked, explored_lore)
 	line_idx = 0
-	# typing 상태 변수 다시 정렬 — _start_line이 처리하지만 명시.
+	# typing 상태 변수 다시 정렬 · _start_line이 처리하지만 명시.
 	revealed = 0
 	t = 0.0
 	typing_done = false
 	silent_timer = 0.0
 	stall_watchdog_t = 0.0
-	# 안전판 — 어떤 경로로든 sequence_complete=true가 됐으면 다시 풀어줘야
+	# 안전판 · 어떤 경로로든 sequence_complete=true가 됐으면 다시 풀어줘야
 	# _process의 typing 분기가 동작함 (이전 버그: hold_to_quit 분기로만 감).
 	sequence_complete = false
 	if hold_hint != null:
@@ -306,7 +306,7 @@ func _on_sequence_done() -> void:
 # 모바일: 화면 탭이 UI Control에 먹히기 전에 받으려 _unhandled_input 대신 _input을 쓴다.
 # 선택지(있어요/없어요) 버튼은 waiting_choice에서 return하므로 버튼 gui_input으로 정상 전달된다.
 func _input(event: InputEvent) -> void:
-	# ESC는 최우선 — 결말 연출을 건너뛴다(입력 락아웃 무관). 선택지(있어요/없어요)는
+	# ESC는 최우선 · 결말 연출을 건너뛴다(입력 락아웃 무관). 선택지(있어요/없어요)는
 	# 서사 분기라 ESC로 건너뛰지 않는다(그 경우 버튼으로만 진행).
 	if event.is_action_pressed("ui_cancel") and not waiting_choice:
 		get_viewport().set_input_as_handled()
@@ -318,14 +318,14 @@ func _input(event: InputEvent) -> void:
 		return
 	if waiting_choice:
 		return
-	# 시퀀스 완료 후엔 SPACE 단발은 무시 — 길게 누르기로만 타이틀 이동 (process에서 처리).
+	# 시퀀스 완료 후엔 SPACE 단발은 무시 · 길게 누르기로만 타이틀 이동 (process에서 처리).
 	if sequence_complete:
-		# 폰: '길게 눌러 종료'를 탭으로 대체 — hold를 채워 다음 _process에서 크레딧으로 넘어간다.
+		# 폰: '길게 눌러 종료'를 탭으로 대체 · hold를 채워 다음 _process에서 크레딧으로 넘어간다.
 		if OrientationGuard.is_tap(event):
 			hold_progress = HOLD_TO_QUIT_DURATION
 		return
 	if input_lockout_t > 0.0:
-		# 진입 직후 1초 동안 입력 무시 — 점프 연타 사고 방지.
+		# 진입 직후 1초 동안 입력 무시 · 점프 연타 사고 방지.
 		return
 	if event.is_action_pressed("ui_skip") or event.is_action_pressed("jump") or OrientationGuard.is_tap(event):
 		# 한 줄 즉시 완성

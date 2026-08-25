@@ -1,7 +1,7 @@
 class_name ThumbCanvas
 extends Control
 
-# 과제 제출용 정사각 썸네일 — 포스터가 세로라 크롭이 아니라 별도 정사각 캔버스로 렌더한다.
+# 과제 제출용 정사각 썸네일 · 포스터가 세로라 크롭이 아니라 별도 정사각 캔버스로 렌더한다.
 # VEIL 눈(키 비주얼) + "EYES ON YOU" + "SURVEILLANCE ROGUELITE". PosterCanvas와 같은 색·눈 모티프.
 # Poster.gd가 600×600 SubViewport로 그린 뒤 150/300으로 다운스케일 저장한다.
 

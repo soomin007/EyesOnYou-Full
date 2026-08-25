@@ -1,7 +1,7 @@
 class_name ArchiveOverlay
 extends Node
 
-# ??? 맵 단말기 자막 — 화면 하단 중앙에 발화자 태그 + 텍스트 한 줄씩 타자기 출력.
+# ??? 맵 단말기 자막 · 화면 하단 중앙에 발화자 태그 + 텍스트 한 줄씩 타자기 출력.
 # Stage._build_hidden_archive에서 단말기 트리거 시 play() 호출.
 #
 # lines: Array of {speaker: "VEIL-1"/"VEIL-2"/"VEIL", text: String, delay: float}
@@ -9,9 +9,9 @@ extends Node
 
 signal finished
 
-# 텍스트 속도 — 사용자: "좀 늦춰줘". 기존 0.045 → 0.08로 한 박자 느리게.
+# 텍스트 속도 · 사용자: "좀 늦춰줘". 기존 0.045 → 0.08로 한 박자 느리게.
 const TYPE_INTERVAL: float = 0.08
-# 시작 전 정지 — 사용자: "시작하기 전에 1초 정도 딜레이".
+# 시작 전 정지 · 사용자: "시작하기 전에 1초 정도 딜레이".
 const START_DELAY: float = 1.0
 
 var layer: CanvasLayer
@@ -71,7 +71,7 @@ func play(lines: Array) -> void:
 	_finalizing = false
 	panel.visible = true
 	panel.modulate.a = 1.0
-	# 시작 전 한 박자 — 텍스트가 갑자기 떠오르는 느낌 줄이고 패널이 인지된 뒤 전개.
+	# 시작 전 한 박자 · 텍스트가 갑자기 떠오르는 느낌 줄이고 패널이 인지된 뒤 전개.
 	speaker_label.text = ""
 	text_label.text = ""
 	typing = false

@@ -34,7 +34,7 @@ var niches: Array = []           # 세이프 벽감 x 중심들(cover_niches와 
 var niche_half: float = 90.0
 var triggers: Array = []         # 조우 보장 위치 트리거 x들(오름차순) · 지나면 즉시 예고 시작
 
-# 통과 후 최소 간격 — 위치 트리거가 연달아 걸려도 열차가 "거의 계속 지나다니는" 느낌이
+# 통과 후 최소 간격 · 위치 트리거가 연달아 걸려도 열차가 "거의 계속 지나다니는" 느낌이
 # 안 나게 숨을 강제한다(사용자 2026-08-18). 조우 보장(트리거 수)은 그대로 · 리듬만 벌린다.
 const MIN_GAP: float = 6.5
 
@@ -99,7 +99,7 @@ func _physics_process(delta: float) -> void:
 				if p is Node2D and (p as Node2D).global_position.x >= float(triggers[_trigger_idx]):
 					_trigger_idx += 1
 					_t = 0.0
-			# 최소 간격(_gap_t)이 남았으면 예고를 미룬다 — 트리거 연쇄여도 숨은 보장.
+			# 최소 간격(_gap_t)이 남았으면 예고를 미룬다 · 트리거 연쇄여도 숨은 보장.
 			if _t <= 0.0 and _gap_t <= 0.0:
 				_state = S.TELEGRAPH
 				_t = telegraph
@@ -140,7 +140,7 @@ func _check_player_hit() -> void:
 	# 선로 대역 밖(단차 위·공중 점프 정점)이면 세이프.
 	if pos.y < ground_y - TRAIN_H:
 		return
-	# 벽감 세이프(2026-08-22 능동 숨기로 개정) — 벽감 밴드 안 + 숨기(▼ 홀드)여야 안 치인다.
+	# 벽감 세이프(2026-08-22 능동 숨기로 개정) · 벽감 밴드 안 + 숨기(▼ 홀드)여야 안 치인다.
 	if bool(p.get("hiding")):
 		for nx in niches:
 			if absf(pos.x - float(nx)) <= niche_half:
@@ -153,9 +153,9 @@ func _check_player_hit() -> void:
 	if p.has_method("take_hit"):
 		p.call("take_hit", dmg)
 
-# 대피 지시(2026-08-22 "적들이 다 치여 맵이 텅 빈다") — 예고가 뜨면 선로 대역의 순찰도 가까운
+# 대피 지시(2026-08-22 "적들이 다 치여 맵이 텅 빈다") · 예고가 뜨면 선로 대역의 순찰도 가까운
 # 벽감으로 피한다(여기서 일하는 경비는 신호를 안다 · 08-19 "벽감 스폰"이 순찰 이동으로 무효화되던
-# 것의 동적 완성). Enemy 쪽 규칙: ROAMING/FIRING만 대피, 이미 시작한 돌진은 못 멈춤 — 그래서
+# 것의 동적 완성). Enemy 쪽 규칙: ROAMING/FIRING만 대피, 이미 시작한 돌진은 못 멈춤 · 그래서
 # "끌어내면 대신 치워 준다"는 자동 청소가 아니라 돌진을 유도해 성립시키는 전술로 남는다.
 func _assign_shelters() -> void:
 	if niches.is_empty():
@@ -164,7 +164,7 @@ func _assign_shelters() -> void:
 		if not is_instance_valid(e) or not (e is Node2D):
 			continue
 		var en: Node2D = e as Node2D
-		# 보스/더미 가드(enemy_type 없음) — _check_enemy_hits와 동형.
+		# 보스/더미 가드(enemy_type 없음) · _check_enemy_hits와 동형.
 		if en.get("enemy_type") == null or en.get("shelter_x") == null:
 			continue
 		if en.get("dead"):
@@ -182,7 +182,7 @@ func _clear_shelters() -> void:
 		if is_instance_valid(e) and e.get("shelter_x") != null:
 			e.set("shelter_x", INF)
 
-# 열차는 누구 편도 아니다(사용자 2026-08-18 "왜 적은 안 치이지") — 선로 대역의 적도 대뎀.
+# 열차는 누구 편도 아니다(사용자 2026-08-18 "왜 적은 안 치이지") · 선로 대역의 적도 대뎀.
 # 환경 내성 캐논(물·감전 = 시설 유닛 설계 내성)과 구분: 열차는 물리 충돌이라 예외 없음.
 # 전술 부가: 경보 끌고 선로에 세우면 열차가 대신 정리한다.
 func _check_enemy_hits() -> void:
@@ -190,7 +190,7 @@ func _check_enemy_hits() -> void:
 		if not is_instance_valid(e) or not (e is Node2D):
 			continue
 		var en: Node2D = e as Node2D
-		# 일반 Enemy만 — "enemy" 그룹의 보스/더미는 속성이 없어 bool(null) 크래시(2026-08-20
+		# 일반 Enemy만 · "enemy" 그룹의 보스/더미는 속성이 없어 bool(null) 크래시(2026-08-20
 		# FallingDebris에서 실측된 동형 잠복 버그). truthiness로 전환 + enemy_type 게이트.
 		if en.get("enemy_type") == null:
 			continue
@@ -212,7 +212,7 @@ func _check_enemy_hits() -> void:
 			continue
 		_hit_enemies[en.get_instance_id()] = true
 		if en.has_method("take_damage"):
-			# 환경 처치 표식 — 이 타격으로 죽으면 XP·점수 없음. 살아남으면 즉시 해제해서
+			# 환경 처치 표식 · 이 타격으로 죽으면 XP·점수 없음. 살아남으면 즉시 해제해서
 			# 나중에 플레이어가 마무리한 몫까지 삼키지 않게 한다.
 			en.set("env_killed", true)
 			en.call("take_damage", dmg, _dir)

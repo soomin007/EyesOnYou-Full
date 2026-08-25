@@ -4,7 +4,7 @@ extends AnimatableBody2D
 # 두 점 사이를 핑퐁 왕복하며 위에 탄 플레이어를 운반하는 발판 (이동 발판 기믹).
 # AnimatableBody2D를 _physics_process에서 position으로 직접 이동 → 엔진이 그 트랜스폼 변화에서 발판
 # 속도를 계산하고, CharacterBody2D가 on_floor 시 move_and_slide에서 그 속도를 상속받아 자동으로 실린다.
-# (주의: sync_to_physics=true면 트랜스폼이 물리 서버에서 *역동기화*돼 직접 set이 덮어써져 안 움직임 —
+# (주의: sync_to_physics=true면 트랜스폼이 물리 서버에서 *역동기화*돼 직접 set이 덮어써져 안 움직임 ·
 #  AnimationPlayer로 애니메이트할 때만 켤 것. 여기선 끈다.)
 # 정적 발판과 구분되게 앰버 코션 엣지로 "움직인다"를 시각 신호로 준다.
 #
@@ -29,7 +29,7 @@ func setup(from: Vector2, to: Vector2, w: float, cycle: float, phase: float = 0.
 	_phase = phase
 	collision_layer = 1   # 월드(플레이어 mask 1이 충돌)
 	collision_mask = 0
-	sync_to_physics = false  # 직접 position 이동 — true면 물리서버 역동기화로 안 움직임(위 주석)
+	sync_to_physics = false  # 직접 position 이동 · true면 물리서버 역동기화로 안 움직임(위 주석)
 	add_to_group("platform")
 	add_to_group("moving_platform")
 	_build_collision()

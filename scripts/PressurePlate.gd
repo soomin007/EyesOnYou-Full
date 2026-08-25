@@ -12,7 +12,7 @@ signal stepped(plate_id: String)
 @export var one_shot: bool = true
 @export var require_armed: bool = false
 @export var hint_color: Color = Color(0.55, 0.85, 0.95)
-# 발판 외형 — 폭/두께. 베이스 사이즈에 맞춰 visual + collision 둘 다 조절.
+# 발판 외형 · 폭/두께. 베이스 사이즈에 맞춰 visual + collision 둘 다 조절.
 @export var plate_width: float = 60.0
 @export var plate_thickness: float = 8.0
 
@@ -42,14 +42,14 @@ func _ready() -> void:
 	_refresh_visual()
 
 func _build_visual() -> void:
-	# 베이스 — 짙은 금속색 사각판
+	# 베이스 · 짙은 금속색 사각판
 	_base = ColorRect.new()
 	_base.color = Color(0.18, 0.20, 0.24)
 	_base.position = Vector2(-plate_width * 0.5, -plate_thickness * 0.5)
 	_base.size = Vector2(plate_width, plate_thickness)
 	_base.z_index = -1
 	add_child(_base)
-	# 가운데 hint 띠 — armed 상태에 따라 색·강도 변화
+	# 가운데 hint 띠 · armed 상태에 따라 색·강도 변화
 	_glow = ColorRect.new()
 	_glow.position = Vector2(-plate_width * 0.5 + 4.0, -plate_thickness * 0.5 + 1.0)
 	_glow.size = Vector2(plate_width - 8.0, 1.5)
@@ -61,17 +61,17 @@ func _refresh_visual() -> void:
 	if _glow_tween != null and _glow_tween.is_valid():
 		_glow_tween.kill()
 	if pressed:
-		# 눌린 상태 — 베이스 살짝 어둡게, glow 꺼짐.
+		# 눌린 상태 · 베이스 살짝 어둡게, glow 꺼짐.
 		_base.color = Color(0.10, 0.12, 0.16)
 		_glow.color = Color(hint_color.r, hint_color.g, hint_color.b, 0.25)
 		_glow.modulate.a = 1.0
 		return
 	if require_armed and not armed:
-		# 비활성 — 회색 glow, 점멸 없음.
+		# 비활성 · 회색 glow, 점멸 없음.
 		_glow.color = Color(0.45, 0.45, 0.50, 0.45)
 		_glow.modulate.a = 1.0
 		return
-	# 활성 대기 — hint_color로 점멸.
+	# 활성 대기 · hint_color로 점멸.
 	_glow.color = Color(hint_color.r, hint_color.g, hint_color.b, 0.85)
 	_glow_tween = _glow.create_tween()
 	_glow_tween.set_loops()

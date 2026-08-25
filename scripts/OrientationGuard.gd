@@ -19,7 +19,7 @@ var _card: Control = null
 var _font: Font = null
 var _portrait: bool = false
 var _touch_cached: int = -1  # -1 미판정, 0 아님, 1 터치 기기
-var _portrait_paused: bool = false  # 세로 전환으로 우리가 건 pause인지 — 우리 것만 해제
+var _portrait_paused: bool = false  # 세로 전환으로 우리가 건 pause인지 · 우리 것만 해제
 
 # 터치 기기 여부(캐시). is_touchscreen_available()은 모바일 웹에서 false를 흔히 반환하므로 웹은 JS로 직접 확인.
 func is_touch_device() -> bool:
@@ -36,12 +36,12 @@ func _detect_touch() -> bool:
 			return int(r) == 1
 	return false
 
-# 화면 탭(터치)을 "진행/확인" 입력으로 받기 위한 헬퍼 — 진행성 화면이 jump/ui_skip 조건 옆에 OR로 쓴다.
+# 화면 탭(터치)을 "진행/확인" 입력으로 받기 위한 헬퍼 · 진행성 화면이 jump/ui_skip 조건 옆에 OR로 쓴다.
 # ScreenTouch만 인정한다(emulate 마우스 중복 방지 + 데스크톱 마우스 클릭엔 영향 없음).
 func is_tap(event: InputEvent) -> bool:
 	return event is InputEventScreenTouch and (event as InputEventScreenTouch).pressed
 
-# 그리기 전용 Control — CanvasLayer는 _draw가 없어 자식 Control의 _draw에서 host._render를 부른다.
+# 그리기 전용 Control · CanvasLayer는 _draw가 없어 자식 Control의 _draw에서 host._render를 부른다.
 class _Card extends Control:
 	var host: Object = null
 	func _draw() -> void:
@@ -55,7 +55,7 @@ func _ready() -> void:
 	if _font == null:
 		_font = ThemeDB.fallback_font
 	_layer = CanvasLayer.new()
-	_layer.layer = 128  # 최상위 — 어떤 오버레이(일시정지·레벨업·연습장)보다도 위
+	_layer.layer = 128  # 최상위 · 어떤 오버레이(일시정지·레벨업·연습장)보다도 위
 	add_child(_layer)
 	_card = _Card.new()
 	_card.host = self
@@ -74,7 +74,7 @@ func _refresh() -> void:
 		_card.queue_redraw()
 	_update_portrait_pause()
 
-# 세로(portrait)로 돌리면 인게임을 자동 일시정지 — 안내 카드 뒤에서 플레이어가 피격/추락하지 않게.
+# 세로(portrait)로 돌리면 인게임을 자동 일시정지 · 안내 카드 뒤에서 플레이어가 피격/추락하지 않게.
 # stage(게임플레이)에서만. 우리가 건 pause(_portrait_paused)만 가로 복귀 시 해제해 사용자의
 # 일시정지 메뉴(직접 연 pause)는 건드리지 않는다.
 func _update_portrait_pause() -> void:
@@ -120,14 +120,14 @@ func _input(event: InputEvent) -> void:
 	# 자동 전체화면(설정 auto_fullscreen). 브라우저는 사용자 제스처 핸들러 안에서만 fullscreen/orientation
 	# lock을 허용하므로 입력(터치/클릭/키 누름) 이벤트에서 시도한다. 1회성이 아니라 "전체화면이 아니면
 	# 매 입력마다 재시도" → 사용자가 전체화면을 빠져나가도 다음 입력에 다시 들어간다(otherside 방식).
-	# 데스크톱(비터치)은 자동 재진입이 성가시다는 피드백(2026-08-13)으로 제외 — F11 수동 토글만.
+	# 데스크톱(비터치)은 자동 재진입이 성가시다는 피드백(2026-08-13)으로 제외 · F11 수동 토글만.
 	if not GameState.auto_fullscreen:
 		return
 	if not is_touch_device():
 		return
 	if not _is_press(event):
 		return
-	# ESC는 재진입 트리거에서 제외(2026-08-11) — "빠져나가려는" 키인데 여기서 다시 전체화면에
+	# ESC는 재진입 트리거에서 제외(2026-08-11) · "빠져나가려는" 키인데 여기서 다시 전체화면에
 	# 넣으면 웹에서 ESC(브라우저 전체화면 해제)→ESC(일시정지)가 재진입과 겹쳐 성가시다.
 	if event is InputEventKey:
 		var k := event as InputEventKey
@@ -153,14 +153,14 @@ func _enter_fullscreen() -> void:
 	if OS.has_feature("web"):
 		_try_web_landscape()
 		return
-	# 네이티브 — 데스크톱 키보드까지 매 입력 전체화면은 과하니 터치 기기(모바일 네이티브)만.
+	# 네이티브 · 데스크톱 키보드까지 매 입력 전체화면은 과하니 터치 기기(모바일 네이티브)만.
 	if not is_touch_device():
 		return
 	var mode: int = DisplayServer.window_get_mode()
 	if mode != DisplayServer.WINDOW_MODE_FULLSCREEN and mode != DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 
-# 현재 전체화면인가 — 웹은 브라우저 fullscreen 요소, 네이티브는 창 모드로 판정(F11 힌트 노출용).
+# 현재 전체화면인가 · 웹은 브라우저 fullscreen 요소, 네이티브는 창 모드로 판정(F11 힌트 노출용).
 func is_fullscreen_now() -> bool:
 	if OS.has_feature("web"):
 		return bool(JavaScriptBridge.eval(
@@ -168,7 +168,7 @@ func is_fullscreen_now() -> bool:
 	var mode: int = DisplayServer.window_get_mode()
 	return mode == DisplayServer.WINDOW_MODE_FULLSCREEN or mode == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN
 
-# F11 토글 — 웹은 브라우저 전체화면 요청/해제, 네이티브는 창 모드 전환(+설정 동기화).
+# F11 토글 · 웹은 브라우저 전체화면 요청/해제, 네이티브는 창 모드 전환(+설정 동기화).
 func _toggle_fullscreen() -> void:
 	if OS.has_feature("web"):
 		var in_fs: bool = is_fullscreen_now()
@@ -188,7 +188,7 @@ func _try_web_landscape() -> void:
 		return
 	# documentElement를 풀스크린으로 만든 뒤 가로로 잠근다(canvas 요소 선택 실패를 피함).
 	# 이미 전체화면이면 즉시 반환(재요청으로 인한 깜빡임/에러 방지) → 매 입력 호출돼도 무해.
-	# 실패(iOS Safari 등 orientation.lock 미지원)는 조용히 무시 — 세로 안내로 폴백.
+	# 실패(iOS Safari 등 orientation.lock 미지원)는 조용히 무시 · 세로 안내로 폴백.
 	var js: String = """
 	(function(){
 	  if (document.fullscreenElement || document.webkitFullscreenElement) { return; }

@@ -1,10 +1,10 @@
 extends Node
 
 func _ready() -> void:
-	# 저장 설정 로드는 GameState._ready(autoload — 메인 씬 _ready보다 먼저 실행)가 담당한다
+	# 저장 설정 로드는 GameState._ready(autoload · 메인 씬 _ready보다 먼저 실행)가 담당한다
 	# (2026-08-24 이동: 하니스/F6 직부팅이 로드 없이 저장해 실데이터를 덮는 사고 차단).
 	# 순서 중요: load_settings가 attack 이벤트를 cfg값으로 덮어쓰므로(erase+reload), 마우스 보강은
-	# 그 뒤에 둬야 한다 — autoload가 항상 먼저 돌므로 여기서 보강하면 순서가 보장된다.
+	# 그 뒤에 둬야 한다 · autoload가 항상 먼저 돌므로 여기서 보강하면 순서가 보장된다.
 	_bind_default_mouse_inputs()
 	_bind_wasd_to_ui()
 	_bind_pause_fallback()
@@ -15,9 +15,9 @@ func _ready() -> void:
 	# "Parent node is busy adding/removing children" 경고가 난다. 한 프레임 미뤄 안전하게 전환.
 	get_tree().change_scene_to_file.call_deferred(SceneRouter.TITLE)
 
-# 마우스 좌/우 클릭을 attack/skill의 기본 이벤트로 보강(이미 있으면 그대로). load_settings 뒤에 호출 —
+# 마우스 좌/우 클릭을 attack/skill의 기본 이벤트로 보강(이미 있으면 그대로). load_settings 뒤에 호출 ·
 # 좌클릭 사격·우클릭 스킬은 핵심 조작이라 cfg가 잃어버려도 항상 살아 있게 한다.
-# 단 터치 기기에선 마우스를 바인딩하지 않는다 — emulate_mouse_from_touch가 켜져 있어(메뉴 탭 처리에
+# 단 터치 기기에선 마우스를 바인딩하지 않는다 · emulate_mouse_from_touch가 켜져 있어(메뉴 탭 처리에
 # 필요) 빈 화면 터치가 좌클릭=attack 오발사를 일으키기 때문. 인게임 사격은 가상 패드(TouchControls)가
 # 전담하고, 메뉴 UI 탭은 emulate 마우스로 그대로 동작한다.
 func _bind_default_mouse_inputs() -> void:
@@ -26,7 +26,7 @@ func _bind_default_mouse_inputs() -> void:
 	_ensure_mouse_event("attack", MOUSE_BUTTON_LEFT)
 	_ensure_mouse_event("skill", MOUSE_BUTTON_RIGHT)
 
-# P를 일시정지 보조 키로 상시 보강(2026-08-11 피드백) — 웹 전체화면에서 ESC는 브라우저가 먼저
+# P를 일시정지 보조 키로 상시 보강(2026-08-11 피드백) · 웹 전체화면에서 ESC는 브라우저가 먼저
 # 소비(전체화면 해제)해 일시정지가 한 번에 안 열린다. 핵심 조작 보강 패턴(cfg가 잃어도 복구).
 func _bind_pause_fallback() -> void:
 	_ensure_key_event("pause", KEY_P)
@@ -37,7 +37,7 @@ func _ensure_mouse_event(action: String, btn: int) -> void:
 	for e in InputMap.action_get_events(action):
 		if e is InputEventMouseButton and (e as InputEventMouseButton).button_index == btn:
 			return
-	# 마우스는 보조 입력 — 키보드 기본(J/L 등)이 먼저 표시되도록 맨 뒤에 추가.
+	# 마우스는 보조 입력 · 키보드 기본(J/L 등)이 먼저 표시되도록 맨 뒤에 추가.
 	# (이전엔 마우스를 첫 슬롯에 넣어 HUD/안내가 마우스를 먼저 보여줘 키보드 유저가 혼란.)
 	var ev := InputEventMouseButton.new()
 	ev.button_index = btn
@@ -51,7 +51,7 @@ func _bind_wasd_to_ui() -> void:
 	_ensure_key_event("ui_down", KEY_S)
 	_ensure_key_event("ui_left", KEY_A)
 	_ensure_key_event("ui_right", KEY_D)
-	# 패드 — A=accept, B=cancel, D-Pad/좌스틱 = 방향
+	# 패드 · A=accept, B=cancel, D-Pad/좌스틱 = 방향
 	_ensure_pad_button("ui_accept", JOY_BUTTON_A)
 	_ensure_pad_button("ui_cancel", JOY_BUTTON_B)
 	_ensure_pad_button("ui_up", JOY_BUTTON_DPAD_UP)

@@ -1,7 +1,7 @@
 class_name PosterCanvasV2
 extends Control
 
-# 과제 전시용 포스터 v2 — 상단은 v1처럼 게임을 소개하고(눈·타이틀·로그라인), 스크린샷 아래에서
+# 과제 전시용 포스터 v2 · 상단은 v1처럼 게임을 소개하고(눈·타이틀·로그라인), 스크린샷 아래에서
 # "FULLY AI-GENERATED"를 강조한다. 핵심: 코드·그래픽·음악·효과음 4부문 각각의 기여량(실수치)과
 # 생성 AI 모델명을 한 행씩 시원하게 제시(docs/contributions.md 진실). 플레이 피드백 설문 QR/링크도 안내.
 # 게임 실제 색·VEIL 눈 모티프·실제 스크린샷을 그대로 쓴다. PosterV2.gd가 SubViewport로 PNG 캡처.
@@ -15,8 +15,8 @@ const COL_VEIL: Color = Color(0.46, 0.86, 1.0)        # VEIL 시안 (브랜드 /
 const COL_WHITE: Color = Color(0.95, 0.96, 0.97)
 const COL_GRAY: Color = Color(0.74, 0.79, 0.86)
 const COL_DIM: Color = Color(0.50, 0.57, 0.66)
-const COL_AMBER: Color = Color(0.96, 0.80, 0.42)      # 앰버 (Suno — 음악)
-const COL_SURV: Color = Color(0.58, 0.92, 0.68)       # 민트 (ElevenLabs — 효과음)
+const COL_AMBER: Color = Color(0.96, 0.80, 0.42)      # 앰버 (Suno · 음악)
+const COL_SURV: Color = Color(0.58, 0.92, 0.68)       # 민트 (ElevenLabs · 효과음)
 
 const M: float = 100.0
 const FM: float = 44.0
@@ -34,7 +34,7 @@ const HERO_Y: float = 510.0
 const HERO_W: float = 1000.0
 const HERO_H: float = 506.0
 const HERO_SHOT: String = "res://poster_out/shots/shot_route_subway.png"
-const HERO_CAP: String = "실제 플레이 화면 — VEIL이 위협을 짚어주는 횡스크롤 침투전"
+const HERO_CAP: String = "실제 플레이 화면 · VEIL이 위협을 짚어주는 횡스크롤 침투전"
 
 # ── 보조 스크린샷 3컷 ──
 const SUP_Y: float = 1052.0
@@ -47,7 +47,7 @@ const SUPS: Array = [
 	["res://poster_out/shots/shot_route_datacenter.png", "전투 · 적 웨이브"],
 ]
 
-# ── AI 강조 섹션 (스크린샷 아래 — 메인 메시지) ──
+# ── AI 강조 섹션 (스크린샷 아래 · 메인 메시지) ──
 const BADGE_Y: float = 1246.0
 const BADGE_W: float = 470.0
 const BADGE_H: float = 46.0
@@ -190,7 +190,7 @@ func _icon_code(c: Vector2, r: float, col: Color) -> void:
 	draw_line(c + Vector2(-r * 0.18, r * 0.6), c + Vector2(r * 0.18, -r * 0.6), col * Color(1, 1, 1, 0.85), 2.0, true)
 
 func _icon_vector(c: Vector2, r: float, col: Color) -> void:
-	# 벡터 그래픽 — 다각형 윤곽 + 꼭짓점 앵커(펜툴 노드)
+	# 벡터 그래픽 · 다각형 윤곽 + 꼭짓점 앵커(펜툴 노드)
 	var pts: Array = [c + Vector2(-r * 0.8, r * 0.6), c + Vector2(0, -r * 0.85), c + Vector2(r * 0.85, r * 0.2), c + Vector2(r * 0.2, r * 0.8)]
 	for i in pts.size():
 		var a: Vector2 = pts[i]
@@ -222,7 +222,7 @@ func _draw_feedback() -> void:
 	var qx: float = W - M - QR_SZ
 	var qy: float = FOOT_Y - 12.0
 	var rect: Rect2 = Rect2(qx, qy, QR_SZ, QR_SZ)
-	# 흰 배경(quiet zone) + QR을 살짝 안쪽으로 — 스캔 안정성.
+	# 흰 배경(quiet zone) + QR을 살짝 안쪽으로 · 스캔 안정성.
 	draw_rect(rect, Color(0.96, 0.97, 0.98, 1.0), true)
 	if _qr_tex != null:
 		var pad: float = QR_SZ * 0.06
@@ -232,7 +232,7 @@ func _draw_feedback() -> void:
 	draw_rect(rect, COL_VEIL * Color(1, 1, 1, 0.6), false, 1.5)
 
 func _qr_placeholder(rect: Rect2) -> void:
-	# QR finder 패턴(세 모서리 사각) — "여기 QR이 들어간다"가 한눈에 읽히게.
+	# QR finder 패턴(세 모서리 사각) · "여기 QR이 들어간다"가 한눈에 읽히게.
 	var dark: Color = Color(0.07, 0.09, 0.12)
 	var fs: float = rect.size.x * 0.26
 	for corner in [rect.position, rect.position + Vector2(rect.size.x - fs, 0), rect.position + Vector2(0, rect.size.y - fs)]:
@@ -317,26 +317,26 @@ func _build_text() -> void:
 	# 타이틀 + 부제 + 로그라인 (v1풍 게임 소개)
 	_label("EYES ON YOU", Vector2(M, TITLE_Y), W - 2.0 * M, 104, COL_WHITE, HORIZONTAL_ALIGNMENT_CENTER, false, 8)
 	_label("단 하나의 임무, 네 가지 결말", Vector2(M, SUB_Y), W - 2.0 * M, 32, COL_VEIL, HORIZONTAL_ALIGNMENT_CENTER, false, 5)
-	_label("현장 요원인 당신에게, 상황실 AI 'VEIL'이 보이지 않는 위협을 미리 짚어준다.\n그 조언을 따를지 무시할지 — 당신의 선택이 결말과 VEIL의 정체를 가른다.",
+	_label("현장 요원인 당신에게, 상황실 AI 'VEIL'이 보이지 않는 위협을 미리 짚어준다.\n그 조언을 따를지 무시할지 · 당신의 선택이 결말과 VEIL의 정체를 가른다.",
 		Vector2((W - 1000.0) * 0.5, LOG_Y), 1000.0, 21, COL_GRAY, HORIZONTAL_ALIGNMENT_CENTER, true)
 	# hero 캡션
 	_label(HERO_CAP, Vector2(HERO_X, HERO_Y + HERO_H + 7.0), HERO_W, 15,
 		COL_DIM, HORIZONTAL_ALIGNMENT_CENTER, false)
 	# 보조 캡션
 	_sup_captions(SUP_Y + SUP_H + 7.0)
-	# AI 강조 — 배지 + 부제
+	# AI 강조 · 배지 + 부제
 	_label("FULLY  AI-GENERATED", Vector2((W - BADGE_W) * 0.5, BADGE_Y + 8.0), BADGE_W, 26,
 		COL_VEIL, HORIZONTAL_ALIGNMENT_CENTER, false, 5)
 	_ai_row_text()
-	# Direction (정직한 분담) — AI 행 바로 아래 한 줄
-	_label("DIRECTION  ·  기획 · 창작 방향 · 모든 설계 결정 · 검수  —  김수민 (자유전공학부)",
+	# Direction (정직한 분담) · AI 행 바로 아래 한 줄
+	_label("DIRECTION  ·  기획 · 창작 방향 · 모든 설계 결정 · 검수  ·  김수민 (자유전공학부)",
 		Vector2(M, DIR_Y), W - 2.0 * M, 15, COL_DIM, HORIZONTAL_ALIGNMENT_CENTER, false)
-	# 푸터 좌측 — 플레이 링크 + 스펙 (가로 폭 [M, 700])
+	# 푸터 좌측 · 플레이 링크 + 스펙 (가로 폭 [M, 700])
 	_label("▶  soomin007.github.io/EyesOnYou", Vector2(M, FOOT_Y + 2.0), 600.0, 23,
 		COL_VEIL, HORIZONTAL_ALIGNMENT_LEFT, false)
 	_label("8–15분 · Windows PC · 키보드 / 게임패드 · Godot 4.6 · Pretendard(OFL)",
 		Vector2(M, FOOT_Y + 38.0), 600.0, 14, COL_DIM, HORIZONTAL_ALIGNMENT_LEFT, false)
-	# 푸터 우측 — 피드백 안내 (QR 왼쪽, 좌측 컬럼과 안 겹치게 x=720부터)
+	# 푸터 우측 · 피드백 안내 (QR 왼쪽, 좌측 컬럼과 안 겹치게 x=720부터)
 	var fb_url: String = FEEDBACK_URL if FEEDBACK_URL != "" else "전시 현장 QR로 안내"
 	var fb_x: float = 720.0
 	var fb_w: float = (W - M - QR_SZ - 16.0) - fb_x

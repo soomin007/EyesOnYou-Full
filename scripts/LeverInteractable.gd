@@ -10,7 +10,7 @@ signal pulled(lever_id: String)
 
 @export var lever_id: String = ""
 @export var one_shot: bool = true
-@export var hint_color: Color = Color(0.55, 0.85, 0.95)  # ARCTURUS 청색 — 기본 hint
+@export var hint_color: Color = Color(0.55, 0.85, 0.95)  # ARCTURUS 청색 · 기본 hint
 
 var active: bool = false
 var locked: bool = false  # one_shot 후 다시 못 당기게
@@ -22,7 +22,7 @@ var _prompt: Label  # 근접 시 "공격으로 당기기" 안내 (피드백: 레
 
 func _ready() -> void:
 	add_to_group("lever")
-	# 정찰 POI(보상 재정의 2026-08-21) — 정찰 보상 활성 시 VeilSight가 위치를 청색으로 짚는다.
+	# 정찰 POI(보상 재정의 2026-08-21) · 정찰 보상 활성 시 VeilSight가 위치를 청색으로 짚는다.
 	# 당겨진 레버는 try_pull에서 그룹 제거(발견이 끝난 요소는 안 짚음).
 	add_to_group("recon_poi")
 	collision_layer = 0
@@ -49,7 +49,7 @@ func _build_visual() -> void:
 	_base.size = Vector2(20.0, 14.0)
 	_base.z_index = -1
 	add_child(_base)
-	# 손잡이 — idle은 위로 기울어짐, active는 아래로
+	# 손잡이 · idle은 위로 기울어짐, active는 아래로
 	_handle = ColorRect.new()
 	_handle.color = Color(0.75, 0.75, 0.78)
 	_handle.position = Vector2(-3.0, -28.0)
@@ -57,7 +57,7 @@ func _build_visual() -> void:
 	_handle.pivot_offset = Vector2(3.0, 36.0)
 	_handle.rotation = deg_to_rad(-22.0)
 	add_child(_handle)
-	# hint 빛 — 처음 발견을 돕는 작은 점멸
+	# hint 빛 · 처음 발견을 돕는 작은 점멸
 	_glow = ColorRect.new()
 	_glow.color = Color(hint_color.r, hint_color.g, hint_color.b, 0.55)
 	_glow.position = Vector2(-14.0, -36.0)
@@ -68,7 +68,7 @@ func _build_visual() -> void:
 	tw.set_loops()
 	tw.tween_property(_glow, "modulate:a", 0.25, 0.9)
 	tw.tween_property(_glow, "modulate:a", 1.0, 0.9)
-	# 근접 안내 프롬프트(평소 숨김) — 레버가 상호작용 대상임을 글자로 명시(피드백: "정체불명 상자").
+	# 근접 안내 프롬프트(평소 숨김) · 레버가 상호작용 대상임을 글자로 명시(피드백: "정체불명 상자").
 	_prompt = Label.new()
 	_prompt.text = "공격으로 당기기"
 	_prompt.add_theme_font_size_override("font_size", 14)
@@ -107,7 +107,7 @@ func try_pull() -> bool:
 	if active and one_shot:
 		return false
 	active = true
-	remove_from_group("recon_poi")   # 정찰 표식 해제 — 이미 찾은 요소
+	remove_from_group("recon_poi")   # 정찰 표식 해제 · 이미 찾은 요소
 	if one_shot:
 		locked = true
 		# 플레이어가 이 레버를 더 이상 참조하지 않도록 정리
@@ -125,7 +125,7 @@ func _animate_pull() -> void:
 	tw.set_parallel(true)
 	tw.tween_property(_handle, "rotation", deg_to_rad(28.0), 0.18)
 	tw.tween_property(_handle, "color", Color(0.95, 0.55, 0.35), 0.18)
-	# hint 빛·프롬프트 사라짐 — 더 이상 안내할 필요 없음
+	# hint 빛·프롬프트 사라짐 · 더 이상 안내할 필요 없음
 	if is_instance_valid(_glow):
 		var tw2 := _glow.create_tween()
 		tw2.tween_property(_glow, "modulate:a", 0.0, 0.30)

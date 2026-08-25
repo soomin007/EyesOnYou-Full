@@ -1,12 +1,12 @@
 extends Area2D
 
-# 보스 SENTINEL 측면 미사일. 약한 유도 — HOMING_DURATION 동안 player 방향으로 천천히 회전,
+# 보스 SENTINEL 측면 미사일. 약한 유도 · HOMING_DURATION 동안 player 방향으로 천천히 회전,
 # 이후 직진. 벽/플랫폼 충돌 시 파괴, 플레이어 닿으면 데미지 1.
 
 const DAMAGE: int = 1
 const LIFETIME: float = 4.0
 const HOMING_DURATION: float = 1.4    # 1.4초까지 약한 유도
-const TURN_RATE_RAD: float = 1.4      # rad/s — 약 80도/s, 직각 회전 못 하지만 따라옴
+const TURN_RATE_RAD: float = 1.4      # rad/s · 약 80도/s, 직각 회전 못 하지만 따라옴
 
 var velocity: Vector2 = Vector2.ZERO
 var t: float = 0.0
@@ -17,7 +17,7 @@ func _ready() -> void:
 	collision_mask = 1 | 2  # 벽/플랫폼 + 플레이어
 	body_entered.connect(_on_body_entered)
 	z_index = 2
-	# 시각 — 빨간 작은 막대 + 후미 광점
+	# 시각 · 빨간 작은 막대 + 후미 광점
 	var col := CollisionShape2D.new()
 	var shape := RectangleShape2D.new()
 	shape.size = Vector2(20.0, 8.0)
@@ -33,7 +33,7 @@ func _ready() -> void:
 	glow.position = Vector2(-14.0, -3.0)
 	glow.size = Vector2(6.0, 6.0)
 	add_child(glow)
-	# 미사일 rotation을 velocity 방향에 맞춰 초기화 — 자식 ColorRect들이 함께 회전.
+	# 미사일 rotation을 velocity 방향에 맞춰 초기화 · 자식 ColorRect들이 함께 회전.
 	# 유도 중에 velocity가 회전하면 _process가 rotation을 갱신.
 	if velocity.length() > 0.01:
 		rotation = velocity.angle()
@@ -42,7 +42,7 @@ func _process(delta: float) -> void:
 	if consumed:
 		return
 	t += delta
-	# 약한 유도 — HOMING_DURATION 안에서만 player 방향으로 천천히 회전
+	# 약한 유도 · HOMING_DURATION 안에서만 player 방향으로 천천히 회전
 	if t < HOMING_DURATION:
 		var p: Node2D = _find_player()
 		if p != null:

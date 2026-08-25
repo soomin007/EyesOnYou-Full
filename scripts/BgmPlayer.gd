@@ -1,16 +1,16 @@
 extends Node
 
-# 단일 BGM 재생기. autoload — scene 전환에도 살아남는다.
+# 단일 BGM 재생기. autoload · scene 전환에도 살아남는다.
 # 두 개의 AudioStreamPlayer로 crossfade. 트랙별 키:
-#   main_theme    : Glass Protocol — 타이틀/튜토리얼/크레딧 (느린 BPM, 메인 테마)
-#   early         : Cold Gear      — 외곽/외벽 초중반 맵 (BPM ↑)
-#   mid_late      : Cold Wire      — 중후반 맵 (BPM ↑↑)
-#   boss          : Chrome Grit    — (구 보스전. 현재 미사용 — 재배치 후보. lab은 confront로 이관)
-#   pursuit       : Broken Wire    — 막4 추적(라이벌 영역, 쫓기는 결. 2026-08-10)
-#   confront      : Violet Signal  — 막3 lab 보스전 + 막5 대면(0~25s 빌드업 = 보스 인트로 컷씬 구간)
-#   hidden        : Gravity Static — ??? 방
+#   main_theme    : Glass Protocol · 타이틀/튜토리얼/크레딧 (느린 BPM, 메인 테마)
+#   early         : Cold Gear      · 외곽/외벽 초중반 맵 (BPM ↑)
+#   mid_late      : Cold Wire      · 중후반 맵 (BPM ↑↑)
+#   boss          : Chrome Grit    · (구 보스전. 현재 미사용 · 재배치 후보. lab은 confront로 이관)
+#   pursuit       : Broken Wire    · 막4 추적(라이벌 영역, 쫓기는 결. 2026-08-10)
+#   confront      : Violet Signal  · 막3 lab 보스전 + 막5 대면(0~25s 빌드업 = 보스 인트로 컷씬 구간)
+#   hidden        : Gravity Static · ??? 방
 #
-# Suno로 생성된 트랙 시리즈 — 진행할수록 BPM이 빨라지고, 막4/5(라이벌 영역)는 같은 산업 전자 톤에
+# Suno로 생성된 트랙 시리즈 · 진행할수록 BPM이 빨라지고, 막4/5(라이벌 영역)는 같은 산업 전자 톤에
 # 디튠·정전기 이질감을 섞은 변절 파트(act4_bgm_plan.md). 선곡: 막1~3=라우트 매핑, 막4+=막(ACTS.bgm) 기반.
 
 const TRACKS: Dictionary = {
@@ -27,7 +27,7 @@ const TRACKS: Dictionary = {
 	"ending_d":      "res://assets/bgm/Ending D.mp3",
 }
 
-# 루프 복귀 지점(초) — confront는 0~25s가 조용한 빌드업(보스 인트로 전용)이라, 곡이 끝나고
+# 루프 복귀 지점(초) · confront는 0~25s가 조용한 빌드업(보스 인트로 전용)이라, 곡이 끝나고
 # 반복될 때 빌드업으로 돌아가면 전투 중 김이 빠진다 → 비트 시작 지점으로 복귀.
 const LOOP_OFFSETS: Dictionary = {
 	"confront": 25.0,
@@ -37,7 +37,7 @@ const FADE_IN: float = 1.2
 const FADE_OUT: float = 0.9
 const BASE_DB: float = -8.0     # 1.0 master에서 적당히 들리도록
 const SILENT_DB: float = -80.0
-# 사망 화면 등에서 BGM을 dB 감쇠로 먹먹하게 — 트랙 전환 없이 즉시 ducking.
+# 사망 화면 등에서 BGM을 dB 감쇠로 먹먹하게 · 트랙 전환 없이 즉시 ducking.
 const DUCKED_OFFSET_DB: float = -12.0
 const DUCK_FADE: float = 0.4
 
@@ -68,7 +68,7 @@ func play(track_id: String) -> void:
 	if not TRACKS.has(track_id):
 		stop()
 		return
-	# 트랙이 바뀌면 누적 감쇠 리셋 — 다음 트랙(엔딩 등)이 silent에서 시작하지 않도록.
+	# 트랙이 바뀌면 누적 감쇠 리셋 · 다음 트랙(엔딩 등)이 silent에서 시작하지 않도록.
 	_extra_db = 0.0
 	var path: String = TRACKS[track_id]
 	var stream: AudioStream = load(path) as AudioStream
@@ -97,7 +97,7 @@ func play(track_id: String) -> void:
 		_tween_out.tween_callback(Callable(prev, "stop"))
 	_active_idx = next_idx
 
-# 현재 트랙의 재생 위치 이동/조회 — 보스 인트로 스킵·재도전 시 빌드업(0~25s) 건너뛰기용.
+# 현재 트랙의 재생 위치 이동/조회 · 보스 인트로 스킵·재도전 시 빌드업(0~25s) 건너뛰기용.
 func seek_current(sec: float) -> void:
 	if _current_track == "" or _active_idx >= _players.size():
 		return
@@ -123,7 +123,7 @@ func stop() -> void:
 			tw.tween_property(p, "volume_db", SILENT_DB, FADE_OUT)
 			tw.tween_callback(Callable(p, "stop"))
 
-# 마스터 볼륨 슬라이더 변경 시 호출 — 현재 재생 중인 트랙 dB만 즉시 갱신.
+# 마스터 볼륨 슬라이더 변경 시 호출 · 현재 재생 중인 트랙 dB만 즉시 갱신.
 func refresh_volume() -> void:
 	if _current_track == "":
 		return
@@ -146,9 +146,9 @@ func _target_db() -> float:
 	base += _extra_db
 	return base
 
-# 점진 감쇠 — 매 프레임 호출 가능. 맵 끝 가까워질수록 BGM 페이드아웃 같은 효과에.
+# 점진 감쇠 · 매 프레임 호출 가능. 맵 끝 가까워질수록 BGM 페이드아웃 같은 효과에.
 # db_offset = 0 이면 감쇠 없음. -60 정도면 거의 무음.
-# 즉시 active player의 volume_db 반영 — 트윈 없이 매끄러운 슬라이드는 호출자가 매 프레임 누적.
+# 즉시 active player의 volume_db 반영 · 트윈 없이 매끄러운 슬라이드는 호출자가 매 프레임 누적.
 func set_extra_attenuation_db(db_offset: float) -> void:
 	if is_equal_approx(_extra_db, db_offset):
 		return

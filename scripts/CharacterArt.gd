@@ -11,14 +11,14 @@ extends RefCounted
 # 모든 함수는 parent에 자식 Node2D("Visual")을 추가하고 그 노드를 반환한다.
 # 좌우 반전은 returned root의 scale.x = -1 로 처리한다.
 #
-# 도형 위에 어두운 외곽선(Line2D)을 얹어 픽토그램 톤을 만든다 — _filled 헬퍼.
+# 도형 위에 어두운 외곽선(Line2D)을 얹어 픽토그램 톤을 만든다 · _filled 헬퍼.
 # Player는 Torso/ArmFront 컨테이너 분리 → Player.gd가 idle bob/총 회전 적용.
 
 # 외곽선은 형태를 잡아주는 정도로만. 너무 진하면 픽토그램이 아니라 만화책처럼 느껴짐.
 const STROKE_COLOR: Color = Color(0.08, 0.10, 0.13, 0.55)
 const STROKE_W: float = 0.9
 
-# 스킬 부착물(파우치·윙 등)에 부여하는 그룹 — 갱신 시 한 번에 제거하기 위함.
+# 스킬 부착물(파우치·윙 등)에 부여하는 그룹 · 갱신 시 한 번에 제거하기 위함.
 const SKILL_PART_GROUP: String = "skill_part"
 
 static func build_player(parent: Node2D) -> Node2D:
@@ -28,21 +28,21 @@ static func build_player(parent: Node2D) -> Node2D:
 
 	root.add_child(_ellipse(Vector2(0, -2), Vector2(20, 5), Color(0, 0, 0, 0.45)))
 
-	# Torso — Player.gd._update_visual()이 y bob을 적용한다.
+	# Torso · Player.gd._update_visual()이 y bob을 적용한다.
 	var torso := Node2D.new()
 	torso.name = "Torso"
 	root.add_child(torso)
 
-	# 5두신 비례 — 머리 14 / 상체 22 / 다리 16 / 신발 4. 가랑이 -20.
+	# 5두신 비례 · 머리 14 / 상체 22 / 다리 16 / 신발 4. 가랑이 -20.
 	# 이전엔 다리(28) > 상체(18)라 "상체 없는" 인상이었음.
-	# 상체(어깨 -42 ~ 가랑이 -20) — V형 어깨~허리.
+	# 상체(어깨 -42 ~ 가랑이 -20) · V형 어깨~허리.
 	_filled(torso, Color(0.82, 0.84, 0.88), PackedVector2Array([
 		Vector2(-11, -42), Vector2(11, -42),
 		Vector2(10, -32), Vector2(9, -20),
 		Vector2(-9, -20), Vector2(-10, -32),
 	]))
 
-	# 다리 — 가랑이 origin인 LegL/LegR Node2D로 분리. 평행 직사각형
+	# 다리 · 가랑이 origin인 LegL/LegR Node2D로 분리. 평행 직사각형
 	# (이전 무릎 부분이 바깥으로 휘어 오다리처럼 보였음). Player.gd가
 	# 이 노드를 회전시켜 걷기 애니메이션을 만든다(번갈아 swing).
 	var leg_l := Node2D.new()
@@ -71,7 +71,7 @@ static func build_player(parent: Node2D) -> Node2D:
 		Vector2(4, 20), Vector2(-4, 20),
 	]))
 
-	# 어깨 패드 — 어깨 라인(-42)에서 살짝 바깥으로
+	# 어깨 패드 · 어깨 라인(-42)에서 살짝 바깥으로
 	_filled(torso, Color(0.50, 0.54, 0.62), PackedVector2Array([
 		Vector2(-13, -42), Vector2(-7, -42), Vector2(-8, -36), Vector2(-13, -36),
 	]))
@@ -79,7 +79,7 @@ static func build_player(parent: Node2D) -> Node2D:
 		Vector2(7, -42), Vector2(13, -42), Vector2(13, -36), Vector2(8, -36),
 	]))
 
-	# 벨트 — 허리(-25 ~ -20) 5px. 짙은 색 + 상단 highlight로 허리 라인 명확.
+	# 벨트 · 허리(-25 ~ -20) 5px. 짙은 색 + 상단 highlight로 허리 라인 명확.
 	_filled(torso, Color(0.10, 0.12, 0.16), PackedVector2Array([
 		Vector2(-10, -25), Vector2(10, -25), Vector2(10, -20), Vector2(-10, -20),
 	]))
@@ -94,17 +94,17 @@ static func build_player(parent: Node2D) -> Node2D:
 		Vector2(-2.5, -24), Vector2(2.5, -24), Vector2(2.5, -21), Vector2(-2.5, -21),
 	]))
 
-	# 가슴 패널 — 어깨 -42 ~ 벨트 위 -28 (14px 길게)
+	# 가슴 패널 · 어깨 -42 ~ 벨트 위 -28 (14px 길게)
 	_filled(torso, Color(0.40, 0.55, 0.70, 0.85), PackedVector2Array([
 		Vector2(-5, -38), Vector2(5, -38), Vector2(5, -28), Vector2(-5, -28),
 	]))
 	# 가슴 LED
 	_filled_circle(torso, Vector2(0, -33), 1.4, Color(0.75, 1.0, 1.0))
 
-	# 머리 (얼굴) — radius 6 → 7
+	# 머리 (얼굴) · radius 6 → 7
 	_filled_circle(torso, Vector2(0, -50), 7.0, Color(0.95, 0.88, 0.78))
 
-	# 헬멧 — 둥근 윗면
+	# 헬멧 · 둥근 윗면
 	_filled(torso, Color(0.18, 0.20, 0.25), PackedVector2Array([
 		Vector2(-7, -56), Vector2(-6, -58), Vector2(6, -58), Vector2(7, -56),
 		Vector2(7, -50), Vector2(-7, -50),
@@ -117,7 +117,7 @@ static func build_player(parent: Node2D) -> Node2D:
 	_filled(torso, Color(0.55, 0.90, 0.95, 0.95), PackedVector2Array([
 		Vector2(-5, -50), Vector2(5, -50), Vector2(5, -47), Vector2(-5, -47),
 	]))
-	# 바이저 하이라이트 — stroke 없는 작은 띠
+	# 바이저 하이라이트 · stroke 없는 작은 띠
 	var hl := Polygon2D.new()
 	hl.color = Color(1.0, 1.0, 1.0, 0.55)
 	hl.polygon = PackedVector2Array([
@@ -125,12 +125,12 @@ static func build_player(parent: Node2D) -> Node2D:
 	])
 	torso.add_child(hl)
 
-	# 뒷팔 — 어깨 -38 ~ 허리 -28
+	# 뒷팔 · 어깨 -38 ~ 허리 -28
 	_filled(torso, Color(0.62, 0.64, 0.70), PackedVector2Array([
 		Vector2(-11, -38), Vector2(-7, -38), Vector2(-7, -28), Vector2(-11, -28),
 	]))
 
-	# 앞팔 + 총 — ArmFront origin이 손목 부근(10, -32) — 어깨에서 허리 사이.
+	# 앞팔 + 총 · ArmFront origin이 손목 부근(10, -32) · 어깨에서 허리 사이.
 	# 회전 시 총구가 살짝 위/아래로 흔들리도록.
 	var arm_front := Node2D.new()
 	arm_front.name = "ArmFront"
@@ -260,7 +260,7 @@ static func build_drone(parent: Node2D) -> Node2D:
 	pupil.polygon = PackedVector2Array(ppts)
 	torso.add_child(pupil)
 
-	# 좌우 로터 — 회전 가능하도록 노드로 분리
+	# 좌우 로터 · 회전 가능하도록 노드로 분리
 	var rotor_l := Node2D.new()
 	rotor_l.name = "RotorL"
 	rotor_l.position = Vector2(-13, 0)
@@ -354,7 +354,7 @@ static func build_shield(parent: Node2D) -> Node2D:
 		Vector2(-3, -37), Vector2(3, -37), Vector2(3, -35), Vector2(-3, -35),
 	]))
 
-	# 방패 — Enemy.gd가 "Shield" 이름으로 참조
+	# 방패 · Enemy.gd가 "Shield" 이름으로 참조
 	var shield := Node2D.new()
 	shield.name = "Shield"
 	torso.add_child(shield)
@@ -369,7 +369,7 @@ static func build_shield(parent: Node2D) -> Node2D:
 	return root
 
 static func build_jammer(parent: Node2D) -> Node2D:
-	# 라이벌 VEIL의 '손' — 고정형 방출 장치. 바이올렛/마젠타로 VEIL 시안(0.42,0.86,1.0)과 대비.
+	# 라이벌 VEIL의 '손' · 고정형 방출 장치. 바이올렛/마젠타로 VEIL 시안(0.42,0.86,1.0)과 대비.
 	# 발밑 origin(0,0), 대략 x∈[-20,20] y∈[-46,0] (콜리전 44×44에 맞춤).
 	var root := Node2D.new()
 	root.name = "Visual"
@@ -397,7 +397,7 @@ static func build_jammer(parent: Node2D) -> Node2D:
 		Vector2(6, -27), Vector2(12, -27), Vector2(12, -17), Vector2(6, -17),
 	]))
 
-	# 방출 코어 — 빛나는 마젠타(중앙 렌즈)
+	# 방출 코어 · 빛나는 마젠타(중앙 렌즈)
 	_filled_circle(body, Vector2(0, -22), 6.5, Color(0.95, 0.30, 0.92))
 	_filled_circle(body, Vector2(0, -22), 3.2, Color(1.0, 0.78, 1.0))
 
@@ -417,10 +417,10 @@ static func build_jammer(parent: Node2D) -> Node2D:
 	return root
 
 static func build_caller(parent: Node2D) -> Node2D:
-	# 호출병 — 무기 대신 등짐 무전기를 진 통신병(2026-08-20 신설). 직접 공격이 없어 실루엣부터
+	# 호출병 · 무기 대신 등짐 무전기를 진 통신병(2026-08-20 신설). 직접 공격이 없어 실루엣부터
 	# "총이 없다"가 읽히게: 양손이 비었고, 등 뒤 무전기 상자 + 비스듬한 채찍 안테나가 정체성.
 	# 발밑 origin(0,0), 대략 x∈[-17,12] y∈[-56,0] (콜리전 32×48에 맞춤). 악센트 = 앰버(신호등).
-	# 안테나 끝은 (0,-56) — Enemy._CallerBeacon 점멸등/신호 링과 정렬(비주얼 플립과 무관한 중심선).
+	# 안테나 끝은 (0,-56) · Enemy._CallerBeacon 점멸등/신호 링과 정렬(비주얼 플립과 무관한 중심선).
 	var root := Node2D.new()
 	root.name = "Visual"
 	parent.add_child(root)
@@ -438,11 +438,11 @@ static func build_caller(parent: Node2D) -> Node2D:
 	_filled(body, Color(0.20, 0.22, 0.19), PackedVector2Array([
 		Vector2(3, -16), Vector2(9, -16), Vector2(10, 0), Vector2(4, 0),
 	]))
-	# 몸통(올리브 야전복) — 앞으로 살짝 숙인 사다리꼴
+	# 몸통(올리브 야전복) · 앞으로 살짝 숙인 사다리꼴
 	_filled(body, Color(0.33, 0.36, 0.28), PackedVector2Array([
 		Vector2(-9, -36), Vector2(8, -36), Vector2(10, -14), Vector2(-11, -14),
 	]))
-	# 등짐 무전기(등 = -x 쪽) — 각진 상자 + 앰버 다이얼 + 어두운 스피커 슬릿
+	# 등짐 무전기(등 = -x 쪽) · 각진 상자 + 앰버 다이얼 + 어두운 스피커 슬릿
 	_filled(body, Color(0.22, 0.23, 0.21), PackedVector2Array([
 		Vector2(-17, -38), Vector2(-8, -38), Vector2(-8, -18), Vector2(-17, -18),
 	]))
@@ -450,7 +450,7 @@ static func build_caller(parent: Node2D) -> Node2D:
 	_filled(body, Color(0.15, 0.16, 0.14), PackedVector2Array([
 		Vector2(-16, -26), Vector2(-9, -26), Vector2(-9, -21), Vector2(-16, -21),
 	]))
-	# 빈손 팔 — 헤드셋을 누르는 팔(무장 없음이 한눈에 읽히게 손이 귀 쪽으로)
+	# 빈손 팔 · 헤드셋을 누르는 팔(무장 없음이 한눈에 읽히게 손이 귀 쪽으로)
 	_filled(body, Color(0.30, 0.33, 0.26), PackedVector2Array([
 		Vector2(6, -34), Vector2(12, -32), Vector2(11, -40), Vector2(7, -41),
 	]))
@@ -460,7 +460,7 @@ static func build_caller(parent: Node2D) -> Node2D:
 		Vector2(-7, -47), Vector2(7, -47), Vector2(7, -44), Vector2(-7, -44),
 	]))
 	_filled_circle(body, Vector2(6, -42), 2.2, Color(0.16, 0.17, 0.15))
-	# 채찍 안테나 — 무전기 상단에서 중심선 위(0,-56)로 비스듬히
+	# 채찍 안테나 · 무전기 상단에서 중심선 위(0,-56)로 비스듬히
 	_filled(body, Color(0.46, 0.44, 0.38), PackedVector2Array([
 		Vector2(-0.9, -56), Vector2(1.0, -56), Vector2(-10.5, -38), Vector2(-13.0, -38),
 	]))
@@ -471,7 +471,7 @@ static func build_tutorial_dummy(parent: Node2D) -> Node2D:
 	# 받침대 바닥 = y=0(지면), 본체는 받침대 위, 머리는 본체 위.
 	var root := Node2D.new()
 	parent.add_child(root)
-	# 받침대 — 받침대 윗면 y=-6, 바닥 y=0 (지면에 정확히 닿음).
+	# 받침대 · 받침대 윗면 y=-6, 바닥 y=0 (지면에 정확히 닿음).
 	_filled(root, Color(0.32, 0.28, 0.25), PackedVector2Array([
 		Vector2(-18, -6), Vector2(18, -6), Vector2(20, 0), Vector2(-20, 0),
 	]))
@@ -494,7 +494,7 @@ static func build_tutorial_dummy(parent: Node2D) -> Node2D:
 	stitch2.width = 1.2
 	stitch2.default_color = Color(0.92, 0.88, 0.78, 0.85)
 	root.add_child(stitch2)
-	# 중앙 과녁 — 가슴(본체 중심) y=-26 부근.
+	# 중앙 과녁 · 가슴(본체 중심) y=-26 부근.
 	var bull_outer := Polygon2D.new()
 	bull_outer.color = Color(0.85, 0.30, 0.30, 0.85)
 	bull_outer.polygon = _circle_pts(7.0, 18, Vector2(0, -26))
@@ -512,7 +512,7 @@ static func attach_player_skill_parts(torso: Node2D, skills: Dictionary) -> void
 	if torso == null:
 		return
 	var arm_front: Node2D = torso.get_node_or_null("ArmFront")
-	# 기존 부착물 제거 — torso + arm_front(총기) 양쪽의 skill_part 그룹.
+	# 기존 부착물 제거 · torso + arm_front(총기) 양쪽의 skill_part 그룹.
 	for c in torso.get_children():
 		if c.is_in_group(SKILL_PART_GROUP):
 			c.queue_free()
@@ -520,39 +520,39 @@ static func attach_player_skill_parts(torso: Node2D, skills: Dictionary) -> void
 		for c in arm_front.get_children():
 			if c.is_in_group(SKILL_PART_GROUP):
 				c.queue_free()
-	# fire_boost — 총기 외형 업그레이드 (T1 긴 총신+주황팁 / T2 측면 탄창 / T3 관통 총신).
+	# fire_boost · 총기 외형 업그레이드 (T1 긴 총신+주황팁 / T2 측면 탄창 / T3 관통 총신).
 	# 사용자 의도: "사격 강화는 먹을 때마다 총기 외형이 변한다." → arm_front(조준 회전 따라감)에 부착.
 	var fb: int = int(skills.get("fire_boost", 0))
 	if fb >= 1 and arm_front != null:
 		_attach_gun_upgrade(arm_front, fb)
-	# explosive — 허리춤 수류탄 키트 (T1 띠+파우치 / T2 어깨 추가 / T3 두 번째 파우치).
+	# explosive · 허리춤 수류탄 키트 (T1 띠+파우치 / T2 어깨 추가 / T3 두 번째 파우치).
 	var ex: int = int(skills.get("explosive", 0))
 	if ex >= 1:
 		_attach_grenade_kit(torso, ex)
-	# glide — 등 글라이더 윙 (T1 접힘 / T2~ 펼침·확대 / T3 분사 벤트).
+	# glide · 등 글라이더 윙 (T1 접힘 / T2~ 펼침·확대 / T3 분사 벤트).
 	var gl: int = int(skills.get("glide", 0))
 	if gl >= 1:
 		_attach_glide_wing(torso, gl)
-	# dash_boost — 양 발목 추진 노즐 (티어별 노즐·글로우 확대).
+	# dash_boost · 양 발목 추진 노즐 (티어별 노즐·글로우 확대).
 	var db: int = int(skills.get("dash_boost", 0))
 	if db >= 1:
 		_attach_ankle_jet(torso, Vector2(-6.0, -4.0), db)
 		_attach_ankle_jet(torso, Vector2(6.0, -4.0), db)
-	# shield(부활) — 앞가슴 부활 코어 모듈 (티어별 확대·LED·재충전 링).
+	# shield(부활) · 앞가슴 부활 코어 모듈 (티어별 확대·LED·재충전 링).
 	var sh: int = int(skills.get("shield", 0))
 	if sh >= 1:
 		_attach_revive_module(torso, sh)
-	# hp — 어깨/가슴 장갑판 (T2 가슴판, T3 헬멧 밴드+코어).
+	# hp · 어깨/가슴 장갑판 (T2 가슴판, T3 헬멧 밴드+코어).
 	var hp: int = int(skills.get("hp", 0))
 	if hp >= 1:
 		_attach_armor_plates(torso, hp)
 
-# 총기 외형 업그레이드 — arm_front 로컬좌표(앞=+x). 기존 총신은 ~x=3에서 끝남.
+# 총기 외형 업그레이드 · arm_front 로컬좌표(앞=+x). 기존 총신은 ~x=3에서 끝남.
 static func _attach_gun_upgrade(arm_front: Node2D, tier: int) -> void:
 	var g := Node2D.new()
 	g.add_to_group(SKILL_PART_GROUP)
 	arm_front.add_child(g)
-	# T1 — 더 길고 굵은 총신 + 주황 머즐 팁 (탄 색과 호응)
+	# T1 · 더 길고 굵은 총신 + 주황 머즐 팁 (탄 색과 호응)
 	_filled(g, Color(0.26, 0.28, 0.33), PackedVector2Array([
 		Vector2(3, -2.2), Vector2(8, -2.2), Vector2(8, 2.2), Vector2(3, 2.2),
 	]))
@@ -560,7 +560,7 @@ static func _attach_gun_upgrade(arm_front: Node2D, tier: int) -> void:
 		Vector2(8, -2.0), Vector2(10.5, -1.4), Vector2(10.5, 1.4), Vector2(8, 2.0),
 	]))
 	if tier >= 2:
-		# 속사 — 아래로 돌출한 측면 탄창/벤트 + 밝은 슬릿
+		# 속사 · 아래로 돌출한 측면 탄창/벤트 + 밝은 슬릿
 		_filled(g, Color(0.20, 0.22, 0.26), PackedVector2Array([
 			Vector2(-0.5, 2), Vector2(4, 2), Vector2(4, 7.5), Vector2(-0.5, 7.5),
 		]))
@@ -569,7 +569,7 @@ static func _attach_gun_upgrade(arm_front: Node2D, tier: int) -> void:
 		slit.polygon = PackedVector2Array([Vector2(0.3, 3), Vector2(3.5, 3), Vector2(3.5, 4), Vector2(0.3, 4)])
 		g.add_child(slit)
 	if tier >= 3:
-		# 관통 — 길쭉한 관통 총신 연장 + 시안 팁
+		# 관통 · 길쭉한 관통 총신 연장 + 시안 팁
 		_filled(g, Color(0.30, 0.33, 0.40), PackedVector2Array([
 			Vector2(10.5, -1.4), Vector2(15.5, -1.0), Vector2(15.5, 1.0), Vector2(10.5, 1.4),
 		]))
@@ -578,7 +578,7 @@ static func _attach_gun_upgrade(arm_front: Node2D, tier: int) -> void:
 		tip.polygon = PackedVector2Array([Vector2(14.5, -1), Vector2(16.5, -0.6), Vector2(16.5, 0.6), Vector2(14.5, 1)])
 		g.add_child(tip)
 
-# 수류탄 키트 — 밴돌리어 띠 + 파우치(티어별 개수).
+# 수류탄 키트 · 밴돌리어 띠 + 파우치(티어별 개수).
 static func _attach_grenade_kit(torso: Node2D, tier: int) -> void:
 	var kit := Node2D.new()
 	kit.add_to_group(SKILL_PART_GROUP)
@@ -589,10 +589,10 @@ static func _attach_grenade_kit(torso: Node2D, tier: int) -> void:
 	]))
 	_attach_grenade_pouch(kit, Vector2(-9.0, -19.0))
 	if tier >= 2:
-		# 폭발물+ — 어깨 띠 위 추가 수류탄
+		# 폭발물+ · 어깨 띠 위 추가 수류탄
 		_attach_grenade_pouch(kit, Vector2(-8.0, -33.0))
 	if tier >= 3:
-		# 이중 충전 — 허리 두 번째 파우치
+		# 이중 충전 · 허리 두 번째 파우치
 		_attach_grenade_pouch(kit, Vector2(-12.0, -16.0))
 
 static func _attach_grenade_pouch(parent: Node2D, pos: Vector2) -> void:
@@ -600,7 +600,7 @@ static func _attach_grenade_pouch(parent: Node2D, pos: Vector2) -> void:
 	p.add_to_group(SKILL_PART_GROUP)
 	p.position = pos
 	parent.add_child(p)
-	# 파우치(사다리꼴) — 이전보다 1.4배 키움
+	# 파우치(사다리꼴) · 이전보다 1.4배 키움
 	_filled(p, Color(0.22, 0.27, 0.17), PackedVector2Array([
 		Vector2(-4, -3), Vector2(4, -3), Vector2(3, 5), Vector2(-3, 5),
 	]))
@@ -614,12 +614,12 @@ static func _attach_glide_wing(torso: Node2D, tier: int) -> void:
 	var w := Node2D.new()
 	w.add_to_group(SKILL_PART_GROUP)
 	torso.add_child(w)
-	# 등 마운트(어깨 뒤 -x) — 크게
+	# 등 마운트(어깨 뒤 -x) · 크게
 	_filled(w, Color(0.28, 0.44, 0.54), PackedVector2Array([
 		Vector2(-10, -42), Vector2(-6, -40), Vector2(-7, -28), Vector2(-11, -29),
 	]))
 	if tier >= 2:
-		# 펼쳐진 큰 윙 (뒤·위로 길게) — T2 삼단점프부터 전개
+		# 펼쳐진 큰 윙 (뒤·위로 길게) · T2 삼단점프부터 전개
 		_filled(w, Color(0.45, 0.74, 0.88, 0.95), PackedVector2Array([
 			Vector2(-9, -42), Vector2(-15, -46), Vector2(-15, -28), Vector2(-9, -30),
 		]))
@@ -637,7 +637,7 @@ static func _attach_glide_wing(torso: Node2D, tier: int) -> void:
 		edge.polygon = PackedVector2Array([Vector2(-12.5, -37), Vector2(-13, -37), Vector2(-13, -31), Vector2(-12.5, -31)])
 		w.add_child(edge)
 	if tier >= 3:
-		# 유도 사격 — 윙 끝 분사 벤트 글로우 (공중 제압 표시)
+		# 유도 사격 · 윙 끝 분사 벤트 글로우 (공중 제압 표시)
 		var vent := Polygon2D.new()
 		vent.color = Color(0.6, 0.95, 1.0, 0.55)
 		vent.polygon = PackedVector2Array([Vector2(-15, -34), Vector2(-18, -33), Vector2(-18, -30), Vector2(-15, -31)])
@@ -653,9 +653,9 @@ static func _attach_ankle_jet(torso: Node2D, pos: Vector2, tier: int) -> void:
 	_filled(j, Color(0.26, 0.50, 0.60), PackedVector2Array([
 		Vector2(-nl, -3.5), Vector2(-2, -3.5), Vector2(-2, 2.5), Vector2(-nl, 2.5),
 	]))
-	# 청록 분사 글로우 (티어별 길이·밝기, stroke 없음) — 정지 상태엔 숨김(2026-08-23 사용자
+	# 청록 분사 글로우 (티어별 길이·밝기, stroke 없음) · 정지 상태엔 숨김(2026-08-23 사용자
 	# "가만히 있는데 잔상 같은 그림이 이상하다"). 시작 알파 0, Player가 매 프레임 속도/대시로
-	# 구동(dash_jet_glow 그룹) — 진짜 분사처럼 움직일 때만 뿜는다.
+	# 구동(dash_jet_glow 그룹) · 진짜 분사처럼 움직일 때만 뿜는다.
 	var glow := Polygon2D.new()
 	var gl_len: float = 12.0 if tier >= 3 else (8.5 if tier >= 2 else 5.0)
 	var gl_a: float = 0.85 if tier >= 3 else 0.62
@@ -676,7 +676,7 @@ static func _attach_revive_module(torso: Node2D, tier: int) -> void:
 	var led_r: float = 2.4 if tier >= 2 else 1.9
 	_filled_circle(m, Vector2(4.5, -35.5), led_r, Color(0.50, 0.95, 0.80), 12)
 	if tier >= 3:
-		# 재충전 — 코어 주위 링(재무장 가능 표시)
+		# 재충전 · 코어 주위 링(재무장 가능 표시)
 		var ring := Line2D.new()
 		var rpts: PackedVector2Array = []
 		for i in 16:
@@ -706,7 +706,7 @@ static func _attach_armor_plates(torso: Node2D, tier: int) -> void:
 			Vector2(-6, -40), Vector2(6, -40), Vector2(5, -30), Vector2(-5, -30),
 		]))
 	if tier >= 3:
-		# 피격 슬로모 — 헬멧 보강 밴드 + 가슴 코어
+		# 피격 슬로모 · 헬멧 보강 밴드 + 가슴 코어
 		_filled(a, Color(0.70, 0.74, 0.82), PackedVector2Array([
 			Vector2(-7, -54), Vector2(7, -54), Vector2(7, -51), Vector2(-7, -51),
 		]))
@@ -738,7 +738,7 @@ static func _filled(parent: Node2D, fill_color: Color, points: PackedVector2Arra
 	parent.add_child(line)
 	return fill
 
-# 외곽선 포함 원 — 다각형으로 근사.
+# 외곽선 포함 원 · 다각형으로 근사.
 static func _filled_circle(parent: Node2D, center: Vector2, radius: float, color: Color, segments: int = 16) -> Polygon2D:
 	var pts: Array = []
 	for i in segments:

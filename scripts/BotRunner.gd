@@ -16,32 +16,32 @@ const BUILDS: Array = [
 const MAPS: Array = [
 	{"rid": "route_substation",     "tags": ["원거리", "드론", "노출", "전투"], "risk": 3, "stage": 4},
 	{"rid": "route_warehouse",      "tags": ["근접전", "전투"], "risk": 2, "stage": 3},
-	# 방 체인 확산 1호(2026-08-18) — 창고와 함께 체인 목표 밴드(막2~3 90~120s) 검증 대상.
+	# 방 체인 확산 1호(2026-08-18) · 창고와 함께 체인 목표 밴드(막2~3 90~120s) 검증 대상.
 	{"rid": "route_cooling",        "tags": ["전투", "드론", "함정"], "risk": 2, "stage": 4},
-	# 배치 2(2026-08-18) — 막2~3 미확산 우선 체인화 3맵.
+	# 배치 2(2026-08-18) · 막2~3 미확산 우선 체인화 3맵.
 	{"rid": "route_control_corridor", "tags": ["전투"], "risk": 3, "stage": 6},
 	{"rid": "route_server_hall",      "tags": ["전투"], "risk": 3, "stage": 6},
-	# 배치 3(2026-08-19) — 중계소 3방 체인(간섭 펄스). 드론은 봇 2회 포기 규칙으로 우회.
+	# 배치 3(2026-08-19) · 중계소 3방 체인(간섭 펄스). 드론은 봇 2회 포기 규칙으로 우회.
 	{"rid": "route_relay_station",    "tags": ["원거리", "드론", "노출", "전투"], "risk": 3, "stage": 10},
 	{"rid": "route_demolition_zone", "tags": ["근접전", "어두운_환경", "전투"], "risk": 2, "stage": 1},
-	# 압력 파일럿(2026-08-21) — 사선 교차·재조준·밀도 재배치. 변전소는 기존 행이 커버.
-	# 감시탑은 추가 불가(실측 2026-08-21): VERTICAL_UP 골이라 봇이 시작 지점에서 정지 —
+	# 압력 파일럿(2026-08-21) · 사선 교차·재조준·밀도 재배치. 변전소는 기존 행이 커버.
+	# 감시탑은 추가 불가(실측 2026-08-21): VERTICAL_UP 골이라 봇이 시작 지점에서 정지 ·
 	# 봇 내비에 수직 상승이 없다(datacenter 제외와 같은 구조 한계). 검증은 실플레이로.
 	{"rid": "route_pump_station",   "tags": ["원거리", "노출", "전투"], "risk": 2, "stage": 1},
-	# 배치 4(2026-08-22) — 응축기·함정 통로·차량 엄폐 체인. 화물 리프트는 제외:
-	# 페리(이동 발판) 대기·탑승 리듬이 봇에 없다(구조 한계) — 검증은 스크린샷+실플레이.
+	# 배치 4(2026-08-22) · 응축기·함정 통로·차량 엄폐 체인. 화물 리프트는 제외:
+	# 페리(이동 발판) 대기·탑승 리듬이 봇에 없다(구조 한계) · 검증은 스크린샷+실플레이.
 	{"rid": "route_condenser",      "tags": ["드론", "함정", "전투"], "risk": 2, "stage": 4},
 	{"rid": "route_gauntlet",       "tags": ["함정", "이동"], "risk": 2, "stage": 4},
 	{"rid": "route_car_cover",      "tags": ["원거리", "이동", "전투"], "risk": 3, "stage": 10},
 	# 표준 조우 벤치(MapData._bot_bench · 게임 미노출): 평지 3웨이브, 빌드 화력의 순수 비교.
 	{"rid": "route_bot_bench",      "tags": ["전투"], "risk": 2, "stage": 3},
-	# 막5 벤치(stage 12) — 막 진행 적 강화(HP·사격 빈도) + 실전형 조우(저격·드론 혼성) 검증.
+	# 막5 벤치(stage 12) · 막 진행 적 강화(HP·사격 빈도) + 실전형 조우(저격·드론 혼성) 검증.
 	# 실런의 만렙 빌드가 실제로 만나는 조우는 이쪽(만렙이 stage 3에 있는 조합은 실런에 없다).
 	{"rid": "route_bot_bench_late", "tags": ["전투", "원거리"], "risk": 2, "stage": 12},
 	# datacenter는 스위트에서 제외(2026-08-18): 수직 지형이라 봇이 상층 드론을 못 잡고
 	# 90s 타임아웃까지 대치(데드락). 전멸형 대표는 벤치가 맡는다 · 참고치 가치 낮음.
 ]
-# 방당 타임아웃 — 단일방 시절 90이었으나 체인 방 확대 + 봇의 전멸 성향(대공·크로스 시도
+# 방당 타임아웃 · 단일방 시절 90이었으나 체인 방 확대 + 봇의 전멸 성향(대공·크로스 시도
 # 포함)으로 base의 정직한 완주가 90을 넘기 시작(창고 방2 실측 97s). 120은 실패 판정이
 # 아니라 측정 상한: 넘으면 그 방 설계나 봇 기법에 구조 문제가 있다는 신호.
 const TIMEOUT_GAME_S: float = 120.0
@@ -49,12 +49,12 @@ const HP_POOL: int = 30   # 사망 중단 없이 받은 피해를 지표로 잰�
 const ONLY_MAP: String = ""   # ""이면 전체 · 진단 시 rid 지정(콤마로 여러 개)
 
 func _ready() -> void:
-	# 실사용자 저장 파일 보호 — 계측 주행 중 도감 첫 조우 등으로 settings.cfg가 기본값으로
+	# 실사용자 저장 파일 보호 · 계측 주행 중 도감 첫 조우 등으로 settings.cfg가 기본값으로
 	# 덮이는 것을 차단(2026-08-24, 설정 리셋 원인).
 	GameState.persist_blocked = true
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	Engine.time_scale = 3.0
-	# 배속에 맞춰 물리 틱도 3배 — 게임초당 물리 delta를 1/60로 보존한다. 이거 없이 scale 3만
+	# 배속에 맞춰 물리 틱도 3배 · 게임초당 물리 delta를 1/60로 보존한다. 이거 없이 scale 3만
 	# 올리면 물리 delta 0.05로 양자화가 거칠어져 명중률·회피가 실플레이와 다르게 측정된다
 	# (2026-08-18 실측: 변전소 발사 98→187 · 벤치 피탄 9→15로 오염).
 	Engine.physics_ticks_per_second = 180
@@ -87,7 +87,7 @@ func _run_one(build: Dictionary, m: Dictionary) -> void:
 	GameState.skills = (build.get("skills", {}) as Dictionary).duplicate()
 	GameState.skills["dash"] = 1
 	GameState.skills["double_jump"] = 1
-	# 레벨업 오버레이(일시정지) 차단 — pause 중엔 골 Area 판정이 없어 가짜 TIMEOUT이 난다
+	# 레벨업 오버레이(일시정지) 차단 · pause 중엔 골 Area 판정이 없어 가짜 TIMEOUT이 난다
 	# (2026-08-18 배치 2에서 실측: 체인·밀도 증가로 XP가 level 30 문턱을 넘기 시작).
 	# level 99 + 폴링마다 XP 0 리셋의 이중 방어.
 	GameState.player_level = 99
@@ -99,7 +99,7 @@ func _run_one(build: Dictionary, m: Dictionary) -> void:
 	GameState.current_route_risk = int(m.get("risk"))
 	GameState.current_route_reward_type = ""   # 봇 계측은 종류 효과 미사용
 	GameState.current_stage = int(m.get("stage"))
-	# 방 체인 — 방마다 새 Stage를 띄워 순서대로 주파, 지표는 체인 합산(한 스테이지 = 한 행).
+	# 방 체인 · 방마다 새 Stage를 띄워 순서대로 주파, 지표는 체인 합산(한 스테이지 = 한 행).
 	var seg_total: int = MapData.segment_count(rid)
 	var kills0: int = GameState.kills_total
 	var enemies_total: int = 0

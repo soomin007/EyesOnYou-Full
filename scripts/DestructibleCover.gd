@@ -1,13 +1,13 @@
 class_name DestructibleCover
 extends StaticBody2D
 
-# 부서지는 엄폐물(정비 차량) — 적 탄을 막지만 피격마다 HP가 줄고 균열, 0에서 파괴된다.
+# 부서지는 엄폐물(정비 차량) · 적 탄을 막지만 피격마다 HP가 줄고 균열, 0에서 파괴된다.
 #
 # 솔리드(layer 1): 플레이어·양측 탄이 모두 막힌다. 저격수 LoS(Enemy._has_line_of_sight, raycast mask 1)를
 # 차단하므로 엄폐 뒤에 붙으면 저격이 발사를 보류(안전) → 넘어갈 때만 노출된다. 발사 함정(BulletTrap) 탄이
 # LoS 무관하게 통로를 훑어 먼 쪽 차량부터 침식 → "머물면 엄폐가 깨진다" 압박(목표 근처가 점점 노출).
 #
-# 데미지 채널: 탄이 StaticBody2D에 부딪히면 hit_by_bullet() — 적 탄(EnemyBullet)과 플레이어 탄
+# 데미지 채널: 탄이 StaticBody2D에 부딪히면 hit_by_bullet() · 적 탄(EnemyBullet)과 플레이어 탄
 # (Bullet) **양쪽 다**(2026-08-21 일관성: "탄이면 갉는다" · 종전엔 적 탄만이라 비대칭이 어색하다는
 # 지적). 원웨이 발판이 아니라 두 방향 솔리드라 "platform" 그룹엔 넣지 않는다(넣으면 원웨이
 # 통과가 되어 탄·플레이어가 뚫음).
@@ -16,7 +16,7 @@ extends StaticBody2D
 
 const COL_BODY: Color = Color(0.21, 0.23, 0.27)
 const COL_CABIN: Color = Color(0.32, 0.42, 0.50, 0.85)
-const COL_TRIM: Color = Color(0.86, 0.63, 0.20)   # 앰버 — 엄폐물 신호(MovingPlatform과 같은 계열)
+const COL_TRIM: Color = Color(0.86, 0.63, 0.20)   # 앰버 · 엄폐물 신호(MovingPlatform과 같은 계열)
 const COL_WHEEL: Color = Color(0.06, 0.06, 0.07)
 const COL_EDGE: Color = Color(0.10, 0.10, 0.12)
 const COL_CRACK: Color = Color(0.02, 0.02, 0.03, 0.92)
@@ -26,14 +26,14 @@ var _max_hp: int = 3
 var _w: float = 96.0
 var _h: float = 72.0
 # 스타일(2026-08-22 고가 저격 도입): "car" = 낮은 정비 차량(지상 사선 차단) /
-# "container" = 키 큰 적재 컨테이너(고가 저격 사선까지 차단 — 그 사각이 답).
+# "container" = 키 큰 적재 컨테이너(고가 저격 사선까지 차단 · 그 사각이 답).
 var _style: String = "car"
 var _art: Node2D = null
 var _col: CollisionShape2D = null
 var _dead: bool = false
 var _shake_tw: Tween = null
 
-# 그리기 전용 자식 — StaticBody도 _draw가 있지만, 흔들림 오프셋을 아트에만 주려고 분리한다.
+# 그리기 전용 자식 · StaticBody도 _draw가 있지만, 흔들림 오프셋을 아트에만 주려고 분리한다.
 class _CoverArt extends Node2D:
 	var host: Object = null
 	func _draw() -> void:
@@ -46,7 +46,7 @@ func setup(w: float, h: float, hp: int, style: String = "car") -> void:
 	_max_hp = maxi(hp, 1)
 	_hp = _max_hp
 	_style = style
-	collision_layer = 1   # 월드 — 플레이어·적탄·플레이어탄(모두 mask 1)이 충돌
+	collision_layer = 1   # 월드 · 플레이어·적탄·플레이어탄(모두 mask 1)이 충돌
 	collision_mask = 0
 	_build_collision()
 	_build_art()
@@ -67,7 +67,7 @@ func _build_art() -> void:
 func _hp_ratio() -> float:
 	return float(_hp) / float(_max_hp)
 
-# EnemyBullet이 StaticBody 충돌 시 호출 — 데미지 1 + 균열/흔들림, 0에서 파괴.
+# EnemyBullet이 StaticBody 충돌 시 호출 · 데미지 1 + 균열/흔들림, 0에서 파괴.
 func hit_by_bullet() -> void:
 	if _dead:
 		return
@@ -86,7 +86,7 @@ func hit_by_bullet() -> void:
 
 func _break() -> void:
 	_dead = true
-	# 즉시 차단 해제 — 더는 엄폐/충돌하지 않게. 물리 flush 중 충돌 회피 위해 disabled는 deferred.
+	# 즉시 차단 해제 · 더는 엄폐/충돌하지 않게. 물리 flush 중 충돌 회피 위해 disabled는 deferred.
 	collision_layer = 0
 	if _col != null:
 		_col.set_deferred("disabled", true)
@@ -100,28 +100,28 @@ func _break() -> void:
 		tw.tween_interval(0.35)
 	tw.tween_callback(queue_free)
 
-# _CoverArt._draw에서 호출 — 스타일별 아트(차량/컨테이너) + 피해 균열.
+# _CoverArt._draw에서 호출 · 스타일별 아트(차량/컨테이너) + 피해 균열.
 func _render_art(art: Node2D) -> void:
 	var hw: float = _w * 0.5
 	var ratio: float = _hp_ratio()
 	var body_col: Color = COL_BODY.darkened((1.0 - ratio) * 0.35)
 	if _style == "container":
-		# 적재 컨테이너 — 키 큰 박스 + 가로 골판 주름 + 모서리 캡. 바퀴·캐빈 없음.
+		# 적재 컨테이너 · 키 큰 박스 + 가로 골판 주름 + 모서리 캡. 바퀴·캐빈 없음.
 		art.draw_rect(Rect2(Vector2(-hw, -_h), Vector2(_w, _h)), body_col.lightened(0.04))
 		var ry: float = -_h + 14.0
 		while ry < -12.0:
 			art.draw_rect(Rect2(Vector2(-hw + 4.0, ry), Vector2(_w - 8.0, 3.0)),
 				Color(0.10, 0.11, 0.13, 0.8))
 			ry += 18.0
-		# 상단 앰버 트림 — "엄폐물" 신호(차량과 공통 어휘).
+		# 상단 앰버 트림 · "엄폐물" 신호(차량과 공통 어휘).
 		art.draw_rect(Rect2(Vector2(-hw, -_h), Vector2(_w, 5.0)), COL_TRIM)
-		# 모서리 캡(수직 보강재 — 좌우 얇은 기둥).
+		# 모서리 캡(수직 보강재 · 좌우 얇은 기둥).
 		for cx in [-hw, hw - 6.0]:
 			art.draw_rect(Rect2(Vector2(float(cx), -_h), Vector2(6.0, _h)),
 				Color(0.14, 0.15, 0.18, 0.95))
 		art.draw_rect(Rect2(Vector2(-hw, -_h), Vector2(_w, _h)), COL_EDGE, false, 1.5)
 	else:
-		# 정비 차량 — 본체 + 캐빈 창 + 바퀴.
+		# 정비 차량 · 본체 + 캐빈 창 + 바퀴.
 		art.draw_rect(Rect2(Vector2(-hw, -_h), Vector2(_w, _h)), body_col)
 		var cab_y: float = -_h + _h * 0.20
 		art.draw_rect(Rect2(Vector2(-hw + _w * 0.12, cab_y), Vector2(_w * 0.76, _h * 0.26)), COL_CABIN)
@@ -129,7 +129,7 @@ func _render_art(art: Node2D) -> void:
 		art.draw_circle(Vector2(-hw + _w * 0.22, -6.0), 9.0, COL_WHEEL)
 		art.draw_circle(Vector2(hw - _w * 0.22, -6.0), 9.0, COL_WHEEL)
 		art.draw_rect(Rect2(Vector2(-hw, -_h), Vector2(_w, _h)), COL_EDGE, false, 1.5)
-	# 균열 — 받은 피해 수만큼(결정적: idx로 분산).
+	# 균열 · 받은 피해 수만큼(결정적: idx로 분산).
 	var dmg: int = _max_hp - _hp
 	for i in dmg:
 		_draw_crack(art, i)

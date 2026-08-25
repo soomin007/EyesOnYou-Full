@@ -1,7 +1,7 @@
 class_name BulletTrap
 extends Node2D
 
-# 발사 포탑 — 표면에 장착되어 정해진 방향으로 빠른 총알을 쏜다. 파괴 불가, 회피해야 함.
+# 발사 포탑 · 표면에 장착되어 정해진 방향으로 빠른 총알을 쏜다. 파괴 불가, 회피해야 함.
 # 모드:
 #   "periodic"  : 텔레그래프(구경 충전) 후 주기 발사.
 #   "triggered" : 평소 대기. 같은 trigger_id의 LaserTripwire가 발동하면 텔레그래프 후 버스트 발사.
@@ -52,7 +52,7 @@ func _process(delta: float) -> void:
 		_advance_burst(delta)
 	queue_redraw()
 
-# LaserTripwire가 호출 — 대기 중인 triggered 포탑을 발사시킴.
+# LaserTripwire가 호출 · 대기 중인 triggered 포탑을 발사시킴.
 func trigger_fire() -> void:
 	if mode != "triggered":
 		return
@@ -101,14 +101,14 @@ func _glow() -> float:
 func _draw() -> void:
 	var g: float = _glow()
 	var perp := Vector2(-direction.y, direction.x)
-	# 조준 라인 — periodic은 점선(텔레그래프 시 밝아짐), triggered는 평소 흐릿하게 발사 방향만 암시.
+	# 조준 라인 · periodic은 점선(텔레그래프 시 밝아짐), triggered는 평소 흐릿하게 발사 방향만 암시.
 	var base_a: float = 0.08 if mode == "triggered" else 0.10
 	var line_col: Color = COL_HOT * Color(1, 1, 1, base_a + 0.55 * g)
 	var seg: float = 16.0
 	var n: int = int(LINE_LEN / seg)
 	for i in range(0, n, 2):
 		draw_line(direction * (float(i) * seg + 18.0), direction * (float(i + 1) * seg + 18.0), line_col, 2.0, true)
-	# 장착 베이스(브래킷) — -direction 쪽 표면에 붙음.
+	# 장착 베이스(브래킷) · -direction 쪽 표면에 붙음.
 	var bracket := PackedVector2Array([
 		perp * 15.0 - direction * 16.0, -perp * 15.0 - direction * 16.0,
 		-perp * 13.0 - direction * 9.0, perp * 13.0 - direction * 9.0])
@@ -119,10 +119,10 @@ func _draw() -> void:
 		-perp * 9.0 + direction * 6.0, perp * 9.0 + direction * 6.0])
 	draw_colored_polygon(housing, COL_PORT)
 	draw_polyline(_closed(housing), COL_EDGE, 1.5, true)
-	# 구경 — 충전 글로우.
+	# 구경 · 충전 글로우.
 	draw_line(perp * 7.0 + direction * 4.0, -perp * 7.0 + direction * 4.0,
 		COL_HOT * Color(1, 1, 1, 0.45 + 0.55 * g), 3.0, true)
-	# ⚠ 경고 — 하우징 뒤(장착면).
+	# ⚠ 경고 · 하우징 뒤(장착면).
 	var wc: Vector2 = -direction * 22.0
 	draw_polyline(_closed(PackedVector2Array([wc + Vector2(0, -5), wc + Vector2(-5, 4), wc + Vector2(5, 4)])),
 		Color(1.0, 0.78, 0.2, 0.9), 1.5, true)

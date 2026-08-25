@@ -1,12 +1,12 @@
 class_name TouchControls
 extends CanvasLayer
 
-# 모바일 터치 조작 오버레이 — 인게임(Stage)에 얹는 가상 버튼 패드.
+# 모바일 터치 조작 오버레이 · 인게임(Stage)에 얹는 가상 버튼 패드.
 #
 # 동작 원리: 이 게임의 인게임 입력은 전부 폴링(Input.get_axis / is_action_pressed /
 # is_action_just_pressed)이라, 가상 버튼이 Input.action_press/release만 호출하면 Player.gd를
 # 고치지 않고 그대로 먹는다. (이 게임은 마우스 조준이 아니라 facing 방향 횡사격이라 조준 스틱이
-# 불필요 — mobile_feasibility.md 참조.)
+# 불필요 · mobile_feasibility.md 참조.)
 #
 # 예외: pause는 Stage가 _unhandled_input의 *이벤트*(event.is_action_pressed("pause"))로 토글하므로
 # action_press로는 안 잡힌다 → InputEventAction을 parse_input_event로 주입한다.
@@ -28,16 +28,16 @@ const DIM_COOLDOWN: float = 0.40
 
 var _font: Font = null
 var _pad: Control = null
-# 버튼 목록 — 각 항목 {action,label,kind,center:Vector2,radius:float}.
+# 버튼 목록 · 각 항목 {action,label,kind,center:Vector2,radius:float}.
 # kind: "tri_left"/"tri_right"/"tri_down"/"text"/"pause".
 var _buttons: Array = []
 var _finger: Dictionary = {}   # 터치 index -> 누르고 있는 버튼 인덱스
 var _down: Dictionary = {}     # 버튼 인덱스 -> true (시각 하이라이트용)
 var _portrait: bool = false
 var _was_paused: bool = false
-var _state_sig: String = ""   # 버튼 상태(vis/en/dim) 서명 — 바뀔 때만 재그리기
+var _state_sig: String = ""   # 버튼 상태(vis/en/dim) 서명 · 바뀔 때만 재그리기
 
-# 그리기 전용 자식 Control — CanvasLayer 자신은 CanvasItem이 아니라 _draw가 없어서,
+# 그리기 전용 자식 Control · CanvasLayer 자신은 CanvasItem이 아니라 _draw가 없어서,
 # Control 하나를 두고 그 _draw에서 host._render(self)를 호출하게 한다.
 class _Pad extends Control:
 	var host: Object = null
@@ -56,7 +56,7 @@ func _ready() -> void:
 		_font = ThemeDB.fallback_font
 	_pad = _Pad.new()
 	_pad.host = self
-	_pad.mouse_filter = Control.MOUSE_FILTER_IGNORE  # gui_input을 가로채지 않게 — 입력은 _input에서 직접 처리
+	_pad.mouse_filter = Control.MOUSE_FILTER_IGNORE  # gui_input을 가로채지 않게 · 입력은 _input에서 직접 처리
 	add_child(_pad)
 	_build_buttons()
 	_fit()
@@ -86,11 +86,11 @@ func _fit() -> void:
 	if _pad != null:
 		_pad.queue_redraw()
 
-# 코너 기준 배치 — 화면 폭/높이에 맞춰 매 _fit마다 다시 계산(폰 비율이 1280x720보다 넓어도 코너에 붙음).
+# 코너 기준 배치 · 화면 폭/높이에 맞춰 매 _fit마다 다시 계산(폰 비율이 1280x720보다 넓어도 코너에 붙음).
 func _layout(vs: Vector2) -> void:
 	var w: float = vs.x
 	var h: float = vs.y
-	# 좌하단 = 이동 D-pad(왼손). 좌우 나란히 + '아래'(▼)는 그 밑 중앙 — 아이콘 방향과 위치를 일치시켜
+	# 좌하단 = 이동 D-pad(왼손). 좌우 나란히 + '아래'(▼)는 그 밑 중앙 · 아이콘 방향과 위치를 일치시켜
 	# "아래인데 위에 있어 어색"을 해소. 손가락 기본 위치(버튼 사이 빈 공간)에 맞게 안쪽으로 모음.
 	_set_center("move_left",  Vector2(140.0, h - 128.0))
 	_set_center("move_right", Vector2(296.0, h - 128.0))
@@ -130,7 +130,7 @@ func _button_at(pos: Vector2) -> int:
 	var best_d: float = 1.0e20
 	for i in _buttons.size():
 		var b: Dictionary = _buttons[i]
-		# 숨김/비활성(전투차단·미보유) 버튼은 터치를 받지 않는다 — 헛눌림/유령 하이라이트 방지.
+		# 숨김/비활성(전투차단·미보유) 버튼은 터치를 받지 않는다 · 헛눌림/유령 하이라이트 방지.
 		if not bool(b.get("vis", true)) or not bool(b.get("en", true)):
 			continue
 		var c: Vector2 = b["center"]
@@ -153,7 +153,7 @@ func _finger_move(index: int, pos: Vector2) -> void:
 	var bi: int = _button_at(pos)
 	if bi == cur:
 		return
-	# 손가락이 다른 버튼(또는 밖)으로 옮겨감 — 이전 해제 후 새 버튼 활성(좌↔우 슬라이드에 유용).
+	# 손가락이 다른 버튼(또는 밖)으로 옮겨감 · 이전 해제 후 새 버튼 활성(좌↔우 슬라이드에 유용).
 	if cur >= 0:
 		_activate(cur, false)
 		_finger.erase(index)
@@ -195,7 +195,7 @@ func _process(_delta: float) -> void:
 			_release_all()  # 일시정지 진입 시 눌린 채로 멈춘 액션이 carry되지 않게
 		if _pad != null:
 			_pad.visible = not p
-	# 보일 때만 버튼 상태(쿨다운/미보유/전투차단) 갱신 — 바뀌면 재그리기.
+	# 보일 때만 버튼 상태(쿨다운/미보유/전투차단) 갱신 · 바뀌면 재그리기.
 	if not p and not _portrait:
 		_update_states()
 
@@ -253,7 +253,7 @@ func _update_states() -> void:
 		if _pad != null:
 			_pad.queue_redraw()
 
-# 눌려 있던 모든 액션 해제 — 일시정지 진입/씬 이탈 시 유령 입력 방지.
+# 눌려 있던 모든 액션 해제 · 일시정지 진입/씬 이탈 시 유령 입력 방지.
 func _release_all() -> void:
 	for index in _finger.keys():
 		var cur: int = int(_finger[index])
@@ -287,7 +287,7 @@ func _draw_button(pad: Control, b: Dictionary, down: bool) -> void:
 	var c: Vector2 = b["center"]
 	var r: float = b["radius"]
 	var kind: String = b["kind"]
-	# 미보유/쿨다운 흐림 — 모든 색의 알파에 곱한다.
+	# 미보유/쿨다운 흐림 · 모든 색의 알파에 곱한다.
 	var dim: float = float(b.get("dim", 1.0))
 	var bg_c: Color = BG_DOWN_COL if down else BG_COL
 	var edge_c: Color = EDGE_DOWN_COL if down else EDGE_COL

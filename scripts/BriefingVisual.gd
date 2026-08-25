@@ -1,16 +1,16 @@
 extends Control
 
-# VEIL 인트로 비주얼 — OPERATION PALIMPSEST 진입 시 "연결되며 열리는 감시 조리개/눈".
+# VEIL 인트로 비주얼 · OPERATION PALIMPSEST 진입 시 "연결되며 열리는 감시 조리개/눈".
 # 자산 없이 _draw 도형만으로 그린다(백로그: 도형·색 프로토타입). stage 0 인트로에서만 표시
-# (Briefing.gd가 visible 제어). 색은 VEIL 시안 계열 — 화면 우측에 "당신을 본다" 정체성을 시각화.
+# (Briefing.gd가 visible 제어). 색은 VEIL 시안 계열 · 화면 우측에 "당신을 본다" 정체성을 시각화.
 # 등장 시 조리개가 열리고(appear 이징), 스캔 선이 회전하며, 눈동자가 천천히 맥동한다.
 
 const COL_VEIL: Color = Color(0.46, 0.86, 1.0)
 const TWO_PI: float = PI * 2.0
 
-var t: float = 0.0        # 누적 시간 — 회전/맥동/스캔라인 구동
+var t: float = 0.0        # 누적 시간 · 회전/맥동/스캔라인 구동
 var appear: float = 0.0   # 0→1 등장 이징 (조리개 열림)
-var degraded: bool = false  # ACT3 시야 붕괴 — 눈이 흐려지고 불안정해짐(서사 연결)
+var degraded: bool = false  # ACT3 시야 붕괴 · 눈이 흐려지고 불안정해짐(서사 연결)
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -28,12 +28,12 @@ func _draw() -> void:
 	var r: float = minf(size.x * 0.5, size.y * 0.5) * 0.86
 	if r <= 1.0:
 		return
-	# 시야 붕괴 — 통신 두절/EMP 재머 느낌. 주기적 신호 끊김(드롭아웃) + 위치 지터.
+	# 시야 붕괴 · 통신 두절/EMP 재머 느낌. 주기적 신호 끊김(드롭아웃) + 위치 지터.
 	if degraded:
 		if fmod(t * 9.0, 1.0) < 0.16:
 			return  # 짧게 화면에서 사라졌다 돌아옴(신호 끊김)
 		c += Vector2(randf_range(-2.5, 2.5), randf_range(-2.5, 2.5))
-	# easeOutCubic — 등장 알파/스케일.
+	# easeOutCubic · 등장 알파/스케일.
 	var a: float = 1.0 - pow(1.0 - appear, 3.0)
 	# 시야 붕괴 후엔 눈이 흐려지고 불안정하게 깜빡인다(VEIL이 잘 못 봄을 브리핑에서도 체감).
 	if degraded:
@@ -44,7 +44,7 @@ func _draw() -> void:
 	# --- 바깥 링 2겹 + 눈금 ---
 	_ring(c, r, 2.0, COL_VEIL * Color(1, 1, 1, 0.55 * a))
 	_ring(c, r * 0.82, 1.0, COL_VEIL * Color(1, 1, 1, 0.28 * a))
-	# 눈금 — 30°마다 짧은 방사선, 동서남북엔 길게.
+	# 눈금 · 30°마다 짧은 방사선, 동서남북엔 길게.
 	for i in 12:
 		var ang: float = float(i) / 12.0 * TWO_PI
 		var cardinal: bool = (i % 3 == 0)
@@ -76,14 +76,14 @@ func _draw() -> void:
 	# --- 눈동자 (조리개 열림 + 맥동) ---
 	var pulse: float = 0.5 + 0.5 * sin(t * 1.8)
 	var pupil_r: float = r * (0.10 + 0.16 * appear) * (0.92 + 0.08 * pulse)
-	# 홍채 글로우 — 바깥에서 안으로 짙어지는 동심원 몇 겹.
+	# 홍채 글로우 · 바깥에서 안으로 짙어지는 동심원 몇 겹.
 	for i in 5:
 		var f: float = float(i) / 4.0
 		var rr: float = pupil_r * (2.4 - f * 1.4)
 		draw_circle(c, rr, COL_VEIL * Color(1, 1, 1, 0.06 * a))
 	draw_circle(c, pupil_r, COL_VEIL * Color(1, 1, 1, (0.45 + 0.25 * pulse) * a))
 	_ring(c, pupil_r, 1.5, COL_VEIL * Color(1, 1, 1, 0.8 * a))
-	# 하이라이트 점 — 시선 느낌.
+	# 하이라이트 점 · 시선 느낌.
 	draw_circle(c + Vector2(-pupil_r * 0.3, -pupil_r * 0.3), pupil_r * 0.22, Color(0.9, 0.98, 1.0, 0.7 * a))
 
 	# --- 드리프트 스캔라인 (얇은 가로선이 위아래로) ---

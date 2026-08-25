@@ -1,6 +1,6 @@
 extends Control
 
-# 다단계 메인 메뉴 — 키보드/마우스/패드 모두 동일한 흐름.
+# 다단계 메인 메뉴 · 키보드/마우스/패드 모두 동일한 흐름.
 #   STATE_MAIN  : 게임 시작 / 설정 / 게임 종료
 #   STATE_MODE  : 일반 모드 / 스토리 모드 / 뒤로
 #   STATE_TUTOR : 튜토리얼부터 시작? 예 / 아니오 / 뒤로
@@ -13,12 +13,12 @@ enum { STATE_MAIN, STATE_MODE, STATE_TUTOR, STATE_NEWGAME_CONFIRM, STATE_PATCHNO
 @onready var center_node: CenterContainer = $Center
 
 var blink_t: float = 0.0
-# F11 전체화면 안내(데스크톱 전용, 전체화면 아닐 때만) — _process가 0.5s 폴링으로 노출 갱신.
+# F11 전체화면 안내(데스크톱 전용, 전체화면 아닐 때만) · _process가 0.5s 폴링으로 노출 갱신.
 var _f11_hint: Label = null
 var _f11_poll_t: float = 0.0
 var settings_overlay: Control = null
 var state: int = STATE_MAIN
-# 모드 선택 단계에서 결정 — TUTOR 단계에서 사용.
+# 모드 선택 단계에서 결정 · TUTOR 단계에서 사용.
 var picked_story: bool = false
 # STATE_MODE 전용 설명 패널 (오른쪽 회색 박스).
 var description_panel: PanelContainer = null
@@ -30,7 +30,7 @@ var description_icon: ColorRect = null
 
 func _ready() -> void:
 	GameState.reset()
-	# 웹 개인 플레이 — 도감(seen_enemies)·본 엔딩은 누적 영속. 부스 가정의 "매 진입=새 세션" 도감 리셋
+	# 웹 개인 플레이 · 도감(seen_enemies)·본 엔딩은 누적 영속. 부스 가정의 "매 진입=새 세션" 도감 리셋
 	# 제거(2026-06-23 방향 전환). 진행 이어하기는 별도 run.cfg가 담당(reset과 무관).
 	GameState.save_settings()
 	GameState.input_kind_changed.connect(_on_input_kind_changed)
@@ -40,7 +40,7 @@ func _ready() -> void:
 	_build_description_panel()
 	_build_patch_panel()
 	_set_state(STATE_MAIN)
-	# 폰(키보드 없음)용 디버그 잠금 해제 — 좌상단 숨은 영역 연속 탭. _set_state 뒤에 추가해 최상위(입력 우선).
+	# 폰(키보드 없음)용 디버그 잠금 해제 · 좌상단 숨은 영역 연속 탭. _set_state 뒤에 추가해 최상위(입력 우선).
 	_build_debug_hotzone()
 
 func _build_description_panel() -> void:
@@ -48,7 +48,7 @@ func _build_description_panel() -> void:
 	description_panel = PanelContainer.new()
 	description_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	description_panel.anchor_left = 0.55
-	# 사용자: 박스/텍스트 좀만 위로 — 0.36 → 0.20.
+	# 사용자: 박스/텍스트 좀만 위로 · 0.36 → 0.20.
 	description_panel.anchor_top = 0.20
 	description_panel.anchor_right = 0.92
 	description_panel.anchor_bottom = 0.65
@@ -71,7 +71,7 @@ func _build_description_panel() -> void:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 16)
 	description_panel.add_child(v)
-	# 간단한 도형 아이콘 — 모드별 색깔 다름. 작은 사각형 + 외곽선 느낌.
+	# 간단한 도형 아이콘 · 모드별 색깔 다름. 작은 사각형 + 외곽선 느낌.
 	description_icon = ColorRect.new()
 	description_icon.color = Color(0.62, 0.78, 0.92)
 	description_icon.custom_minimum_size = Vector2(56, 56)
@@ -143,7 +143,7 @@ func _fill_patch_panel(patch: Dictionary, latest: bool) -> void:
 		patch_v.add_child(sub)
 	for item in patch.get("items", []):
 		var l := Label.new()
-		# keep_all — 어절 단위 줄바꿈("조여옵니/다" 같은 음절 꺾임 방지 · TextUtil 참고).
+		# keep_all · 어절 단위 줄바꿈("조여옵니/다" 같은 음절 꺾임 방지 · TextUtil 참고).
 		l.text = TextUtil.keep_all("· " + str(item))
 		l.add_theme_font_size_override("font_size", 13)
 		l.add_theme_color_override("font_color", Color(0.78, 0.82, 0.88))
@@ -151,7 +151,7 @@ func _fill_patch_panel(patch: Dictionary, latest: bool) -> void:
 		l.custom_minimum_size = Vector2(360, 0)
 		patch_v.add_child(l)
 
-# F11 전체화면 안내(사용자 2026-08-14) — 데스크톱(비터치)에서 전체화면이 아닐 때만 우하단 노출.
+# F11 전체화면 안내(사용자 2026-08-14) · 데스크톱(비터치)에서 전체화면이 아닐 때만 우하단 노출.
 # 모바일(터치)은 자동 전체화면이 담당하므로 제외. 펄스는 완만하게(_process).
 func _build_f11_hint() -> void:
 	if OrientationGuard.is_touch_device():
@@ -196,7 +196,7 @@ func _refresh_hint() -> void:
 
 func _process(delta: float) -> void:
 	blink_t += delta
-	# F11 안내(데스크톱) — 전체화면이 아닐 때만 노출(0.5s 폴링), 완만한 펄스.
+	# F11 안내(데스크톱) · 전체화면이 아닐 때만 노출(0.5s 폴링), 완만한 펄스.
 	if _f11_hint != null:
 		_f11_poll_t -= delta
 		if _f11_poll_t <= 0.0:
@@ -210,7 +210,7 @@ func _process(delta: float) -> void:
 			hint_label.modulate.a = 0.5 + 0.5 * sin(blink_t * 3.0)
 		else:
 			hint_label.modulate.a = 1.0
-	# 포커스 가드 — 메뉴에서 포커스가 사라지면(예: snu 입력 중 's'(이동 매핑)가 포커스를 이탈시킴)
+	# 포커스 가드 · 메뉴에서 포커스가 사라지면(예: snu 입력 중 's'(이동 매핑)가 포커스를 이탈시킴)
 	# 첫 버튼으로 회수. 설정창 떠 있을 땐 설정창이 포커스를 가지므로 건드리지 않는다.
 	if settings_overlay == null and buttons_box != null and buttons_box.get_child_count() > 0:
 		if get_viewport().gui_get_focus_owner() == null:
@@ -237,12 +237,12 @@ func _set_state(new_state: int) -> void:
 			var b_start := _make_button("게임 시작")
 			b_start.pressed.connect(_on_start_pressed)
 			buttons_box.add_child(b_start)
-			# 이어하기 — 저장된 진행(run.cfg)이 있을 때만. 웹에서 닫았다 와도 스테이지 사이부터 재개.
+			# 이어하기 · 저장된 진행(run.cfg)이 있을 때만. 웹에서 닫았다 와도 스테이지 사이부터 재개.
 			if GameState.has_run():
 				var b_continue := _make_button("이어하기")
 				b_continue.pressed.connect(_on_continue_pressed)
 				buttons_box.add_child(b_continue)
-			# 기록 재진입(팔림프세스트) — 완주 1회 이상 + 확정 스냅샷 보유 시에만 노출(그 전엔 숨김).
+			# 기록 재진입(팔림프세스트) · 완주 1회 이상 + 확정 스냅샷 보유 시에만 노출(그 전엔 숨김).
 			if GameState.playthrough_count >= 1 and GameState.has_any_confirmed_snapshot():
 				var b_reentry := _make_button("기록 재진입")
 				b_reentry.pressed.connect(_on_reentry_pressed)
@@ -257,7 +257,7 @@ func _set_state(new_state: int) -> void:
 			var b_feedback := _make_button("피드백 보내기")
 			b_feedback.pressed.connect(_on_feedback_pressed)
 			buttons_box.add_child(b_feedback)
-			# 검증 갤러리(개발용 · 2026-08-23 사용자 요청) — 실플레이 QA 큐 아티팩트로 바로 이동.
+			# 검증 갤러리(개발용 · 2026-08-23 사용자 요청) · 실플레이 QA 큐 아티팩트로 바로 이동.
 			# 디버그 빌드에서만 노출: 배포(release/웹 배포) 빌드에는 버튼 자체가 없다.
 			if OS.is_debug_build():
 				var b_verify := _make_button("검증 갤러리")
@@ -300,7 +300,7 @@ func _set_state(new_state: int) -> void:
 			buttons_box.add_child(b_back)
 			b_yes.grab_focus.call_deferred()
 		STATE_NEWGAME_CONFIRM:
-			# 진행 저장 덮어쓰기 경고(사용자 제안). 실제 삭제는 _on_tutor_pressed에서 — 여기선 안내·확인만.
+			# 진행 저장 덮어쓰기 경고(사용자 제안). 실제 삭제는 _on_tutor_pressed에서 · 여기선 안내·확인만.
 			var warn := Label.new()
 			warn.text = "진행 중인 게임이 있어요. 새로 시작하면 그 진행이 사라져요."
 			warn.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -339,7 +339,7 @@ func _make_button(text: String) -> Button:
 	var b := Button.new()
 	b.text = text
 	b.custom_minimum_size = Vector2(360, 44)
-	# 컨테이너 폭으로 늘어나지 않고 360 고정·가운데 — 박스가 너무 넓어 보이던 문제(사용자 보고).
+	# 컨테이너 폭으로 늘어나지 않고 360 고정·가운데 · 박스가 너무 넓어 보이던 문제(사용자 보고).
 	b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	b.add_theme_font_size_override("font_size", 18)
 	return b
@@ -347,16 +347,16 @@ func _make_button(text: String) -> Button:
 func _unhandled_input(event: InputEvent) -> void:
 	if settings_overlay != null:
 		return
-	# 한 단계 뒤로 — ESC, 패드 B (둘 다 ui_cancel에 매핑).
+	# 한 단계 뒤로 · ESC, 패드 B (둘 다 ui_cancel에 매핑).
 	if event.is_action_pressed("ui_cancel"):
 		if state != STATE_MAIN:
 			_on_back_pressed()
 			get_viewport().set_input_as_handled()
 
-# 디버그 잠금 해제 키 시퀀스("snu") 추적은 _input에서 — _unhandled_input은 포커스/
+# 디버그 잠금 해제 키 시퀀스("snu") 추적은 _input에서 · _unhandled_input은 포커스/
 # 내비게이션 시스템이 키를 소비한 뒤 호출되므로 's'(move_down 매핑)가 안 잡힘.
 # (사용자 보고: snu 입력해도 잠금 해제 안 됨.)
-# _input은 raw 이벤트 — 여기서는 추적만 하고 set_input_as_handled 호출 안 함 → 기존
+# _input은 raw 이벤트 · 여기서는 추적만 하고 set_input_as_handled 호출 안 함 → 기존
 # 이동/포커스 동작은 그대로 유지.
 func _input(event: InputEvent) -> void:
 	if settings_overlay != null:
@@ -365,7 +365,7 @@ func _input(event: InputEvent) -> void:
 		_track_debug_unlock_sequence(event as InputEventKey)
 		_track_konami(event as InputEventKey)
 
-# 이스터에그 — 코나미 코드(↑↑↓↓←→←→ B A)로 숨은 대체 색 잠금 해제(데스크톱 키보드).
+# 이스터에그 · 코나미 코드(↑↑↓↓←→←→ B A)로 숨은 대체 색 잠금 해제(데스크톱 키보드).
 # 폰(키보드 없음)은 황금 3처치로 대신 열린다(Stage._reward_shiny_kill). 추적만 하고 입력은 소비 안 함.
 const _KONAMI: Array = [KEY_UP, KEY_UP, KEY_DOWN, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_LEFT, KEY_RIGHT, KEY_B, KEY_A]
 var _konami_idx: int = 0
@@ -402,7 +402,7 @@ func _show_skin_unlock_toast() -> void:
 const _DEBUG_CODE: String = "snu"
 var _debug_input_buffer: String = ""
 
-# 폰용 디버그 잠금 해제 — 좌상단 숨은 hot-zone을 빠르게 연속 탭(안드로이드 "빌드 번호 7번 탭" 방식).
+# 폰용 디버그 잠금 해제 · 좌상단 숨은 hot-zone을 빠르게 연속 탭(안드로이드 "빌드 번호 7번 탭" 방식).
 # gui_input으로 받아 좌표 공간/스케일 문제 없이 동작. 데스크톱은 "snu" 키 시퀀스와 병행(둘 다 유효).
 const _DEBUG_TAP_TARGET: int = 7
 const _DEBUG_TAP_WINDOW_MS: int = 2000  # 이 간격 넘게 뜸하면 카운트 리셋(우발 방지)
@@ -442,7 +442,7 @@ func _on_debug_hotzone_input(event: InputEvent) -> void:
 func _track_debug_unlock_sequence(ev: InputEventKey) -> void:
 	if GameState.debug_unlocked:
 		return
-	# 키 라벨 가져오기 — 알파벳만 인정. unicode가 0이면 keycode로 폴백.
+	# 키 라벨 가져오기 · 알파벳만 인정. unicode가 0이면 keycode로 폴백.
 	var ch_int: int = ev.unicode
 	if ch_int == 0:
 		ch_int = ev.keycode
@@ -485,11 +485,11 @@ func _on_mode_focused(which: String) -> void:
 		return
 	match which:
 		"normal":
-			description_icon.color = Color(0.95, 0.55, 0.45)  # 주황 — 도전적
+			description_icon.color = Color(0.95, 0.55, 0.45)  # 주황 · 도전적
 			description_title_label.text = "일반 모드"
 			description_text_label.text = "전투와 회피가 중심.\n\n· HP 3\n· 7 스테이지\n· 보스 3페이즈\n· 드론·저격수 등 모든 적"
 		"story":
-			description_icon.color = Color(0.55, 0.85, 0.95)  # 푸름 — 부드러움
+			description_icon.color = Color(0.55, 0.85, 0.95)  # 푸름 · 부드러움
 			description_title_label.text = "스토리 모드"
 			description_text_label.text = "쉽게 따라오는 흐름.\n\n· HP 무제한\n· 5 스테이지\n· 보스 단순화\n· 드론 없음"
 		"back":
@@ -503,16 +503,16 @@ func _on_mode_pressed(story: bool) -> void:
 	_set_state(STATE_TUTOR)
 
 func _on_continue_pressed() -> void:
-	# 이어하기 — 저장된 런을 GameState에 복원하고 루트 선택(스테이지 사이)으로 복귀.
+	# 이어하기 · 저장된 런을 GameState에 복원하고 루트 선택(스테이지 사이)으로 복귀.
 	if GameState.load_run():
 		SceneRouter.go(get_tree(), SceneRouter.ROUTE_MAP)
 
 func _on_reentry_pressed() -> void:
-	# 기록 재진입(팔림프세스트) — 막 경계 선택 오버레이. 선택 시 오버레이가 직접 씬 전환.
+	# 기록 재진입(팔림프세스트) · 막 경계 선택 오버레이. 선택 시 오버레이가 직접 씬 전환.
 	ReentryOverlay.show(self)
 
 func _on_tutor_pressed(want_tutorial: bool) -> void:
-	# 새 게임 시작 — 이전 진행 저장(run.cfg) 삭제(이어하기와 분리). 모드는 모드 선택에서 이미 박혔다.
+	# 새 게임 시작 · 이전 진행 저장(run.cfg) 삭제(이어하기와 분리). 모드는 모드 선택에서 이미 박혔다.
 	GameState.clear_run()
 	if want_tutorial:
 		get_tree().change_scene_to_file.call_deferred(SceneRouter.TUTORIAL)
@@ -522,7 +522,7 @@ func _on_tutor_pressed(want_tutorial: bool) -> void:
 func _on_back_pressed() -> void:
 	match state:
 		STATE_TUTOR:
-			# 모드 선택으로 — story_mode 다시 끄고 돌아감
+			# 모드 선택으로 · story_mode 다시 끄고 돌아감
 			GameState.story_mode = false
 			_set_state(STATE_MODE)
 		STATE_MODE:
@@ -547,7 +547,7 @@ func _on_settings_closed() -> void:
 	if settings_overlay != null:
 		settings_overlay.queue_free()
 		settings_overlay = null
-	# 설정 닫힌 뒤 포커스가 사라져 키/패드 입력이 먹히지 않던 버그 — 첫 버튼에 다시 포커스.
+	# 설정 닫힌 뒤 포커스가 사라져 키/패드 입력이 먹히지 않던 버그 · 첫 버튼에 다시 포커스.
 	if buttons_box.get_child_count() > 0:
 		var first := buttons_box.get_child(0) as Button
 		if first != null:
@@ -556,7 +556,7 @@ func _on_settings_closed() -> void:
 func _on_feedback_pressed() -> void:
 	GameState.open_feedback()
 
-# 검증 갤러리(개발용) — 세션이 관리하는 QA 큐 아티팩트. URL이 바뀌면 여기와
+# 검증 갤러리(개발용) · 세션이 관리하는 QA 큐 아티팩트. URL이 바뀌면 여기와
 # 메모리 verify-gallery-routine을 함께 갱신한다.
 const VERIFY_GALLERY_URL: String = "https://claude.ai/code/artifact/54f220b5-974e-404e-b270-98750e6b69d4"
 

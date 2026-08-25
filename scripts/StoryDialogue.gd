@@ -2,12 +2,12 @@ class_name StoryDialogue
 extends CanvasLayer
 
 # 컷씬 대사 오버레이(2026-08-23 사용자: "스토리용 대사·보스전 오프닝은 온전히 그 대사에만
-# 집중할 환경을 만들라") — 세계를 일시정지하고 대사를 한 줄씩 보여준다.
+# 집중할 환경을 만들라") · 세계를 일시정지하고 대사를 한 줄씩 보여준다.
 #  - 대상: 구조/스토리 발화 비트(막3 reveal · 회선 잠금 · 14-1 페이즈 오프닝/자백/격파).
 #    전투 중 위협 콜아웃·조언·route_lines는 기존 자막 유지(눈앞의 것이 지시 대상이라 겹침이 정상).
 #  - 조작: 스페이스/클릭/탭 = 줄 완성 → 다음 줄. ESC = 전체 건너뛰기. 아무 키나 길게(0.55s)도
 #    전체 건너뛰기(터치·패드 대응). 진입 직후 0.3s는 잔여 입력 무시(문서 오버레이와 동형 가드).
-#  - 일시정지 자립 관리: 열 때 pause, 닫을 때 복원(+ _exit_tree 안전판 — ArcturusDocumentOverlay 패턴).
+#  - 일시정지 자립 관리: 열 때 pause, 닫을 때 복원(+ _exit_tree 안전판 · ArcturusDocumentOverlay 패턴).
 #  - 시각: 어둡게 깔린 정지 화면 + 레터박스(표준 컷씬 문법) + 기존 자막 pill 문법(화자 색 동일)을
 #    큰 폰트로. 게임 세계가 배경 무대로 얼어 있는 채 대사만 진행된다.
 
@@ -17,7 +17,7 @@ const TYPE_SEC_PER_CHAR: float = 0.016   # Stage._subtitle_type_time과 같은 �
 const HOLD_SKIP_SEC: float = 0.55
 const ENTER_LOCKOUT: float = 0.3
 
-# 화자 초상(하데스식 액자 · 2026-08-23 사용자 제공 아트) — 아트가 어두운 배경까지 한 장이라
+# 화자 초상(하데스식 액자 · 2026-08-23 사용자 제공 아트) · 아트가 어두운 배경까지 한 장이라
 # 투명화 대신 프레임에 담는다(글리치판은 배경과 본체 분리 불가 · 사용자 후처리 지침).
 # 라이벌은 정체 공개 전(첫 격파 전 + P3 도달 전)엔 글리치 은닉판.
 const PORTRAIT_VEIL: String = "res://assets/portraits/veil.webp"
@@ -25,11 +25,11 @@ const PORTRAIT_RIVAL_HIDDEN: String = "res://assets/portraits/rival_hidden.webp"
 const PORTRAIT_RIVAL_EYE: String = "res://assets/portraits/rival_eye.webp"
 
 # 줄 서식: {who: "rival"/"veil", text: String, portrait?: "hidden"}
-#  - portrait "hidden": 라이벌 공개 게이트를 무시하고 은닉판 강제 — 실체가 그 자리에 없는
+#  - portrait "hidden": 라이벌 공개 게이트를 무시하고 은닉판 강제 · 실체가 그 자리에 없는
 #    무전 목소리 비트(막4/5 잠금)용. 다회차 런에서 거대 눈이 뜨던 문제(4차 피드백)도 막는다.
 var _lines: Array = []
 
-# 쇼케이스 — 대사가 가리키는 실물(예: 잠금 하트 줄)을 컷씬 화면 상단 중앙에 띄운다.
+# 쇼케이스 · 대사가 가리키는 실물(예: 잠금 하트 줄)을 컷씬 화면 상단 중앙에 띄운다.
 # HUD가 레터박스·딤에 가려 지시 대상이 화면에 없어지는 문제(4차 피드백)의 해소 장치.
 # add_child 전에 세팅한다. 컷씬이 소유(종료 페이드·해제 포함).
 var showcase: Control = null
@@ -50,7 +50,7 @@ var _lockout_t: float = ENTER_LOCKOUT
 var _done: bool = false
 var _prev_paused: bool = false
 
-# 초상 경계 월경 글리치(2026-08-25 사용자 안) — 초상을 대사 판 위로 올리고, 패널 윗변을
+# 초상 경계 월경 글리치(2026-08-25 사용자 안) · 초상을 대사 판 위로 올리고, 패널 윗변을
 # 넘어온 부분을 셰이더가 잇는다. 상시 저강도 + 줄 시작 버스트 엔벨로프를 _process가 구동.
 const PORTRAIT_GLITCH: Shader = preload("res://assets/shaders/portrait_glitch.gdshader")
 var _portrait_mat: ShaderMaterial = null
@@ -59,28 +59,28 @@ var _glitch_burst: float = 0.0
 
 static var active: StoryDialogue = null
 
-# 패널 장식 — 이중 프레임(바깥 어두운 헤어라인) + 오른쪽 모서리 ㄱ자 브래킷 + 왼쪽 아래 틱 +
+# 패널 장식 · 이중 프레임(바깥 어두운 헤어라인) + 오른쪽 모서리 ㄱ자 브래킷 + 왼쪽 아래 틱 +
 # 윗 레일 눈금·접점 노드(전술 콘솔 문법). 왼쪽 위 모서리는 초상이 덮으므로 비운다.
 # 서식 리뉴얼 2차(5차 피드백 "여전히 너무 밋밋").
 class _PanelTrim extends Control:
 	var col: Color = Color.WHITE
-	var rail_from_x: float = 0.0   # 레일 눈금 시작 x(트림 로컬) — 초상 오른쪽부터. 0이면 생략.
+	var rail_from_x: float = 0.0   # 레일 눈금 시작 x(트림 로컬) · 초상 오른쪽부터. 0이면 생략.
 	func _draw() -> void:
 		var w: float = size.x
 		var h: float = size.y
 		var arm: float = 16.0
 		var th: float = 2.0
-		# 이중 프레임 — 판 바깥 한 겹의 어두운 창틀 라인.
+		# 이중 프레임 · 판 바깥 한 겹의 어두운 창틀 라인.
 		draw_rect(Rect2(0.5, 0.5, w - 1.0, h - 1.0), Color(col.r, col.g, col.b, 0.22), false, 1.0)
 		# 오른쪽 모서리 브래킷.
 		draw_rect(Rect2(w - arm, 0.0, arm, th), col, true)
 		draw_rect(Rect2(w - th, 0.0, th, arm), col, true)
 		draw_rect(Rect2(w - arm, h - th, arm, th), col, true)
 		draw_rect(Rect2(w - th, h - arm, th, arm), col, true)
-		# 왼쪽 아래 틱 — 초상에 안 덮이는 쪽 최소 마감(비대칭이 초상 자리를 설명한다).
+		# 왼쪽 아래 틱 · 초상에 안 덮이는 쪽 최소 마감(비대칭이 초상 자리를 설명한다).
 		draw_rect(Rect2(0.0, h - th, arm, th), col, true)
 		draw_rect(Rect2(0.0, h - arm, th, arm), col, true)
-		# 윗 레일 — 접점 노드(밝은 점) + 96px 간격 짧은 눈금(전술 눈금자).
+		# 윗 레일 · 접점 노드(밝은 점) + 96px 간격 짧은 눈금(전술 눈금자).
 		if rail_from_x > 0.0:
 			draw_rect(Rect2(rail_from_x - 2.0, 3.0, 5.0, 8.0), col, true)
 			var tx: float = rail_from_x + 96.0
@@ -102,7 +102,7 @@ func _ready() -> void:
 	active = self
 	_prev_paused = get_tree().paused
 	get_tree().paused = true
-	# 어둡게 — 정지된 게임 화면이 무대 배경으로 남는다(완전 암전 아님).
+	# 어둡게 · 정지된 게임 화면이 무대 배경으로 남는다(완전 암전 아님).
 	_dim = ColorRect.new()
 	_dim.color = Color(0, 0, 0, 0.0)
 	_dim.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -111,15 +111,15 @@ func _ready() -> void:
 	var dtw := _dim.create_tween()
 	dtw.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	dtw.tween_property(_dim, "color:a", 0.5, 0.22)
-	# 레터박스 — 위/아래 바가 화면 밖에서 밀려 들어온다(컷씬 신호, 표준 기법).
+	# 레터박스 · 위/아래 바가 화면 밖에서 밀려 들어온다(컷씬 신호, 표준 기법).
 	_bar_top = _make_bar(true)
 	_bar_bot = _make_bar(false)
-	# 대사 홀더 — 하단 1/3, 중앙 정렬.
+	# 대사 홀더 · 하단 1/3, 중앙 정렬.
 	_holder = Control.new()
 	_holder.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_holder)
-	# 쇼케이스 — 상단 레터박스 바로 아래 중앙. 딤 위 레이어라 정지 화면보다 밝게 선다.
+	# 쇼케이스 · 상단 레터박스 바로 아래 중앙. 딤 위 레이어라 정지 화면보다 밝게 선다.
 	if showcase != null:
 		showcase.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var sc_wrap := CenterContainer.new()
@@ -134,7 +134,7 @@ func _ready() -> void:
 		stw.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 		stw.tween_interval(0.25)
 		stw.tween_property(sc_wrap, "modulate:a", 1.0, 0.35)
-	# 하데스 구도(2026-08-23 사용자 "전혀 하데스스럽지 않다" 반려 반영) — 하단 전폭 대사
+	# 하데스 구도(2026-08-23 사용자 "전혀 하데스스럽지 않다" 반려 반영) · 하단 전폭 대사
 	# 패널 + 그 왼쪽에 큰 초상이 패널 위로 솟는 배치. 줄마다 _build_line이 재구성한다.
 	# 진행 점 + 조작 힌트.
 	_dots = Label.new()
@@ -179,7 +179,7 @@ func _make_bar(top: bool) -> ColorRect:
 		bar.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 		bar.offset_top = 0.0
 	add_child(bar)
-	# 안쪽 가장자리 헤어라인 — 검은 바가 그냥 잘린 화면이 아니라 프레임으로 읽히게(서식 리뉴얼).
+	# 안쪽 가장자리 헤어라인 · 검은 바가 그냥 잘린 화면이 아니라 프레임으로 읽히게(서식 리뉴얼).
 	var edge := ColorRect.new()
 	edge.color = Color(0.45, 0.62, 0.78, 0.30)
 	edge.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -198,7 +198,7 @@ func _make_bar(top: bool) -> ColorRect:
 		tw.tween_property(bar, "offset_top", -52.0, 0.28).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	return bar
 
-# 현재 줄 pill 재구성 — Stage 자막 pill과 같은 화자 문법(? 바이올렛 / VEIL 시안), 폰트만 큼.
+# 현재 줄 pill 재구성 · Stage 자막 pill과 같은 화자 문법(? 바이올렛 / VEIL 시안), 폰트만 큼.
 func _build_line(ln: Dictionary) -> void:
 	if _row != null and is_instance_valid(_row):
 		_row.queue_free()
@@ -217,7 +217,7 @@ func _build_line(ln: Dictionary) -> void:
 		sp_color = Color(0.42, 0.86, 1.0)
 		msg_color = Color(0.90, 0.96, 1.0)
 		speaker = "VEIL"
-	# 서식 리뉴얼(4차 피드백 "AI 기본 생성 틀 같다") — 둥근 말풍선 대신 전술 콘솔 판:
+	# 서식 리뉴얼(4차 피드백 "AI 기본 생성 틀 같다") · 둥근 말풍선 대신 전술 콘솔 판:
 	# 모서리를 세우고, 화자색 1px 테두리 + 아래 그림자로 정지 화면에서 판을 띄운다.
 	sb.set_corner_radius_all(3)
 	sb.border_color = Color(sp_color.r, sp_color.g, sp_color.b, 0.55)
@@ -225,14 +225,14 @@ func _build_line(ln: Dictionary) -> void:
 	sb.shadow_color = Color(0, 0, 0, 0.5)
 	sb.shadow_size = 14
 	sb.shadow_offset = Vector2(0.0, 6.0)
-	# 하데스 구도(레퍼런스 실물 기준) — 왼쪽 대형 초상이 액자 없이 하단에서 솟고(에셋에
+	# 하데스 구도(레퍼런스 실물 기준) · 왼쪽 대형 초상이 액자 없이 하단에서 솟고(에셋에
 	# 가장자리 페더 알파 베이크), 대사 패널이 초상 하단을 덮으며, 이름표는 패널 윗변에
 	# 걸치는 별도 판. 줄마다 재구성.
 	_row = Control.new()
 	_row.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_holder.add_child(_row)
-	# 초상을 먼저 추가 — 나중에 추가되는 패널이 위에 그려져 초상 하단을 자연스럽게 덮는다.
+	# 초상을 먼저 추가 · 나중에 추가되는 패널이 위에 그려져 초상 하단을 자연스럽게 덮는다.
 	# 화자색 헤일로(라디얼 글로우)를 초상 뒤에 깔아 페더된 아트가 장면 위에 뜨는 근거를 만든다.
 	var halo := TextureRect.new()
 	var halo_grad := Gradient.new()
@@ -259,7 +259,7 @@ func _build_line(ln: Dictionary) -> void:
 		var revealed: bool = GameState.rival_kills >= 1 or GameState.rival_phase_reached >= 2
 		p_path = PORTRAIT_RIVAL_EYE if revealed else PORTRAIT_RIVAL_HIDDEN
 		if str(ln.get("portrait", "")) == "hidden":
-			p_path = PORTRAIT_RIVAL_HIDDEN   # 실체 없는 무전 비트 — 공개 게이트보다 우선
+			p_path = PORTRAIT_RIVAL_HIDDEN   # 실체 없는 무전 비트 · 공개 게이트보다 우선
 	p_tex.texture = load(p_path)
 	p_tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	p_tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
@@ -268,7 +268,7 @@ func _build_line(ln: Dictionary) -> void:
 	p_tex.offset_right = 468.0
 	p_tex.offset_top = -516.0
 	p_tex.offset_bottom = -96.0
-	# add_child는 패널·림·브래킷 뒤로 미룬다 — 초상이 대사 판 *위에* 그려져 경계를 넘어온
+	# add_child는 패널·림·브래킷 뒤로 미룬다 · 초상이 대사 판 *위에* 그려져 경계를 넘어온
 	# 구도(2026-08-25 사용자 안). 텍스트 영역(x498~)과는 안 겹친다(초상 우변 468).
 	var panel := PanelContainer.new()
 	# 텍스트 시작 = 이름표 왼끝(486)과 정렬(2026-08-25 사용자 "정렬을 맞추든지 물음표 옆까지
@@ -284,7 +284,7 @@ func _build_line(ln: Dictionary) -> void:
 	panel.offset_top = -208.0
 	panel.offset_bottom = -64.0
 	_row.add_child(panel)
-	# 윗변 림 — 초상 오른쪽부터 패널 오른끝까지 화자색 라인(이름표가 걸터앉는 레일).
+	# 윗변 림 · 초상 오른쪽부터 패널 오른끝까지 화자색 라인(이름표가 걸터앉는 레일).
 	var rim := ColorRect.new()
 	rim.color = Color(sp_color.r, sp_color.g, sp_color.b, 0.8)
 	rim.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -294,7 +294,7 @@ func _build_line(ln: Dictionary) -> void:
 	rim.offset_top = -209.0
 	rim.offset_bottom = -207.0
 	_row.add_child(rim)
-	# 모서리 브래킷 + 이중 프레임 + 레일 눈금 — 패널보다 6px 바깥.
+	# 모서리 브래킷 + 이중 프레임 + 레일 눈금 · 패널보다 6px 바깥.
 	var trim := _PanelTrim.new()
 	trim.col = Color(sp_color.r, sp_color.g, sp_color.b, 0.75)
 	trim.rail_from_x = 476.0 - 224.0   # 림 시작(초상 오른쪽 476)을 트림 로컬(left 224)로 환산
@@ -306,7 +306,7 @@ func _build_line(ln: Dictionary) -> void:
 	trim.offset_bottom = -58.0
 	_row.add_child(trim)
 	# 초상을 패널 위에 얹고, 월경부는 셰이더 글리치가 잇는다(명명 연출=셰이더급 규칙).
-	# edge_y = (초상 상단 516 - 패널 윗변 208) / 초상 높이 420 — 초상 에셋이 정사각이라
+	# edge_y = (초상 상단 516 - 패널 윗변 208) / 초상 높이 420 · 초상 에셋이 정사각이라
 	# KEEP_ASPECT로 렉트에 꽉 찬다(스크린샷 실측 확인).
 	_portrait_mat = null
 	if GameState.screen_fx_enabled:
@@ -317,7 +317,7 @@ func _build_line(ln: Dictionary) -> void:
 			Vector3(0.55, 0.30, 0.85) if who == "rival" else Vector3(0.30, 0.75, 1.0))
 		p_tex.material = pm
 		_portrait_mat = pm
-		_glitch_burst = 1.0   # 줄 시작 버스트 — 경계를 뚫고 들어오는 순간감, _process에서 감쇠
+		_glitch_burst = 1.0   # 줄 시작 버스트 · 경계를 뚫고 들어오는 순간감, _process에서 감쇠
 	_row.add_child(p_tex)
 	_msg_label = Label.new()
 	_msg_label.text = str(ln.get("text", ""))
@@ -329,8 +329,8 @@ func _build_line(ln: Dictionary) -> void:
 	_msg_label.add_theme_constant_override("outline_size", 4)
 	_msg_label.visible_characters = 0
 	panel.add_child(_msg_label)
-	# 이름표 — 패널 윗변 림에 걸터앉는 기운 판(하데스 명판 자리: 초상 오른쪽 어깨 높이).
-	# 서식 리뉴얼: 사각 칩 대신 평행사변형(skew) + 화자색 테두리 — 콘솔 탭 문법.
+	# 이름표 · 패널 윗변 림에 걸터앉는 기운 판(하데스 명판 자리: 초상 오른쪽 어깨 높이).
+	# 서식 리뉴얼: 사각 칩 대신 평행사변형(skew) + 화자색 테두리 · 콘솔 탭 문법.
 	var plate := PanelContainer.new()
 	var pl_sb := StyleBoxFlat.new()
 	if who == "rival":
@@ -413,7 +413,7 @@ func _finish() -> void:
 			tw.parallel().tween_property(n, "modulate:a", 0.0, 0.25)
 	tw.tween_callback(queue_free)
 
-# 안전판 — 어떤 경로로든 트리에서 빠지면 pause 복원(문서 오버레이와 동형).
+# 안전판 · 어떤 경로로든 트리에서 빠지면 pause 복원(문서 오버레이와 동형).
 func _exit_tree() -> void:
 	if active == self:
 		active = null
@@ -425,7 +425,7 @@ func _exit_tree() -> void:
 func _process(delta: float) -> void:
 	if _done:
 		return
-	# 초상 글리치 구동 — 0.09s 간격 시드 재추첨(연속 갱신은 스트로브처럼 번져 11Hz 이산 틱) +
+	# 초상 글리치 구동 · 0.09s 간격 시드 재추첨(연속 갱신은 스트로브처럼 번져 11Hz 이산 틱) +
 	# 버스트 감쇠. lockout 중에도 진행(진입 순간이 곧 버스트 구간).
 	if _portrait_mat != null:
 		_glitch_tick_t += delta
@@ -437,7 +437,7 @@ func _process(delta: float) -> void:
 	if _lockout_t > 0.0:
 		_lockout_t -= delta
 		return
-	# 타자 진행 — smoothstep(시작·끝 완속, 중간 가속). 등속 타자기가 늘어진다는
+	# 타자 진행 · smoothstep(시작·끝 완속, 중간 가속). 등속 타자기가 늘어진다는
 	# 갤러리 지적(2026-08-25) 반영: 총 시간도 글자당 16ms · 0.3~1.0s 클램프로 단축.
 	if _typing and _msg_label != null and is_instance_valid(_msg_label):
 		_type_t += delta
@@ -448,7 +448,7 @@ func _process(delta: float) -> void:
 		if u >= 1.0:
 			_msg_label.visible_characters = -1
 			_typing = false
-	# 길게 누르면 전체 건너뛰기(터치·패드 포함) — 힌트 라벨이 채워지는 걸로 진행 표시.
+	# 길게 누르면 전체 건너뛰기(터치·패드 포함) · 힌트 라벨이 채워지는 걸로 진행 표시.
 	var held: bool = Input.is_action_pressed("ui_accept") or Input.is_action_pressed("ui_skip") \
 		or Input.is_action_pressed("attack") or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
 	if held:

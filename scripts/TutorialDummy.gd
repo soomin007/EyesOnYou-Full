@@ -2,7 +2,7 @@ class_name TutorialDummy
 extends StaticBody2D
 
 signal killed(at_position: Vector2)
-# 총알이 튕겨나갈 때 emit — Tutorial이 "스킬로 처치하세요" 안내를 띄우게.
+# 총알이 튕겨나갈 때 emit · Tutorial이 "스킬로 처치하세요" 안내를 띄우게.
 signal bullet_deflected
 
 # skill_only: true면 총알(from_dir != 0)은 무시하고 폭발(from_dir == 0)만 받는다.
@@ -23,7 +23,7 @@ func _ready() -> void:
 	col.position = Vector2(0, -20.0)
 	add_child(col)
 	visual = CharacterArt.build_tutorial_dummy(self)
-	# 스킬 전용 더미는 시각적으로 구분 — 약간 주황 + 외곽 광택.
+	# 스킬 전용 더미는 시각적으로 구분 · 약간 주황 + 외곽 광택.
 	if skill_only and visual != null:
 		visual.modulate = Color(1.25, 0.85, 0.55)
 		var ring := ColorRect.new()
@@ -41,7 +41,7 @@ func _ready() -> void:
 func take_damage(amount: int, from_dir: int = 0) -> void:
 	if dead:
 		return
-	# 스킬 전용 더미 — 총알(from_dir != 0)은 튕겨내고 hp 변화 없음. 시그널로 안내.
+	# 스킬 전용 더미 · 총알(from_dir != 0)은 튕겨내고 hp 변화 없음. 시그널로 안내.
 	if skill_only and from_dir != 0:
 		modulate = Color(1.8, 1.2, 0.6)
 		create_tween().tween_property(self, "modulate", Color(1, 1, 1), 0.18)

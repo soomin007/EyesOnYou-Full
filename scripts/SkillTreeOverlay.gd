@@ -4,10 +4,10 @@ extends CanvasLayer
 # 전체 스킬 트리 열람 오버레이 (독립).
 # 목적: 레벨업 픽 3장만으론 안 보이는 "라인 점증(T2·T3에 뭐가 오는지)"을 한눈에.
 # 일시정지 메뉴 / 레벨업 화면에서 버튼으로 열고, Esc/취소로 닫는다.
-# paused 상태는 건드리지 않는다 — 밑에 깔린 pause/levelup 오버레이가 계속 paused를 원함.
+# paused 상태는 건드리지 않는다 · 밑에 깔린 pause/levelup 오버레이가 계속 paused를 원함.
 # 라인 포커스/호버 시 하단 패널에 그 계열 T1~T3 전체를 보유/다음/잠김으로 표시.
 
-# 계열 색은 단일 소스(SkillTreeData)에서 — 트리 텍스트와 아이콘이 같은 색으로 보이게.
+# 계열 색은 단일 소스(SkillTreeData)에서 · 트리 텍스트와 아이콘이 같은 색으로 보이게.
 const FAMILY_COLORS: Dictionary = SkillTreeData.FAMILY_COLORS
 const COL_NEXT: Color = Color(0.98, 0.85, 0.45)    # 다음 선택 가능 티어
 const COL_LOCKED: Color = Color(0.45, 0.48, 0.55)  # 잠긴 티어
@@ -88,10 +88,10 @@ func _build() -> void:
 	desc_label.custom_minimum_size = Vector2(760, 150)
 	desc_label.add_theme_font_size_override("normal_font_size", 18)
 	desc_label.add_theme_font_size_override("bold_font_size", 18)
-	# 얇은 검정 아웃라인 — faux-bold([b])는 너무 두꺼웠으니, Regular + 외곽선으로 "중간 굵기 + 또렷한 가장자리".
+	# 얇은 검정 아웃라인 · faux-bold([b])는 너무 두꺼웠으니, Regular + 외곽선으로 "중간 굵기 + 또렷한 가장자리".
 	desc_label.add_theme_constant_override("outline_size", 4)
 	desc_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
-	desc_label.add_theme_constant_override("line_separation", 8)  # T1~T3 줄 간격 — 빽빽하지 않게
+	desc_label.add_theme_constant_override("line_separation", 8)  # T1~T3 줄 간격 · 빽빽하지 않게
 	desc_label.text = "[color=#8a909a]계열에 마우스를 올리거나 방향키로 옮겨 보세요. T1~T3가 한눈에 보여요.[/color]"
 	desc_panel.add_child(desc_label)
 
@@ -102,7 +102,7 @@ func _build() -> void:
 	footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(footer)
 
-	# 트리거 입력(메뉴 버튼 Enter)이 첫 라인에 carry돼 바로 눌리는 사고 방지 — 짧은 지연 후 포커스.
+	# 트리거 입력(메뉴 버튼 Enter)이 첫 라인에 carry돼 바로 눌리는 사고 방지 · 짧은 지연 후 포커스.
 	var first: Button = cols.get_child(0).get_child(1) as Button  # 첫 계열 헤더(0) 다음 첫 라인
 	if first != null:
 		GameState.arm_focus_with_delay(self, first, 0.25)
@@ -123,7 +123,7 @@ func _build_column(fam: String) -> VBoxContainer:
 		var l: Dictionary = line
 		if str(l.get("family", "")) == fam:
 			col.add_child(_make_line_button(str(l.get("id", "")), fam))
-	# 이동 계열엔 베이스라인(대시·이중점프)도 함께 — 트리 외 기본 보유 스킬.
+	# 이동 계열엔 베이스라인(대시·이중점프)도 함께 · 트리 외 기본 보유 스킬.
 	if fam == SkillTreeData.FAMILY_MOBILITY:
 		for bid in ["dash", "double_jump"]:
 			col.add_child(_make_baseline_button(bid, fam))
@@ -134,7 +134,7 @@ func _make_line_button(line_id: String, fam: String) -> Button:
 	var b := Button.new()
 	b.custom_minimum_size = Vector2(248, 48)
 	b.add_theme_font_size_override("font_size", 17)
-	b.alignment = HORIZONTAL_ALIGNMENT_LEFT  # 텍스트 왼쪽 — 오른쪽에 스킬 아이콘 자리
+	b.alignment = HORIZONTAL_ALIGNMENT_LEFT  # 텍스트 왼쪽 · 오른쪽에 스킬 아이콘 자리
 	var t1: Dictionary = SkillTreeData.find_tier(line_id, 1)
 	b.text = "%s   %s" % [_tier_dots(owned), str(t1.get("name", line_id))]
 	var tint: Color = FAMILY_COLORS.get(fam, Color.WHITE)
@@ -166,7 +166,7 @@ func _make_baseline_button(bid: String, fam: String) -> Button:
 	b.mouse_entered.connect(_show_line_desc.bind(bid, fam, true))
 	return b
 
-# 트리 버튼 공통 — 얇은 검정 아웃라인으로 가독성/중간 굵기.
+# 트리 버튼 공통 · 얇은 검정 아웃라인으로 가독성/중간 굵기.
 func _style_tree_button(b: Button) -> void:
 	b.add_theme_constant_override("outline_size", 4)
 	b.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))

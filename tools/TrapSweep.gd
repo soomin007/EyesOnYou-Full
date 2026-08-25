@@ -1,6 +1,6 @@
 extends Node
 
-# 포탑(BulletTrap) 사선 전수 스윕 — 전 라우트·전 방의 포탑 발사 경로가 플랫폼 슬래브에
+# 포탑(BulletTrap) 사선 전수 스윕 · 전 라우트·전 방의 포탑 발사 경로가 플랫폼 슬래브에
 # 얼마 만에 막히는지 기하로 검사한다(발판이 탄을 먹는 배치 금지 · known_issues "가로 포탑
 # 높이" 항목의 수직 확장판). 지면·외벽에 끝나는 것은 정상이라 보고하지 않고, **플랫폼**에
 # 막히는 경우만 거리와 함께 찍는다. 실행:
@@ -13,7 +13,7 @@ const SPAWN_OFF: float = 14.0
 const RANGE: float = 736.0
 
 func _ready() -> void:
-	GameState.persist_blocked = true   # 실사용자 저장 파일 보호 — 하니스 공통
+	GameState.persist_blocked = true   # 실사용자 저장 파일 보호 · 하니스 공통
 	var findings: int = 0
 	for r in RouteData.ALL_ROUTES:
 		var route: Dictionary = r
@@ -59,7 +59,7 @@ func _dir_vec(d: String) -> Vector2:
 		"right": return Vector2.RIGHT
 		_: return Vector2.DOWN
 
-# 축 정렬 레이 vs 사각형 — 진행 방향으로 rect에 닿기까지의 거리(안 닿으면 -1).
+# 축 정렬 레이 vs 사각형 · 진행 방향으로 rect에 닿기까지의 거리(안 닿으면 -1).
 func _ray_vs_rect(origin: Vector2, dv: Vector2, rect: Rect2) -> float:
 	if dv.y != 0.0:
 		if origin.x < rect.position.x or origin.x > rect.end.x:
