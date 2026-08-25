@@ -34,7 +34,8 @@ func _ready() -> void:
 	print("[SWEEP] ", "ALL PASS" if fails == 0 else "%d FAIL" % fails)
 	get_tree().quit(1 if fails > 0 else 0)
 
-# 그리디 진행 · stage까지 풀 첫 후보를 고르며 history를 쌓는다. 풀이 빈 스테이지는 -1 반환.
+# 그리디 진행 · stage까지 풀 첫 후보를 실제 선택 경로(record_route_choice)로 고르며
+# 진행한다. 실런과 같은 파생 집계·막 경계 검문이 함께 굴러간다. 풀이 빈 스테이지는 -1 반환.
 func _greedy_to(stage: int) -> int:
 	GameState.route_history = []
 	GameState.current_route_id = ""
@@ -43,24 +44,42 @@ func _greedy_to(stage: int) -> int:
 		var pool: Array = RouteData.get_route_pool_for_stage(s, GameState.route_history)
 		if pool.is_empty():
 			return s
-		var first: Dictionary = pool[0]
-		GameState.route_history.append(str(first.get("id", "")))
-		GameState.current_route_id = str(first.get("id", ""))
+		GameState.record_route_choice(pool[0], "")
+		GameState.current_stage = s + 1
+		if GameState.is_act_start(s + 1):
+			GameState.capture_act_checkpoint()
 	GameState.current_stage = stage
 	return -1
 
-# A. 전 스테이지 사망 불변식.
+# A. 전 스테이지 사망 불변식 · 위치·기록·풀·HP에 더해 파생 집계(공격성)와 직전 맵 표지가
+# 막 시작 시점으로 함께 되감기는지(감사 A-1/A-2)까지 단언한다.
 func _sweep_death_invariant() -> void:
 	var bad: Array = []
 	for s in 14:
 		GameState.start_main_game()
 		GameState.disposal_choice = "extract"
-		if _greedy_to(s) >= 0:
+		var act_s: int = GameState.act_start_stage(GameState.act_for_stage(s))
+		var exp_aggr: int = 0
+		var boot_fail: bool = false
+		for t in s:
+			GameState.current_stage = t
+			var pool0: Array = RouteData.get_route_pool_for_stage(t, GameState.route_history)
+			if pool0.is_empty():
+				boot_fail = true
+				break
+			GameState.record_route_choice(pool0[0], "")
+			GameState.current_stage = t + 1
+			if GameState.is_act_start(t + 1):
+				GameState.capture_act_checkpoint()
+			if t + 1 == act_s:
+				exp_aggr = GameState.aggression_score
+		if boot_fail:
 			bad.append("s%d 풀 소진(그리디)" % s)
 			continue
+		GameState.current_stage = s
 		GameState.register_death()
-		var act_s: int = GameState.act_start_stage(GameState.act_for_stage(s))
 		var pool: Array = RouteData.get_route_pool_for_stage(GameState.current_stage, GameState.route_history)
+		var exp_rid: String = str(GameState.route_history.back()) if not GameState.route_history.is_empty() else ""
 		if GameState.current_stage != act_s:
 			bad.append("s%d stage %d != 막시작 %d" % [s, GameState.current_stage, act_s])
 		elif GameState.route_history.size() != GameState.current_stage:
@@ -69,7 +88,11 @@ func _sweep_death_invariant() -> void:
 			bad.append("s%d 사망 후 풀 0" % s)
 		elif GameState.player_hp != GameState.effective_max_hp():
 			bad.append("s%d hp %d != 실효 %d" % [s, GameState.player_hp, GameState.effective_max_hp()])
-	_check("A. 전 스테이지 사망 불변식(s0~13)", bad.is_empty(), str(bad))
+		elif GameState.current_route_id != exp_rid:
+			bad.append("s%d rid '%s' != 기록 끝 '%s'" % [s, GameState.current_route_id, exp_rid])
+		elif GameState.aggression_score != exp_aggr:
+			bad.append("s%d 공격성 %d != 막시작 %d(이중 집계)" % [s, GameState.aggression_score, exp_aggr])
+	_check("A. 전 스테이지 사망 불변식(s0~13 · 파생 집계 포함)", bad.is_empty(), str(bad))
 	# 14-1 예외 · 보스전 사망은 제자리(리셋은 페이즈만).
 	GameState.start_main_game()
 	_greedy_to(13)

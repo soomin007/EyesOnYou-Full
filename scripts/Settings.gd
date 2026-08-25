@@ -389,6 +389,9 @@ func _on_meta_reset_saves() -> void:
 # 엔딩 미리보기 진입 · 처리(disposal)·신뢰(수용률)·진실(truth_seen)을 ending_id에 맞춰 강제.
 # 기존 진행도는 백업 안 함 · 디버그 용도라 진행 데이터 손실은 무시 (사용자가 알고 누름).
 func _on_ending_preview_pressed(ending_id: String) -> void:
+	# 디버그 파생 런 표시(감사 B-1) · 이 흐름의 record_ending이 실런 세이브 삭제·완주 카운트·
+	# 미완주 스냅샷 승격을 일으키지 않게(결말 도감 등록은 유지). reset()이 끈다.
+	GameState.debug_preview_run = true
 	GameState.rec_count = 4  # 수용률 분모 고정 · followed_count로 신뢰 hi/lo 강제.
 	GameState.rival_lure_followed = 0  # 유인 감점 잔재가 유효 수용을 깎아 hi 강제가 깨지는 것 방지.
 	if ending_id == EndingResolver.ENDING_TRUTH:

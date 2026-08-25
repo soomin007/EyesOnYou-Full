@@ -72,7 +72,8 @@ func _ready() -> void:
 		Time.get_datetime_string_from_system(), ending_id, GameState.run_time_text(),
 		GameState.hits_taken, GameState.kills_total, GameState.score, GameState.death_count,
 		" / ".join(GameState.stage_time_log)]
-	if not GameState.persist_blocked:   # QA 하니스 실행은 실플레이 기록에 섞지 않는다
+	# 디버그 파생 런(연습장 실런·엔딩 미리보기)도 실완주 실측에 섞지 않는다(감사 A-9).
+	if not GameState.persist_blocked and not GameState.debug_preview_run:
 		var fa: FileAccess = FileAccess.open("user://run_history.log", FileAccess.READ_WRITE)
 		if fa == null:
 			fa = FileAccess.open("user://run_history.log", FileAccess.WRITE)

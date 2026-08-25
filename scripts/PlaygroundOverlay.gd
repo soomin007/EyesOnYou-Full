@@ -547,6 +547,9 @@ func _on_ch14_phase(phase: int) -> void:
 # 확인이 끝나면 일시정지 → 처음으로로 빠져나오면 된다(Title reset이 플래그를 정리).
 func _on_tunnel_live() -> void:
 	GameState.playground_active = false
+	# 디버그 파생 런 표시(감사 A-9) · 이후 흐름(처리 선택→탈출→엔딩)이 실런과 같지만,
+	# run.cfg 저장/삭제·완주 카운트·스냅샷 승격은 막는다. reset()이 끈다.
+	GameState.debug_preview_run = true
 	GameState.core_tunnel_live = true
 	# 실런 흐름에선 14-1 클리어의 on_stage_clear가 13→14로 올려둔 뒤 터널로 온다. 여기서
 	# 안 맞추면 처리 선택 후 브리핑이 stage 13 풀(=14-1)로 되돌아가 보스를 다시 하게 된다

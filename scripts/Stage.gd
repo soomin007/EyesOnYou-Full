@@ -8456,8 +8456,8 @@ func _start_fake_clear() -> void:
 	# 라이벌 기억(축 C, 확정 ⓐ) · 이미 이 마술을 본 관객에게는 같은 마술을 두 번 하지 않는다:
 	# 자기 폭로 한 마디 후 곧장 찢고 P3로. 첫 목격이면 정식 체인(3.4s 유지 → 예고 → 본 찢김).
 	var fake_seen_before: bool = GameState.rival_fake_clear_seen
-	GameState.rival_fake_clear_seen = true
-	GameState.save_settings()
+	# "이미 봤음" 확정은 찢김이 실제로 재생된 시점(_fake_clear_tear)으로 이동(감사 A-7) ·
+	# 여기서 미리 저장하면 연출 전에 이탈(일시정지→처음으로)해도 다음 회차 트릭이 영구 소실된다.
 	if fake_seen_before:
 		get_tree().create_timer(1.0, false).timeout.connect(_fake_clear_self_expose)
 	else:
@@ -8483,6 +8483,10 @@ func _fake_clear_pretear() -> void:
 func _fake_clear_tear() -> void:
 	if goal_reached or not is_inside_tree() or _fake_clear_layer == null:
 		return
+	# "이미 봤음" 확정 · 찢김이 실제로 시작되는 이 시점에 기록(감사 A-7). 연출 전에 이탈하면
+	# 미기록으로 남아 다음 회차에 정식 트릭을 다시 보여준다.
+	GameState.rival_fake_clear_seen = true
+	GameState.save_settings()
 	SfxPlayer.play("boss_alert_text")
 	# 강도 하향 2.2/0.9 → 1.6/0.65 · 본 찢김은 유지하되 눈 아픈 피크를 깎는다(2026-08-14).
 	_run_glitch(1.6, 0.65)
@@ -10015,7 +10019,9 @@ func _play_final_epilogue() -> void:
 	await ft.finished
 	await get_tree().create_timer(0.6).timeout
 	# 엔딩별 에필로그 · ENDING 씬과 같은 입력으로 resolve해 동일 id의 에필로그를 고른다.
-	var eid: String = EndingResolver.resolve(GameState.disposal_choice, GameState.truth_seen, GameState.followed_count, GameState.rec_count)
+	# effective_followed = 엔딩 화면과 같은 분자(감사 A-5 · 유인 감점 반영). followed_count를
+	# 그대로 쓰면 에필로그 hi/lo와 직후 엔딩 화면 판정이 서로 모순될 수 있다.
+	var eid: String = EndingResolver.resolve(GameState.disposal_choice, GameState.truth_seen, GameState.effective_followed(), GameState.rec_count)
 	var lines: Array = EndingResolver.get_epilogue_lines(eid)
 	for ln in lines:
 		label.text = str(ln)

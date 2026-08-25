@@ -33,6 +33,31 @@ const PALIMPSEST_PATH: String = "user://palimpsest.cfg"
 # (settings/run/palimpsest/playstyle)과 run.cfg 삭제를 전면 차단해, 스테이징된 상태가
 # 실사용자 저장 파일을 덮는 오염을 막는다(2026-08-24, "에디터마다 설정 리셋" 원인).
 var persist_blocked: bool = false
+# 디버그 파생 런(2026-08-25 상태 감사 A-9/B-1) · 연습장 "14-2 실런"·엔딩 미리보기처럼
+# 디버그 탭에서 갈라져 나온 흐름. true인 동안 run.cfg 저장/삭제와 팔림프세스트 승격을 막아
+# 실런 세이브·재진입 기록이 디버그 상태로 오염되지 않게 한다. reset()이 끈다.
+var debug_preview_run: bool = false
+
+# 막 시작 검문 스냅샷(2026-08-25 상태 감사 A-1/A-3/A-6) · 사망 = 막 되감기가 스테이지
+# 파생 상태(선택 집계·1회성 보상·막 컷씬 플래그)도 함께 되감도록, 막 시작 시점 값을 보관한다.
+# route_history 절단과 한 몸: 기록에서 지운 선택의 집계가 남으면 재선택이 이중 집계된다.
+const ACT_CHECKPOINT_FIELDS: Array = [
+	"rec_count", "followed_count", "aggression_score", "trust_score", "shared_hardship",
+	"score", "rival_lure_shown", "rival_lure_followed",
+	"veilsight_recon_active", "veilsight_recon_next", "recon_note_pending",
+	"rival_lock_beat4_shown", "rival_lock_beat5_shown", "bonus_line_last_stage",
+]
+var act_checkpoint: Dictionary = {}
+
+func capture_act_checkpoint() -> void:
+	act_checkpoint = {}
+	for f in ACT_CHECKPOINT_FIELDS:
+		act_checkpoint[f] = get(f)
+
+func _restore_act_checkpoint() -> void:
+	for f in ACT_CHECKPOINT_FIELDS:
+		if act_checkpoint.has(f):
+			set(f, act_checkpoint[f])
 # 플레이 피드백 설문(구글 폼). 타이틀·크레딧 끝 메뉴의 "피드백 보내기"가 연다.
 const FEEDBACK_URL: String = "https://forms.gle/byS8EABJitB9r6z88"
 const KEYBIND_ACTIONS: Array[String] = ["move_left", "move_right", "jump", "attack", "dash", "skill", "pause"]
@@ -500,6 +525,12 @@ func reset() -> void:
 	# playground_active가 true로 남아, 다음 일반 모드 클리어가 _trigger_stage_clear에서 연습장 분기로
 	# 빠져 패널만 뜨고 다음 맵으로 안 넘어가던 치명 버그. reset()은 타이틀 복귀/새 런마다 호출되므로 여기서 해제.
 	playground_active = false
+	# 런 스코프 잔여 정리(2026-08-25 상태 감사 A-4/B-4) · 수행 멘트 간격 기준이 전 런 값으로
+	# 남으면 새 런 내내 침묵하고, 전투 입력 잠금이 남으면 해제처가 지역 코드뿐이다.
+	bonus_line_last_stage = -9
+	restrict_combat_input = false
+	debug_preview_run = false
+	act_checkpoint = {}
 	_reset_perf_metrics()
 
 # 튜토리얼 종료 후 본편 시작 시 호출. 진행/스킬/XP 모두 초기화 · 튜토리얼은
@@ -566,7 +597,11 @@ func start_main_game() -> void:
 	stage_time_log = []
 	clear_pending_snapshots()  # 완주 못 한 이전 런의 막 경계 스냅샷 폐기(승격 오염 방지)
 	playground_active = false  # 연습장 플래그 누수 차단(디버그→일반 모드) · reset()과 동일 방어.
+	bonus_line_last_stage = -9  # 수행 멘트 간격 기준 리셋(2026-08-25 감사 A-4 · 전 런 값 잔존 시 새 런 침묵)
+	debug_preview_run = false
+	restrict_combat_input = false
 	_reset_perf_metrics()
+	capture_act_checkpoint()   # 막0 시작 검문 · 사망 되감기의 파생 상태 복원 기준점
 
 func _reset_perf_metrics() -> void:
 	hits_taken = 0
@@ -606,8 +641,10 @@ func record_route_choice(route: Dictionary, recommended_id: String) -> void:
 			veil_degraded = true
 			veil_reversal_pending = true
 	followed_veil_last_choice = (rid == recommended_id and recommended_id != "")
-	# 엔딩 도덕 축 = 추천 수용률(§3.3). 선택 시점에 1회만 집계 · 죽음 재시도엔 record가
-	# 재호출되지 않으므로 한 맵당 한 번. (어투 trust는 클리어 시점에 적립 · on_stage_clear.)
+	# 엔딩 도덕 축 = 추천 수용률(§3.3). 선택 시점에 1회 집계. 사망 = 막 되감기(2026-08-23
+	# 통일)에서는 RouteMap이 다시 열려 record가 재호출되지만, 막 검문 스냅샷 복원(2026-08-25
+	# 감사 A-1)이 집계를 함께 되감아 재선택이 이중 집계되지 않는다.
+	# (어투 trust는 클리어 시점에 적립 · on_stage_clear.)
 	if recommended_id != "":
 		rec_count += 1
 		if followed_veil_last_choice:
@@ -855,6 +892,13 @@ func register_death() -> void:
 		# 여러 번 죽으면 선택지가 말라붙었다. 되감은 스테이지 이후의 기록을 잘라 풀을 되돌린다.
 		if route_history.size() > current_stage:
 			route_history.resize(current_stage)
+		# 파생 상태도 함께 되감기(2026-08-25 상태 감사 A-1/A-2/A-3) · 기록만 자르고 선택
+		# 집계(rec/followed/공격성/유인)·1회성 보상(정찰)·막 컷씬 플래그를 남기면 재선택이
+		# 이중 집계되고 정찰 보상이 증발한다. 막 시작 검문 스냅샷으로 복원.
+		_restore_act_checkpoint()
+		# 직전 맵 표지도 기록과 정합하게 · 잘려나간 맵을 가리키면 고도 인접 필터가
+		# 존재하지 않는 "직전 맵" 기준으로 풀을 깎는다(불변식: current_route_id == 기록 끝).
+		current_route_id = str(route_history.back()) if not route_history.is_empty() else ""
 	player_hp = effective_max_hp()
 	save_run()
 
@@ -913,6 +957,10 @@ func on_stage_clear() -> bool:
 		if add_xp(4, false):
 			leveled = true
 	# regen은 획득 시점에 max_hp +1 효과만 · 매 stage HP 풀 회복이라 heal_player 불필요
+	# 막 경계 검문(2026-08-25 감사 A-1) · 이 클리어의 적립까지 전부 반영된 "막 진입 시점"을
+	# 보관한다. 사망 = 막 되감기가 이 시점으로 파생 상태를 복원한다(record 이중 집계 차단).
+	if not story_mode and not playground_active and is_act_start(current_stage):
+		capture_act_checkpoint()
 	return leveled
 
 # 막(Act) 헬퍼 · 흩어진 stage 매직넘버 대신 막 경계로 판정.
@@ -996,6 +1044,12 @@ func mark_enemy_seen(id: String) -> bool:
 func record_ending(id: String) -> void:
 	if id != "" and not (id in endings_seen):
 		endings_seen.append(id)
+	# 디버그 파생 런(감사 A-9/B-1 · 연습장 "14-2 실런"/엔딩 미리보기) · 결말 도감 등록은
+	# 유지(보는 게 목적)하되, 완주 카운트·라이벌 기억·스냅샷 승격·세이브 삭제는 실런 전용.
+	# 미완주 pending이 "완주 기록"으로 승격되거나 진짜 이어하기가 지워지는 오염 차단.
+	if debug_preview_run:
+		save_settings()
+		return
 	playthrough_count += 1
 	# 라이벌 기억 적립(축 C) · 본편 완주만. 처리 이력 + 상충 추천 간파율(런 누적 → 영속 합산).
 	if not story_mode:
@@ -1087,9 +1141,17 @@ func _store_run_state(cf: ConfigFile, section: String) -> void:
 	cf.set_value(section, "kills_total", kills_total)
 	cf.set_value(section, "run_play_secs", run_play_secs)
 	cf.set_value(section, "stage_time_log", stage_time_log)
+	# 2026-08-25 감사 B-3 · 잠금 컷씬 플래그가 rival_locks_broken과 짝인데 미저장이라
+	# 이어하기마다 컷씬이 재생됐다. 보스 인트로 1회 가드도 동반 저장.
+	cf.set_value(section, "rival_lock_beat4_shown", rival_lock_beat4_shown)
+	cf.set_value(section, "rival_lock_beat5_shown", rival_lock_beat5_shown)
+	cf.set_value(section, "boss_intro_seen_run", boss_intro_seen_run)
+	# 막 시작 검문 스냅샷(감사 A-1) · 이어하기 후의 사망 되감기도 같은 기준점을 쓰게.
+	cf.set_value(section, "act_checkpoint", act_checkpoint)
 
 func save_run() -> void:
-	if persist_blocked:
+	# debug_preview_run(감사 A-9/B-1) · 디버그 파생 런이 실런 세이브를 덮어쓰지 않게.
+	if persist_blocked or debug_preview_run:
 		return
 	var cf := ConfigFile.new()
 	cf.set_value("meta", "version", RUN_VERSION)
@@ -1106,7 +1168,8 @@ func has_run() -> bool:
 	return int(cf.get_value("meta", "version", 0)) == RUN_VERSION
 
 func clear_run() -> void:
-	if persist_blocked:
+	# debug_preview_run · 디버그 파생 런의 엔딩 도달이 실런 이어하기를 지우지 않게(감사 A-9).
+	if persist_blocked or debug_preview_run:
 		return
 	var d := DirAccess.open("user://")
 	if d != null and d.file_exists("run.cfg"):
@@ -1173,6 +1236,17 @@ func _restore_run_state(cf: ConfigFile, section: String) -> void:
 	stage_time_log = []
 	for t in cf.get_value(section, "stage_time_log", []):
 		stage_time_log.append(str(t))
+	# 2026-08-25 감사 B-3/A-1 · 잠금 컷씬 플래그·보스 인트로 가드·막 검문 스냅샷 복원.
+	rival_lock_beat4_shown = bool(cf.get_value(section, "rival_lock_beat4_shown", false))
+	rival_lock_beat5_shown = bool(cf.get_value(section, "rival_lock_beat5_shown", false))
+	boss_intro_seen_run = bool(cf.get_value(section, "boss_intro_seen_run", false))
+	act_checkpoint = {}
+	var saved_cp: Dictionary = cf.get_value(section, "act_checkpoint", {})
+	for k in saved_cp:
+		act_checkpoint[str(k)] = saved_cp[k]
+	if act_checkpoint.is_empty():
+		# 구버전 세이브 폴백 · 현재(복원 직후) 값을 기준점으로 삼는다 - 종전과 동일 동작.
+		capture_act_checkpoint()
 
 # run.cfg를 GameState에 복원. 성공 시 true(이어하기 → ROUTE_MAP 복귀). 실패 시 false(상태 불변).
 func load_run() -> bool:
@@ -1198,7 +1272,7 @@ func act_start_stage(act_idx: int) -> int:
 	return s
 
 func save_act_snapshot() -> void:
-	if story_mode or playground_active or persist_blocked:
+	if story_mode or playground_active or persist_blocked or debug_preview_run:
 		return
 	if not is_act_start(current_stage):
 		return
@@ -1302,6 +1376,11 @@ func start_reentry(act: int) -> bool:
 	reentry_act = act
 	reentry_line_pending = true
 	rival_reentry_count += 1   # 라이벌 기억(축 C) · 기록을 뒤진 횟수
+	# 감사 B-2 · 재진입 확인문("덮어씁니다")과 실제를 일치 - 옛 런의 이어하기를 즉시 정리
+	# (안 지우면 첫 RouteMap 저장 전까지 이어하기가 예전 런을 되살린다).
+	clear_run()
+	# 재진입 시작점 = 막 시작 검문(감사 A-1) · 이 지점의 사망 되감기 기준.
+	capture_act_checkpoint()
 	save_settings()
 	return true
 
