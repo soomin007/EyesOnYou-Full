@@ -7797,6 +7797,9 @@ func _rival_intro_cutscene() -> void:
 		return
 	# 발화 동기 플래시 제거(2026-08-14 2차) · 존재감은 카메라 흔들림만 남긴다.
 	_camera_shake(5.0, 0.25)
+	# 사망 재시작(P1 리셋)에선 같은 컷씬을 다시 읽지 않는다(2026-08-30 사용자). 목표는 노드 바가 보여준다.
+	if not GameState.rival_cutscene_first_time("intro"):
+		return
 	# 라이벌 기억(축 C) · 이미 쓰러뜨린 적 있는 회차엔 인사가 달라진다(그는 기억한다).
 	# 정보 축적형 공개(2026-08-23) · 서버 로그 기발견자는 "아는 자 대접": 로그 말미의 미서명
 	# 문자열("기다리고 있었습니다.")을 자기 것이라 자백한다. 그가 열람 사실을 아는 근거는
@@ -7973,6 +7976,9 @@ func _p2_enable_turrets() -> void:
 # P2 오프닝 컷씬 · 라이벌(기억 변형 포함) + VEIL 목표 안내.
 func _rival_p2_cutscene() -> void:
 	if not is_inside_tree() or goal_reached or _rival_phase != 1:
+		return
+	# 사망 재시작에선 생략(2026-08-30) · 포탑 전원 = 제어 코어 규칙은 한 번 읽으면 충분하다.
+	if not GameState.rival_cutscene_first_time("p2"):
 		return
 	# 다회차 기억 변형 대사 · 기존 라인 "대체"(발화 수 증가 없음 · 기억 언급 런당 1~2회 상한 준수).
 	# 기억의 대상은 플레이어가 아니라 이전 작전 기록(4번째 벽 금지, replay_support_plan §4.3).
@@ -8538,6 +8544,11 @@ func _fake_clear_end() -> void:
 # P3 오프닝 컷씬 · 자백(이번 런 이력 변형 3종) + VEIL 동요·판별 안내.
 func _p3_opening_cutscene() -> void:
 	if not is_inside_tree() or goal_reached or _rival_phase != 2:
+		return
+	# 사망 재시작에선 자백 컷씬(세계 정지)을 생략하고 판별 tell 자막 2줄만 전투 중에 흘린다(2026-08-30).
+	if not GameState.rival_cutscene_first_time("p3"):
+		get_tree().create_timer(1.4, false).timeout.connect(_p3_tell_line)
+		get_tree().create_timer(4.8, false).timeout.connect(_p3_unmarked_line)
 		return
 	# 정보 축적형 공개(2026-08-23) · 자백이 이번 런의 이력을 회수한다: 막4+ 루트맵에서 유인
 	# (? 귀띔)을 따랐으면 "그것도 나였다", 봤지만 안 따랐으면 그 불신을 짚는다. 조우 없으면 원형.

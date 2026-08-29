@@ -7,6 +7,7 @@ extends Node
 #   ③ 방류구: 판정 시작 = 플랜지 입구(기단·급수관 위 무피격) · 하우징/절연 포스트 z = 캐릭터 뒤
 #   ④ 이동 발판 탑승: 수평 리프트 위 정지 플레이어의 상대 위치 한 주기 흔들림 0(엔진 1스텝 지연 보정) ·
 #      수직 리프트는 접지 유지(floor lost 0) + 윗면 오차 ≤ 3.5px
+#   ⑤ 14-1 컷씬 게이트: 첫 진입은 인트로 컷씬(세계 정지) · 사망 재시작(본 컷씬)은 정지 없음
 # 실행: godot --headless --path . --audio-driver Dummy tools/rule_smoke.tscn (종료 코드 0 = 전부 PASS)
 const STAGE_SCENE: String = "res://scenes/stage.tscn"
 var fails: int = 0
@@ -44,6 +45,7 @@ func _ready() -> void:
 	await _sniper_case()
 	await _challenge_case()
 	await _platform_case()
+	await _rival_cutscene_case()
 	print("[RULE] %s" % ("ALL PASS" if fails == 0 else "%d FAIL" % fails))
 	get_tree().quit(0 if fails == 0 else 1)
 
@@ -228,4 +230,24 @@ func _platform_case() -> void:
 		worst_y = maxf(worst_y, absf(p.global_position.y - (vp.global_position.y - 12.0)))
 	_check("수직 리프트 접지 유지 · 윗면 오차 ≤ 3.5px", lost == 0 and worst_y <= 3.5, "lost=%d worst_y=%.2f" % [lost, worst_y])
 	stage.queue_free()
+	await get_tree().process_frame
+
+func _rival_cutscene_case() -> void:
+	# 첫 진입 · 1.0s 뒤 인트로 컷씬이 세계를 멈춘다.
+	var stage: Node = await _boot("route_core_recovery", 13)
+	GameState.rival_cutscenes_seen_run = []
+	await get_tree().create_timer(1.6, true).timeout
+	_check("14-1 첫 진입 = 인트로 컷씬(pause)", get_tree().paused and GameState.rival_cutscenes_seen_run.has("intro"))
+	get_tree().paused = false
+	GameState.restrict_combat_input = false
+	stage.queue_free()
+	await get_tree().process_frame
+	# 사망 재시작 · 이미 본 컷씬은 생략(정지 없음).
+	var stage2: Node = await _boot("route_core_recovery", 13)
+	GameState.rival_cutscenes_seen_run = ["intro", "p2", "p3"]
+	await get_tree().create_timer(1.6, true).timeout
+	_check("14-1 재시작 = 컷씬 생략(pause 없음)", not get_tree().paused)
+	get_tree().paused = false
+	GameState.restrict_combat_input = false
+	stage2.queue_free()
 	await get_tree().process_frame

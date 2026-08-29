@@ -216,6 +216,10 @@ var map_extension_seen: bool = false
 # 보스 인트로(막3 lab, Violet Signal 빌드업 컷씬)를 이번 런에서 봤는가 · 죽고 재도전 시 인트로를
 # 생략하고 음악만 비트 구간으로 점프하기 위한 세션 플래그. reset()/start_main_game()에서 해제.
 var boss_intro_seen_run: bool = false
+# 14-1 대사 컷씬 3종(인트로·P2·P3 오프닝)을 이번 런에서 봤는가 · 보스전 사망 재시작(P1 리셋)에서
+# 같은 컷씬을 다시 읽지 않는다(사용자 2026-08-30 "죽어서 다시 시작하면 대사 컷씬 생략"). 판별 정보는
+# 전투 중 짧은 자막(tell)이 대신 준다. 런 저장에 포함(이어하기 후 재시작도 동일).
+var rival_cutscenes_seen_run: Array = []   # "intro" | "p2" | "p3"
 
 var tutorial_done: bool = false
 var bgm_volume: float = 1.0
@@ -499,6 +503,7 @@ func reset() -> void:
 	overflow_hp_bonus = 0
 	map_extension_seen = false
 	boss_intro_seen_run = false
+	rival_cutscenes_seen_run = []
 	story_mode = false
 	veil_degraded = false
 	veil_reversal_pending = false
@@ -574,6 +579,7 @@ func start_main_game() -> void:
 	overflow_hp_bonus = 0
 	map_extension_seen = false
 	boss_intro_seen_run = false
+	rival_cutscenes_seen_run = []
 	skills = STARTING_SKILLS.duplicate()
 	veil_degraded = false
 	veil_reversal_pending = false
@@ -1160,6 +1166,7 @@ func _store_run_state(cf: ConfigFile, section: String) -> void:
 	cf.set_value(section, "rival_lock_beat4_shown", rival_lock_beat4_shown)
 	cf.set_value(section, "rival_lock_beat5_shown", rival_lock_beat5_shown)
 	cf.set_value(section, "boss_intro_seen_run", boss_intro_seen_run)
+	cf.set_value(section, "rival_cutscenes_seen_run", rival_cutscenes_seen_run)
 	# 막 시작 검문 스냅샷(감사 A-1) · 이어하기 후의 사망 되감기도 같은 기준점을 쓰게.
 	cf.set_value(section, "act_checkpoint", act_checkpoint)
 
@@ -1254,6 +1261,9 @@ func _restore_run_state(cf: ConfigFile, section: String) -> void:
 	rival_lock_beat4_shown = bool(cf.get_value(section, "rival_lock_beat4_shown", false))
 	rival_lock_beat5_shown = bool(cf.get_value(section, "rival_lock_beat5_shown", false))
 	boss_intro_seen_run = bool(cf.get_value(section, "boss_intro_seen_run", false))
+	rival_cutscenes_seen_run = []
+	for k in cf.get_value(section, "rival_cutscenes_seen_run", []):
+		rival_cutscenes_seen_run.append(str(k))
 	act_checkpoint = {}
 	var saved_cp: Dictionary = cf.get_value(section, "act_checkpoint", {})
 	for k in saved_cp:
@@ -1724,3 +1734,10 @@ func profile_note_grenade() -> void:
 func profile_note_damage(amount: int) -> void:
 	if _ps_active:
 		_ps_dmg += amount
+
+# 14-1 컷씬 재생 게이트 · 이번 런에서 처음이면 true를 돌려주고 본 것으로 기록한다.
+func rival_cutscene_first_time(key: String) -> bool:
+	if rival_cutscenes_seen_run.has(key):
+		return false
+	rival_cutscenes_seen_run.append(key)
+	return true
