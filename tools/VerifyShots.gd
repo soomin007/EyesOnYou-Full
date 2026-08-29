@@ -42,6 +42,10 @@ const TARGETS: Array = [
 	{"id": "kill_burst", "route": "route_back_alley", "stage": 1, "setup": "kill"},
 	{"id": "land_dust", "route": "route_back_alley", "stage": 1, "setup": "land"},
 	{"id": "routemap_heal_reward", "route": "", "setup": "routemap"},
+	# 08-29 실플레이 피드백 · 방류구 z(순찰이 하우징 앞) · 저격 조준 고정(백열선) · 도전방 비상등+배너.
+	{"id": "pump_jet_zorder", "route": "route_pump_station", "stage": 1, "setup": "pump_jet"},
+	{"id": "sniper_lock", "route": "route_pump_station", "stage": 1, "setup": "sniper_lock"},
+	{"id": "challenge_lamps", "route": "route_blackout", "stage": 3, "setup": "challenge_lamps"},
 ]
 
 func _ready() -> void:
@@ -127,6 +131,57 @@ func _shot(d: Dictionary) -> void:
 			stage.call("_refresh_hud")
 			for i in 5:
 				await get_tree().process_frame
+		"pump_jet":
+			# 순찰을 방류구(880) 하우징 위에 세우고 방류 중 캡처 · 하우징은 순찰 뒤, 물줄기는 앞.
+			if p is Node2D:
+				(p as Node2D).global_position = Vector2(700.0, 600.0)
+			var near: Node2D = null
+			for e in get_tree().get_nodes_in_group("enemy"):
+				if is_instance_valid(e) and e is Node2D and (e as Node2D).global_position.y > 500.0:
+					if near == null or absf((e as Node2D).global_position.x - 880.0) < absf(near.global_position.x - 880.0):
+						near = e as Node2D
+			if near != null:
+				near.global_position = Vector2(884.0, 600.0)
+				near.set("harmless", true)
+			for j in get_tree().get_nodes_in_group("discharge_jet"):
+				if absf((j as Node2D).global_position.x - 880.0) < 5.0:
+					j.set("_state", DischargeJet.S.JET)
+					j.set("_t", 0.55)
+					j.set("_hit_this_jet", true)
+			_snap_camera(stage)
+			for i in 4:
+				await get_tree().process_frame
+		"sniper_lock":
+			# 거치대 저격(1500)이 지상 1250의 요원을 겨누다 마지막 0.3s 백열 고정되는 순간.
+			for j in get_tree().get_nodes_in_group("discharge_jet"):
+				j.queue_free()
+			var sn: Node = null
+			for e in get_tree().get_nodes_in_group("enemy"):
+				if not is_instance_valid(e):
+					continue
+				if int(e.get("enemy_type")) == 1 and absf((e as Node2D).global_position.x - 1500.0) < 5.0:
+					sn = e
+				else:
+					e.set("harmless", true)
+			if p is Node2D:
+				(p as Node2D).global_position = Vector2(1250.0, 600.0)
+			_snap_camera(stage)
+			var tl: float = 0.0
+			while sn != null and tl < 6.0 and sn.get("aim_lock_point") == Vector2.INF:
+				await get_tree().physics_frame
+				tl += get_physics_process_delta_time()
+				if p is Node2D:
+					(p as Node2D).global_position = Vector2(1250.0, 600.0)
+		"challenge_lamps":
+			# 도전 시작 1.6s 뒤 · 암전 + 배너("맞으면 -5초") + 첫 가시 구덩이 비상등이 한 화면에.
+			for e in get_tree().get_nodes_in_group("enemy"):
+				if is_instance_valid(e):
+					e.set("harmless", true)
+			stage.call("_start_challenge_run")
+			if p is Node2D:
+				(p as Node2D).global_position = Vector2(700.0, 600.0)
+			_snap_camera(stage)
+			await get_tree().create_timer(1.6).timeout
 		"doc":
 			var doc := ArcturusDocumentOverlay.new()
 			doc.style = "terminal"   # 실제 서버 로그 트리거와 동일 스타일
@@ -369,6 +424,13 @@ func _anim_tick(setup: String, f: int, p: Node) -> void:
 				Input.action_release("move_left")
 
 # 잠금 비트는 감속 완충(~1.05s)을 지나야 컷씬이 열린다 · StoryDialogue.active 대기(상한 ~4s).
+# 카메라 스무딩 즉시 수렴 · 플레이어 순간이동 직후 캡처용.
+func _snap_camera(stage: Node) -> void:
+	var cam: Variant = stage.get("camera")
+	if cam is Camera2D:
+		await get_tree().process_frame
+		(cam as Camera2D).reset_smoothing()
+
 func _wait_cutscene_open() -> void:
 	for i in 240:
 		if StoryDialogue.active != null:

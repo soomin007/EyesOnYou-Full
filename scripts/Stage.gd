@@ -10504,7 +10504,7 @@ func _show_challenge_briefing_banner() -> void:
 	title_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(title_lbl)
 	var body_lbl := Label.new()
-	body_lbl.text = "%d초 안에 출구 도달 / 맞으면 -%d초" % [int(challenge_time_remaining), int(CHALLENGE_HIT_PENALTY)]
+	body_lbl.text = "%d초 안에 출구 도달 / 맞으면 -%d초" % [int(ceil(challenge_time_remaining)), int(CHALLENGE_HIT_PENALTY)]
 	body_lbl.add_theme_font_size_override("font_size", 18)
 	body_lbl.add_theme_color_override("font_color", Color(0.95, 0.92, 0.85))
 	body_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
