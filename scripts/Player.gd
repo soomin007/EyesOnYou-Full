@@ -212,6 +212,26 @@ var _was_on_floor: bool = true
 const _STEP_INTERVAL: float = 0.32
 var _step_t: float = 0.0
 
+# 이동 발판 탑승 보정(2026-08-30 사용자 "방향 전환 앞뒤로 반대로 미끄러진다") · 엔진은 발판 속도를
+# 직전 물리 스텝의 이동량으로 계산해 실어 나르므로, 가속 중엔 한 스텝만큼 뒤처지고 감속 중엔 앞선다
+# (실측 190px/s에서 ±3.2px = 정확히 1스텝). 이번 스텝의 실제 발판 이동량과 엔진이 적용한 양의 차이를
+# 그 자리에서 메운다(RuleSmoke ④가 0.00px를 감시). 발밑 발판은 짧은 하향 레이로 찾는다(정지 상태의 move_and_slide는 충돌 목록을
+# 안 남긴다 · Enemy._ray_exclude와 같은 이유).
+func _ride_moving_platform(delta: float) -> void:
+	if not is_on_floor():
+		return
+	var q := PhysicsRayQueryParameters2D.create(global_position + Vector2(0.0, -4.0), global_position + Vector2(0.0, 10.0), 1)
+	q.exclude = [get_rid()]
+	var r: Dictionary = get_world_2d().direct_space_state.intersect_ray(q)
+	if r.is_empty() or not (r.collider is MovingPlatform):
+		return
+	var mp: MovingPlatform = r.collider as MovingPlatform
+	# 수평만 보정한다. 수직은 엔진의 충돌·스냅이 접지를 유지하고(리프트 실측 ±2.6px · 시각 무해),
+	# 발을 새 윗면에 직접 맞추면 원웨이 발판의 접지 판정이 풀린다(실측 302프레임 · 낙하 위험).
+	var dx: float = mp.step_motion(delta).x - get_platform_velocity().x * delta
+	if absf(dx) > 0.001:
+		global_position.x += dx
+
 func _physics_process(delta: float) -> void:
 	# 지난 프레임의 최종 수평 속도 · 스키드(급정지) 감지는 입력 처리 "전" 값이어야 한다
 	# (이동이 입력 직결이라 입력을 끊는 프레임엔 velocity.x가 이미 0).
@@ -221,6 +241,7 @@ func _physics_process(delta: float) -> void:
 	_apply_gravity(delta)
 	var fall_v: float = velocity.y   # 착지 먼지용 · move_and_slide가 지우기 전의 낙하 속도
 	move_and_slide()
+	_ride_moving_platform(delta)
 	var on_floor_now: bool = is_on_floor()
 	# 착지 SFX · 공중에서 지면으로 전이된 순간 한 번. 짧은 hop은 step과 비슷해서
 	# 발이 떴던 시간이 있을 때만(=jumps_used > 0 또는 _was_on_floor false) 의미.

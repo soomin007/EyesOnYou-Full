@@ -5,6 +5,8 @@ extends Node
 #   ② 도전방: 피격 = 시간 -5(강제 종료 아님) · 비상등 8개 · 시간 초과 = 실패 플래그 + 암전 걷힘 +
 #      방 계속 + 완수 프리미엄 없음
 #   ③ 방류구: 판정 시작 = 플랜지 입구(기단·급수관 위 무피격) · 하우징/절연 포스트 z = 캐릭터 뒤
+#   ④ 이동 발판 탑승: 수평 리프트 위 정지 플레이어의 상대 위치 한 주기 흔들림 0(엔진 1스텝 지연 보정) ·
+#      수직 리프트는 접지 유지(floor lost 0) + 윗면 오차 ≤ 3.5px
 # 실행: godot --headless --path . --audio-driver Dummy tools/rule_smoke.tscn (종료 코드 0 = 전부 PASS)
 const STAGE_SCENE: String = "res://scenes/stage.tscn"
 var fails: int = 0
@@ -41,6 +43,7 @@ func _ready() -> void:
 	await _discharge_case()
 	await _sniper_case()
 	await _challenge_case()
+	await _platform_case()
 	print("[RULE] %s" % ("ALL PASS" if fails == 0 else "%d FAIL" % fails))
 	get_tree().quit(0 if fails == 0 else 1)
 
@@ -178,3 +181,51 @@ class FakePlayer extends Node2D:
 	var clear_protect: bool = false
 	func take_hit(d: int) -> void:
 		hits += d
+
+func _platform_case() -> void:
+	# 막4 2번째 스테이지로 부팅(막 진입 잠금 컷씬의 시간 감속·pause 회피).
+	var stage: Node = await _boot("route_freight_lift", 10)
+	var p: CharacterBody2D = get_tree().get_first_node_in_group("player") as CharacterBody2D
+	for e in get_tree().get_nodes_in_group("enemy"):
+		if is_instance_valid(e):
+			e.set("harmless", true)
+	var hp: Node2D = null
+	var vp: Node2D = null
+	for m in get_tree().get_nodes_in_group("moving_platform"):
+		var fx: float = float(m.get("_from").x)
+		if absf(fx - 800.0) < 1.0:
+			hp = m
+		elif absf(fx - 1330.0) < 1.0:
+			vp = m
+	_check("이동 발판 확보(수평 800 · 수직 1330)", hp != null and vp != null)
+	if hp == null or vp == null:
+		stage.queue_free()
+		return
+	# 수평 리프트 · 한 주기(5s) 상대 x 흔들림.
+	p.global_position = hp.global_position + Vector2(0.0, -14.0)
+	p.velocity = Vector2.ZERO
+	await get_tree().create_timer(0.5).timeout
+	var off0: float = p.global_position.x - hp.global_position.x
+	var worst: float = 0.0
+	var t: float = 0.0
+	while t < 5.2:
+		await get_tree().physics_frame
+		t += get_physics_process_delta_time()
+		worst = maxf(worst, absf(p.global_position.x - hp.global_position.x - off0))
+	_check("수평 리프트 탑승 흔들림 ≤ 0.05px", worst <= 0.05, "worst=%.2f" % worst)
+	# 수직 리프트 · 접지 유지 + 윗면 오차.
+	p.global_position = vp.global_position + Vector2(0.0, -14.0)
+	p.velocity = Vector2.ZERO
+	await get_tree().create_timer(0.5).timeout
+	var lost: int = 0
+	var worst_y: float = 0.0
+	var t2: float = 0.0
+	while t2 < 4.6:
+		await get_tree().physics_frame
+		t2 += get_physics_process_delta_time()
+		if not p.is_on_floor():
+			lost += 1
+		worst_y = maxf(worst_y, absf(p.global_position.y - (vp.global_position.y - 12.0)))
+	_check("수직 리프트 접지 유지 · 윗면 오차 ≤ 3.5px", lost == 0 and worst_y <= 3.5, "lost=%d worst_y=%.2f" % [lost, worst_y])
+	stage.queue_free()
+	await get_tree().process_frame

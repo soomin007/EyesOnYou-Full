@@ -20,6 +20,8 @@ var _cycle: float = 4.0
 var _phase: float = 0.0
 var _w: float = 160.0
 var _t: float = 0.0
+var _last_motion: Vector2 = Vector2.ZERO   # 이번 물리 스텝에서 옮긴 양
+var _motion_frame: int = -1                # _last_motion을 계산한 물리 프레임
 
 func setup(from: Vector2, to: Vector2, w: float, cycle: float, phase: float = 0.0) -> void:
 	_from = from
@@ -69,7 +71,21 @@ func _tri(u: float) -> float:
 		x = 2.0 - x
 	return smoothstep(0.0, 1.0, x)
 
+func _pos_at(t: float) -> Vector2:
+	return _from.lerp(_to, _tri(_phase + t / _cycle))
+
 func _physics_process(delta: float) -> void:
+	var before: Vector2 = position
 	_t += delta
-	var u: float = _phase + _t / _cycle
-	position = _from.lerp(_to, _tri(u))
+	position = _pos_at(_t)
+	_last_motion = position - before
+	_motion_frame = Engine.get_physics_frames()
+
+# 이번 물리 스텝의 실제 이동량 · Player가 탑승 보정에 쓴다(Player._ride_moving_platform).
+# 엔진이 CharacterBody2D에 실어 주는 발판 속도는 "직전 스텝 이동량"이라 한 스텝 늦다(가속 중 뒤처지고
+# 감속 중 앞서는 ±3px 미끄러짐 · 2026-08-30 실측). 호출 순서와 무관하게 정답을 주기 위해, 아직 이
+# 프레임에 안 움직였으면 같은 delta로 움직일 양을 미리 계산해 돌려준다.
+func step_motion(delta: float) -> Vector2:
+	if _motion_frame == Engine.get_physics_frames():
+		return _last_motion
+	return _pos_at(_t + delta) - _pos_at(_t)
