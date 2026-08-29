@@ -269,17 +269,18 @@ func _build_line(ln: Dictionary) -> void:
 	p_tex.offset_top = -516.0
 	p_tex.offset_bottom = -96.0
 	# add_child는 패널·림·브래킷 뒤로 미룬다 · 초상이 대사 판 *위에* 그려져 경계를 넘어온
-	# 구도(2026-08-25 사용자 안). 텍스트 영역(x498~)과는 안 겹친다(초상 우변 468).
+	# 구도(2026-08-25 사용자 안).
 	var panel := PanelContainer.new()
-	# 텍스트 시작 = 이름표 왼끝(486)과 정렬(2026-08-25 사용자 "정렬을 맞추든지 물음표 옆까지
-	# 당기든지"). 판 left 230 + 256 = 486. 초상 우변(468)과도 안 겹친다.
-	sb.content_margin_left = 256.0
+	# 대사 판 자체를 이름표 자리까지 당긴다(2026-08-30 사용자 "텍스트가 아니라 대화창을 거기로") ·
+	# 판 left 466, 이름표 486이 윗변에 걸터앉고 텍스트 시작 = 466 + 20 = 486(이름표 왼끝 정렬 유지).
+	# 초상(48~468)은 판 왼쪽 바깥에 선다.
+	sb.content_margin_left = 20.0
 	sb.content_margin_right = 34.0
 	sb.content_margin_top = 22.0
 	sb.content_margin_bottom = 18.0
 	panel.add_theme_stylebox_override("panel", sb)
 	panel.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	panel.offset_left = 230.0
+	panel.offset_left = 466.0
 	panel.offset_right = -130.0
 	panel.offset_top = -208.0
 	panel.offset_bottom = -64.0
@@ -297,10 +298,10 @@ func _build_line(ln: Dictionary) -> void:
 	# 모서리 브래킷 + 이중 프레임 + 레일 눈금 · 패널보다 6px 바깥.
 	var trim := _PanelTrim.new()
 	trim.col = Color(sp_color.r, sp_color.g, sp_color.b, 0.75)
-	trim.rail_from_x = 476.0 - 224.0   # 림 시작(초상 오른쪽 476)을 트림 로컬(left 224)로 환산
+	trim.rail_from_x = 476.0 - 460.0   # 림 시작(476)을 트림 로컬(left 460)로 환산
 	trim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	trim.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	trim.offset_left = 224.0
+	trim.offset_left = 460.0
 	trim.offset_right = -124.0
 	trim.offset_top = -214.0
 	trim.offset_bottom = -58.0

@@ -110,9 +110,12 @@ const SNIPER_RANGE: float = 600.0
 # 폐지 · 2026-08-29 "차징을 끊어도 이어서 사격하니 피할 방법이 없다"). 고정 뒤 점프·낙하·옆걸음
 # = 빗나감, 엄폐물 뒤 = 막힘. 멈춘 선(백열)이 tell.
 const SNIPER_LOCK_TIME: float = 0.3
-# 하향 사각 · 수평 아래로 이 각도보다 가파른 표적은 못 본다("바로 밑은 사각"). 종전엔 자기 발판이
-# 레이를 막아 우연히 생기던 사각을 명시 규칙으로(발판 두께·폭에 따라 800px까지 못 보던 불일치 해소).
-const SNIPER_BLIND_DOWN_DEG: float = 50.0
+# 자리 이동(2026-08-30 사용자 제안) · 자기 발판이 시야를 막는 건 의도("바닥을 뚫고 쏘는 건 비상식").
+# 대신 사거리 안의 표적이 안 보이면 초소 반경(SNIPER_LEASH_X) 안에서 발판 가장자리 쪽으로 천천히
+# 걸어가 사선을 연다. 걷는 모습 자체가 예고이고, 표적이 밑으로 파고들면 다시 걸어야 한다.
+const SNIPER_WALK_SPEED: float = 42.0
+const SNIPER_LEASH_X: float = 150.0
+const SNIPER_EDGE_LOOKAHEAD: float = 12.0   # 가장자리까지 바싹(기본 36이면 발판이 계속 사선을 막는다)
 # 측면 단독 둥지(회피 전용) 저격수 · 등반/회피 맵(watchtower/rooftops/cooling)에서 아래를 너무 쉽게
 # 쏴 등반이 막힌다는 피드백. 둥지 저격수만 사거리·조준·발사를 완화해 "한 둥지씩, 텔레그래프 보고 피하며"
 # 오르게 한다. 전투 맵(subway/datacenter) 저격수는 avoid_only 미부착이라 그대로(영향 없음).
@@ -194,6 +197,7 @@ var fire_timer: float = 0.0
 var aim_line: Line2D
 var aim_los_clear: bool = false
 var aim_lock_point: Vector2 = Vector2.INF   # 조준 고정 지점(고정 창 진입 순간의 표적) · INF = 미고정
+var _sniper_home_x: float = NAN   # 초소 x(첫 틱에 기록) · 자리 이동 반경의 기준
 
 var drone_bomb_cd: float = 0.0
 
@@ -1086,7 +1090,20 @@ func _schedule_elite_second_shot() -> void:
 # ─── Sniper ─────────────────────────────────────────────────
 
 func _tick_sniper(delta: float) -> void:
-	velocity.x = 0.0
+	if is_nan(_sniper_home_x):
+		_sniper_home_x = global_position.x
+	# 자리 이동 · 사거리 안인데 안 보이면(자기 발판·엄폐) 표적 쪽 가장자리로 천천히. 조준 중·둥지 제외.
+	var walk_dir: int = 0
+	var p0 := _find_player()
+	if p0 != null and is_on_floor() and aim_line == null and not _is_nest_sniper():
+		if global_position.distance_to(p0.global_position) <= _eff_sniper_range() and not _has_line_of_sight(p0):
+			var d: int = 1 if p0.global_position.x > global_position.x else -1
+			var next_x: float = global_position.x + float(d) * SNIPER_WALK_SPEED * delta
+			if absf(next_x - _sniper_home_x) <= SNIPER_LEASH_X and not is_on_wall() 					and _has_ground_ahead(d, SNIPER_EDGE_LOOKAHEAD):
+				walk_dir = d
+	velocity.x = float(walk_dir) * SNIPER_WALK_SPEED
+	if walk_dir != 0:
+		_flip_visual(walk_dir < 0)
 	if not is_on_floor():
 		velocity.y = min(velocity.y + GRAVITY * delta, 1100.0)
 	else:
@@ -1138,32 +1155,14 @@ func _tick_sniper(delta: float) -> void:
 		_clear_aim()
 	queue_redraw()  # 사거리 링(_draw) 갱신 · 플레이어 접근/조준 상태 반영
 
-# 시야·사격 레이 제외 목록 · 자기 몸 + 지금 서 있는 발판. 발판은 24px 원웨이 바디인데 레이 질의는
-# 원웨이를 무시해, 거치대 저격의 하향 사선을 자기 발판 가장자리가 막았다(2026-08-29 스모크 실측:
-# 펌프장 1500 거치대가 지상 450px 앞을 영영 못 봄 · 거리 800 이하 전부 사각). move_and_slide 직후 호출.
-func _ray_exclude() -> Array[RID]:
-	var out: Array[RID] = [get_rid()]
-	# 서 있는 바디는 발밑 짧은 레이로 찾는다 · 정지 상태(velocity 0)의 move_and_slide는 충돌을 남기지
-	# 않아 get_slide_collision으로는 못 얻는다.
-	var q := PhysicsRayQueryParameters2D.create(global_position + Vector2(0, -6.0), global_position + Vector2(0, 16.0), 1)
-	q.exclude = [get_rid()]
-	var r: Dictionary = get_world_2d().direct_space_state.intersect_ray(q)
-	if not r.is_empty():
-		var rid: RID = r.rid
-		if rid.is_valid():
-			out.append(rid)
-	return out
-
+# 시야 · 지형(층 1)만 본다. 자기가 선 발판도 막는다 = 의도(2026-08-30 사용자 "바닥을 뚫고 쏘는 건
+# 비상식"). 가려지면 _tick_sniper의 자리 이동이 가장자리로 데려가 사선을 연다.
 func _has_line_of_sight(p: Node2D) -> bool:
 	var space := get_world_2d().direct_space_state
 	var from: Vector2 = global_position + Vector2(0, -20)
 	var to: Vector2 = p.global_position + Vector2(0, -28)
-	# 하향 사각 · 발밑 가까이는 겨눌 수 없다(SNIPER_BLIND_DOWN_DEG).
-	var dy: float = to.y - from.y
-	if dy > 40.0 and rad_to_deg(atan2(dy, absf(to.x - from.x))) > SNIPER_BLIND_DOWN_DEG:
-		return false
 	var query := PhysicsRayQueryParameters2D.create(from, to, 1)
-	query.exclude = _ray_exclude()
+	query.exclude = [get_rid()]
 	var result: Dictionary = space.intersect_ray(query)
 	return result.is_empty()
 
@@ -1505,7 +1504,7 @@ func _fire_at_player() -> void:
 		return
 	var to: Vector2 = from + dirv.normalized() * (_eff_sniper_range() + 240.0)
 	var query := PhysicsRayQueryParameters2D.create(from, to, 1 | 2)
-	query.exclude = _ray_exclude()
+	query.exclude = [get_rid()]
 	var result: Dictionary = get_world_2d().direct_space_state.intersect_ray(query)
 	var end: Vector2 = to
 	var hit: bool = false
