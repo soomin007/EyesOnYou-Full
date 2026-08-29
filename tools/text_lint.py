@@ -9,9 +9,10 @@
 import glob
 import io
 import os
+import re
 import sys
 
-BANNED_JARGON = ["격벽", "실체화", "사선", "벽감", "차폐"]
+BANNED_JARGON = ["격벽", "실체화", "사선", "벽감", "차폐", "랙"]
 
 GD_GLOBS = ["scripts/*.gd", "tools/*.gd"]
 MD_GLOBS = ["*.md", "docs/**/*.md", "session_logs/*.md"]
@@ -69,6 +70,9 @@ def main() -> int:
             if f.endswith(".gd"):
                 for s in string_spans(ln):
                     for w in BANNED_JARGON:
+                        # '랙'은 블랙·트랙·크랙 같은 합성 음절이 아닌 단독 낱말(서버 랙)만 잡는다.
+                        if w == "랙" and not re.search(r"(?<![블트크])랙", s):
+                            continue
                         if w in s:
                             print("[WARN] 조어 '%s' %s:%d : %s" % (w, f, num, s[:60]))
                             warns += 1

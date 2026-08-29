@@ -2275,7 +2275,7 @@ func _ambience_server_hall() -> void:
 			_add_server_rack(x, bank_h, rw, rng, true)
 			x += rw + 4.0
 		x += rng.randf_range(180.0, 300.0)
-	_add_lore_label(Vector2(360.0, -30.0), "서버 랙 · 코어 접근", Color(0.4, 0.85, 1.0, 0.5), 15)
+	_add_lore_label(Vector2(360.0, -30.0), "서버실 · 코어 접근", Color(0.4, 0.85, 1.0, 0.5), 15)
 
 # 랙 1기 · 몸체 + 유닛 줄눈 + 받침 + 점멸 LED. 뱅크 문법의 단위 부품(hall·stacks 공용).
 func _add_server_rack(x: float, rh: float, rw: float, rng: RandomNumberGenerator, blink: bool) -> void:
@@ -2640,7 +2640,7 @@ func _ambience_server_stacks() -> void:
 			desk.z_index = -11
 			add_child(desk)
 		x += rng.randf_range(170.0, 300.0)
-	_add_lore_label(Vector2(360.0, -30.0), "랙 열람실 · 접근 기록", Color(0.4, 0.85, 1.0, 0.5), 15)
+	_add_lore_label(Vector2(360.0, -30.0), "서버 열람실 · 접근 기록", Color(0.4, 0.85, 1.0, 0.5), 15)
 
 # 코어 스위치룸(서버 홀 체인 방3) · 대형 스위치 캐비닛 + 케이블 다발 + 붉은 비상등 워시.
 func _ambience_server_switchroom() -> void:
@@ -4304,7 +4304,7 @@ func _build_route_ambience() -> void:
 			_apply_act_rival_tint()
 			return
 		"warehouse_racks":
-			_ambience_warehouse("물류 창고 · 보관 랙")
+			_ambience_warehouse("물류 창고 · 보관 선반")
 			_apply_act_rival_tint()
 			return
 		"warehouse_shipping":
@@ -9353,10 +9353,14 @@ func _build_cooling_secret() -> void:
 	# 증기 분출구 옆 지면에 있어 위험했고, 당겨 솟는 발판 연출이 불필요했음).
 	var lever := _spawn_lever(Vector2(1560.0, 360.0), "cooling_vent")
 	lever.pulled.connect(func(_id: String) -> void:
-		var spots: Array = [Vector2(1510.0, 354.0), Vector2(1560.0, 348.0), Vector2(1610.0, 354.0)]
-		for p in spots:
-			_spawn_orb(p, true)
-		_show_veil_subtitle(VeilDialogue.banded("여기도 잠긴 칸이었습니다. 발밑 보급품을 챙기십시오.", "여기도 잠긴 칸이었네요. 발밑 보급품을 챙겨요."), 3.0)
+		# 정지 배치(static)는 플레이어 발밑 26px 위에 놓여 그 자리에서 즉시 흡수 = "당겨도 달라지는 게
+		# 없다"(사용자 2026-08-29). 레버 기단에서 부채꼴로 튀어오르게 해 보상이 눈에 보이게 한다.
+		var launches: Array = [Vector2(-150.0, -300.0), Vector2(0.0, -340.0), Vector2(150.0, -300.0)]
+		for lv in launches:
+			var orb: Node2D = _spawn_orb(Vector2(1560.0, 372.0))
+			orb.set("bounce_velocity", lv)
+			orb.set("placed", true)
+		_show_veil_subtitle(VeilDialogue.banded("레버에서 경험치가 튀어나왔습니다. 챙기십시오.", "레버에서 경험치가 나왔어요. 놓치지 말고 챙기세요."), 3.0)
 	)
 
 # ── rooftops 비밀칸 ───────────────────────────────────────────
@@ -10078,40 +10082,53 @@ func _on_core_breached() -> void:
 	get_tree().change_scene_to_file.call_deferred(SceneRouter.DEATH)
 
 func _on_player_damaged() -> void:
-	# 도전 방: 1 hit fail · 즉시 stage 스킵 처리.
+	# 도전 방: 피격 = 시간 페널티(1피격 강제 종료 폐지 · 2026-08-29 사용자 "스치기만 해도 갑자기
+	# 꺼지는 게 어이없다"). 체력은 평소처럼 깎이고, 도전은 시간이 다 돼야 실패한다.
 	if challenge_active and not challenge_failed and not goal_reached:
-		_challenge_fail("피격")
-		return
+		_challenge_hit_penalty()
 	# 피격 · 화면 가장자리 짧은 붉은 플래시 + 가벼운 카메라 흔들림
 	_screen_flash(Color(1.0, 0.18, 0.22, 0.55), 0.06, 0.32)
 	_camera_shake(6.0, 0.18)
 
+const CHALLENGE_HIT_PENALTY: float = 5.0   # 도전 방 피격당 시간 차감(초)
+
+# 도전 피격 페널티 · 타이머 -5s + 라벨 옆 "-5" 팝. 체력 감소·플래시는 일반 피격 경로가 처리.
+func _challenge_hit_penalty() -> void:
+	challenge_time_remaining = maxf(0.0, challenge_time_remaining - CHALLENGE_HIT_PENALTY)
+	if challenge_timer_label == null or not is_instance_valid(challenge_timer_label):
+		return
+	var pop := Label.new()
+	pop.text = "-%d" % int(CHALLENGE_HIT_PENALTY)
+	pop.add_theme_font_size_override("font_size", 22)
+	pop.add_theme_color_override("font_color", Color(1.0, 0.30, 0.30))
+	pop.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+	pop.add_theme_constant_override("outline_size", 4)
+	pop.position = challenge_timer_label.position + Vector2(206.0, 0.0)
+	challenge_timer_label.get_parent().add_child(pop)
+	var tw := pop.create_tween()
+	tw.tween_property(pop, "position:y", pop.position.y - 26.0, 0.7)
+	tw.parallel().tween_property(pop, "modulate:a", 0.0, 0.5).set_delay(0.25)
+	tw.tween_callback(pop.queue_free)
+
+# 도전 실패 = 완수 보너스만 잃는다 · 방은 끝까지 정상 진행(1피격 강제 종료·즉시 다음 구역 폐지,
+# 2026-08-29). 교신 복구 연출: 암전이 걷히고 타이머가 꺼진다. 골 도달은 평소 클리어와 같다.
 func _challenge_fail(_reason: String) -> void:
 	if challenge_failed:
 		return
 	challenge_failed = true
+	GameState.challenge_failed_this_stage = true
 	SfxPlayer.play("challenge_fail")
-	# 잔여 데미지로 인한 사망 방지: HP 리필 + 긴 invuln (대기 중 죽으면 데스 씬으로 새버림).
-	GameState.player_hp = GameState.effective_max_hp()
-	if player != null and is_instance_valid(player):
-		player.set("invuln", 5.0)
-	# 안전 처리: paused 상태가 어떤 경로로든 set되어 있으면 풀어줘서 await timer가 진행되게.
-	# restrict_combat_input도 명시 해제 · 다음 stage carry되어 입력 잠김 방지.
 	get_tree().paused = false
 	GameState.restrict_combat_input = false
-	# VEIL 실패 대사 + 조용히 다음 stage로 (보상 0, 페널티 없음).
-	_show_veil_subtitle(VeilDialogue.banded("괜찮습니다. 다음 구역으로 갑니다.", "괜찮아요. 다음 구역으로 가요."), 2.5)
-	await get_tree().create_timer(2.8).timeout
-	if goal_reached:
-		return
-	goal_reached = true
-	# 보상/레벨업 없이 stage 카운트만 증가시킨 뒤 다음 씬으로.
-	GameState.current_stage += 1
-	GameState.player_hp = GameState.effective_max_hp()
-	# transition 직전 한 번 더 안전 reset.
-	get_tree().paused = false
-	GameState.restrict_combat_input = false
-	_transition_after_clear()
+	if challenge_dark_root != null and is_instance_valid(challenge_dark_root):
+		if _challenge_dark_tween != null and _challenge_dark_tween.is_valid():
+			_challenge_dark_tween.kill()
+		var tw_d := challenge_dark_root.create_tween()
+		tw_d.tween_property(challenge_dark_root, "modulate:a", 0.0, 0.9)
+	if challenge_timer_label != null and is_instance_valid(challenge_timer_label):
+		challenge_timer_label.text = "TIME  0.0"
+		challenge_timer_label.add_theme_color_override("font_color", Color(0.55, 0.55, 0.55))
+	_show_veil_subtitle(VeilDialogue.banded("시간 초과입니다. 통신 복구, 조명 켭니다. 출구까지 그대로 가십시오.", "시간이 다 됐어요. 통신 돌아왔고 불도 켰으니, 출구까지 그대로 가세요."), 3.4)
 
 func _on_player_revived() -> void:
 	# 부활 · 강한 흰 플래시 (전체 화면이 잠깐 밝아짐)
@@ -10397,7 +10414,7 @@ func _build_challenge_gate() -> void:
 	challenge_plate.reset_physics_interpolation()
 	challenge_plate.stepped.connect(_on_challenge_plate_stepped)
 	# VEIL 사전 경고 · 발판이 뭔지 알려주기.
-	_show_veil_subtitle("이 안은 통신이 끊깁니다. 발판을 밟으면 시작입니다.\n한 대만 맞아도 끝.", 4.0)
+	_show_veil_subtitle("이 안은 통신이 끊깁니다. 발판을 밟으면 시간을 잽니다.\n맞으면 남은 시간이 깎입니다.", 4.0)
 
 func _on_challenge_plate_stepped(_id: String) -> void:
 	if not challenge_pending:
@@ -10428,12 +10445,13 @@ func _start_challenge_run() -> void:
 	_play_siren_flash()
 	# 3) 암전 · 0 → 정상 강도 fade in. CanvasLayer 안의 Control 노드를 트윈.
 	_build_challenge_blackout()
+	_build_challenge_lamps()
 	if challenge_dark_root != null:
 		SfxPlayer.play("blackout_fade_in")
 		challenge_dark_root.modulate.a = 0.0
-		var tw_d := challenge_dark_root.create_tween()
-		tw_d.tween_interval(0.4)
-		tw_d.tween_property(challenge_dark_root, "modulate:a", 1.0, 0.7)
+		_challenge_dark_tween = challenge_dark_root.create_tween()
+		_challenge_dark_tween.tween_interval(0.4)
+		_challenge_dark_tween.tween_property(challenge_dark_root, "modulate:a", 1.0, 0.7)
 	# 4) 타이머 HUD.
 	_build_challenge_timer_hud()
 	# 5) 클리어 조건 배너 · 큰 글자, 화면 중앙. 페이드 인 → 2.4s 머무름 → 페이드 아웃.
@@ -10486,7 +10504,7 @@ func _show_challenge_briefing_banner() -> void:
 	title_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(title_lbl)
 	var body_lbl := Label.new()
-	body_lbl.text = "%d초 안에 골 도달 / 한 대만 맞아도 실패" % int(challenge_time_remaining)
+	body_lbl.text = "%d초 안에 출구 도달 / 맞으면 -%d초" % [int(challenge_time_remaining), int(CHALLENGE_HIT_PENALTY)]
 	body_lbl.add_theme_font_size_override("font_size", 18)
 	body_lbl.add_theme_color_override("font_color", Color(0.95, 0.92, 0.85))
 	body_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -10502,6 +10520,7 @@ func _show_challenge_briefing_banner() -> void:
 	tw.chain().tween_callback(layer.queue_free)
 
 var challenge_dark_root: Control = null
+var _challenge_dark_tween: Tween = null   # 암전 페이드 인 · 실패 시 kill(같은 속성 트윈 경합 방지)
 
 func _build_challenge_blackout() -> void:
 	# 화면 강 dim · 짙은 검정. 더 진하게(0.72), 가장자리 비네트도 더 두껍게.
@@ -10545,6 +10564,32 @@ func _build_challenge_blackout() -> void:
 				v.offset_left = -thick
 		v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		challenge_dark_root.add_child(v)
+
+# 비상등 · 가시 구덩이 양끝에 붉은 등. 암전 레이어(17) 위의 뷰포트 추종 레이어(18)에 그려
+# 어둠 속에서도 함정 자리가 읽힌다(2026-08-29 사용자 "잘 보이지도 않는데 스치기만 해도").
+# 점멸 없음(광과민) · 등은 상시 점등.
+func _build_challenge_lamps() -> void:
+	var layer := CanvasLayer.new()
+	layer.name = "ChallengeLamps"
+	layer.layer = 18
+	layer.follow_viewport_enabled = true
+	add_child(layer)
+	for entry in _map_data.get("spikes", []):
+		var d: Dictionary = entry
+		var cx: float = float(d.get("x", 0.0))
+		var w: float = float(d.get("w", 90.0))
+		var y: float = float(d.get("y", GROUND_Y - 6.0))
+		for sx in [cx - w * 0.5 - 12.0, cx + w * 0.5 + 12.0]:
+			var lamp := Node2D.new()
+			lamp.position = Vector2(float(sx), y + 6.0)
+			lamp.draw.connect(_draw_challenge_lamp.bind(lamp))
+			layer.add_child(lamp)
+
+func _draw_challenge_lamp(ci: CanvasItem) -> void:
+	# 기둥 + 붉은 등 + 옅은 글로우.
+	ci.draw_rect(Rect2(Vector2(-2.0, -34.0), Vector2(4.0, 34.0)), Color(0.38, 0.14, 0.12))
+	ci.draw_circle(Vector2(0.0, -37.0), 11.0, Color(1.0, 0.25, 0.20, 0.20))
+	ci.draw_circle(Vector2(0.0, -37.0), 4.5, Color(1.0, 0.48, 0.38, 1.0))
 
 func _build_challenge_timer_hud() -> void:
 	var layer := CanvasLayer.new()

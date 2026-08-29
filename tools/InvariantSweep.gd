@@ -85,7 +85,13 @@ func _sweep_death_invariant() -> void:
 		if died_in == "route_lab" or died_in == "route_core_recovery":
 			if GameState.current_stage != s:
 				bad.append("s%d(보스방) 제자리 아님 stage=%d" % [s, GameState.current_stage])
+			elif not GameState.death_restart_in_place:
+				bad.append("s%d(보스방) 제자리 플래그 꺼짐" % s)
 			continue
+		# 보스방 밖 사망은 절대 제자리 플래그가 켜지면 안 된다 · 되감기 후 직전 맵이 lab인
+		# 막4 사망이 SENTINEL로 끌려간 실사고(2026-08-29) 회귀 감시.
+		if GameState.death_restart_in_place:
+			bad.append("s%d 제자리 플래그 켜짐(rid=%s · 보스전 오인)" % [s, GameState.current_route_id])
 		var pool: Array = RouteData.get_route_pool_for_stage(GameState.current_stage, GameState.route_history)
 		var exp_rid: String = str(GameState.route_history.back()) if not GameState.route_history.is_empty() else ""
 		if GameState.current_stage != act_s:

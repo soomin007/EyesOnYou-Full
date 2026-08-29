@@ -187,6 +187,11 @@ var current_route_risk: int = 1   # 1~3, 적 수 배율 + 행동 강화에 사�
 # ("xp" 경험치 +2 / "record" 기록 1칸 / "recon" 다음 구간 숨은 요소 표시(재정의 08-21) / "" 없음).
 var current_route_reward_type: String = ""
 var current_route_challenge: bool = false  # 도전 맵 여부 · 고비 판정용
+# 사망 재개 방식 · register_death가 결정(true = 보스방에서 죽어 그 자리 처음부터). Death 씬은 이
+# 플래그만 본다 · current_route_id로 판정하면 막 되감기 후 "직전에 깬 맵"이 보스방(lab)일 때
+# 막4 사망이 SENTINEL로 끌려간다(2026-08-29 실사고 · 8/25 A-2 재고정 + lab 예외의 결합).
+var death_restart_in_place: bool = false
+var challenge_failed_this_stage: bool = false  # 도전 실패(시간 초과) · Stage가 set · 완수 프리미엄 차단(2026-08-29)
 var current_route_hidden: bool = false     # 히든 맵 여부 · 고비 판정용
 
 var player_max_hp: int = 3
@@ -484,6 +489,7 @@ func reset() -> void:
 	recon_note_pending = false
 	last_clear_reward_note = ""
 	current_route_challenge = false
+	challenge_failed_this_stage = false
 	current_route_hidden = false
 	player_max_hp = 3
 	player_hp = 3
@@ -558,6 +564,7 @@ func start_main_game() -> void:
 	recon_note_pending = false
 	last_clear_reward_note = ""
 	current_route_challenge = false
+	challenge_failed_this_stage = false
 	current_route_hidden = false
 	player_max_hp = 3
 	player_hp = player_max_hp
@@ -627,6 +634,7 @@ func record_route_choice(route: Dictionary, recommended_id: String) -> void:
 	veilsight_recon_next = false
 	recon_note_pending = veilsight_recon_active
 	current_route_challenge = bool(route.get("challenge", false))
+	challenge_failed_this_stage = false
 	current_route_hidden = bool(route.get("hidden", false))
 	# 비상 탈출로: 시야 붕괴 해제(끌려온 degradation 끔). 탈출=종착이라 이후 맵·엔딩 영향 없음.
 	# 그 외, 보스/탈출 직전 첫 전투 맵(일반 stage>=4 / 스토리 stage2~3, 아직 안 붕괴)은 "진입부터 붕괴"
@@ -881,11 +889,14 @@ func register_death() -> void:
 	# 사망 = 그 막 첫 스테이지로 후퇴(2026-08-23 통일 · 자원은 HP 하나). 여기서 즉시 후퇴·저장을
 	# 마쳐 타이틀 이탈 후 이어하기로도 무를 수 없게 한다(이어하기 무름 방지). 예외 = 14-1
 	# 보스전: 같은 스테이지 P1부터(Death._restart_stage가 rival_phase_reached를 리셋).
+	death_restart_in_place = false
 	if story_mode or playground_active:
 		return
 	# 보스전 사망 = 그 자리(보스전 처음)부터 · 14-1과 SENTINEL(lab) 공통(2026-08-23 통일
 	# "보스전만 같은 자리"가 14-1에만 구현돼 lab은 막3 처음으로 끌려갔다 · 7차 갤러리 지적).
-	if current_route_id != "route_core_recovery" and current_route_id != "route_lab":
+	# 판정은 "죽은 맵"(되감기 전 current_route_id)으로만 · 결과는 플래그로 Death에 전달.
+	death_restart_in_place = current_route_id == "route_core_recovery" or current_route_id == "route_lab"
+	if not death_restart_in_place:
 		current_stage = act_start_stage(act_for_stage(current_stage))
 		rival_phase_reached = 0
 		# 진행 불가 소프트락 수정(2026-08-25 사용자 보고): 막 시작으로 후퇴하면서 그 막에서
@@ -953,7 +964,8 @@ func on_stage_clear() -> bool:
 	last_clear_flawless = false
 	# 도전 루트 완수 프리미엄 · 1히트 실패·시간 제한·VEIL 차단의 기대 보상 보정(2026-08-15 검토:
 	# 종전엔 클리어 XP가 일반 reward3 맵과 동일한데 킬 기회는 없어 이론상 보상 열위였다).
-	last_clear_challenge = current_route_challenge and not story_mode and not playground_active
+	# 실패(시간 초과)한 도전은 방을 끝까지 진행해도 프리미엄 없음(2026-08-29 · 강제 종료 폐지 후 신설 게이트).
+	last_clear_challenge = current_route_challenge and not challenge_failed_this_stage and not story_mode and not playground_active
 	if last_clear_challenge:
 		score += 100 * current_stage
 		if add_xp(4, false):
@@ -1259,6 +1271,14 @@ func load_run() -> bool:
 		clear_run()
 		return false
 	_restore_run_state(cf, "run")
+	# 자가 치유(2026-08-29) · 막4 사망이 보스방으로 오인돼 lab을 다시 깬 세이브는 기록(route_history)
+	# 없이 current_stage만 앞서 있다. 불변식(기록 길이 == 스테이지)으로 되돌려 그 막의 선택부터 재개.
+	if not story_mode and route_history.size() < current_stage:
+		print("[RUN] heal: stage %d > history %d · 기록 끝으로 되감기" % [current_stage, route_history.size()])
+		current_stage = route_history.size()
+		current_route_id = str(route_history.back()) if not route_history.is_empty() else ""
+		death_restart_in_place = false
+		save_run()
 	return true
 
 # --- 기록 재진입(팔림프세스트) · user://palimpsest.cfg. replay_support_plan §2 ---

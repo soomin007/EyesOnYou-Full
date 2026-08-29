@@ -9,6 +9,7 @@
 | InvariantSweep | `godot --headless --path . tools/invariant_sweep.tscn` | 런 상태 불변식 11항목: 전 스테이지 사망 불변식(막 시작·기록 절단·풀 보존·hp 복원) · 14-1 제자리 예외 · 처리 4종 그리디 완주 풀 하한 · 실효 최대 HP ≥ 2 · 런 직렬화 왕복 · 오버레이 pause/time_scale 복원 |
 | TrapSweep | `godot --headless --path . tools/trap_sweep.tscn` | 전 라우트·전 방 포탑 사선 vs 플랫폼 기하(탄이 발판에 먹혀 죽는 배치) |
 | BootSweep | `godot --headless --path . tools/boot_sweep.tscn` | 전 라우트 × 전 방(61맵) 실제 Stage 인스턴스화 · 맵 구성 붕괴/스폰 크래시/플레이어 미생성 감시 |
+| RuleSmoke | `godot --headless --path . --audio-driver Dummy tools/rule_smoke.tscn` | 실플레이 규칙 3종 실인스턴스 단언: 저격 조준 고정(비키면 빗나감·제자리 명중·사거리 600·거치대 하향 사각) · 도전방(피격 -5s·비상등·시간 초과 = 조명 복구+방 계속+프리미엄 없음) · 방류구(판정 = 플랜지 입구부터·하우징 z) |
 | text_lint | `python tools/text_lint.py` | em dash(U+2014) 재유입(ERROR) · en dash(WARN) · .gd 문자열 내 노출 금지 조어(격벽·실체화·사선·벽감·차폐) |
 | spawn_lint | `python tools/spawn_lint.py` | add_child 후 global_position 대입에 reset_physics_interpolation 누락(원점 잔상 함정) |
 

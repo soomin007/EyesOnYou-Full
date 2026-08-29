@@ -29,7 +29,7 @@ func _ready() -> void:
 	# 반드시 화면에 명시(시스템 브래킷 문법). register_death가 이미 후퇴를 마친 뒤라
 	# current_stage = 재개 지점이다. 보스전은 같은 자리 처음부터.
 	if not GameState.story_mode and not GameState.playground_active:
-		if GameState.current_route_id == "route_core_recovery":
+		if GameState.death_restart_in_place:
 			full_text += "\n\n[ 보스전 처음부터 재개 ]"
 		else:
 			full_text += "\n\n[ 막 %d 첫 구역에서 재개 ]" \
@@ -89,15 +89,12 @@ func _restart_stage() -> void:
 	if GameState.story_mode or GameState.playground_active:
 		get_tree().change_scene_to_file.call_deferred(SceneRouter.STAGE)
 		return
-	# 14-1 보스전 사망 = 항상 같은 자리 P1부터(2026-08-15 사용자 확정). 사망 경로 한정 ·
-	# 연습장 페이즈 직행·_init_rival_boss 체크포인트 분기는 그대로 쓴다.
-	if GameState.current_route_id == "route_core_recovery":
-		GameState.rival_phase_reached = 0
-		get_tree().change_scene_to_file.call_deferred(SceneRouter.STAGE)
-		return
-	# SENTINEL(lab) 보스전 사망도 같은 자리부터(2026-08-25 사용자 "보스전 처음으로 가는 게
-	# 맞을 듯") · 재도전 인트로 생략(boss_intro_seen_run)은 기존 가드가 처리.
-	if GameState.current_route_id == "route_lab":
+	# 보스전 사망 = 같은 자리 처음부터(14-1은 P1 리셋 · 2026-08-15 확정, SENTINEL(lab)은 08-25).
+	# 판정은 register_death가 "죽은 맵" 기준으로 세운 플래그만 본다. current_route_id로 보면 막
+	# 되감기 뒤 직전 맵이 lab인 막4 사망이 보스전으로 오인된다(2026-08-29 실사고).
+	if GameState.death_restart_in_place:
+		if GameState.current_route_id == "route_core_recovery":
+			GameState.rival_phase_reached = 0
 		get_tree().change_scene_to_file.call_deferred(SceneRouter.STAGE)
 		return
 	# 본편 사망 = 막 첫 스테이지(2026-08-23 통일). current_stage 후퇴·저장은 register_death가

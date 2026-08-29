@@ -103,12 +103,21 @@ const SNIPER_REAIM_GAP: float = 0.5        # 일반·엘리트: 발사 후 이 �
 const NEST_SNIPER_REAIM_GAP: float = 1.2   # 둥지(회피 전용): 등반 여유 보존 · 완만한 재조준
 # 저격수다운 사거리 · 플레이어 총알 사거리(495px)보다 충분히 길게.
 # 플레이어가 사거리 안에 들어오면 LoS 체크 후 발사. 엄폐가 보일 만큼 길어야 진짜 저격수.
-const SNIPER_RANGE: float = 820.0
+# 사거리 820 → 600(2026-08-29 사용자 "쓸데없이 먼 곳에서부터 차징"): 화면 반폭 640 안에서만
+# 조준이 시작된다 · 화면 밖 저격수의 조준선이 먼저 들어오는 일이 없다.
+const SNIPER_RANGE: float = 600.0
+# 조준 고정 창 · 조준 마지막 0.3s는 조준선이 표적 위치에 멈춰 고정되고 그 자리로 쏜다(히트스캔
+# 폐지 · 2026-08-29 "차징을 끊어도 이어서 사격하니 피할 방법이 없다"). 고정 뒤 점프·낙하·옆걸음
+# = 빗나감, 엄폐물 뒤 = 막힘. 멈춘 선(백열)이 tell.
+const SNIPER_LOCK_TIME: float = 0.3
+# 하향 사각 · 수평 아래로 이 각도보다 가파른 표적은 못 본다("바로 밑은 사각"). 종전엔 자기 발판이
+# 레이를 막아 우연히 생기던 사각을 명시 규칙으로(발판 두께·폭에 따라 800px까지 못 보던 불일치 해소).
+const SNIPER_BLIND_DOWN_DEG: float = 50.0
 # 측면 단독 둥지(회피 전용) 저격수 · 등반/회피 맵(watchtower/rooftops/cooling)에서 아래를 너무 쉽게
 # 쏴 등반이 막힌다는 피드백. 둥지 저격수만 사거리·조준·발사를 완화해 "한 둥지씩, 텔레그래프 보고 피하며"
 # 오르게 한다. 전투 맵(subway/datacenter) 저격수는 avoid_only 미부착이라 그대로(영향 없음).
 # 모래주머니/ㄴ자 발판으로는 하향 사격을 못 막는다(탄이 발판 밑으로 빠짐) → 압박 수치로 조정.
-const NEST_SNIPER_RANGE: float = 700.0
+const NEST_SNIPER_RANGE: float = 600.0   # 700 → 600 (2026-08-29 · 화면 안 규칙 동일)
 const NEST_SNIPER_AIM_TIME: float = 1.8    # 텔레그래프(붉은 조준선)=조준→발사 시간. 길게 잡아 등반 중 피할 여유. (+0.1s 2026-08-25)
 const NEST_SNIPER_INTERVAL_MUL: float = 1.5  # 발사 간격 1.5배(2.6→3.9s) · 등반 중 피탄 횟수↓
 
@@ -184,6 +193,7 @@ var patrol_fire_armed: bool = false
 var fire_timer: float = 0.0
 var aim_line: Line2D
 var aim_los_clear: bool = false
+var aim_lock_point: Vector2 = Vector2.INF   # 조준 고정 지점(고정 창 진입 순간의 표적) · INF = 미고정
 
 var drone_bomb_cd: float = 0.0
 
@@ -1094,34 +1104,66 @@ func _tick_sniper(delta: float) -> void:
 
 	fire_timer -= delta
 	if fire_timer < _eff_sniper_aim_time():
-		aim_los_clear = _has_line_of_sight(p)
-		if aim_los_clear:
-			if aim_line == null:
-				_start_aim()
-			# 발사 임박도(0=조준 시작, 1=발사 직전) · 조준선이 굵고 밝아진다.
-			var aim_prog: float = clampf(1.0 - fire_timer / _eff_sniper_aim_time(), 0.0, 1.0)
-			_update_aim(aim_prog)
+		if fire_timer <= SNIPER_LOCK_TIME:
+			# 조준 고정 창 · 진입 순간의 표적 위치에 조준선을 멈춘다. 그 뒤엔 표적을 따라가지도,
+			# 시야를 다시 보지도 않고 그 자리로 쏜다(SNIPER_LOCK_TIME 주석).
+			if aim_lock_point == Vector2.INF:
+				if aim_los_clear and aim_line != null:
+					aim_lock_point = p.global_position + Vector2(0, -28)
+					_update_aim_locked()
+				else:
+					# 고정 시점에 시야 없음(엄폐) → 취소·재조준.
+					_clear_aim()
+					fire_timer = _reaim_timer()
 		else:
-			# 시야 끊김 → 발사 취소, 조준 다시 처음부터. 재조준: 엄폐 빼꼼 반복이
-			# 사이클 리셋 파밍이 되지 않게 짧은 대기 후 곧바로 다시 조준(예고 시간은 그대로).
-			_clear_aim()
-			fire_timer = _reaim_timer()
+			aim_los_clear = _has_line_of_sight(p)
+			if aim_los_clear:
+				if aim_line == null:
+					_start_aim()
+				# 발사 임박도(0=조준 시작, 1=발사 직전) · 조준선이 굵고 밝아진다.
+				var aim_prog: float = clampf(1.0 - fire_timer / _eff_sniper_aim_time(), 0.0, 1.0)
+				_update_aim(aim_prog)
+			else:
+				# 시야 끊김 → 발사 취소, 조준 다시 처음부터. 재조준: 엄폐 빼꼼 반복이
+				# 사이클 리셋 파밍이 되지 않게 짧은 대기 후 곧바로 다시 조준(예고 시간은 그대로).
+				_clear_aim()
+				fire_timer = _reaim_timer()
 
 	if fire_timer <= 0.0:
 		# 재조준: 발사 후에도 사거리 안에 머물면 짧은 대기 뒤 곧바로 다음 조준 ·
 		# "한 번 피하면 끝"이 아니라 피하는 동안 전진하거나 처치해야 한다.
 		fire_timer = _reaim_timer()
-		if aim_los_clear:
+		if aim_lock_point != Vector2.INF:
 			_fire_at_player()
 		_clear_aim()
 	queue_redraw()  # 사거리 링(_draw) 갱신 · 플레이어 접근/조준 상태 반영
+
+# 시야·사격 레이 제외 목록 · 자기 몸 + 지금 서 있는 발판. 발판은 24px 원웨이 바디인데 레이 질의는
+# 원웨이를 무시해, 거치대 저격의 하향 사선을 자기 발판 가장자리가 막았다(2026-08-29 스모크 실측:
+# 펌프장 1500 거치대가 지상 450px 앞을 영영 못 봄 · 거리 800 이하 전부 사각). move_and_slide 직후 호출.
+func _ray_exclude() -> Array[RID]:
+	var out: Array[RID] = [get_rid()]
+	# 서 있는 바디는 발밑 짧은 레이로 찾는다 · 정지 상태(velocity 0)의 move_and_slide는 충돌을 남기지
+	# 않아 get_slide_collision으로는 못 얻는다.
+	var q := PhysicsRayQueryParameters2D.create(global_position + Vector2(0, -6.0), global_position + Vector2(0, 16.0), 1)
+	q.exclude = [get_rid()]
+	var r: Dictionary = get_world_2d().direct_space_state.intersect_ray(q)
+	if not r.is_empty():
+		var rid: RID = r.rid
+		if rid.is_valid():
+			out.append(rid)
+	return out
 
 func _has_line_of_sight(p: Node2D) -> bool:
 	var space := get_world_2d().direct_space_state
 	var from: Vector2 = global_position + Vector2(0, -20)
 	var to: Vector2 = p.global_position + Vector2(0, -28)
+	# 하향 사각 · 발밑 가까이는 겨눌 수 없다(SNIPER_BLIND_DOWN_DEG).
+	var dy: float = to.y - from.y
+	if dy > 40.0 and rad_to_deg(atan2(dy, absf(to.x - from.x))) > SNIPER_BLIND_DOWN_DEG:
+		return false
 	var query := PhysicsRayQueryParameters2D.create(from, to, 1)
-	query.exclude = [get_rid()]
+	query.exclude = _ray_exclude()
 	var result: Dictionary = space.intersect_ray(query)
 	return result.is_empty()
 
@@ -1148,7 +1190,18 @@ func _update_aim(prog: float) -> void:
 	aim_line.width = lerpf(1.5, 4.5, prog)
 	aim_line.default_color = Color(1.0, 0.32 + 0.18 * prog, 0.30, lerpf(0.40, 0.95, prog))
 
+# 고정된 조준선 · 표적을 더 따라가지 않고 백열로 굳는다(움직임이 멈춘 선 = "지금 피해라").
+func _update_aim_locked() -> void:
+	if aim_line == null:
+		return
+	aim_line.clear_points()
+	aim_line.add_point(global_position + Vector2(0, -20))
+	aim_line.add_point(aim_lock_point)
+	aim_line.width = 4.5
+	aim_line.default_color = Color(1.0, 0.92, 0.85, 0.95)
+
 func _clear_aim() -> void:
+	aim_lock_point = Vector2.INF
 	if aim_line != null:
 		aim_line.queue_free()
 		aim_line = null
@@ -1438,30 +1491,46 @@ func _find_player() -> Node2D:
 		return null
 	return nodes[0] as Node2D
 
+# 고정 지점으로 발사 · 총구에서 고정 지점을 지나 사거리 끝까지 레이를 쏘고, 지형(층 1)이나
+# 플레이어 몸(층 2)에 처음 닿는 곳이 착탄점. 플레이어가 고정 뒤 비켰으면 빗나가 벽·바닥에 박힌다.
 func _fire_at_player() -> void:
-	if harmless:
+	if harmless or aim_lock_point == Vector2.INF:
 		return
 	var player := _find_player()
 	if player == null:
 		return
-	var dist: float = global_position.distance_to(player.global_position)
-	if dist > _eff_sniper_range():
+	var from: Vector2 = global_position + Vector2(0, -20)
+	var dirv: Vector2 = aim_lock_point - from
+	if dirv.length() < 1.0:
 		return
+	var to: Vector2 = from + dirv.normalized() * (_eff_sniper_range() + 240.0)
+	var query := PhysicsRayQueryParameters2D.create(from, to, 1 | 2)
+	query.exclude = _ray_exclude()
+	var result: Dictionary = get_world_2d().direct_space_state.intersect_ray(query)
+	var end: Vector2 = to
+	var hit: bool = false
+	if not result.is_empty():
+		end = result.position
+		hit = result.collider == player
 	SfxPlayer.play_at("enemy_sniper_fire", global_position)
 	var tracer := Line2D.new()
 	tracer.width = 2.5
 	tracer.default_color = Color(1.0, 0.55, 0.30, 1.0)
 	tracer.z_index = 2
-	tracer.add_point(global_position + Vector2(0, -20))
-	tracer.add_point(player.global_position + Vector2(0, -28))
+	tracer.add_point(from)
+	tracer.add_point(end)
 	get_parent().add_child(tracer)
 	var tw := tracer.create_tween()
 	tw.tween_property(tracer, "default_color", Color(1.0, 0.55, 0.30, 0.0), 0.30)
 	tw.tween_callback(tracer.queue_free)
-	if player.has_method("take_hit"):
-		player.take_hit(1)
+	if hit:
+		if player.has_method("take_hit"):
+			player.take_hit(1)
+	else:
+		# 빗나감 · 착탄 스파크만(피했다는 확인).
+		Fx.hit_sparks(get_parent(), end, 0)
 
-# 저격수 사거리 시각화 · 히트스캔이라 '사거리 안 + 시야 트임'이면 무조건 맞는다. 그 위협 반경을
+# 저격수 사거리 시각화 · '사거리 안 + 시야 트임'이면 조준이 시작된다(고정 뒤 비키면 빗나감). 그 위협 반경을
 # 점선 링으로 보여줘 플레이어가 "이 원 밖이면 안전 / 안이면 엄폐·이동"을 읽게 한다. 사거리 근처에
 # 들어와야 떠오르고(평소엔 숨김), 안으로 들수록·조준 중일수록 진해진다. 사용자 피드백 2026-06-13.
 func _draw() -> void:
@@ -1561,6 +1630,10 @@ func take_damage(amount: int, from_dir: int = 0) -> bool:
 	var eff: int = amount
 	if enemy_type == EnemyType.SHIELD and from_dir == 0 and hp > 3:
 		eff += 1
+	# 저격수 · 조준 중(고정 포함) 피격 = 조준 취소 · "쏴서 끊는다"가 성립(2026-08-29).
+	if enemy_type == EnemyType.SNIPER and aim_line != null:
+		_clear_aim()
+		fire_timer = _reaim_timer()
 	hp -= eff
 	# 타격 스파크(그래픽 패키지 1차) · 명중이 "박히는" 순간을 그림으로.
 	Fx.hit_sparks(get_parent(), global_position + Vector2(0, -14.0), from_dir)
