@@ -8562,23 +8562,24 @@ func _p3_opening_cutscene() -> void:
 		confession = "이 화면, 익숙하시죠. 제가 그렸습니다.\n경로 고를 때는 저를 한 번도 안 믿으시더니."
 	else:
 		confession = "이 화면, 익숙하시죠. 제가 그렸습니다."
+	# 판별 규칙(A안 · 2026-08-30) · 눈이 둘 뜨고, 요원을 똑바로 보는 쪽이 진짜.
 	_play_story_dialogue([
 		{"who": "rival", "text": confession},
 		{"who": "veil", "text": "방금 그 신호, 제가 보낸 게 아닙니다."},
-		{"who": "veil", "text": "굵은 표식은 제 것이 아닙니다. 저건 몸이 없습니다."},
-		{"who": "veil", "text": "진짜는 표식 없이 옵니다. 가장자리는 직접 보십시오."},
+		{"who": "veil", "text": "눈이 둘 뜹니다. 요원을 똑바로 보는 쪽이 진짜입니다."},
+		{"who": "veil", "text": "딴 데 보는 쪽은 그림입니다. 탄이 그냥 지나갑니다."},
 	])
 
 func _p3_tell_line() -> void:
 	if not is_inside_tree() or goal_reached:
 		return
-	# 강의식 3문장 → 2문장 압축("작위적" 반려 2026-08-14). 탄 통과 tell은 시각(찢김)이 담당.
-	_show_veil_subtitle("굵은 표식은 제 것이 아닙니다. 저건 몸이 없습니다.", 3.0)
+	# 재시작·체크포인트 진입용 짧은 판별 tell(A안).
+	_show_veil_subtitle("요원을 똑바로 보는 눈이 진짜입니다.", 3.0)
 
 func _p3_unmarked_line() -> void:
 	if not is_inside_tree() or goal_reached or _rival_phase != 2:
 		return
-	_show_veil_subtitle("진짜는 표식 없이 옵니다. 가장자리는 직접 보십시오.", 3.0)
+	_show_veil_subtitle("딴 데 보는 눈은 그림입니다. 탄이 그냥 지나갑니다.", 3.0)
 
 # ─── P3 분신전 · 거짓 VEIL(FalseVeil) + 무표시 위협 + 신뢰=지각 보조 ───
 var _false_veil: Node2D = null
@@ -8680,19 +8681,26 @@ func _start_rival_p3(hold: float = 3.0) -> void:
 	fv.max_hp = 8 + int(float(GameState.player_level) * 1.5)
 	fv.hp = fv.max_hp
 	fv.intro_hold = hold
-	# 리워크(§2.4) · 복층 무대 좌표: 실체화 3지점(중앙 상/좌상/우상 = 중반 텔레포트 지점 겸용),
-	# 가짜 마커는 지상·중층·데크에 분산. 가짜 눈(동반 미끼)은 FalseVeil이 자체 관리.
-	var p3_anchors: Array = [Vector2(1200.0, 560.0), Vector2(620.0, 640.0), Vector2(1780.0, 640.0)]
+	# A안(2026-08-30) · 실체화 후보 = 각 데크·지면의 가슴 높이(데크 y - 30 · 수평 사격으로 바로 맞는
+	# 높이) 13곳. 매 창마다 FalseVeil._pick_pair가 플레이어가 닿을 수 있는 둘을 골라 진짜/가짜를
+	# 무작위 배정한다. 종전 위층 3지점(560/640)은 점프샷이어야 닿고 "멀리 소환"과 겹쳐 물리 불가였다.
+	# 가짜 마커(병사 그림)는 지상·중층·데크에 분산 · 가짜 눈은 FalseVeil이 자체 관리.
+	var p3_anchors: Array = [
+		Vector2(560.0, 1190.0), Vector2(1840.0, 1190.0),            # 지면
+		Vector2(300.0, 1022.0), Vector2(2100.0, 1022.0),            # 좌·우 낮은 데크(1052)
+		Vector2(1100.0, 970.0), Vector2(1300.0, 970.0),             # 중앙 낮은 데크(1000)
+		Vector2(640.0, 862.0), Vector2(1760.0, 862.0),              # 중층(892)
+		Vector2(1200.0, 830.0),                                     # 중앙 상단(860)
+		Vector2(380.0, 706.0), Vector2(520.0, 706.0),               # 좌 상단 데크(736)
+		Vector2(1880.0, 706.0), Vector2(2020.0, 706.0),             # 우 상단 데크(736)
+	]
 	var p3_spots: Array = [Vector2(350.0, 1190.0), Vector2(850.0, 1190.0), Vector2(1550.0, 1190.0),
 		Vector2(2050.0, 1190.0), Vector2(350.0, 1022.0), Vector2(2050.0, 1022.0),
 		Vector2(700.0, 862.0), Vector2(1700.0, 862.0), Vector2(1200.0, 830.0)]
-	# 다회차 기억 변주 · P3 · 실체화 시작 지점·가짜 병사 슬롯 순서를 회차로 회전
-	# ("네가 외운 자리에는 없다"). 수류탄으로 끝냈던 기억이 있으면 가짜 눈이 지난 회차의
-	# 진짜 자리(+2 회전)에 선다 · 익숙한 자리일수록 가짜다. 개수·창 길이·HP는 불변.
+	# 다회차 기억 변주 · P3 · 가짜 병사 슬롯 순서를 회차로 회전("네가 외운 자리에는 없다").
+	# 실체화 자리는 A안(플레이어 기준 짝 선택)이라 회전 대상이 아니다. 개수·창 길이·HP는 불변.
 	if GameState.rival_kills >= 1:
-		p3_anchors = _rotated(p3_anchors, GameState.rival_kills % p3_anchors.size())
 		p3_spots = _rotated(p3_spots, (GameState.rival_kills * 4) % p3_spots.size())
-		fv.decoy_shift = 2 if GameState.rival_boss_explosive else 1
 	fv.setup(p3_anchors, p3_spots)
 	# deferred · volley_started는 take_damage(물리 콜백)에서 발화, 동기 스폰은 flushing 에러
 	# (2026-08-20 실플레이 로그 실측 · BossSentinel 소환과 동형).
@@ -8725,7 +8733,7 @@ func _on_p3_stage_shifted(stage_idx: int) -> void:
 	_rival_beat_flash()
 	SfxPlayer.play("boss_phase_change")
 	if stage_idx == 1:
-		_show_rival_subtitle("잘 보시네요. 그럼 자리를 옮겨 가며 하죠.", 3.0)
+		_show_rival_subtitle("잘 보시네요. 그럼 둘을 더 벌려 놓죠.", 3.0)
 	elif stage_idx == 2:
 		_show_rival_subtitle("...방이 저를 못 버티기 시작하는군요. 서두르겠습니다.", 3.2)
 		# 낙하 잔해 3존(final_boss_rework §6-1) · 진동이 실제 붕괴로 이어지는 체감.
@@ -10078,7 +10086,59 @@ func _show_playground_clear_msg() -> void:
 	msg_layer.add_child(l)
 
 func _on_player_died() -> void:
+	if _death_beat_active:
+		return
+	_death_beat_active = true
 	GameState.register_death()
+	_play_death_beat()
+
+# ─── 사망 한 박자(2026-08-30 사용자 안 · 종전엔 죽는 순간 바로 사망 화면으로 잘려 장면이 없었다) ───
+# 실시간 DEATH_BEAT_DUR: 히트스톱(0.05배) → 0.25배 슬로모, 카메라 1.08배 줌인 + 채도 감쇠 램프 +
+# 음악 덕킹. 아무 키로 스킵(첫 0.25s는 잠금 · 죽게 만든 입력이 그대로 스킵되지 않게). 점멸 없음.
+# 씬 전환 전 time_scale 복원(known_issues · 전환 뒤 배속이 남는 함정). 반복 사망이 잦은 게임이라
+# 1초를 넘기지 않는다.
+const DEATH_BEAT_DUR: float = 0.9
+const DEATH_BEAT_STOP: float = 0.08
+const DEATH_BEAT_SCALE: float = 0.25
+var _death_beat_active: bool = false
+var death_transition_enabled: bool = true   # 하니스(RuleSmoke)가 끈다 · 씬 전환 없이 박자만 검증
+
+func _play_death_beat() -> void:
+	if player != null and is_instance_valid(player) and player.has_method("cancel_hit_slowmo"):
+		player.call("cancel_hit_slowmo")
+	BgmPlayer.set_ducked(true)
+	var layer := CanvasLayer.new()
+	layer.layer = 36
+	add_child(layer)
+	var desat := ColorRect.new()
+	var mat := ShaderMaterial.new()
+	mat.shader = load("res://assets/shaders/desaturate.gdshader")
+	mat.set_shader_parameter("amount", 0.0)
+	desat.material = mat
+	desat.set_anchors_preset(Control.PRESET_FULL_RECT)
+	desat.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(desat)
+	var cam: Camera2D = camera
+	var z0: Vector2 = cam.zoom if (cam != null and is_instance_valid(cam)) else Vector2.ONE
+	Engine.time_scale = 0.05
+	var t: float = 0.0
+	while t < DEATH_BEAT_DUR and is_inside_tree():
+		await get_tree().process_frame
+		if not is_inside_tree():
+			break
+		t += get_process_delta_time() / maxf(Engine.time_scale, 0.001)
+		if t >= DEATH_BEAT_STOP and Engine.time_scale < DEATH_BEAT_SCALE:
+			Engine.time_scale = DEATH_BEAT_SCALE
+		var k: float = clampf(t / DEATH_BEAT_DUR, 0.0, 1.0)
+		var e: float = 1.0 - (1.0 - k) * (1.0 - k)
+		if cam != null and is_instance_valid(cam):
+			cam.zoom = z0 * (1.0 + 0.08 * e)
+		mat.set_shader_parameter("amount", 0.75 * e)
+		if t > 0.25 and Input.is_anything_pressed():
+			break
+	Engine.time_scale = 1.0
+	if not death_transition_enabled:
+		return
 	get_tree().change_scene_to_file.call_deferred(SceneRouter.DEATH)
 
 # 코어 함락 = 방어 실패. 플레이어 사망과 동일 경로(재시도)로 처리한다.

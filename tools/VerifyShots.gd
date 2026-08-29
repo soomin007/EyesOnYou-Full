@@ -46,6 +46,9 @@ const TARGETS: Array = [
 	{"id": "pump_jet_zorder", "route": "route_pump_station", "stage": 1, "setup": "pump_jet"},
 	{"id": "sniper_lock", "route": "route_pump_station", "stage": 1, "setup": "sniper_lock"},
 	{"id": "challenge_lamps", "route": "route_blackout", "stage": 3, "setup": "challenge_lamps"},
+	# 08-30 · P3 짝 규칙(A안) 정지컷 + 사망 한 박자 연사.
+	{"id": "p3_pair", "route": "route_core_recovery", "stage": 13, "setup": "p3_pair"},
+	{"id": "anim_death_beat", "route": "route_back_alley", "stage": 1, "setup": "anim_death_beat", "anim": 60, "every": 1},
 ]
 
 func _ready() -> void:
@@ -98,6 +101,9 @@ func _shot(d: Dictionary) -> void:
 		return
 	GameState.record_route_choice(route, "")
 	GameState.current_segment = int(d.get("seg", 0))
+	if setup == "p3_pair":
+		GameState.rival_phase_reached = 2
+		GameState.rival_cutscenes_seen_run = ["intro", "p2", "p3"]
 	var stage: Node = (load(STAGE_SCENE) as PackedScene).instantiate()
 	add_child(stage)
 	for i in 40:
@@ -106,6 +112,24 @@ func _shot(d: Dictionary) -> void:
 	if p != null:
 		p.set("clear_protect", true)   # 캡처 중 사망 = 씬 전환 = 하니스 소멸 방지(anim과 동일 가드)
 	match setup:
+		"p3_pair":
+			# 요원을 좌 상단 데크(450,736)에 세우고 짝(진짜 응시 · 가짜 헛시선)이 실체화된 순간.
+			var fv: Node = null
+			var tw0: float = 0.0
+			while tw0 < 4.0 and fv == null:
+				await get_tree().create_timer(0.1).timeout
+				tw0 += 0.1
+				fv = stage.get("_false_veil")
+			if p is Node2D:
+				(p as Node2D).global_position = Vector2(450.0, 736.0)
+			var tw1: float = 0.0
+			while fv != null and tw1 < 14.0 and int(fv.get("state")) != 2:
+				await get_tree().physics_frame
+				tw1 += get_physics_process_delta_time()
+				if p is Node2D:
+					(p as Node2D).global_position = Vector2(450.0, 736.0)
+			for i in 12:
+				await get_tree().process_frame
 		"dash":
 			GameState.skills["dash_boost"] = 2
 			if p != null:
@@ -396,9 +420,22 @@ func _anim_prepare(setup: String, p: Node, stage: Node) -> void:
 			# 잠금 비트 감속 완충 · 세계가 계단식으로 늘어지다 컷씬이 열리는 전 과정(~2.8s).
 			if stage != null:
 				stage.call("_play_rival_lock_beat", 4, 0)
+		"anim_death_beat":
+			# 사망 한 박자 · 씬 전환은 끄고(하니스 소멸 방지) 박자만 촬영.
+			if stage != null:
+				stage.set("death_transition_enabled", false)
+			for e in get_tree().get_nodes_in_group("enemy"):
+				if is_instance_valid(e):
+					e.set("harmless", true)
 
 func _anim_tick(setup: String, f: int, p: Node) -> void:
 	match setup:
+		"anim_death_beat":
+			if f == 4 and p != null:
+				p.set("clear_protect", false)
+				GameState.player_hp = 1
+				p.set("invuln", 0.0)
+				p.call("take_hit", 1)
 		"anim_dash":
 			if p != null and (f == 12 or f == 44):
 				p.set("facing", 1)

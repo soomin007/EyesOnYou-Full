@@ -31,12 +31,19 @@ const TELE_DUR: float = 0.7
 const SOLID_DUR: float = 3.4
 const FAKES_PER_VOLLEY: int = 4
 const DRIFT_SPEED: float = 60.0
+# 짝 규칙(A안 · 2026-08-30 사용자 확정): 매 창마다 플레이어가 닿을 수 있는 자리 둘에 진짜 눈과
+# 가짜 눈이 동시에 뜬다. 어느 쪽이 진짜인지는 무작위 · 판별 단서 = "요원을 똑바로 보는 눈이 진짜"
+# (가짜는 딴 데 본다). 종전 "멀리 소환" 규칙은 한쪽 데크에서 반대편까지 3.4s 안에 못 가 창을 통째로
+# 날리는 물리 불가를 만들었다(사용자 지적). 캠핑 대책은 "직전 자리 제외" + 낙하 잔해 + 억제 미사일.
+const PAIR_MIN_DX: float = 60.0     # 요원 몸 위에 겹쳐 뜨지 않게(눈 반경 34 + 몸 반폭 14)
+const PAIR_MAX_DX: float = 520.0    # 한 창(3.4s) 안에 닿는 거리
+const PAIR_Y_BAND: float = 40.0     # 같은 높이(수평 사격으로 바로 맞는 대역)
+const PAIR_Y_REACH: float = 220.0   # 점프·한 층 이동으로 닿는 높이
 
 var max_hp: int = MAX_HP
 var hp: int = MAX_HP
 var state: State = State.PHASED
-# 다회차 기억 변주 시드(Stage가 setup 전에 세팅) · 가짜 눈 앵커 회전 폭 · 결정타 출처 기록.
-var decoy_shift: int = 1
+# 결정타 출처 기록(Stage가 격파 시 읽음 · 다회차 기억).
 # 개시 응시 유예(초 · Stage가 add_child 전에 시드) · 발화가 흐르는 동안 공격 없음(_ready 참조).
 var intro_hold: float = 0.0
 var last_hit_from_dir: int = 0
@@ -58,6 +65,7 @@ var _ripple_t: float = 0.0              # 잠복 중 탄 통과 파문("지금�
 var _ripple_cd: float = 0.0
 var _anchors: Array = []                # 부유 이동 지점(순환)
 var _anchor_idx: int = 0
+var _prev_real_idx: int = -1            # 직전에 *실체화한* 진짜 자리(다음 창 제외 · 캠핑 대책)
 var _fake_spots: Array = []             # 가짜 마커 후보 위치(순환)
 var _spot_idx: int = 0
 var _fakes: Array = []                  # 살아있는 _FakeMarker 참조
@@ -92,16 +100,11 @@ func _ready() -> void:
 	col.shape = shape
 	add_child(col)
 	z_index = 2
-	# 가짜 눈 동반 스폰 · 부모(스테이지)에 형제로. 앵커는 본체 앵커를 decoy_shift칸 돌린 것
-	# (같은 자리 금지). 기본 1 · 다회차 기억 변주(수류탄 격파 기억)면 Stage가 2로 시드 ·
-	# 지난 회차의 진짜 자리에 가짜가 선다.
+	# 가짜 눈 동반 스폰 · 부모(스테이지)에 형제로. 자리는 매 창 _pick_pair가 준다(짝 규칙).
 	_decoy = _DecoyEye.new()
 	_decoy.owner_fv = self
-	var d_anchors: Array = []
-	for i in _anchors.size():
-		d_anchors.append(_anchors[(i + maxi(1, decoy_shift)) % _anchors.size()])
-	_decoy.anchors = d_anchors
 	_decoy.global_position = global_position + Vector2(300.0, 40.0)
+	_decoy.target = _decoy.global_position
 	get_parent().call_deferred("add_child", _decoy)
 	# 개시 응시 유예(2026-08-23 · 컷씬 개정) · 등장 직후엔 응시만(§7.2 "반 박자 긴 응시"의
 	# 개시판). 가짜 그림은 즉시 깔린다(Stage의 오프닝 컷씬 정지 화면에 실물이 서서 "굵은 표식"
@@ -113,9 +116,7 @@ func _ready() -> void:
 		state = State.PHASED
 		_state_t = -intro_hold
 		_window_dmg = 0
-		_pick_far_anchor()
-		if _decoy != null and is_instance_valid(_decoy):
-			_decoy.cycle_anchor()
+		_pick_pair()
 		_spawn_fakes()
 		# 첫 배치는 유예만큼 수명 연장 · 잠복 진행이 늦게 시작하므로 그대로면 첫 실체화 전에
 		# 그림이 다 걷혀 판별 안내의 대상이 사라진다.
@@ -141,39 +142,59 @@ func _enter_phased() -> void:
 	state = State.PHASED
 	_state_t = 0.0
 	_window_dmg = 0
-	_pick_far_anchor()
-	if _decoy != null and is_instance_valid(_decoy):
-		_decoy.cycle_anchor()
+	_pick_pair()
 	_spawn_fakes()
 	emit_signal("volley_started")
 
-# 캠핑 대책 ①(2026-08-20 사용자 "P3 지루해 · 맨 위 발판 홀드로 무피해") · 다음 실체화 앵커는
-# 현재 앵커를 제외하고 플레이어에게서 x로 가장 먼 곳. 눌러앉은 자리 근처엔 안 떠서
-# 창마다 이동을 강제한다(연사 이동 감속과 시너지 · 쏘며 갈지 달려가 쏠지 판단이 생김).
-func _pick_far_anchor() -> void:
-	if _anchors.is_empty():
+# 짝 선택(A안) · 플레이어 기준 "닿을 수 있는" 자리 둘: 같은 높이 대역(PAIR_Y_BAND)이 1순위, 그다음
+# 한 층 차이(PAIR_Y_REACH), 그래도 모자라면 거리순. 직전에 실체화한 자리는 제외. 둘 중 진짜는 무작위.
+# 중반+(fight_stage ≥ 1)는 가짜를 한 칸 더 먼 후보에 세워 둘 사이를 벌린다("둘을 더 벌려 놓죠").
+# 잠복 시작 때 잠정 선택(부유 목적지)하고, 예고(TELE) 진입 순간 플레이어의 *그때* 위치로 다시 고른다 ·
+# 잠복 5.2s 동안 플레이어가 옮겨 가면 "닿는 자리"가 달라지기 때문(스모크 실측).
+func _pick_pair() -> void:
+	if _anchors.size() < 2:
 		return
 	var p := _find_player()
 	if p == null:
 		_anchor_idx = (_anchor_idx + 1) % _anchors.size()
 		return
-	# 개정(2026-08-21 사용자 "멀리 소환 로직 때문에 가운데 나오는 건 항상 가짜"): 최원거리
-	# 1곳 고정은 캠핑은 막지만 "거리 = 진짜 판별"이라는 역정보를 준다. → 충분히 먼 후보
-	# (최대 거리의 55%+ · 현재 앵커 제외) 중 **무작위**. 캠퍼 근처엔 여전히 안 뜨고,
-	# 거리로는 진짜를 못 가린다(_spawn_fakes도 같은 분포로 통일).
-	var max_d: float = 0.0
+	var ref: Vector2 = p.global_position + Vector2(0.0, -30.0)
+	var tier1: Array = []
+	var tier2: Array = []
+	var rest: Array = []
 	for i in _anchors.size():
-		max_d = maxf(max_d, absf((_anchors[i] as Vector2).x - p.global_position.x))
-	var far: Array = []
-	for i in _anchors.size():
-		if i == _anchor_idx:
+		if i == _prev_real_idx:
 			continue
-		if absf((_anchors[i] as Vector2).x - p.global_position.x) >= max_d * 0.55:
-			far.append(i)
-	if far.is_empty():
+		var a: Vector2 = _anchors[i]
+		var dx: float = absf(a.x - ref.x)
+		var dy: float = absf(a.y - ref.y)
+		if dx < PAIR_MIN_DX:
+			continue
+		if dy <= PAIR_Y_BAND and dx <= PAIR_MAX_DX:
+			tier1.append(i)
+		elif dy <= PAIR_Y_REACH and dx <= PAIR_MAX_DX:
+			tier2.append(i)
+		else:
+			rest.append(i)
+	var by_dist := func(ia: int, ib: int) -> bool:
+		return (_anchors[ia] as Vector2).distance_to(ref) < (_anchors[ib] as Vector2).distance_to(ref)
+	tier1.sort_custom(by_dist)
+	tier2.sort_custom(by_dist)
+	rest.sort_custom(by_dist)
+	var pool: Array = tier1 + tier2 + rest
+	if pool.size() < 2:
 		_anchor_idx = (_anchor_idx + 1) % _anchors.size()
 		return
-	_anchor_idx = int(far[randi() % far.size()])
+	# 가까운 둘(중반+는 셋 중 1·3번째)에 진짜/가짜를 무작위 배정.
+	var a_i: int = int(pool[0])
+	var b_i: int = int(pool[1])
+	if fight_stage >= 1 and pool.size() >= 3:
+		b_i = int(pool[2])
+	var real_i: int = a_i if randf() < 0.5 else b_i
+	var decoy_i: int = b_i if real_i == a_i else a_i
+	_anchor_idx = real_i
+	if _decoy != null and is_instance_valid(_decoy):
+		_decoy.target = _anchors[decoy_i]
 
 func _spawn_fakes() -> void:
 	if _fake_spots.is_empty():
@@ -249,7 +270,9 @@ func _physics_process(delta: float) -> void:
 	var p := _find_player()
 	if p != null:
 		var want: Vector2 = (p.global_position - global_position).normalized() * 10.0
-		_gaze = _gaze.lerp(want, minf(1.0, delta * 2.0))
+		# 판별 tell(A안) · 예고·실체 창에선 시선이 요원에게 즉시 고정된다(가짜는 딴 데 본다).
+		var rate: float = 8.0 if (state == State.TELE or state == State.SOLID) else 2.0
+		_gaze = _gaze.lerp(want, minf(1.0, delta * rate))
 	match state:
 		State.PHASED:
 			_drift(delta)
@@ -258,15 +281,16 @@ func _physics_process(delta: float) -> void:
 				state = State.TELE
 				_state_t = 0.0
 				_next_phased_scale = 1.0
-				# 중반+(변주 §2.4): 실체화 위치가 3지점 텔레포트 · 드리프트로 예측되던 위치가
-				# 튄다. 가짜 눈도 동시에 다른 지점으로 튀어 "어느 쪽이 진짜인가"가 매번 갱신.
-				# 워프 연출(사용자 2026-08-17 "위치 초기화 텔레포트가 맞나?") · 의도된 변주지만
-				# 연출 없이 스냅해 버그처럼 읽혔다 · 이전 자리 소멸 파문을 남겨 "옮겨 갔다"로.
-				# 목적지는 캠핑 대책 ①과 동일 규칙(플레이어 반대편) · _enter_phased가 이미 골랐다.
-				if fight_stage >= 1 and not _anchors.is_empty():
-					_warp_from = global_position
-					_warp_t = 0.4
-					global_position = _anchors[_anchor_idx]
+				# 예고 진입 · 플레이어의 지금 위치로 짝을 다시 고르고 그 자리로 스냅(A안 · 전 단계 공통).
+				# 워프 파문(이전 자리 소멸 링)으로 "옮겨 갔다"가 읽힌다.
+				_pick_pair()
+				_prev_real_idx = _anchor_idx
+				if not _anchors.is_empty():
+					var dest: Vector2 = _anchors[_anchor_idx]
+					if global_position.distance_to(dest) > 4.0:
+						_warp_from = global_position
+						_warp_t = 0.4
+						global_position = dest
 					if _decoy != null and is_instance_valid(_decoy):
 						_decoy.tele_jump()
 		State.TELE:
@@ -520,8 +544,7 @@ func _draw() -> void:
 # homing_decoy 그룹 · 유도탄이 이쪽으로도 휘어 "유도 방향 = 공짜 판별"을 차단(사용자 지적).
 class _DecoyEye extends Node2D:
 	var owner_fv: Node2D = null
-	var anchors: Array = []
-	var anchor_idx: int = 0
+	var target: Vector2 = Vector2.ZERO   # 이번 창의 자리(본체 _pick_pair가 준다)
 	var _t: float = 0.0
 	var _gaze: Vector2 = Vector2.ZERO
 	var _ripple_t: float = 0.0
@@ -533,14 +556,8 @@ class _DecoyEye extends Node2D:
 		add_to_group("homing_decoy")
 		z_index = 2
 
-	func cycle_anchor() -> void:
-		anchor_idx = (anchor_idx + 1) % maxi(1, anchors.size())
-
 	func tele_jump() -> void:
-		if anchors.is_empty():
-			return
-		anchor_idx = (anchor_idx + 1 + (randi() % maxi(1, anchors.size() - 1))) % anchors.size()
-		global_position = anchors[anchor_idx]
+		global_position = target
 
 	func begin_erase() -> void:
 		_erasing = true
@@ -582,16 +599,14 @@ class _DecoyEye extends Node2D:
 				queue_free()
 				return
 		var st: int = int(owner_fv.get("state"))
-		# 잠복 동안 자기 앵커로 부유(본체와 같은 리듬, 다른 자리).
-		if st == 0 and not anchors.is_empty():
-			global_position = global_position.move_toward(anchors[anchor_idx % anchors.size()], 60.0 * delta)
-		# 시선 흉내 · 본체보다 뻣뻣하게(지연 절반 · 미세 tell).
+		# 잠복 동안 이번 창의 자리로 부유(본체와 같은 리듬, 다른 자리).
+		if st == 0:
+			global_position = global_position.move_toward(target, 60.0 * delta)
+		# 판별 tell(A안) · 가짜는 요원을 보지 않는다. 시선이 천천히 헛돈다(본체는 요원에게 고정).
+		var want: Vector2 = Vector2(sin(_t * 0.9) * 8.0, cos(_t * 0.7) * 5.0)
+		_gaze = _gaze.lerp(want, minf(1.0, delta * 2.0))
 		var tree := get_tree()
 		if tree != null:
-			var arr := tree.get_nodes_in_group("player")
-			if arr.size() > 0:
-				var want: Vector2 = ((arr[0] as Node2D).global_position - global_position).normalized() * 10.0
-				_gaze = _gaze.lerp(want, minf(1.0, delta * 1.0))
 			# 탄 통과 파문 · 쏘면 그림임이 드러난다(확정 판별 · 대신 탄과 시간을 쓴다).
 			if _ripple_cd <= 0.0:
 				for b in tree.get_nodes_in_group("player_bullet"):

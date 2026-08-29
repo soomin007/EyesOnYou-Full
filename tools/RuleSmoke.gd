@@ -8,6 +8,9 @@ extends Node
 #   ④ 이동 발판 탑승: 수평 리프트 위 정지 플레이어의 상대 위치 한 주기 흔들림 0(엔진 1스텝 지연 보정) ·
 #      수직 리프트는 접지 유지(floor lost 0) + 윗면 오차 ≤ 3.5px
 #   ⑤ 14-1 컷씬 게이트: 첫 진입은 인트로 컷씬(세계 정지) · 사망 재시작(본 컷씬)은 정지 없음
+#   ⑥ 사망 한 박자: 죽는 순간 time_scale이 내려갔다가 실시간 ~0.9s 뒤 1.0 복원(씬 전환은 하니스가 차단)
+#   ⑦ P3 짝 규칙(A안): 실체화 창마다 진짜·가짜 눈이 플레이어가 닿을 수 있는 자리 둘에 동시에 서고,
+#      진짜는 요원을 똑바로 본다 · 다음 창의 진짜 자리는 직전과 다르다
 # 실행: godot --headless --path . --audio-driver Dummy tools/rule_smoke.tscn (종료 코드 0 = 전부 PASS)
 const STAGE_SCENE: String = "res://scenes/stage.tscn"
 var fails: int = 0
@@ -17,9 +20,11 @@ func _check(label: String, ok: bool, detail: String = "") -> void:
 	if not ok:
 		fails += 1
 
-func _boot(route_id: String, stage_idx: int) -> Node:
+func _boot(route_id: String, stage_idx: int, pre: Callable = Callable()) -> Node:
 	GameState.start_main_game()
 	GameState.current_stage = stage_idx
+	if pre.is_valid():
+		pre.call()
 	GameState.seen_enemies = ["patrol", "sniper", "drone", "bomber", "shield", "jammer", "elite", "caller"]
 	GameState.player_level = 99
 	var route: Dictionary = {}
@@ -46,6 +51,8 @@ func _ready() -> void:
 	await _challenge_case()
 	await _platform_case()
 	await _rival_cutscene_case()
+	await _death_beat_case()
+	await _p3_pair_case()
 	print("[RULE] %s" % ("ALL PASS" if fails == 0 else "%d FAIL" % fails))
 	get_tree().quit(0 if fails == 0 else 1)
 
@@ -250,4 +257,78 @@ func _rival_cutscene_case() -> void:
 	get_tree().paused = false
 	GameState.restrict_combat_input = false
 	stage2.queue_free()
+	await get_tree().process_frame
+
+func _death_beat_case() -> void:
+	var stage: Node = await _boot("route_back_alley", 1)
+	stage.set("death_transition_enabled", false)
+	var p: Node = get_tree().get_first_node_in_group("player")
+	for e in get_tree().get_nodes_in_group("enemy"):
+		if is_instance_valid(e):
+			e.set("harmless", true)
+	GameState.player_hp = 1
+	p.set("invuln", 0.0)
+	p.call("take_hit", 1)
+	await get_tree().create_timer(0.15, true, false, true).timeout   # 실시간 0.15s
+	_check("사망 순간 슬로모 진입(time_scale < 0.3)", Engine.time_scale < 0.3 and bool(stage.get("_death_beat_active")), "ts=%.2f" % Engine.time_scale)
+	await get_tree().create_timer(1.4, true, false, true).timeout    # 실시간 1.4s · 박자 종료 후
+	_check("박자 종료 후 time_scale 1.0 복원", is_equal_approx(Engine.time_scale, 1.0), "ts=%.2f" % Engine.time_scale)
+	Engine.time_scale = 1.0
+	stage.queue_free()
+	await get_tree().process_frame
+
+func _p3_pair_case() -> void:
+	var stage: Node = await _boot("route_core_recovery", 13, func() -> void:
+		GameState.rival_phase_reached = 2
+		GameState.rival_cutscenes_seen_run = ["intro", "p2", "p3"])
+	var p: Node2D = get_tree().get_first_node_in_group("player") as Node2D
+	p.set("clear_protect", true)
+	# 본체 등장 대기(deferred 3.6s 유예 시작).
+	var fv: Node = null
+	var t0: float = 0.0
+	while t0 < 4.0 and fv == null:
+		await get_tree().create_timer(0.1).timeout
+		t0 += 0.1
+		fv = stage.get("_false_veil")
+	_check("P3 본체 등장", fv != null)
+	if fv == null:
+		stage.queue_free()
+		return
+	# 요원을 좌 상단 데크(450,736)에 세운다 · 짝은 이 데크 근처 둘이어야 한다.
+	p.global_position = Vector2(450.0, 736.0)
+	var prev_real: Vector2 = Vector2.INF
+	for w in 2:
+		# 실체(SOLID=2) 진입 대기.
+		var t: float = 0.0
+		while t < 14.0 and int(fv.get("state")) != 2:
+			await get_tree().physics_frame
+			t += get_physics_process_delta_time()
+			p.global_position = Vector2(450.0, 736.0)
+		var solid: bool = int(fv.get("state")) == 2
+		_check("창 %d · 실체화 도달" % (w + 1), solid, "t=%.1f" % t)
+		if not solid:
+			break
+		var real_pos: Vector2 = (fv as Node2D).global_position
+		var decoy: Node2D = fv.get("_decoy") as Node2D
+		var ref: Vector2 = p.global_position + Vector2(0.0, -30.0)
+		var dx: float = absf(real_pos.x - ref.x)
+		var dy: float = absf(real_pos.y - ref.y)
+		_check("창 %d · 진짜가 닿는 자리(dx ≤ 520 · dy ≤ 220)" % (w + 1), dx <= 520.0 and dy <= 220.0, "dx=%.0f dy=%.0f" % [dx, dy])
+		_check("창 %d · 가짜 눈 동반(닿는 자리 · 진짜와 ≥ 90px)" % (w + 1),
+			decoy != null and is_instance_valid(decoy) and absf(decoy.global_position.x - ref.x) <= 520.0
+			and decoy.global_position.distance_to(real_pos) >= 90.0,
+			"" if decoy == null else str(decoy.global_position))
+		var gaze: Vector2 = fv.get("_gaze")
+		var to_p: Vector2 = (p.global_position - real_pos).normalized()
+		_check("창 %d · 진짜 시선 = 요원 방향" % (w + 1), gaze.length() > 4.0 and gaze.normalized().dot(to_p) > 0.9, "dot=%.2f" % gaze.normalized().dot(to_p))
+		if w == 1:
+			_check("창 2 · 진짜 자리가 직전과 다름", real_pos.distance_to(prev_real) > 60.0, "%s vs %s" % [str(prev_real), str(real_pos)])
+		prev_real = real_pos
+		# 잠복 복귀 대기.
+		var t2: float = 0.0
+		while t2 < 6.0 and int(fv.get("state")) == 2:
+			await get_tree().physics_frame
+			t2 += get_physics_process_delta_time()
+			p.global_position = Vector2(450.0, 736.0)
+	stage.queue_free()
 	await get_tree().process_frame

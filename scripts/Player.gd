@@ -863,12 +863,21 @@ func _trigger_hit_slowmo() -> void:
 		return
 	slowmo_active = true
 	Engine.time_scale = _HIT_SLOWMO_SCALE
-	var timer: SceneTreeTimer = get_tree().create_timer(_HIT_SLOWMO_DURATION, true, false, true)
-	timer.timeout.connect(_end_hit_slowmo)
+	_slowmo_timer = get_tree().create_timer(_HIT_SLOWMO_DURATION, true, false, true)
+	_slowmo_timer.timeout.connect(_end_hit_slowmo)
 
 func _end_hit_slowmo() -> void:
 	slowmo_active = false
 	Engine.time_scale = 1.0
+
+# 사망 한 박자(Stage._play_death_beat)가 time_scale을 넘겨받는다 · 피격 슬로모의 0.35s 복원
+# 타이머가 도중에 1.0으로 되돌리지 않게 끊는다. time_scale 자체는 건드리지 않는다(Stage가 관리).
+var _slowmo_timer: SceneTreeTimer = null
+func cancel_hit_slowmo() -> void:
+	if _slowmo_timer != null and _slowmo_timer.timeout.is_connected(_end_hit_slowmo):
+		_slowmo_timer.timeout.disconnect(_end_hit_slowmo)
+	_slowmo_timer = null
+	slowmo_active = false
 
 func _exit_tree() -> void:
 	# scene 전환 도중 슬로모가 활성된 채 player가 free되면 다음 씬도 0.4 배속이 됨.
