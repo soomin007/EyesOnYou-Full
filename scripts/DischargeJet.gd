@@ -19,6 +19,7 @@ const JET_DUR: float = 1.3
 const PERIOD: float = IDLE_DUR + TELE_DUR + JET_DUR
 
 const MOUTH_Y: float = 46.0        # 물줄기 축(지면 위 높이) · 지상에 서 있으면 맞는 허리 높이
+const MOUTH_X: float = 30.0        # 플랜지 입구 x(방류 방향 기준) · 물줄기 렌더와 판정이 여기서 시작
 const BAND_H: float = 96.0         # 지상 판정 높이(이 위 발판은 안전)
 const COL: Color = Color(0.62, 0.92, 1.0)   # 물(응축수 낙수와 동일 계열)
 const WARN: Color = Color(1.0, 0.55, 0.2)   # 예고 경고색(증기 노즐과 동형)
@@ -30,13 +31,20 @@ var damage: int = 1
 var _state: int = S.IDLE
 var _t: float = 0.0
 var _hit_this_jet: bool = false
+var _housing: Node2D = null         # 방류구 하우징(상시 실물) · 캐릭터 뒤 z에 따로 그린다
 
 func setup(cfg: Dictionary, g_y: float) -> void:
 	position = Vector2(float(cfg.get("x", 0.0)), g_y)
 	jet_dir = 1 if int(cfg.get("dir", 1)) >= 0 else -1
 	length = maxf(float(cfg.get("len", 480.0)), 120.0)
 	damage = int(cfg.get("dmg", 1))
-	z_index = 1
+	z_index = 1                        # 물줄기·예고 = 캐릭터(적 0) 위
+	# 하우징(기단·급수관·플랜지)은 상시 실물이라 캐릭터 뒤(실효 z -1 · 배경 위)로 분리.
+	# 한 노드 z 1로 다 그리면 순찰이 방류구 뒤로 숨는다(2026-08-29 사용자 지적).
+	_housing = Node2D.new()
+	_housing.z_index = -2              # 상대 z · 부모 1 + (-2) = -1
+	_housing.draw.connect(_draw_outlet.bind(_housing))
+	add_child(_housing)
 	add_to_group("discharge_jet")
 	_t = fmod(float(cfg.get("phase", 0.0)), 1.0) * PERIOD
 	# 위상 오프셋으로 임의 상태에서 시작해도 사이클 정합 유지.
@@ -68,6 +76,8 @@ func _physics_process(delta: float) -> void:
 				_state = S.IDLE
 				_t = 0.0
 	queue_redraw()
+	if _housing != null:
+		_housing.queue_redraw()
 
 func _check_hit() -> void:
 	if _hit_this_jet:
@@ -80,7 +90,10 @@ func _check_hit() -> void:
 	# 판정 구간 = 그려진 물줄기 길이(reach)와 동기 · 물이 아직 안 닿은 앞 구간은 안 맞는다
 	# (2026-08-22 "물줄기가 나오기 전에 피격": 뻗어나가는 0.2s 동안 전체 구간 선판정이던 버그).
 	var reach: float = length * minf(1.0, (_t / JET_DUR) * 6.0)
-	if along >= -10.0 and along <= reach and rel.y > -BAND_H and rel.y <= 8.0:
+	# 판정 시작 = 플랜지 입구(MOUTH_X) · 방류구 하우징 자체는 물이 아니다. 종전 -10부터라
+	# 기단·급수관 위 40px 구간이 물 없이 맞았다(2026-08-29 사용자 "펌프 기계에도 판정").
+	# 끝도 렌더(mouth + reach)와 같은 자리.
+	if along >= MOUTH_X and along <= MOUTH_X + reach and rel.y > -BAND_H and rel.y <= 8.0:
 		if p.has_method("take_hit"):
 			p.call("take_hit", damage)
 			_hit_this_jet = true
@@ -88,14 +101,14 @@ func _check_hit() -> void:
 
 # ─── 렌더 ──────────────────────────────────────────────────────
 func _draw() -> void:
-	_draw_outlet()
 	if _state == S.TELE:
 		_draw_telegraph()
 	elif _state == S.JET:
 		_draw_jet()
 
 # 방류구 하우징(상시) · 콘크리트 기단 + 수직 급수관 + 입구 플랜지. 위치가 항상 보인다.
-func _draw_outlet() -> void:
+# _housing 자식(z -1)의 draw 시그널에서 호출 · 그리기는 그 노드(ci)에 한다.
+func _draw_outlet(ci: CanvasItem) -> void:
 	var d: float = float(jet_dir)
 	# 예고~방류 동안 경고 줄무늬가 달아오른다(램프).
 	var hot: float = 0.0
@@ -104,24 +117,24 @@ func _draw_outlet() -> void:
 	elif _state == S.JET:
 		hot = 1.0
 	# 기단(콘크리트).
-	draw_rect(Rect2(Vector2(-26.0, -14.0), Vector2(52.0, 14.0)), Color(0.20, 0.22, 0.24))
+	ci.draw_rect(Rect2(Vector2(-26.0, -14.0), Vector2(52.0, 14.0)), Color(0.20, 0.22, 0.24))
 	# 수직 급수관(배경 대구경 파이프에서 내려온 결).
-	draw_rect(Rect2(Vector2(-11.0, -84.0), Vector2(22.0, 70.0)), Color(0.16, 0.21, 0.24))
-	draw_rect(Rect2(Vector2(-11.0, -84.0), Vector2(5.0, 70.0)), Color(0.24, 0.30, 0.33))
+	ci.draw_rect(Rect2(Vector2(-11.0, -84.0), Vector2(22.0, 70.0)), Color(0.16, 0.21, 0.24))
+	ci.draw_rect(Rect2(Vector2(-11.0, -84.0), Vector2(5.0, 70.0)), Color(0.24, 0.30, 0.33))
 	# 입구 엘보 + 플랜지(방류 방향).
-	draw_rect(Rect2(Vector2(minf(0.0, d * 24.0), -MOUTH_Y - 14.0), Vector2(24.0, 28.0)), Color(0.19, 0.25, 0.28))
-	draw_rect(Rect2(Vector2(minf(d * 24.0, d * 30.0), -MOUTH_Y - 17.0), Vector2(6.0, 34.0)), Color(0.28, 0.35, 0.38))
+	ci.draw_rect(Rect2(Vector2(minf(0.0, d * 24.0), -MOUTH_Y - 14.0), Vector2(24.0, 28.0)), Color(0.19, 0.25, 0.28))
+	ci.draw_rect(Rect2(Vector2(minf(d * 24.0, d * MOUTH_X), -MOUTH_Y - 17.0), Vector2(6.0, 34.0)), Color(0.28, 0.35, 0.38))
 	# 경고 줄무늬 칼라(플랜지 둘레) · 항상 보이되 임박 시 밝게.
 	var stripe_a: float = 0.35 + 0.55 * hot
 	for i in 3:
 		var yy: float = -MOUTH_Y - 12.0 + float(i) * 10.0
-		draw_rect(Rect2(Vector2(minf(d * 24.0, d * 30.0) + 1.0, yy),
+		ci.draw_rect(Rect2(Vector2(minf(d * 24.0, d * MOUTH_X) + 1.0, yy),
 			Vector2(4.0, 6.0)), Color(WARN.r, WARN.g, WARN.b, stripe_a))
 
 func _draw_telegraph() -> void:
 	var d: float = float(jet_dir)
 	var k: float = _t / TELE_DUR
-	var mouth := Vector2(d * 30.0, -MOUTH_Y)
+	var mouth := Vector2(d * MOUTH_X, -MOUTH_Y)
 	# 덜컹거림 · 플랜지 앞에서 물이 새며 방울이 흘러내린다(점멸 없음 · 새는 양이 램프로 는다).
 	var jitter: float = sin(_t * 34.0) * 1.5 * k
 	for i in 3:
@@ -135,7 +148,7 @@ func _draw_jet() -> void:
 	var d: float = float(jet_dir)
 	var bt: float = _t / JET_DUR
 	var power: float = sin(bt * PI)            # 0→1→0 세기 엔벨로프(완만)
-	var mouth := Vector2(d * 30.0, -MOUTH_Y)
+	var mouth := Vector2(d * MOUTH_X, -MOUTH_Y)
 	var reach: float = length * minf(1.0, bt * 6.0)   # 첫 0.2s에 물줄기가 뻗어나간다
 	# 연속 물줄기 · 겉(넓고 옅음)/중간/심(밝음) 3겹의 이어진 띠. 끝으로 갈수록 살짝 처진다.
 	for layer in [[34.0, 0.30], [18.0, 0.55], [9.0, 0.85]]:

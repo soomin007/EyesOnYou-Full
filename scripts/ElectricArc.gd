@@ -22,6 +22,7 @@ var phase: float = 0.0
 
 var _t: float = 0.0
 var _hit_this_burst: bool = false
+var _posts: Node2D = null          # 절연 포스트·바닥 케이블(상시 실물) · 캐릭터 뒤 z에 따로 그린다
 
 func setup(x1: float, x2: float, ground_y: float, ph: float = 0.0, dmg: int = 1) -> void:
 	position = Vector2((x1 + x2) * 0.5, ground_y)
@@ -29,7 +30,13 @@ func setup(x1: float, x2: float, ground_y: float, ph: float = 0.0, dmg: int = 1)
 	phase = ph
 	damage = dmg
 	_t = ph * PERIOD
-	z_index = 1
+	z_index = 1                        # 예고·방전 = 캐릭터(적 0) 위
+	# 포스트·케이블은 상시 실물이라 캐릭터 뒤(실효 z -1)로 분리 · 순찰이 포스트 뒤로 숨지 않게
+	# (DischargeJet 하우징과 동형 · 2026-08-29).
+	_posts = Node2D.new()
+	_posts.z_index = -2                # 상대 z · 부모 1 + (-2) = -1
+	_posts.draw.connect(_draw_static.bind(_posts))
+	add_child(_posts)
 	add_to_group("electric_arc")
 
 func _cycle_t() -> float:
@@ -56,14 +63,17 @@ func _check_hit() -> void:
 			_hit_this_burst = true
 			SfxPlayer.play_at("spike_hit", (p as Node2D).global_position)
 
-func _draw() -> void:
-	var ct: float = _cycle_t()
+# 상시 실물 · _posts 자식(z -1)의 draw 시그널에서 호출 · 그리기는 그 노드(ci)에 한다.
+func _draw_static(ci: CanvasItem) -> void:
 	# 절연 포스트 · 양끝 상시(위치가 항상 보임 · 증기 노즐 마커와 동형).
 	for sx in [-half, half]:
-		draw_rect(Rect2(Vector2(float(sx) - 4.0, -26.0), Vector2(8.0, 26.0)), Color(0.20, 0.19, 0.15))
-		draw_rect(Rect2(Vector2(float(sx) - 6.0, -30.0), Vector2(12.0, 5.0)), Color(0.32, 0.30, 0.22))
+		ci.draw_rect(Rect2(Vector2(float(sx) - 4.0, -26.0), Vector2(8.0, 26.0)), Color(0.20, 0.19, 0.15))
+		ci.draw_rect(Rect2(Vector2(float(sx) - 6.0, -30.0), Vector2(12.0, 5.0)), Color(0.32, 0.30, 0.22))
 	# 바닥 전선 · 상시 어두운 케이블 라인.
-	draw_rect(Rect2(Vector2(-half, -3.0), Vector2(half * 2.0, 3.0)), Color(0.16, 0.15, 0.11))
+	ci.draw_rect(Rect2(Vector2(-half, -3.0), Vector2(half * 2.0, 3.0)), Color(0.16, 0.15, 0.11))
+
+func _draw() -> void:
+	var ct: float = _cycle_t()
 	if ct < IDLE_DUR:
 		return
 	var warn_col := Color(1.0, 0.78, 0.30)
