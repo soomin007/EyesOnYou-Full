@@ -9,7 +9,17 @@ extends Node
 #   var doc = ArcturusDocumentOverlay.new()
 #   parent.add_child(doc)
 #   doc.finished.connect(_on_done)
-#   doc.show_doc(lines)   # lines: Array of {text: String, kind: "title"/"body"/"speaker", delay: float}
+#   doc.show_doc(lines)   # lines: Array of {text: String, kind: String, delay: float, ...}
+#
+# 행 종류(kind) · 문서 서식 리뉴얼(2026-08-30 사용자 "배경만 다르고 글은 전부 왼쪽 정렬 줄글"):
+#   공통   title(제목) · blank(간격, h) · rule(괘선) · body(줄글) · speaker(옛 발화자 라벨)
+#   서식   section(하위 문서 머리 · tag/badge/text) · kv(라벨: 값 · label/text · right_label/right_text ·
+#          gap) · form(표 행 · label/text · last) · para(문단) · num(번호 항목 · n) · note(비고 상자 ·
+#          label) · sign(서명 · sub) · redacted(검열 바) · sheet(장 경계)
+#   콘솔   prompt(프롬프트 줄) · log(로그 행 · ts/lvl) · corrupt(덮어쓰인 구간)
+#   뷰어   bar(복호화 게이지) · hex(헥스 덤프 줄)
+#   타이핑 대상은 행마다 RichTextLabel 하나(labels[i]) · 행 컨테이너(rows[i])가 라벨 열·괘선·상자를 함께
+#   담는다. 행 높이는 실측(get_content_height)으로 쌓는다. [[키워드]]=강조색, [REDACTED]=검열 바.
 
 signal finished
 
@@ -19,9 +29,6 @@ const TYPE_INTERVAL: float = 0.035
 const PAPER_WIDTH: float = 880.0
 const MARGIN_TOP: float = 64.0
 const MARGIN_SIDE: float = 44.0
-const LINE_HEIGHT_BODY: float = 46.0
-const LINE_HEIGHT_TITLE: float = 62.0
-const LINE_HEIGHT_BLANK: float = 20.0
 # 디자인 기준 화면 크기 · show_doc 진입 시 실제 화면(visible_rect)으로 갱신(적응형).
 # const가 아니라 var: 런타임에 현재 해상도/화면비로 덮어쓴다(아래 모든 사용처에 반영).
 var VIEWPORT_W: float = 1280.0
@@ -32,7 +39,14 @@ var layer: CanvasLayer
 var bg: ColorRect
 var paper: Control
 var paper_visual: ColorRect
-var labels: Array = []   # Label 배열, 입력 lines와 1:1
+var labels: Array = []   # RichTextLabel(타이핑 대상) 배열, lines_data와 1:1
+var rows: Array = []     # 행 컨테이너(Control) 배열, lines_data와 1:1 · 라벨 열·괘선·상자 포함
+var _scan: ColorRect = null   # 콘솔 스캔라인 · 행 실측 후 종이 크기에 맞춘다
+var _frame: Panel = null      # 콘솔 창 프레임 · 위와 같음
+var _pal: Dictionary = {}     # 양식별 팔레트(_setup_palette)
+var _font_main: Font = null
+var _font_bold: Font = null
+var _head_room: float = 68.0
 var lines_data: Array = []
 var current_line: int = 0
 var revealed: int = 0
@@ -86,10 +100,10 @@ func show_doc(input_lines: Array) -> void:
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(bg)
-	# 종이 컨테이너 (화면 가운데 가로 정렬)
+	# 종이 컨테이너 (화면 가운데 가로 정렬) · 높이는 행을 전부 그려 실측한 뒤 확정한다.
 	paper = Control.new()
 	paper.position = Vector2((VIEWPORT_W - PAPER_WIDTH) * 0.5, MARGIN_TOP)
-	paper.size = Vector2(PAPER_WIDTH, _calc_paper_height())
+	paper.size = Vector2(PAPER_WIDTH, VIEWPORT_H)
 	paper.modulate.a = 0.0
 	layer.add_child(paper)
 	# paper_target_y 초기값을 시작 position과 동기화 · 안 그러면 0(기본값)으로
@@ -100,25 +114,17 @@ func show_doc(input_lines: Array) -> void:
 	# terminal: 서버 콘솔 / drive: 회수 드라이브 복호화 뷰어(어두운 보라).
 	var is_term: bool = style == "terminal"
 	var is_drive: bool = style == "drive"
-	if is_term:
-		_kw_color = "#ffc857"
-	elif is_drive:
-		_kw_color = "#c9a2ff"
-	else:
-		_kw_color = "#0a4a73"
-	# 콘솔 계열 양식은 코딩 폰트(D2Coding, OFL) · 사용자 제안 2026-08-23. 종이는 프리텐다드 유지.
+	_setup_palette()
+	_kw_color = str(_pal["kw"])
+	# 콘솔 계열 양식은 코딩 폰트(D2Coding, OFL) · 사용자 제안 2026-08-23. 종이는 프리텐다드.
 	var mono: FontFile = null
 	if is_term or is_drive:
 		mono = load("res://assets/fonts/D2Coding.ttf")
 	paper_visual = ColorRect.new()
-	if is_term:
-		paper_visual.color = Color(0.043, 0.055, 0.075, 0.97)
-	elif is_drive:
-		paper_visual.color = Color(0.055, 0.042, 0.085, 0.97)
-	else:
-		paper_visual.color = Color(0.92, 0.90, 0.84, 0.96)
+	paper_visual.color = _pal["paper"]
 	# 종이 양식은 레터헤드·스탬프 확대(4차 피드백 "더 커도 될 것 같다")로 머리 여백을 더 쓴다.
 	var head_room: float = 40.0 if (is_term or is_drive) else 68.0
+	_head_room = head_room
 	paper_visual.position = Vector2(-MARGIN_SIDE, -head_room)
 	paper_visual.size = paper.size + Vector2(MARGIN_SIDE * 2.0, head_room + 40.0)
 	paper.add_child(paper_visual)
@@ -156,23 +162,23 @@ func show_doc(input_lines: Array) -> void:
 		path_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		bar.add_child(path_l)
 		# 은은한 스캔라인 · 4px 간격 수평선(수직 줄무늬 금지 규칙과 별개, CRT 문법은 수평).
-		var scan := ColorRect.new()
-		scan.color = Color(1, 1, 1, 1)
-		scan.position = paper_visual.position
-		scan.size = paper_visual.size
-		scan.material = _make_scanline_material()
-		paper.add_child(scan)
+		_scan = ColorRect.new()
+		_scan.color = Color(1, 1, 1, 1)
+		_scan.position = paper_visual.position
+		_scan.size = paper_visual.size
+		_scan.material = _make_scanline_material()
+		paper.add_child(_scan)
 		# 콘솔 창 프레임 · 가장자리 1px 라인(4차 피드백 "더 꾸밀 요소"). 스크롤을 따라간다.
-		var frame := Panel.new()
+		_frame = Panel.new()
 		var fr_sb := StyleBoxFlat.new()
 		fr_sb.bg_color = Color(0, 0, 0, 0)
 		fr_sb.border_color = Color(0.30, 0.55, 0.42, 0.55) if is_term else Color(0.48, 0.36, 0.72, 0.55)
 		fr_sb.set_border_width_all(1)
-		frame.add_theme_stylebox_override("panel", fr_sb)
-		frame.position = paper_visual.position
-		frame.size = paper_visual.size
-		frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		paper.add_child(frame)
+		_frame.add_theme_stylebox_override("panel", fr_sb)
+		_frame.position = paper_visual.position
+		_frame.size = paper_visual.size
+		_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		paper.add_child(_frame)
 		# 하단 상태 바 · 세션 정보 + 깜빡이는 블록 커서(터미널 문법). 타이틀 바처럼 화면 고정.
 		# 텍스트는 기술 표기(영문)라 대사 검수 대상 아님.
 		var foot := ColorRect.new()
@@ -184,9 +190,9 @@ func show_doc(input_lines: Array) -> void:
 		layer.add_child(foot)
 		var foot_l := Label.new()
 		if is_term:
-			foot_l.text = "svr-03 · READ-ONLY · %d LINES RECOVERED" % lines_data.size()
+			foot_l.text = "svr-03 · READ-ONLY · %d LINES RECOVERED" % input_lines.size()
 		else:
-			foot_l.text = "drive-A7 · DECRYPT OK · %d ENTRIES" % lines_data.size()
+			foot_l.text = "drive-A7 · DECRYPT OK · %d ENTRIES" % input_lines.size()
 		if mono != null:
 			foot_l.add_theme_font_override("font", mono)
 		foot_l.add_theme_font_size_override("font_size", 12)
@@ -251,54 +257,27 @@ func show_doc(input_lines: Array) -> void:
 		st_l.add_theme_color_override("font_color", Color(0.72, 0.18, 0.16, 0.78))
 		_stamp.add_child(st_l)
 		paper.add_child(_stamp)
-	# 줄들 미리 배치 (alpha=0)
+	# 행 배치 · 양식별 머리 행(콘솔 프롬프트·드라이브 복호화 게이지)을 데이터 앞에 붙이고,
+	# 각 행을 종류별 서식으로 그린 뒤 실제 높이를 재서 쌓는다(alpha=0 · 타이핑 순서대로 드러남).
+	lines_data = _style_preamble() + input_lines
 	var y: float = 0.0
 	for entry in lines_data:
 		var d: Dictionary = entry
-		var kind: String = str(d.get("kind", "body"))
-		# RichTextLabel · [[키워드]]만 진청으로 물들인다(줄 전체 형광펜 밴드는 "책 전체에
-		# 형광펜" 반려로 폐지, 2026-08-23). 타이핑은 visible_characters로(태그 substr 깨짐 방지).
-		var lbl := RichTextLabel.new()
-		lbl.bbcode_enabled = true
-		lbl.scroll_active = false
-		if mono != null:
-			lbl.add_theme_font_override("normal_font", mono)
-		lbl.position = Vector2(0.0, y)
-		lbl.size = Vector2(PAPER_WIDTH, _line_height_for(kind))
-		lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		lbl.modulate.a = 0.0
-		match kind:
-			"title":
-				lbl.add_theme_font_size_override("normal_font_size", 30)
-				var tc := Color(0.18, 0.20, 0.28)
-				if is_term:
-					tc = Color(0.45, 0.85, 0.58)
-				elif is_drive:
-					tc = Color(0.75, 0.55, 1.0)
-				lbl.add_theme_color_override("default_color", tc)
-			"speaker":
-				lbl.add_theme_font_size_override("normal_font_size", 18)
-				var sc := Color(0.45, 0.45, 0.55)
-				if is_term:
-					sc = Color(0.42, 0.58, 0.50)
-				elif is_drive:
-					sc = Color(0.56, 0.48, 0.70)
-				lbl.add_theme_color_override("default_color", sc)
-			"blank":
-				lbl.add_theme_font_size_override("normal_font_size", 16)
-			_:
-				lbl.add_theme_font_size_override("normal_font_size", 23)
-				var bc := Color(0.10, 0.12, 0.18)
-				if is_term:
-					bc = Color(0.72, 0.80, 0.78)
-				elif is_drive:
-					bc = Color(0.80, 0.75, 0.90)
-				lbl.add_theme_color_override("default_color", bc)
-		lbl.text = _to_bbcode(str(d.get("text", "")))
-		lbl.visible_characters = 0
-		paper.add_child(lbl)
-		labels.append(lbl)
-		y += _line_height_for(kind)
+		var built: Dictionary = _build_row(d)
+		var row: Control = built["row"]
+		row.position = Vector2(0.0, y)
+		row.modulate.a = 0.0
+		rows.append(row)
+		labels.append(built["lbl"])
+		y += float(built["h"])
+	paper.size = Vector2(PAPER_WIDTH, max(y, VIEWPORT_H - MARGIN_TOP * 2.0))
+	var vis_size: Vector2 = paper.size + Vector2(MARGIN_SIDE * 2.0, head_room + 40.0)
+	paper_visual.size = vis_size
+	shadow.size = vis_size
+	if _scan != null:
+		_scan.size = vis_size
+	if _frame != null:
+		_frame.size = vis_size
 	# 배경 페이드 인 → 양식별 등장 연출(5차 피드백 "처음부터 펼쳐져 있지 않게 · 양식에 맞게
 	# 펼쳐지거나 켜지게") → 타이핑 시작. 종이 = 봉인 펼침 / 콘솔·뷰어 = 전원 켜짐.
 	get_tree().paused = true
@@ -450,27 +429,334 @@ func _enter_power_on() -> void:
 	tw.tween_callback(ign.queue_free)
 	tw.tween_callback(_start_typing)
 
-# [[키워드]] -> 진청 색 강조 bbcode. 원문 대괄호는 [lb]로 이스케이프해 그대로 보이게.
-func _to_bbcode(raw: String) -> String:
-	var out: String = raw.replace("[[", "").replace("]]", "")
-	out = out.replace("[", "[lb]")
-	out = out.replace("", "[color=%s]" % _kw_color).replace("", "[/color]")
-	return out
+# ── 양식 팔레트 · 종이(크림 위 진청) / 콘솔(어두운 청록 위 녹색·호박) / 뷰어(보라) ──────────
+func _setup_palette() -> void:
+	match style:
+		"terminal":
+			_pal = {
+				"paper": Color(0.043, 0.055, 0.075, 0.97), "body": Color(0.72, 0.80, 0.78),
+				"dim": Color(0.42, 0.58, 0.50), "title": Color(0.45, 0.85, 0.58),
+				"rule": Color(0.30, 0.55, 0.42, 0.55), "tint": Color(0.30, 0.55, 0.42, 0.10),
+				"redact": Color(0.16, 0.21, 0.22), "kw": "#ffc857", "accent": Color(0.45, 0.85, 0.58),
+				"bad": Color(0.85, 0.36, 0.32),
+			}
+		"drive":
+			_pal = {
+				"paper": Color(0.055, 0.042, 0.085, 0.97), "body": Color(0.80, 0.75, 0.90),
+				"dim": Color(0.56, 0.48, 0.70), "title": Color(0.75, 0.55, 1.0),
+				"rule": Color(0.48, 0.36, 0.72, 0.55), "tint": Color(0.48, 0.36, 0.72, 0.12),
+				"redact": Color(0.19, 0.15, 0.26), "kw": "#c9a2ff", "accent": Color(0.75, 0.55, 1.0),
+				"bad": Color(0.85, 0.36, 0.32),
+			}
+		_:
+			_pal = {
+				"paper": Color(0.92, 0.90, 0.84, 0.96), "body": Color(0.10, 0.12, 0.18),
+				"dim": Color(0.45, 0.45, 0.55), "title": Color(0.18, 0.20, 0.28),
+				"rule": Color(0.30, 0.33, 0.45, 0.55), "tint": Color(0.30, 0.33, 0.45, 0.08),
+				"redact": Color(0.12, 0.12, 0.14), "kw": "#0a4a73", "accent": Color(0.33, 0.36, 0.48),
+				"bad": Color(0.72, 0.18, 0.16),
+			}
+	if style == "terminal" or style == "drive":
+		_font_main = load("res://assets/fonts/D2Coding.ttf")
+	else:
+		_font_main = load("res://assets/fonts/Pretendard-Regular.otf")
+	# 굵은 글꼴은 별도 파일이 없어 합성(embolden) · 제목·라벨 열·프롬프트에만 쓴다.
+	var fv := FontVariation.new()
+	fv.base_font = _font_main
+	fv.variation_embolden = 0.55
+	_font_bold = fv
 
-func _calc_paper_height() -> float:
+func _c(key: String) -> Color:
+	return _pal[key]
+
+func _hex(key: String) -> String:
+	return "#" + (_pal[key] as Color).to_html(false)
+
+# 양식별 머리 행 · 데이터(대사집 단일 소스) 밖의 기술 표기만 붙인다(영문 · 검수 대상 아님).
+func _style_preamble() -> Array:
+	match style:
+		"terminal":
+			return [{"kind": "prompt", "text": "tail -n +1 /var/log/veil.d/recovered.log", "delay": 0.35}]
+		"drive":
+			return [
+				{"kind": "bar", "text": "DECRYPT", "delay": 0.8},
+				{"kind": "hex", "text": "0000  7f 45 4c 46 02 01 01 00  00 00 00 00 00 00 00 00  |.ELF............|", "delay": 0.15},
+				{"kind": "hex", "text": "0010  02 00 3e 00 01 00 00 00  a0 1f 56 45 49 4c 00 00  |..>.......VEIL..|", "delay": 0.25},
+				{"kind": "rule", "delay": 0.2},
+			]
+	return []
+
+# ── 행 빌더 · 행 컨테이너 + 타이핑 대상 RichTextLabel + 실측 높이 ────────────────────────
+func _rtl(parent: Control, x: float, y: float, w: float, px: int, col: Color, bb: String) -> RichTextLabel:
+	var lbl := RichTextLabel.new()
+	lbl.bbcode_enabled = true
+	lbl.scroll_active = false
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	# 타이핑 중 줄바꿈·정렬이 흔들리지 않게 · 숨긴 글자도 자리를 차지한다.
+	lbl.visible_characters_behavior = TextServer.VC_CHARS_AFTER_SHAPING
+	lbl.add_theme_font_override("normal_font", _font_main)
+	lbl.add_theme_font_override("bold_font", _font_bold)
+	lbl.add_theme_font_size_override("normal_font_size", px)
+	lbl.add_theme_font_size_override("bold_font_size", px)
+	lbl.add_theme_color_override("default_color", col)
+	lbl.position = Vector2(x, y)
+	lbl.size = Vector2(w, 10.0)
+	lbl.text = bb
+	lbl.visible_characters = 0
+	parent.add_child(lbl)
+	var ch: float = lbl.get_content_height()
+	if ch <= 0.0:
+		ch = float(px) * 1.45
+	lbl.size = Vector2(w, ch)
+	return lbl
+
+func _lab(parent: Control, x: float, y: float, w: float, px: int, col: Color, text: String, bold: bool = false, align: int = HORIZONTAL_ALIGNMENT_LEFT) -> Label:
+	var l := Label.new()
+	l.text = text
+	l.add_theme_font_override("font", _font_bold if bold else _font_main)
+	l.add_theme_font_size_override("font_size", px)
+	l.add_theme_color_override("font_color", col)
+	l.position = Vector2(x, y)
+	l.size = Vector2(w, float(px) * 1.5)
+	l.horizontal_alignment = align
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(l)
+	return l
+
+func _rect(parent: Control, x: float, y: float, w: float, h: float, col: Color) -> ColorRect:
+	var r := ColorRect.new()
+	r.color = col
+	r.position = Vector2(x, y)
+	r.size = Vector2(w, h)
+	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(r)
+	return r
+
+func _build_row(d: Dictionary) -> Dictionary:
+	var kind: String = str(d.get("kind", "body"))
+	var text: String = str(d.get("text", ""))
+	var is_paper: bool = not (style == "terminal" or style == "drive")
+	var row := Control.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.size = Vector2(PAPER_WIDTH, 10.0)
+	paper.add_child(row)
+	var lbl: RichTextLabel = null
 	var h: float = 0.0
-	for entry in lines_data:
-		var d: Dictionary = entry
-		h += _line_height_for(str(d.get("kind", "body")))
-	return max(h, VIEWPORT_H - MARGIN_TOP * 2.0)
-
-func _line_height_for(kind: String) -> float:
 	match kind:
 		"title":
-			return LINE_HEIGHT_TITLE
+			var px: int = 30 if is_paper else (24 if style == "terminal" else 28)
+			var bb: String = _to_bbcode(text)
+			if style == "terminal":
+				bb = "[color=%s]==> [/color]%s[color=%s] <==[/color]" % [_hex("dim"), bb, _hex("dim")]
+			lbl = _rtl(row, 0.0, 10.0, PAPER_WIDTH, px, _c("title"), bb)
+			h = lbl.size.y + 22.0
 		"blank":
-			return LINE_HEIGHT_BLANK
-	return LINE_HEIGHT_BODY
+			lbl = _rtl(row, 0.0, 0.0, PAPER_WIDTH, 16, _c("body"), "")
+			h = float(d.get("h", 20.0))
+		"rule":
+			_rect(row, 0.0, 6.0, PAPER_WIDTH, 1.0, _c("rule"))
+			lbl = _rtl(row, 0.0, 0.0, PAPER_WIDTH, 16, _c("body"), "")
+			h = 14.0
+		"speaker":
+			lbl = _rtl(row, 0.0, 6.0, PAPER_WIDTH, 18, _c("dim"), _to_bbcode(text))
+			h = lbl.size.y + 14.0
+		"section":
+			# 하위 문서 머리 · 실물 메모의 "기관명 작은 줄 + 큰 문서명 + 괘선"(레퍼런스 실측) 구도.
+			var tag: String = str(d.get("tag", ""))
+			var badge: String = str(d.get("badge", ""))
+			var x: float = 0.0
+			if tag != "":
+				var box := PanelContainer.new()
+				var sb := StyleBoxFlat.new()
+				sb.bg_color = Color(0, 0, 0, 0)
+				sb.border_color = _c("accent")
+				sb.set_border_width_all(2)
+				sb.content_margin_left = 8.0
+				sb.content_margin_right = 8.0
+				sb.content_margin_top = 1.0
+				sb.content_margin_bottom = 1.0
+				box.add_theme_stylebox_override("panel", sb)
+				box.position = Vector2(0.0, 8.0)
+				box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				var tl := Label.new()
+				tl.text = tag
+				tl.add_theme_font_override("font", _font_bold)
+				tl.add_theme_font_size_override("font_size", 15)
+				tl.add_theme_color_override("font_color", _c("accent"))
+				box.add_child(tl)
+				row.add_child(box)
+				x = 44.0
+			if badge != "":
+				_lab(row, x, 8.0, PAPER_WIDTH - x, 16, _c("dim"), badge)
+			lbl = _rtl(row, 0.0, 36.0, PAPER_WIDTH, 26, _c("title"), "[b]%s[/b]" % _to_bbcode(text))
+			_rect(row, 0.0, 36.0 + lbl.size.y + 8.0, PAPER_WIDTH, 2.0, _c("rule"))
+			h = 36.0 + lbl.size.y + 24.0
+		"kv":
+			# 라벨: 값 · 라벨 열 고정폭(메모 머리 블록 TO/FROM/SUBJECT 실측: 라벨 12% · 값 이어서).
+			var col_w: float = float(d.get("col", 150.0 if is_paper else 200.0))
+			var lab_px: int = 17
+			var val_px: int = 22 if is_paper else 21
+			_lab(row, 0.0, 6.0, col_w - 10.0, lab_px, _c("dim"), str(d.get("label", "")), true)
+			var vw: float = PAPER_WIDTH - col_w
+			if d.has("right_label"):
+				vw = 560.0 - col_w
+				_lab(row, 560.0, 6.0, 90.0, lab_px, _c("dim"), str(d.get("right_label", "")), true)
+				_rtl(row, 650.0, 2.0, PAPER_WIDTH - 650.0, val_px, _c("body"), _to_bbcode(str(d.get("right_text", "")))).visible_characters = -1
+			lbl = _rtl(row, col_w, 2.0, vw, val_px, _c("body"), _to_bbcode(text))
+			h = max(lbl.size.y, 28.0) + 8.0 + float(d.get("gap", 0.0))
+		"form":
+			# 표 행 · 회의록/대장 서식(한국 공문 회의록: 일시·장소·참석자·안건 표) · 라벨 칸 음영 + 괘선.
+			var col_w: float = float(d.get("col", 170.0))
+			var cell: ColorRect = _rect(row, 0.0, 0.0, col_w, 10.0, _c("tint"))   # 높이는 실측 후 갱신
+			_rect(row, 0.0, 0.0, PAPER_WIDTH, 1.0, _c("rule"))
+			_lab(row, 14.0, 8.0, col_w - 20.0, 17, _c("dim"), str(d.get("label", "")), true)
+			lbl = _rtl(row, col_w + 14.0, 5.0, PAPER_WIDTH - col_w - 24.0, 21, _c("body"), _to_bbcode(text))
+			h = max(lbl.size.y, 28.0) + 12.0
+			cell.size.y = h
+			_rect(row, 0.0, 0.0, 1.0, h, _c("rule"))
+			_rect(row, col_w, 0.0, 1.0, h, _c("rule"))
+			_rect(row, PAPER_WIDTH - 1.0, 0.0, 1.0, h, _c("rule"))
+			if bool(d.get("last", false)):
+				_rect(row, 0.0, h - 1.0, PAPER_WIDTH, 1.0, _c("rule"))
+				h += 6.0
+		"para":
+			# 문단 · 블록체(실물 메모: 들여쓰기 없이 문단 사이 한 줄 간격). 양끝 정렬([fill])은 한 줄짜리
+			# 문장도 글자 단위로 벌려 놓아(실측) 쓰지 않는다.
+			lbl = _rtl(row, 0.0, 2.0, PAPER_WIDTH, 23, _c("body"), _to_bbcode(text))
+			h = lbl.size.y + 18.0
+		"num":
+			# 번호 항목 · 번호 열 + 내어쓰기(감긴 줄도 본문 열에 맞춘다).
+			_lab(row, 6.0, 2.0, 34.0, 22, _c("body"), str(d.get("n", "·")))
+			lbl = _rtl(row, 44.0, 2.0, PAPER_WIDTH - 44.0, 23, _c("body"), _to_bbcode(text))
+			h = lbl.size.y + 12.0
+		"note":
+			# 비고·결론 상자 · 왼쪽 강조 띠 + 옅은 음영 + 작은 라벨 위, 본문 아래.
+			var lab: String = str(d.get("label", "비고"))
+			lbl = _rtl(row, 20.0, 32.0, PAPER_WIDTH - 40.0, 21, _c("body"), _to_bbcode(text))
+			h = 32.0 + lbl.size.y + 12.0
+			var bgc: ColorRect = _rect(row, 0.0, 0.0, PAPER_WIDTH, h, _c("tint"))
+			row.move_child(bgc, 0)
+			_rect(row, 0.0, 0.0, 3.0, h, _c("accent"))
+			_lab(row, 20.0, 8.0, 300.0, 15, _c("dim"), lab, true)
+			h += 10.0
+		"sign":
+			# 서명 블록 · 중앙 우측(실물 메모의 서명 위치 · 폭의 55%~85%) + 서명선 + 작은 부기.
+			_rect(row, 600.0, 22.0, 240.0, 1.0, _c("rule"))
+			lbl = _rtl(row, 480.0, 30.0, 360.0, 22, _c("body"), "[right]%s[/right]" % _to_bbcode(text))
+			h = 30.0 + lbl.size.y + 6.0
+			var sub: String = str(d.get("sub", ""))
+			if sub != "":
+				var sl: RichTextLabel = _rtl(row, 380.0, h, 460.0, 15, _c("dim"), "[right]%s[/right]" % _to_bbcode(sub))
+				sl.visible_characters = -1
+				h += sl.size.y + 4.0
+			h += 6.0
+		"redacted":
+			# 통째로 지워진 줄 · 검열 바(글자는 바와 같은 색이라 보이지 않는다).
+			var bw: float = PAPER_WIDTH * float(d.get("w", 0.62))
+			_rect(row, 0.0, 8.0, bw, 24.0, _c("redact"))
+			lbl = _rtl(row, 8.0, 8.0, bw - 16.0, 18, _c("redact"), text.replace("[", "").replace("]", ""))
+			h = 44.0
+		"sheet":
+			# 장 경계 · 겹쳐 쌓인 종이 사이의 어두운 틈 + 윗장 아래 그림자 + 아랫장 윗변 하이라이트.
+			if is_paper:
+				var full_x: float = -MARGIN_SIDE
+				var full_w: float = PAPER_WIDTH + MARGIN_SIDE * 2.0
+				_rect(row, full_x, 8.0, full_w, 34.0, Color(0.03, 0.03, 0.05, 1.0))
+				_rect(row, full_x, 8.0, full_w, 5.0, Color(0.0, 0.0, 0.0, 0.35))
+				_rect(row, full_x, 42.0, full_w, 1.0, Color(1.0, 1.0, 1.0, 0.35))
+			else:
+				_rect(row, 0.0, 22.0, PAPER_WIDTH, 1.0, _c("rule"))
+			lbl = _rtl(row, 0.0, 0.0, PAPER_WIDTH, 16, _c("body"), "")
+			h = 64.0 if is_paper else 46.0
+		"prompt":
+			_lab(row, 0.0, 4.0, 110.0, 18, _c("accent"), "svr-03:~$", true)
+			lbl = _rtl(row, 104.0, 2.0, PAPER_WIDTH - 104.0, 18, _c("body"), _to_bbcode(text))
+			h = lbl.size.y + 14.0
+		"log":
+			# 로그 행 · 시각 열 + 등급 태그 + 메시지(syslog 문법: 시각·등급·메시지 열 정렬).
+			var lvl: String = str(d.get("lvl", "INFO"))
+			var lc: Color = _c("dim")
+			match lvl:
+				"WARN":
+					lc = Color(1.0, 0.78, 0.34)
+				"ALRT", "ERR", "CRIT":
+					lc = Color(1.0, 0.42, 0.38)
+				"NOTE":
+					lc = Color(0.50, 0.80, 0.90)
+			_lab(row, 0.0, 6.0, 90.0, 16, _c("dim"), str(d.get("ts", "")))
+			_lab(row, 96.0, 6.0, 60.0, 16, lc, lvl, true)
+			lbl = _rtl(row, 164.0, 2.0, PAPER_WIDTH - 164.0, 20, _c("body"), _to_bbcode(text))
+			h = max(lbl.size.y, 26.0) + 10.0
+		"corrupt":
+			# 덮어쓰인 구간 · 깨진 블록 문자 띠 위에 복구 불가 표시(어두운 적색).
+			var noise: String = ""
+			var glyphs: String = "▒▓░█▒░"
+			for i in 64:
+				noise += glyphs[randi() % glyphs.length()]
+			_lab(row, 0.0, 4.0, PAPER_WIDTH, 15, Color(_c("bad"), 0.45), noise)
+			lbl = _rtl(row, 0.0, 28.0, PAPER_WIDTH, 18, _c("bad"), "[center]%s[/center]" % _to_bbcode(text))
+			h = 28.0 + lbl.size.y + 12.0
+		"bar":
+			# 복호화 게이지 · 드러날 때 0→100%로 차오른다(_reveal_row).
+			_lab(row, 0.0, 4.0, 110.0, 16, _c("dim"), text, true)
+			_rect(row, 110.0, 9.0, 560.0, 12.0, _c("tint"))
+			var fill: ColorRect = _rect(row, 110.0, 9.0, 0.0, 12.0, _c("accent"))
+			row.set_meta("bar_fill", fill)
+			row.set_meta("bar_w", 560.0)
+			var pct: Label = _lab(row, 684.0, 4.0, 120.0, 16, _c("accent"), "100%  OK")
+			pct.modulate.a = 0.0
+			row.set_meta("bar_pct", pct)
+			lbl = _rtl(row, 0.0, 0.0, PAPER_WIDTH, 16, _c("body"), "")
+			h = 32.0
+		"hex":
+			lbl = _rtl(row, 0.0, 2.0, PAPER_WIDTH, 15, _c("dim"), _to_bbcode(text))
+			h = lbl.size.y + 4.0
+		_:
+			lbl = _rtl(row, 0.0, 2.0, PAPER_WIDTH, 23, _c("body"), _to_bbcode(text))
+			h = max(lbl.size.y, 32.0) + 14.0
+	row.size = Vector2(PAPER_WIDTH, h)
+	return {"row": row, "lbl": lbl, "h": h}
+
+# 행 드러내기 · 컨테이너째 보이고, 게이지 행은 차오르는 연출.
+func _reveal_row(i: int) -> void:
+	if i < 0 or i >= rows.size():
+		return
+	var row: Control = rows[i]
+	row.modulate.a = 1.0
+	if row.has_meta("bar_fill"):
+		var fill: ColorRect = row.get_meta("bar_fill")
+		var tw := fill.create_tween()
+		tw.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+		tw.tween_property(fill, "size:x", float(row.get_meta("bar_w")), 0.6).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		var pct: Label = row.get_meta("bar_pct")
+		tw.tween_property(pct, "modulate:a", 1.0, 0.15)
+
+# 글자가 없는 행(괘선·장 경계·게이지)은 타이핑 없이 delay만 두고 지나간다.
+func _is_static_row(i: int) -> bool:
+	if i < 0 or i >= labels.size():
+		return true
+	return (labels[i] as RichTextLabel).get_total_character_count() == 0
+
+# 하니스용 · 특정 행이 화면 위쪽에 오도록 종이를 즉시 되감는다.
+func scroll_to_line(idx: int) -> void:
+	if idx < 0 or idx >= rows.size():
+		return
+	paper_target_y = MARGIN_TOP - (rows[idx] as Control).position.y + 8.0
+	var min_y: float = -(paper.size.y - VIEWPORT_H + MARGIN_TOP * 2.0)
+	if min_y > MARGIN_TOP:
+		min_y = MARGIN_TOP
+	paper_target_y = clamp(paper_target_y, min_y, MARGIN_TOP)
+	paper.position.y = paper_target_y
+
+# [[키워드]] -> 강조색 bbcode · [REDACTED] -> 검열 바 · 그 밖의 대괄호는 [lb]로 이스케이프해 그대로.
+func _to_bbcode(raw: String) -> String:
+	var out: String = raw.replace("[[", char(1)).replace("]]", char(2)).replace("[REDACTED]", char(3))
+	out = out.replace("[", "[lb]")
+	out = out.replace(char(1), "[color=%s]" % _kw_color).replace(char(2), "[/color]")
+	var bar: String = _hex("redact")
+	out = out.replace(char(3), "[bgcolor=%s][color=%s] REDACTED [/color][/bgcolor]" % [bar, bar])
+	return out
 
 func _start_typing() -> void:
 	started = true
@@ -480,7 +766,11 @@ func _start_typing() -> void:
 	t = 0.0
 	if labels.size() > 0:
 		typing = true
-		labels[0].modulate.a = 1.0
+		_reveal_row(0)
+		if _is_static_row(0):
+			typing = false
+			var ln0: Dictionary = lines_data[0]
+			pause_after_line = float(ln0.get("delay", 0.2))
 
 func _process(delta: float) -> void:
 	if done:
@@ -528,19 +818,19 @@ func _process(delta: float) -> void:
 			revealed = 0
 			t = 0.0
 			typing = true
-			labels[current_line].modulate.a = 1.0
-			# blank 줄은 텍스트 없어 즉시 통과
+			_reveal_row(current_line)
+			# 글자 없는 행(blank·괘선·장 경계·게이지)은 즉시 통과
 			var ln: Dictionary = lines_data[current_line]
-			if str(ln.get("kind", "body")) == "blank":
+			if _is_static_row(current_line):
 				typing = false
 				pause_after_line = float(ln.get("delay", 0.2))
 			_update_scroll_target()
 
 func _update_scroll_target() -> void:
 	# 현재 줄의 종이 내부 y 좌표
-	if current_line >= labels.size():
+	if current_line >= rows.size():
 		return
-	var lbl_y: float = labels[current_line].position.y
+	var lbl_y: float = (rows[current_line] as Control).position.y
 	# paper의 절대 좌표가 (VIEWPORT_H * 0.42 - lbl_y)일 때 그 줄이 화면 약 42% 위치.
 	var target: float = VIEWPORT_H * 0.42 - lbl_y
 	# 종이가 너무 위로 올라가지 않게 clamp (최대 상단 = MARGIN_TOP)
@@ -646,9 +936,8 @@ func _input(event: InputEvent) -> void:
 		revealed = 0
 		t = 0.0
 		typing = true
-		labels[current_line].modulate.a = 1.0
-		var ln: Dictionary = lines_data[current_line]
-		if str(ln.get("kind", "body")) == "blank":
+		_reveal_row(current_line)
+		if _is_static_row(current_line):
 			typing = false
 			pause_after_line = 0.0
 		_update_scroll_target()

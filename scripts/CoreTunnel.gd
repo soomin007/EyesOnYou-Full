@@ -305,7 +305,11 @@ func _advance_readout() -> void:
 		_readout_box.add_child(spacer)
 	else:
 		var l := Label.new()
-		l.text = str(d.get("text", ""))
+		# kv 행(라벨 + 값)은 한 줄로 합친다 · [[강조]] 표식은 종이 오버레이 전용이라 벗긴다.
+		var body: String = str(d.get("text", "")).replace("[[", "").replace("]]", "")
+		if d.has("label"):
+			body = "%s: %s" % [str(d.get("label", "")), body]
+		l.text = body
 		l.add_theme_font_size_override("font_size", 19 if kind == "title" else 15)
 		l.add_theme_color_override("font_color",
 			Color(0.62, 0.92, 1.0) if kind == "title" else Color(0.80, 0.88, 0.94))

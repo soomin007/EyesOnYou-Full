@@ -15,7 +15,7 @@
 | [rival.md](rival.md) | 라이벌(?) 전체: 14-1 P1/P2/P3 · 가짜 클리어 · SENTINEL reveal · 유인(LURE) · 막4 문턱 처리 회상 · 다회차/재진입 반응 · 14-1 내 VEIL 억압 자막 | ~28 |
 | [briefing_routes.md](briefing_routes.md) | 오프닝(INTRO_SYSTEM/VEIL·REPLAY 변형) · 재진입 SYS/VEIL · 막 진입 문턱 멘트(ACT_ENTRY_BY_BAND) · 본편 브리핑 15×밴드 3 · 스토리 브리핑 · RouteData 맵 36종(name/description/veil_comment/entry_comment) · REC_REASON · 루트맵 문구 · MapData route_lines | ~306 |
 | [endings.md](endings.md) | 처리 선택 4지선다 · 엔딩 9종 제목/본문 · 에필로그 9종 · 크레딧 · 관측 로그 스팅어 | ~46 |
-| [story_docs.md](story_docs.md) | 인트로 의뢰 문서(INTRO_CONTRACT) · 회수 리드아웃/VEIL 고백 · ??? 방 전량 · ARCTURUS 아카이브 · server_hall 서버 로그 · 14-2 터널 · 재진입 오버레이 | ~112 |
+| [story_docs.md](story_docs.md) | 인트로 의뢰 문서(INTRO_CONTRACT) · 회수 리드아웃/VEIL 고백 · ??? 방 전량 · ARCTURUS 아카이브 · server_hall 서버 로그 · 14-2 터널 · 재진입 오버레이 | ~134 |
 | [ui.md](ui.md) | 타이틀 · 패치 노트 · 설정 전 탭 · 사망 화면+사망 브리핑 풀 · 레벨업(+오버플로) · 스킬 트리 · 도감 · 튜토리얼 · HUD/도전방 · 터치/가로 유도 · 효과음 자막 · 막 이름(ACTS) | ~280 |
 
 ## 2. 화자 요약
@@ -55,9 +55,9 @@
 
 | 소스 | 스윕 라인 | 수록처(수록 수) · 비고 |
 |---|---|---|
-| Stage.gd | 187 | veil_ingame(29+부록 21) · rival(19) · story_docs(90) · ui(19) |
+| Stage.gd | 206 | veil_ingame(29+부록 21) · rival(19) · story_docs(109) · ui(19) |
 | RouteData.gd | 198 | briefing_routes(163) · 여러 라인 문자열로 스윕>수록 |
-| VeilDialogue.gd | 120 | briefing_routes(107) · story_docs(7) · ui(사망 30+레벨업 12) |
+| VeilDialogue.gd | 123 | briefing_routes(107) · story_docs(10) · ui(사망 30+레벨업 12) |
 | Settings.gd | 103 | ui(58) · 디버그 탭 제외분 큼 |
 | MapData.gd | 96 | briefing_routes(route_lines 9) · 나머지는 배너 영문/내부 키 |
 | EndingResolver.gd | 70 | endings(24항목·본문 67줄) |

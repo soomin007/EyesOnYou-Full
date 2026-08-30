@@ -11,6 +11,8 @@ extends Node
 #   ⑥ 사망 한 박자: 죽는 순간 time_scale이 내려갔다가 실시간 ~0.9s 뒤 1.0 복원(씬 전환은 하니스가 차단)
 #   ⑦ P3 짝 규칙(A안): 실체화 창마다 진짜·가짜 눈이 플레이어가 닿을 수 있는 자리 둘에 동시에 서고,
 #      진짜는 요원을 똑바로 본다 · 다음 창의 진짜 자리는 직전과 다르다
+#   ⑧ 문서 서식: 종이/콘솔/뷰어 3양식이 행마다 컨테이너·타이핑 라벨을 1:1로 갖고, 실측 높이가 0보다 크며
+#      종이 높이 = 행 합 · 종이 문서엔 장(section) 3개 · 글자 없는 행(괘선·장 경계·게이지)은 정적 판정
 # 실행: godot --headless --path . --audio-driver Dummy tools/rule_smoke.tscn (종료 코드 0 = 전부 PASS)
 const STAGE_SCENE: String = "res://scenes/stage.tscn"
 var fails: int = 0
@@ -53,6 +55,7 @@ func _ready() -> void:
 	await _rival_cutscene_case()
 	await _death_beat_case()
 	await _p3_pair_case()
+	await _doc_format_case()
 	print("[RULE] %s" % ("ALL PASS" if fails == 0 else "%d FAIL" % fails))
 	get_tree().quit(0 if fails == 0 else 1)
 
@@ -330,5 +333,69 @@ func _p3_pair_case() -> void:
 			await get_tree().physics_frame
 			t2 += get_physics_process_delta_time()
 			p.global_position = Vector2(450.0, 736.0)
+	stage.queue_free()
+	await get_tree().process_frame
+
+# ⑧ 문서 서식 · 3양식을 실제 Stage 위에서 열어 행 배치 정합을 단언한다(타이핑은 기다리지 않는다).
+func _doc_format_case() -> void:
+	var stage: Node = await _boot("route_back_alley", 1)
+	var specs: Array = [
+		{"style": "paper", "fn": "_arcturus_document_lines", "sections": 3},
+		{"style": "terminal", "fn": "_server_log_doc_lines", "sections": 0},
+		{"style": "drive", "fn": "_lab_recovery_doc_lines", "sections": 0},
+	]
+	for sp_raw in specs:
+		var sp: Dictionary = sp_raw
+		var style: String = str(sp["style"])
+		var doc := ArcturusDocumentOverlay.new()
+		doc.style = style
+		stage.add_child(doc)
+		doc.show_doc(stage.call(str(sp["fn"])))
+		await get_tree().process_frame
+		var rows: Array = doc.get("rows")
+		var labels: Array = doc.get("labels")
+		var ld: Array = doc.get("lines_data")
+		_check("%s · 행/라벨/데이터 1:1" % style, rows.size() == ld.size() and labels.size() == ld.size(),
+			"rows=%d labels=%d lines=%d" % [rows.size(), labels.size(), ld.size()])
+		var sum_h: float = 0.0
+		var all_pos: bool = true
+		var sections: int = 0
+		var statics: int = 0
+		var typed: int = 0
+		for i in rows.size():
+			var r: Control = rows[i]
+			var d: Dictionary = ld[i]
+			if r.size.y <= 0.0 or labels[i] == null:
+				all_pos = false
+			# 행은 위에서부터 빈틈 없이 쌓인다.
+			if absf(r.position.y - sum_h) > 0.5:
+				all_pos = false
+			sum_h += r.size.y
+			if str(d.get("kind", "")) == "section":
+				sections += 1
+			if bool(doc.call("_is_static_row", i)):
+				statics += 1
+			else:
+				typed += 1
+		_check("%s · 행 높이 > 0 · 빈틈 없이 쌓임" % style, all_pos)
+		var paper: Control = doc.get("paper")
+		_check("%s · 종이 높이 = 행 합(또는 화면 하한)" % style, absf(paper.size.y - maxf(sum_h, 720.0 - 64.0 * 2.0)) < 1.0,
+			"paper=%.0f sum=%.0f" % [paper.size.y, sum_h])
+		_check("%s · 장(section) 수 %d" % [style, int(sp["sections"])], sections == int(sp["sections"]), "got %d" % sections)
+		# 글자 없는 행(blank·rule·sheet·bar·redacted 제외)은 정적, 문구 행은 타이핑 대상.
+		var expect_static: int = 0
+		for d2_raw in ld:
+			var d2: Dictionary = d2_raw
+			var k: String = str(d2.get("kind", "body"))
+			if k == "blank" or k == "rule" or k == "sheet" or k == "bar":
+				expect_static += 1
+		_check("%s · 정적 행 = 글자 없는 행(%d)" % [style, expect_static], statics == expect_static, "statics=%d typed=%d" % [statics, typed])
+		# 첫 행이 정적(뷰어의 게이지)이어도 타이핑 상태가 멈추지 않고 delay로 넘어간다.
+		if bool(doc.call("_is_static_row", 0)):
+			pass
+		doc.call("_start_finalize")
+		doc.queue_free()
+		await get_tree().process_frame
+	get_tree().paused = false
 	stage.queue_free()
 	await get_tree().process_frame

@@ -239,14 +239,16 @@ static func get_briefing(stage_index: int) -> String:
 
 # ─── 회수 비트 대사(단일 소스) · 스토리 lab 경로(Stage, 종이 문서)와 14-2 터널(CoreTunnel,
 # 터미널 리드아웃)이 공유한다. 문구는 플레이스홀더(전수 검토 대상). ────────────────────
-# 복호화 리드아웃 라인. {text, kind(title/body/blank), delay}. 기록체만 · 해설·대사 혼입 금지.
+# 복호화 리드아웃 라인. {text, kind(title/kv/blank), label?, delay}. 기록체만 · 해설·대사 혼입 금지.
+# 2026-08-30 서식 리뉴얼: "라벨: 값" 줄은 kv(label + text)로 분리 · 뷰어는 열 정렬, 터널 리드아웃은
+# CoreTunnel이 "라벨: 값"으로 다시 합쳐 한 줄로 찍는다(문구 동일).
 static func get_recovery_doc_lines() -> Array:
 	return [
 		{"text": "회수 데이터: 복호화 완료", "kind": "title", "delay": 0.6},
 		{"text": "", "kind": "blank", "delay": 0.2},
-		{"text": "회수 대상: 핵심 데이터 드라이브 (확보)", "kind": "body", "delay": 0.6},
-		{"text": "드라이브 내용물: 단일 실행 이미지", "kind": "body", "delay": 0.6},
-		{"text": "빌드 서명: [[VEIL]]", "kind": "body", "delay": 0.9},
+		{"kind": "kv", "label": "회수 대상", "text": "핵심 데이터 드라이브 (확보)", "delay": 0.6},
+		{"kind": "kv", "label": "드라이브 내용물", "text": "단일 실행 이미지", "delay": 0.6},
+		{"kind": "kv", "label": "빌드 서명", "text": "[[VEIL]]", "delay": 0.9},
 	]
 
 # 리드아웃 직후 VEIL의 고백 · truth_seen(???에서 이미 본 회차)이면 "이미 안다" 톤. {text, dur}.

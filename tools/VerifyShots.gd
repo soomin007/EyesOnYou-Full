@@ -24,6 +24,9 @@ const TARGETS: Array = [
 	{"id": "hp_lock_hud", "route": "route_pump_station", "setup": "hud_lock", "act4": true},
 	{"id": "server_log_doc", "route": "route_server_hall", "seg": 1, "stage": 7, "setup": "doc"},
 	{"id": "arcturus_doc_paper", "route": "route_back_alley", "stage": 1, "setup": "doc_paper"},
+	# 문서 서식 리뉴얼(2026-08-30) · 회의록(B)·요원 기록(C) 장 정지컷.
+	{"id": "arcturus_doc_minutes", "route": "route_back_alley", "stage": 1, "setup": "doc_paper", "doc_tag": "B"},
+	{"id": "arcturus_doc_record", "route": "route_back_alley", "stage": 1, "setup": "doc_paper", "doc_tag": "C"},
 	{"id": "recovery_doc_drive", "route": "route_back_alley", "stage": 1, "setup": "doc_drive"},
 	# 문서 등장 연출(2026-08-25 5차 피드백) · 봉인 정지컷 + 펼침/켜짐 애니메이션.
 	{"id": "arcturus_doc_seal", "route": "route_back_alley", "stage": 1, "setup": "doc_seal"},
@@ -73,6 +76,22 @@ func _run() -> void:
 	print("[VERIFY] DONE")
 	if is_inside_tree():
 		get_tree().quit()
+
+# 문서 오버레이 타이핑을 사용자 스킵과 같은 경로로 강제 완료 · reading_done까지 상태 폴링.
+# 완료 전엔 _update_scroll_target이 스크롤을 계속 덮어써 되감기가 무효가 된다.
+func _doc_force_complete(doc_p: Node) -> void:
+	for i in 900:
+		if bool(doc_p.get("reading_done")):
+			break
+		if bool(doc_p.get("started")) and bool(doc_p.get("typing")):
+			var lbls: Array = doc_p.get("labels")
+			var cl: int = int(doc_p.get("current_line"))
+			if cl < lbls.size():
+				(lbls[cl] as RichTextLabel).visible_characters = -1
+				doc_p.set("revealed", (lbls[cl] as RichTextLabel).get_total_character_count())
+			doc_p.set("typing", false)
+			doc_p.set("pause_after_line", 0.0)
+		await get_tree().process_frame
 
 func _shot(d: Dictionary) -> void:
 	var id: String = str(d.get("id", "shot"))
@@ -206,41 +225,37 @@ func _shot(d: Dictionary) -> void:
 				(p as Node2D).global_position = Vector2(700.0, 600.0)
 			_snap_camera(stage)
 			await get_tree().create_timer(1.6).timeout
-		"doc":
-			var doc := ArcturusDocumentOverlay.new()
-			doc.style = "terminal"   # 실제 서버 로그 트리거와 동일 스타일
-			stage.add_child(doc)
-			doc.show_doc(stage.call("_server_log_doc_lines"))
-			for i in 1050:
-				await get_tree().process_frame
-		"doc_paper":
+		"doc", "doc_paper", "doc_drive":
+			# 문서 3양식(콘솔 서버 로그 / 종이 아카이브 / 드라이브 뷰어) · 타이핑을 강제 완료한 뒤
+			# 종이 머리(또는 doc_tag 장)로 되감아 찍는다. 프레임 고정 대기는 주사율에 따라 게임 초가
+			# 달라져 타이핑 도중에 찍혔다(2026-08-30 실측 · known_issues "프레임 수 ≠ 게임 초").
 			var doc_p := ArcturusDocumentOverlay.new()
+			if setup == "doc":
+				doc_p.style = "terminal"   # 실제 서버 로그 트리거와 동일 스타일
+			elif setup == "doc_drive":
+				doc_p.style = "drive"
 			stage.add_child(doc_p)
-			doc_p.show_doc(stage.call("_arcturus_document_lines"))
-			# 타이핑을 사용자 스킵과 같은 경로로 강제 완료 · 완료 전엔 _update_scroll_target이
-			# 스크롤을 계속 덮어써 되감기가 무효가 된다(1050프레임 고정 대기는 문서가 길면 미완).
-			for i in 900:
-				if bool(doc_p.get("reading_done")):
-					break
-				if bool(doc_p.get("started")) and bool(doc_p.get("typing")):
-					var lbls: Array = doc_p.get("labels")
-					var cl: int = int(doc_p.get("current_line"))
-					if cl < lbls.size():
-						(lbls[cl] as RichTextLabel).visible_characters = -1
-						doc_p.set("revealed", (lbls[cl] as RichTextLabel).get_total_character_count())
-					doc_p.set("typing", false)
-					doc_p.set("pause_after_line", 0.0)
-				await get_tree().process_frame
-			# 종이 머리(레터헤드·스탬프)가 카드의 검증 대상 · 끝까지 읽혀 내려간 종이를 되감는다.
-			doc_p.call("_scroll_paper", 99999.0)
+			if setup == "doc":
+				doc_p.show_doc(stage.call("_server_log_doc_lines"))
+			elif setup == "doc_drive":
+				doc_p.show_doc(stage.call("_lab_recovery_doc_lines"))
+			else:
+				doc_p.show_doc(stage.call("_arcturus_document_lines"))
+			await _doc_force_complete(doc_p)
+			# doc_tag가 있으면 그 장(section tag)의 머리로, 없으면 종이 머리로 되감는다.
+			var want_tag: String = str(d.get("doc_tag", ""))
+			var sec_idx: int = -1
+			if want_tag != "":
+				var ld: Array = doc_p.get("lines_data")
+				for li in ld.size():
+					var ldd: Dictionary = ld[li]
+					if str(ldd.get("kind", "")) == "section" and str(ldd.get("tag", "")) == want_tag:
+						sec_idx = li
+			if sec_idx >= 0:
+				doc_p.call("scroll_to_line", sec_idx)
+			else:
+				doc_p.call("_scroll_paper", 99999.0)
 			for i in 90:
-				await get_tree().process_frame
-		"doc_drive":
-			var doc_d := ArcturusDocumentOverlay.new()
-			doc_d.style = "drive"
-			stage.add_child(doc_d)
-			doc_d.show_doc(stage.call("_lab_recovery_doc_lines"))
-			for i in 1050:
 				await get_tree().process_frame
 		"doc_seal":
 			# 종이 등장 연출의 봉인 상태(0.38~0.88s 홀드) 한가운데 정지컷.
