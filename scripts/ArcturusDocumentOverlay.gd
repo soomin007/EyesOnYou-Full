@@ -74,6 +74,9 @@ var enter_lockout_t: float = 0.0
 # 서버 로그가 종이 위 파란 형광으로는 로그처럼 안 읽힘 → 터미널 화면을 옮긴 느낌으로).
 # show_doc 호출 전에 세팅한다.
 var style: String = "paper"
+# 캔버스 레이어 번호 · 기본 25(자막 20 위 · 클리어 페이드 38 아래). 설정 디버그 탭에서 열 때는 일시정지
+# 메뉴(30) 위에 와야 하므로 호출자가 show_doc 전에 올린다.
+var layer_index: int = 25
 var _kw_color: String = "#0a4a73"   # [[키워드]] 강조색 · 스타일별로 show_doc에서 결정
 # 양식별 등장 연출(5차 피드백 "처음부터 펼쳐져 있지 않게") · 종이는 봉인 펼침, 콘솔은 켜짐.
 var _stamp: PanelContainer = null   # 종이 우상단 스탬프 · 펼침 연출이 끝나며 페이드 인
@@ -91,7 +94,7 @@ func show_doc(input_lines: Array) -> void:
 	VIEWPORT_W = vp.x
 	VIEWPORT_H = vp.y
 	layer = CanvasLayer.new()
-	layer.layer = 25
+	layer.layer = layer_index
 	layer.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(layer)
 	# 풀스크린 어두운 배경

@@ -333,7 +333,59 @@ func _build_debug_tab() -> Control:
 	meta_warn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(meta_warn)
 
+	# ── 문서 열람(개발용 · 2026-08-30 갤러리 14차 전체 메모 "서식을 직접 체험할 수 있게 디버그 탭에") ──
+	# 인게임 문서 3양식을 설정 위에서 바로 연다(문구 단일 소스 = VeilDialogue). 버튼에 실제 등장 위치를 적어
+	# 실플레이 확인 경로도 안내. 타이틀 메뉴 버튼으로 냈던 것은 같은 날 회수(사용자 지정 자리 = 디버그 탭).
+	var spacer3 := Control.new()
+	spacer3.custom_minimum_size = Vector2(0, 12)
+	v.add_child(spacer3)
+	v.add_child(_make_section_header("문서 열람"))
+	var docs_note := Label.new()
+	docs_note.text = "인게임 문서 3양식을 바로 열어 서식·등장 연출을 확인해요. 괄호 뒤는 실제 등장 위치."
+	docs_note.add_theme_font_size_override("font_size", 13)
+	docs_note.add_theme_color_override("font_color", Color(0.62, 0.72, 0.85))
+	docs_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(docs_note)
+	var doc_defs: Array = [
+		{"label": "아카이브 문서 (종이) · 격리 병동 잠긴 문 너머", "style": "paper"},
+		{"label": "서버 로그 (콘솔) · 서버 복도 두 번째 방 선반 위 레버", "style": "terminal"},
+		{"label": "회수 드라이브 (뷰어) · 스토리 모드 핵심부 보스 뒤 (본편 14-2는 터널 리드아웃)", "style": "drive"},
+	]
+	for doc_entry in doc_defs:
+		var dd: Dictionary = doc_entry
+		var db := Button.new()
+		db.text = str(dd.get("label", ""))
+		db.custom_minimum_size = Vector2(0, 36)
+		db.add_theme_font_size_override("font_size", 13)
+		db.set_meta("doc_style", str(dd.get("style", "")))
+		db.pressed.connect(_open_debug_doc.bind(str(dd.get("style", ""))))
+		v.add_child(db)
+
 	return outer
+
+# 디버그 문서 열람 · 오버레이가 pause·닫기·해제를 자립 처리한다. 오버레이는 닫혀도 자기 노드를 남기므로
+# (known_issues) finished에서 여기서 queue_free해 재열람 가드("DebugDoc")를 푼다. 설정 창은 열린 채 밑에 남고
+# 문서가 열린 동안 설정의 키 처리(ESC 닫기·Q/E 탭 전환)는 _input에서 막는다. 일시정지 메뉴(layer 30)에서
+# 연 설정에서도 보이게 레이어를 60으로 올리고, 오버레이가 pause를 풀어도 진입 전 pause 상태를 되돌린다.
+func _open_debug_doc(style: String) -> void:
+	if get_node_or_null("DebugDoc") != null:
+		return
+	var was_paused: bool = get_tree().paused
+	var doc := ArcturusDocumentOverlay.new()
+	doc.name = "DebugDoc"
+	doc.style = style
+	doc.layer_index = 60
+	add_child(doc)
+	doc.finished.connect(func() -> void:
+		doc.queue_free()
+		get_tree().paused = was_paused)
+	match style:
+		"terminal":
+			doc.show_doc(VeilDialogue.get_server_log_lines())
+		"drive":
+			doc.show_doc(VeilDialogue.get_recovery_doc_lines())
+		_:
+			doc.show_doc(VeilDialogue.get_arcturus_archive_lines())
 
 # ── 메타데이터 관리 · 현황/핸들러. 디버그 용도라 확인 대화 없음(라벨에 명시, 사용자가 알고 누름). ──
 var _meta_status_label: Label = null
@@ -1115,6 +1167,9 @@ func _first_focusable(node: Node) -> Control:
 	return null
 
 func _input(event: InputEvent) -> void:
+	# 디버그 문서 열람 중엔 오버레이가 입력을 갖는다 · 설정의 ESC 닫기·탭 전환이 밑에서 먹지 않게.
+	if get_node_or_null("DebugDoc") != null:
+		return
 	# 캡쳐 중엔 아래 분기만. 그 외엔 Q/E or LB/RB로 탭 전환 가능.
 	if capturing_action == "":
 		# ESC/뒤로 = 닫기 (최우선). 캡쳐 중 ESC는 아래에서 캡쳐 취소로 처리되므로 여기선 제외.

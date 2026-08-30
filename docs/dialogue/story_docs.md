@@ -267,7 +267,7 @@ visited_arcturus 영속.
 - 맥락: 발판을 밟으면 풀스크린 문서 연출(ArcturusDocumentOverlay)로 타이핑. 한 장 종이에 세 문서가
   장 경계(sheet)로 나뉘어 쌓인다.
 - 코드: `VeilDialogue.gd` `get_arcturus_archive_lines` (표시: `Stage.gd` `_arcturus_document_lines` ·
-  타이틀 디버그 "문서 열람")
+  설정 디버그 탭 "문서 열람")
 - 서식(2026-08-30 리뉴얼 · 무맥락 검수 27줄 PASS): A 사내 메모 = 머리 블록(수신·발신·제목 + 우측 일자)
   → 괘선 → 문단 → 번호 항목 → 우측 서명 + 부기 / B 회의록 = 표(일시·장소·참석자·주제) → 결론·비고
   상자 → 검열 바 / C 내부 메모 = 표(요원 코드·임무·현재 상태·협조도) → 비고 상자 → 우측 서명.
@@ -325,7 +325,7 @@ visited_arcturus 영속.
 - 화자: 문서(기록체)
 - 맥락: 서버 랙 위 숨은 레버(청색 힌트)를 당기면 문서 연출. 스테이지당 1회,
   found_server_log 영속. 라이벌 = 폐기된 선대 빌드 복선.
-- 코드: `VeilDialogue.gd` `get_server_log_lines` (표시: `Stage.gd` `_server_log_doc_lines` · 타이틀 디버그
+- 코드: `VeilDialogue.gd` `get_server_log_lines` (표시: `Stage.gd` `_server_log_doc_lines` · 설정 디버그 탭
   "문서 열람")
 
 > 2026-08-15 재작성: 로그가 독자를 부르는 해설·시적 내레이션("하나는 당신을 본다..." 등)이
@@ -428,4 +428,4 @@ visited_arcturus 영속.
 | Stage.gd (환경 표지판) | 0 | 전량 veil_ingame.md 부록 수록 |
 
 총 수록 131건 (Stage.gd 58 · VeilDialogue.gd 58 · 그 외 15). 2026-08-30 문서 서식 리뉴얼로 아카이브 +16 ·
-리드아웃 +3 · 문서 3종 데이터는 VeilDialogue로 이동(타이틀 디버그 "문서 열람" 공유).
+리드아웃 +3 · 문서 3종 데이터는 VeilDialogue로 이동(설정 디버그 탭 "문서 열람" 공유 · 타이틀 메뉴 버튼은 같은 날 회수).

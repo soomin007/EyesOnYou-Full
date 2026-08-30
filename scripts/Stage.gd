@@ -9309,7 +9309,7 @@ func _build_server_hall_secret() -> void:
 # 문서는 기록체만. 2026-08-15 재개정: 독자를 부르는 해설·시적 내레이션 4줄 제거(기록체 규약).
 # 2026-08-16 재개정: VEIL 실황 반응을 문서에서 제거. speaker 비트도 종이 위에 그려져
 # "문서에 적힌 글"로 읽힌다는 반복 지적 수용. 반응은 문서 닫힌 뒤 통신 자막으로(위 finished 연결).
-# 문구·행 구조의 단일 소스 = VeilDialogue.get_server_log_lines(타이틀 디버그 "문서 열람"과 공유).
+# 문구·행 구조의 단일 소스 = VeilDialogue.get_server_log_lines(설정 디버그 탭 "문서 열람"과 공유).
 func _server_log_doc_lines() -> Array:
 	return VeilDialogue.get_server_log_lines()
 
@@ -10717,7 +10717,7 @@ func _on_arcturus_lines_done() -> void:
 	_show_veil_subtitle(VeilDialogue.banded("저도 이 파일들, 읽은 적 있습니다.\n계속 가시죠, 요원.", "저도 이 파일들 읽은 적 있어요.\n계속 가요, 요원."), 3.2, true)
 
 # ARCTURUS 아카이브 문서 · 3 단말기. 문구·행 구조의 단일 소스 = VeilDialogue.get_arcturus_archive_lines
-# (타이틀 디버그 "문서 열람"과 공유). VEIL outro는 문서 안이 아니라 _on_arcturus_lines_done에서 자막으로.
+# (설정 디버그 탭 "문서 열람"과 공유). VEIL outro는 문서 안이 아니라 _on_arcturus_lines_done에서 자막으로.
 func _arcturus_document_lines() -> Array:
 	return VeilDialogue.get_arcturus_archive_lines()
 

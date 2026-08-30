@@ -4,10 +4,9 @@ extends Control
 #   STATE_MAIN  : 게임 시작 / 설정 / 게임 종료
 #   STATE_MODE  : 일반 모드 / 스토리 모드 / 뒤로
 #   STATE_TUTOR : 튜토리얼부터 시작? 예 / 아니오 / 뒤로
-#   STATE_DOCS  : (디버그 빌드) 문서 열람 · 인게임 문서 3양식을 타이틀 위에서 바로 연다
 # 각 단계는 Buttons VBox를 비우고 다시 빌드. ESC/패드 B는 한 단계 뒤로.
 
-enum { STATE_MAIN, STATE_MODE, STATE_TUTOR, STATE_NEWGAME_CONFIRM, STATE_PATCHNOTES, STATE_DOCS }
+enum { STATE_MAIN, STATE_MODE, STATE_TUTOR, STATE_NEWGAME_CONFIRM, STATE_PATCHNOTES }
 
 @onready var hint_label: Label = $Center/V/Hint
 @onready var buttons_box: VBoxContainer = $Center/V/Buttons
@@ -264,11 +263,8 @@ func _set_state(new_state: int) -> void:
 				var b_verify := _make_button("검증 갤러리")
 				b_verify.pressed.connect(_on_verify_gallery_pressed)
 				buttons_box.add_child(b_verify)
-				# 문서 열람(개발용 · 2026-08-30 갤러리 14차 전체 메모 "서식을 직접 체험할 수 있게 디버그 탭에") ·
-				# 인게임 문서 3양식을 타이틀 위에서 바로 연다. 버튼에 실제 위치를 적어 실플레이 확인 경로도 안내.
-				var b_docs := _make_button("문서 열람")
-				b_docs.pressed.connect(_set_state.bind(STATE_DOCS))
-				buttons_box.add_child(b_docs)
+				# 개발용 "문서 열람"은 여기(메인 메뉴)가 아니라 설정 → 디버그 탭(Settings._build_debug_tab)에 있다.
+				# 메뉴 버튼으로 냈다가 회수(2026-08-30 사용자 "메뉴 8개는 난잡 · 디버그 탭에 넣으라 했다").
 			# 웹(브라우저)에선 get_tree().quit()이 탭을 못 닫고 페이지만 멈춤(브라우저 보안: 스크립트가
 			# 사용자가 직접 연 탭을 못 닫음) → 종료 버튼을 숨긴다(탭은 사용자가 닫음). 데스크톱만 종료 제공.
 			if not OS.has_feature("web"):
@@ -324,21 +320,6 @@ func _set_state(new_state: int) -> void:
 			b_cancel.pressed.connect(_set_state.bind(STATE_MAIN))
 			buttons_box.add_child(b_cancel)
 			b_cancel.grab_focus.call_deferred()
-		STATE_DOCS:
-			# 디버그 문서 열람 · 문구 단일 소스(VeilDialogue)를 ArcturusDocumentOverlay에 그대로 준다.
-			var b_paper := _make_button("아카이브 문서 (종이) · 격리 병동 잠긴 문 너머")
-			b_paper.pressed.connect(_open_debug_doc.bind("paper"))
-			buttons_box.add_child(b_paper)
-			var b_term := _make_button("서버 로그 (콘솔) · 서버 복도 두 번째 방 선반 위 레버")
-			b_term.pressed.connect(_open_debug_doc.bind("terminal"))
-			buttons_box.add_child(b_term)
-			var b_drive := _make_button("회수 드라이브 (뷰어) · 핵심부 보스 처치 뒤")
-			b_drive.pressed.connect(_open_debug_doc.bind("drive"))
-			buttons_box.add_child(b_drive)
-			var b_back_d := _make_button("뒤로")
-			b_back_d.pressed.connect(_on_back_pressed)
-			buttons_box.add_child(b_back_d)
-			b_paper.grab_focus.call_deferred()
 		STATE_PATCHNOTES:
 			# 좌측: 역대 패치 목록(날짜 + 제목). 포커스/마우스 호버로 우측 패널에 그 패치 상세를 펼침.
 			for i in GameInfo.PATCH_NOTES.size():
@@ -359,7 +340,7 @@ func _set_state(new_state: int) -> void:
 func _make_button(text: String) -> Button:
 	var b := Button.new()
 	b.text = text
-	b.custom_minimum_size = Vector2(560 if state == STATE_DOCS else 360, 44)
+	b.custom_minimum_size = Vector2(360, 44)
 	# 컨테이너 폭으로 늘어나지 않고 360 고정·가운데 · 박스가 너무 넓어 보이던 문제(사용자 보고).
 	b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	b.add_theme_font_size_override("font_size", 18)
@@ -552,8 +533,6 @@ func _on_back_pressed() -> void:
 			_set_state(STATE_MAIN)
 		STATE_PATCHNOTES:
 			_set_state(STATE_MAIN)
-		STATE_DOCS:
-			_set_state(STATE_MAIN)
 
 func _on_settings_pressed() -> void:
 	if settings_overlay != null:
@@ -582,27 +561,6 @@ func _on_feedback_pressed() -> void:
 # 검증 갤러리(개발용) · 세션이 관리하는 QA 큐 아티팩트. URL이 바뀌면 여기와
 # 메모리 verify-gallery-routine을 함께 갱신한다.
 const VERIFY_GALLERY_URL: String = "https://claude.ai/code/artifact/54f220b5-974e-404e-b270-98750e6b69d4"
-
-# 디버그 문서 열람 · 오버레이가 pause·닫기·해제를 자립 처리하고, 닫히면 문서 목록의 첫 버튼에 포커스를 되돌린다.
-# 긴 버튼 문구는 폭 360 고정(_make_button)을 넘으므로 이 상태에서만 폭을 넓힌다.
-func _open_debug_doc(style: String) -> void:
-	if get_node_or_null("DebugDoc") != null:
-		return
-	var doc := ArcturusDocumentOverlay.new()
-	doc.name = "DebugDoc"
-	doc.style = style
-	add_child(doc)
-	doc.finished.connect(func() -> void:
-		doc.queue_free()   # 오버레이는 레이어만 지우고 자기 노드는 남긴다 · 재열람 가드("DebugDoc")를 위해 제거
-		if buttons_box != null and buttons_box.get_child_count() > 0:
-			(buttons_box.get_child(0) as Button).grab_focus.call_deferred())
-	match style:
-		"terminal":
-			doc.show_doc(VeilDialogue.get_server_log_lines())
-		"drive":
-			doc.show_doc(VeilDialogue.get_recovery_doc_lines())
-		_:
-			doc.show_doc(VeilDialogue.get_arcturus_archive_lines())
 
 func _on_verify_gallery_pressed() -> void:
 	if OS.has_feature("web"):

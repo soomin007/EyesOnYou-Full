@@ -13,8 +13,9 @@ extends Node
 #      진짜는 요원을 똑바로 본다 · 다음 창의 진짜 자리는 직전과 다르다
 #   ⑧ 문서 서식: 종이/콘솔/뷰어 3양식이 행마다 컨테이너·타이핑 라벨을 1:1로 갖고, 실측 높이가 0보다 크며
 #      종이 높이 = 행 합 · 종이 문서엔 장(section) 3개 · 글자 없는 행(괘선·장 경계·게이지)은 정적 판정
-#   ⑨ 타이틀 디버그 "문서 열람": 문서 목록 상태에 버튼 4개 · 각 문서 버튼이 해당 양식 오버레이를 열고(행 > 0 ·
-#      pause) 닫으면 pause 해제 · Stage 래퍼와 VeilDialogue 단일 소스가 같은 행 수
+#   ⑨ 설정 디버그 탭 "문서 열람": 잠금 해제 상태의 설정에 문서 버튼 3개 · 각 버튼이 해당 양식 오버레이를 열고
+#      (행 > 0 · pause · layer 60) 닫으면 pause 해제 + 노드 제거 · 타이틀 메인 메뉴엔 문서 버튼 없음 ·
+#      Stage 래퍼와 VeilDialogue 단일 소스가 같은 행 수
 # 실행: godot --headless --path . --audio-driver Dummy tools/rule_smoke.tscn (종료 코드 0 = 전부 PASS)
 const STAGE_SCENE: String = "res://scenes/stage.tscn"
 var fails: int = 0
@@ -58,7 +59,7 @@ func _ready() -> void:
 	await _death_beat_case()
 	await _p3_pair_case()
 	await _doc_format_case()
-	await _title_docs_case()
+	await _settings_docs_case()
 	print("[RULE] %s" % ("ALL PASS" if fails == 0 else "%d FAIL" % fails))
 	get_tree().quit(0 if fails == 0 else 1)
 
@@ -403,35 +404,60 @@ func _doc_format_case() -> void:
 	stage.queue_free()
 	await get_tree().process_frame
 
-# ⑨ 타이틀 디버그 문서 열람 · Stage 없이 VeilDialogue 단일 소스로 3양식이 열린다.
-func _title_docs_case() -> void:
+# ⑨ 설정 디버그 탭 문서 열람 · Stage 없이 VeilDialogue 단일 소스로 3양식이 열린다. 타이틀 메인 메뉴에는
+# 문서 버튼이 없어야 한다(메뉴 버튼으로 냈다가 회수 · 2026-08-30 사용자 지정 자리 = 디버그 탭).
+func _settings_docs_case() -> void:
 	var title: Node = (load("res://scenes/title.tscn") as PackedScene).instantiate()
 	add_child(title)
 	for i in 10:
 		await get_tree().process_frame
-	title.call("_set_state", int((title.get_script() as Script).get_script_constant_map()["STATE_DOCS"]))
+	var menu_btns: Array = []
+	_collect_buttons(title.get("buttons_box"), menu_btns, "")
+	var has_doc_btn: bool = false
+	for b in menu_btns:
+		if (b as Button).text == "문서 열람":
+			has_doc_btn = true
+	_check("타이틀 메인 메뉴에 '문서 열람' 버튼 없음(버튼 %d개)" % menu_btns.size(), not has_doc_btn)
+	title.queue_free()
 	await get_tree().process_frame
-	var box: Node = title.get("buttons_box")
-	_check("문서 목록 버튼 4개", box != null and box.get_child_count() == 4, "" if box == null else str(box.get_child_count()))
+	GameState.debug_unlocked = true
+	var settings: Node = (load(SceneRouter.SETTINGS) as PackedScene).instantiate()
+	add_child(settings)
+	for i in 10:
+		await get_tree().process_frame
+	var doc_btns: Array = []
+	_collect_buttons(settings, doc_btns, "doc_style")
+	_check("설정 디버그 탭 문서 버튼 3개", doc_btns.size() == 3, str(doc_btns.size()))
 	var styles: Array = ["paper", "terminal", "drive"]
 	for i in 3:
-		if box == null or i >= box.get_child_count():
+		if i >= doc_btns.size():
 			break
-		(box.get_child(i) as Button).pressed.emit()
+		(doc_btns[i] as Button).pressed.emit()
 		await get_tree().process_frame
-		var doc: Node = title.get_node_or_null("DebugDoc")
+		var doc: Node = settings.get_node_or_null("DebugDoc")
 		var ok: bool = doc != null and str(doc.get("style")) == str(styles[i]) and (doc.get("rows") as Array).size() > 0 and get_tree().paused
-		_check("문서 열람 %s · 오버레이 열림(행 %s · pause)" % [styles[i], "-" if doc == null else str((doc.get("rows") as Array).size())], ok)
+		var lay: CanvasLayer = null if doc == null else (doc.get("layer") as CanvasLayer)
+		ok = ok and lay != null and lay.layer == 60
+		_check("문서 열람 %s · 오버레이 열림(행 %s · pause · layer %s)" % [styles[i], "-" if doc == null else str((doc.get("rows") as Array).size()), "-" if lay == null else str(lay.layer)], ok)
 		if doc != null:
 			doc.call("_start_finalize")   # 실제 닫기 경로 · 1.4s 홀드 + 0.9s 페이드 뒤 finished
 			var tc: float = 0.0
-			while tc < 4.0 and title.get_node_or_null("DebugDoc") != null:
+			while tc < 4.0 and settings.get_node_or_null("DebugDoc") != null:
 				await get_tree().create_timer(0.1, true).timeout
 				tc += 0.1
-		_check("문서 열람 %s · 닫힘 후 pause 해제 + 노드 제거(재열람 가능)" % styles[i], not get_tree().paused and title.get_node_or_null("DebugDoc") == null)
+		_check("문서 열람 %s · 닫힘 후 pause 해제 + 노드 제거(재열람 가능)" % styles[i], not get_tree().paused and settings.get_node_or_null("DebugDoc") == null)
+	settings.queue_free()
+	await get_tree().process_frame
 	# 단일 소스 정합 · Stage 래퍼와 같은 행 수.
 	_check("아카이브 단일 소스 31행", VeilDialogue.get_arcturus_archive_lines().size() == 31, str(VeilDialogue.get_arcturus_archive_lines().size()))
 	_check("서버 로그 단일 소스 10행", VeilDialogue.get_server_log_lines().size() == 10, str(VeilDialogue.get_server_log_lines().size()))
 	get_tree().paused = false
-	title.queue_free()
-	await get_tree().process_frame
+
+# 서브트리의 Button을 모은다 · meta_key가 비어 있지 않으면 그 메타가 있는 버튼만.
+func _collect_buttons(n: Node, out: Array, meta_key: String) -> void:
+	if n == null:
+		return
+	if n is Button and (meta_key == "" or n.has_meta(meta_key)):
+		out.append(n)
+	for c in n.get_children():
+		_collect_buttons(c, out, meta_key)
