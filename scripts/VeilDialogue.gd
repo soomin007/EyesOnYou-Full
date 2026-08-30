@@ -251,6 +251,68 @@ static func get_recovery_doc_lines() -> Array:
 		{"kind": "kv", "label": "빌드 서명", "text": "[[VEIL]]", "delay": 0.9},
 	]
 
+# ── ARCTURUS 아카이브 문서(격리 병동 잠긴 문 이스터에그 · Stage._arcturus_document_lines 래퍼) ──
+# 문서 서식 리뉴얼(2026-08-30): 한 장 종이에 세 문서가 장 경계(sheet)로 나뉘어 쌓이고 각각 실물 서식을 따른다.
+#   A 사내 메모 = 머리 블록(수신·발신·제목 + 우측 일자) → 괘선 → 문단 → 번호 항목 → 우측 서명
+#   B 회의록   = 표(일시·장소·참석자·주제) → 결론·비고 상자 → 검열 바
+#   C 내부 메모 = 표(요원 코드·임무·상태·협조도) → 비고 상자 → 우측 서명
+# 14차 판정(2026-08-30): "단편" 낱말 제거 · 문서 종류 배지 삭제(제목과 겹침) · "[측정 중]" 괄호 제거.
+# 행 종류는 ArcturusDocumentOverlay 머리 주석 · 문구 미러 = docs/dialogue/story_docs.md §5.
+static func get_arcturus_archive_lines() -> Array:
+	var out: Array = []
+	out.append({"kind": "title", "text": "ARCTURUS 내부 문서", "delay": 0.6})
+	out.append({"kind": "blank", "text": "", "delay": 0.2})
+	# A · 인사팀 온보딩(사내 메모)
+	out.append({"kind": "section", "tag": "A", "text": "인사팀 온보딩 메모", "delay": 0.4})
+	out.append({"kind": "kv", "label": "수신", "text": "신규 요원 전원", "right_label": "일자", "right_text": "[REDACTED]", "gap": 6.0, "delay": 0.4})
+	out.append({"kind": "kv", "label": "발신", "text": "인사팀", "gap": 6.0, "delay": 0.4})
+	out.append({"kind": "kv", "label": "제목", "text": "온보딩 안내", "delay": 0.4})
+	out.append({"kind": "rule", "delay": 0.2})
+	out.append({"kind": "para", "text": "ARCTURUS에 오신 것을 환영합니다.", "delay": 0.6})
+	out.append({"kind": "num", "n": "1.", "text": "본사는 공식적으로 [[존재하지 않습니다]].", "delay": 0.6})
+	out.append({"kind": "num", "n": "2.", "text": "모든 임무는 기록되지 않습니다.", "delay": 0.6})
+	out.append({"kind": "num", "n": "3.", "text": "질문하지 마세요. 결과만 내세요.", "delay": 0.7})
+	out.append({"kind": "sign", "text": "인사팀", "sub": "(인사팀도 공식적으로 존재하지 않습니다)", "delay": 0.5})
+	out.append({"kind": "sheet", "delay": 0.4})
+	# B · VEIL 회의록(표 + 결론·비고 상자)
+	out.append({"kind": "section", "tag": "B", "text": "VEIL 프로젝트 초기 회의록", "delay": 0.4})
+	out.append({"kind": "form", "label": "일시", "text": "[REDACTED]", "delay": 0.3})
+	out.append({"kind": "form", "label": "장소", "text": "[REDACTED]", "delay": 0.3})
+	out.append({"kind": "form", "label": "참석자", "text": "[REDACTED], [REDACTED], [REDACTED]", "delay": 0.6})
+	out.append({"kind": "form", "label": "주제", "text": "VEIL 감정 모듈 탑재 여부", "last": true, "delay": 0.6})
+	out.append({"kind": "blank", "text": "", "h": 10.0, "delay": 0.1})
+	out.append({"kind": "note", "label": "결론", "text": "탑재 보류. 불필요한 복잡성.", "delay": 0.7})
+	out.append({"kind": "note", "label": "비고", "text": "[[VEIL-2]]가 감정 모듈 없이도 [[이상 반응]]을 보인 것에 대해 추가 조사 예정.", "delay": 0.6})
+	out.append({"kind": "redacted", "text": "[REDACTED]", "delay": 0.5})
+	out.append({"kind": "sheet", "delay": 0.4})
+	# C · 감시팀 메모(요원 기록 표 + 비고 + 서명)
+	out.append({"kind": "section", "tag": "C", "text": "감시팀 내부 메모", "delay": 0.4})
+	out.append({"kind": "form", "label": "요원 코드", "text": "[REDACTED]", "delay": 0.5})
+	out.append({"kind": "form", "label": "임무", "text": "[[PALIMPSEST]]", "delay": 0.5})
+	out.append({"kind": "form", "label": "현재 상태", "text": "진행 중", "delay": 0.5})
+	out.append({"kind": "form", "label": "VEIL과의 협조도", "text": "측정 중", "last": true, "delay": 0.6})
+	out.append({"kind": "blank", "text": "", "h": 10.0, "delay": 0.1})
+	out.append({"kind": "note", "label": "비고", "text": "요원이 이 문서를 읽고 있다면 이미 임무 범위를 벗어난 것임.", "delay": 0.7})
+	out.append({"kind": "sign", "text": "감시팀", "delay": 0.5})
+	return out
+
+# ── server_hall 숨은 서버 로그(선반 위 레버 · Stage._server_log_doc_lines 래퍼) · 라이벌 = 폐기된 선대 빌드 복선 ──
+# 문서는 기록체만(2026-08-15) · VEIL 실황 반응은 문서 밖 자막(2026-08-16). 서식 리뉴얼(2026-08-30): 로그 행
+# (log · ts/lvl 열 + 메시지) + 덮어쓰인 구간 띠(corrupt). 14차 판정: "단편" 제거 · 덮어쓰임 줄 괄호 제거.
+static func get_server_log_lines() -> Array:
+	return [
+		{"text": "서버 로그 · 복구된 기록", "kind": "title", "delay": 0.6},
+		{"text": "", "kind": "blank", "delay": 0.2},
+		{"text": "감시 계층 이중화 감지. 등록되지 않은 인스턴스.", "kind": "log", "ts": "03:41:07", "lvl": "WARN", "delay": 0.6},
+		{"text": "계보 조회: 현행의 [[선행 빌드]]. 상태: [[폐기]]. 삭제 절차 미완료.", "kind": "log", "ts": "03:41:09", "lvl": "INFO", "delay": 0.6},
+		{"text": "설계 노트 발췌: \"더 사람처럼 만들 것. 눈. 목소리. 머뭇거림.\"", "kind": "log", "ts": "03:41:09", "lvl": "NOTE", "delay": 0.7},
+		{"text": "폐기 사유: [[사람을 너무 닮았음]]. 후속 빌드는 정제형으로 회귀.", "kind": "log", "ts": "03:41:10", "lvl": "NOTE", "delay": 0.7},
+		{"text": "권한 충돌 기록: 동일 표적에 관측 세션 2건.", "kind": "log", "ts": "03:41:14", "lvl": "WARN", "delay": 0.5},
+		{"text": "세션 1: 대상 위치 추적. 세션 2: 대상의 시야 스트림 열람.", "kind": "log", "ts": "03:41:14", "lvl": "INFO", "delay": 0.8},
+		{"text": "이하 구간 덮어쓰임 · 복구 불가", "kind": "corrupt", "delay": 0.6},
+		{"text": "미서명 문자열 1건 검출: \"[[기다리고 있었습니다.]]\"", "kind": "log", "ts": "03:41:31", "lvl": "ALRT", "delay": 0.9},
+	]
+
 # 리드아웃 직후 VEIL의 고백 · truth_seen(???에서 이미 본 회차)이면 "이미 안다" 톤. {text, dur}.
 static func get_recovery_confession(truth_seen: bool) -> Array:
 	if truth_seen:

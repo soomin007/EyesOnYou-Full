@@ -9277,7 +9277,7 @@ func _descend_drop_platform(body: Node) -> void:
 # 측면 상층(top, y=340) 끝에 레버 · 당기면 가시가 어두워지며 콜리전 off.
 # 보상: 위험 통로를 안전 통로로 전환 (XP/HP 픽업 같은 토큰 보상은 없음 · 안전 자체가 보상).
 # ── server_hall 숨은 터미널 로그 (이스터에그 · 라이벌 VEIL 복선) ──────────────
-# 서버 랙 위 숨은 레버(ARCTURUS 청색 hint)를 당기면 복구된 서버 로그 단편을 문서로 보여준다.
+# 서버 랙 위 숨은 레버(ARCTURUS 청색 hint)를 당기면 복구된 서버 로그를 문서로 보여준다.
 # ArcturusDocumentOverlay가 일시정지·타이핑·닫기·해제를 자립 처리. 스테이지당 1회.
 # 문구는 초안(사용자 검토 대기) · 두 번째 VEIL이 "당신이 무엇을 보는지를 본다"는 복선.
 var _server_log_shown: bool = false
@@ -9309,20 +9309,9 @@ func _build_server_hall_secret() -> void:
 # 문서는 기록체만. 2026-08-15 재개정: 독자를 부르는 해설·시적 내레이션 4줄 제거(기록체 규약).
 # 2026-08-16 재개정: VEIL 실황 반응을 문서에서 제거. speaker 비트도 종이 위에 그려져
 # "문서에 적힌 글"로 읽힌다는 반복 지적 수용. 반응은 문서 닫힌 뒤 통신 자막으로(위 finished 연결).
-# 2026-08-30 서식 리뉴얼: 로그 행(log · ts/lvl 열 + 메시지)과 덮어쓰인 구간 띠(corrupt)로. 문구는 그대로.
+# 문구·행 구조의 단일 소스 = VeilDialogue.get_server_log_lines(타이틀 디버그 "문서 열람"과 공유).
 func _server_log_doc_lines() -> Array:
-	return [
-		{"text": "서버 로그 · 복구 단편", "kind": "title", "delay": 0.6},
-		{"text": "", "kind": "blank", "delay": 0.2},
-		{"text": "감시 계층 이중화 감지. 등록되지 않은 인스턴스.", "kind": "log", "ts": "03:41:07", "lvl": "WARN", "delay": 0.6},
-		{"text": "계보 조회: 현행의 [[선행 빌드]]. 상태: [[폐기]]. 삭제 절차 미완료.", "kind": "log", "ts": "03:41:09", "lvl": "INFO", "delay": 0.6},
-		{"text": "설계 노트 단편: \"더 사람처럼 만들 것. 눈. 목소리. 머뭇거림.\"", "kind": "log", "ts": "03:41:09", "lvl": "NOTE", "delay": 0.7},
-		{"text": "폐기 사유: [[사람을 너무 닮았음]]. 후속 빌드는 정제형으로 회귀.", "kind": "log", "ts": "03:41:10", "lvl": "NOTE", "delay": 0.7},
-		{"text": "권한 충돌 기록: 동일 표적에 관측 세션 2건.", "kind": "log", "ts": "03:41:14", "lvl": "WARN", "delay": 0.5},
-		{"text": "세션 1: 대상 위치 추적. 세션 2: 대상의 시야 스트림 열람.", "kind": "log", "ts": "03:41:14", "lvl": "INFO", "delay": 0.8},
-		{"text": "[이하 구간 덮어쓰임 · 복구 불가]", "kind": "corrupt", "delay": 0.6},
-		{"text": "미서명 문자열 1건 검출: \"[[기다리고 있었습니다.]]\"", "kind": "log", "ts": "03:41:31", "lvl": "ALRT", "delay": 0.9},
-	]
+	return VeilDialogue.get_server_log_lines()
 
 func _build_datacenter_secret() -> void:
 	# 두 개의 토글 가능 가시 그룹. 지면 y=820 기준 base_y=814.
@@ -10727,52 +10716,10 @@ func _on_arcturus_lines_done() -> void:
 	# VEIL outro · VEIL-1/VEIL-2 시퀀스 직후라 em dash 없이 화자 라벨만(시각 일관성).
 	_show_veil_subtitle(VeilDialogue.banded("저도 이 파일들, 읽은 적 있습니다.\n계속 가시죠, 요원.", "저도 이 파일들 읽은 적 있어요.\n계속 가요, 요원."), 3.2, true)
 
-# ARCTURUS 아카이브 문서 · 3 단말기. 문서 서식 리뉴얼(2026-08-30 · 사용자 "배경만 다르고 글은 전부
-# 왼쪽 정렬 줄글"): 한 장짜리 종이에 세 문서가 장 경계(sheet)로 나뉘어 쌓이고, 각각 실물 서식을 따른다.
-#   A 사내 메모 = 머리 블록(수신·발신·제목 + 우측 일자) → 괘선 → 문단 → 번호 항목 → 우측 서명
-#   B 회의록   = 표(일시·장소·참석자·주제) → 결론·비고 상자 → 검열 바
-#   C 요원 기록 = 표(요원 코드·임무·상태·협조도) → 비고 상자 → 우측 서명
-# 행 종류는 ArcturusDocumentOverlay 머리 주석 참조. 문구는 대사집 docs/dialogue/story_docs.md §5 미러.
+# ARCTURUS 아카이브 문서 · 3 단말기. 문구·행 구조의 단일 소스 = VeilDialogue.get_arcturus_archive_lines
+# (타이틀 디버그 "문서 열람"과 공유). VEIL outro는 문서 안이 아니라 _on_arcturus_lines_done에서 자막으로.
 func _arcturus_document_lines() -> Array:
-	var out: Array = []
-	# 표지
-	out.append({"kind": "title", "text": "ARCTURUS: 내부 문서 단편", "delay": 0.6})
-	out.append({"kind": "blank", "text": "", "delay": 0.2})
-	# 단말기 A · 신입 직원 온보딩(사내 메모)
-	out.append({"kind": "section", "tag": "A", "badge": "사내 메모", "text": "인사팀 온보딩 메모", "delay": 0.4})
-	out.append({"kind": "kv", "label": "수신", "text": "신규 요원 전원", "right_label": "일자", "right_text": "[REDACTED]", "gap": 6.0, "delay": 0.4})
-	out.append({"kind": "kv", "label": "발신", "text": "인사팀", "gap": 6.0, "delay": 0.4})
-	out.append({"kind": "kv", "label": "제목", "text": "온보딩 안내", "delay": 0.4})
-	out.append({"kind": "rule", "delay": 0.2})
-	out.append({"kind": "para", "text": "ARCTURUS에 오신 것을 환영합니다.", "delay": 0.6})
-	out.append({"kind": "num", "n": "1.", "text": "본사는 공식적으로 [[존재하지 않습니다]].", "delay": 0.6})
-	out.append({"kind": "num", "n": "2.", "text": "모든 임무는 기록되지 않습니다.", "delay": 0.6})
-	out.append({"kind": "num", "n": "3.", "text": "질문하지 마세요. 결과만 내세요.", "delay": 0.7})
-	out.append({"kind": "sign", "text": "인사팀", "sub": "(인사팀도 공식적으로 존재하지 않습니다)", "delay": 0.5})
-	out.append({"kind": "sheet", "delay": 0.4})
-	# 단말기 B · VEIL 회의록(표 + 결론·비고 상자)
-	out.append({"kind": "section", "tag": "B", "badge": "회의록", "text": "VEIL 프로젝트 초기 회의록", "delay": 0.4})
-	out.append({"kind": "form", "label": "일시", "text": "[REDACTED]", "delay": 0.3})
-	out.append({"kind": "form", "label": "장소", "text": "[REDACTED]", "delay": 0.3})
-	out.append({"kind": "form", "label": "참석자", "text": "[REDACTED], [REDACTED], [REDACTED]", "delay": 0.6})
-	out.append({"kind": "form", "label": "주제", "text": "VEIL 감정 모듈 탑재 여부", "last": true, "delay": 0.6})
-	out.append({"kind": "blank", "text": "", "h": 10.0, "delay": 0.1})
-	out.append({"kind": "note", "label": "결론", "text": "탑재 보류. 불필요한 복잡성.", "delay": 0.7})
-	out.append({"kind": "note", "label": "비고", "text": "[[VEIL-2]]가 감정 모듈 없이도 [[이상 반응]]을 보인 것에 대해 추가 조사 예정.", "delay": 0.6})
-	out.append({"kind": "redacted", "text": "[REDACTED]", "delay": 0.5})
-	out.append({"kind": "sheet", "delay": 0.4})
-	# 단말기 C · 감시팀 메모(요원 기록 표 + 비고 + 서명)
-	out.append({"kind": "section", "tag": "C", "badge": "내부 메모", "text": "감시팀 내부 메모", "delay": 0.4})
-	out.append({"kind": "form", "label": "요원 코드", "text": "[REDACTED]", "delay": 0.5})
-	out.append({"kind": "form", "label": "임무", "text": "[[PALIMPSEST]]", "delay": 0.5})
-	out.append({"kind": "form", "label": "현재 상태", "text": "진행 중", "delay": 0.5})
-	out.append({"kind": "form", "label": "VEIL과의 협조도", "text": "[측정 중]", "last": true, "delay": 0.6})
-	out.append({"kind": "blank", "text": "", "h": 10.0, "delay": 0.1})
-	out.append({"kind": "note", "label": "비고", "text": "요원이 이 문서를 읽고 있다면 이미 임무 범위를 벗어난 것임.", "delay": 0.7})
-	out.append({"kind": "sign", "text": "감시팀", "delay": 0.5})
-	# VEIL outro는 문서 안이 아니라 _on_arcturus_lines_done에서 게임 내 자막으로 표시.
-	# 문서는 ARCTURUS 내부 단편들만 · VEIL 발화는 게임 화면의 대사창이 어울림.
-	return out
+	return VeilDialogue.get_arcturus_archive_lines()
 
 func _on_xp_collected(leveled_up: bool) -> void:
 	if leveled_up and not pending_levelup:

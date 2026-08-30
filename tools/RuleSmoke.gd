@@ -13,6 +13,8 @@ extends Node
 #      진짜는 요원을 똑바로 본다 · 다음 창의 진짜 자리는 직전과 다르다
 #   ⑧ 문서 서식: 종이/콘솔/뷰어 3양식이 행마다 컨테이너·타이핑 라벨을 1:1로 갖고, 실측 높이가 0보다 크며
 #      종이 높이 = 행 합 · 종이 문서엔 장(section) 3개 · 글자 없는 행(괘선·장 경계·게이지)은 정적 판정
+#   ⑨ 타이틀 디버그 "문서 열람": 문서 목록 상태에 버튼 4개 · 각 문서 버튼이 해당 양식 오버레이를 열고(행 > 0 ·
+#      pause) 닫으면 pause 해제 · Stage 래퍼와 VeilDialogue 단일 소스가 같은 행 수
 # 실행: godot --headless --path . --audio-driver Dummy tools/rule_smoke.tscn (종료 코드 0 = 전부 PASS)
 const STAGE_SCENE: String = "res://scenes/stage.tscn"
 var fails: int = 0
@@ -56,6 +58,7 @@ func _ready() -> void:
 	await _death_beat_case()
 	await _p3_pair_case()
 	await _doc_format_case()
+	await _title_docs_case()
 	print("[RULE] %s" % ("ALL PASS" if fails == 0 else "%d FAIL" % fails))
 	get_tree().quit(0 if fails == 0 else 1)
 
@@ -398,4 +401,37 @@ func _doc_format_case() -> void:
 		await get_tree().process_frame
 	get_tree().paused = false
 	stage.queue_free()
+	await get_tree().process_frame
+
+# ⑨ 타이틀 디버그 문서 열람 · Stage 없이 VeilDialogue 단일 소스로 3양식이 열린다.
+func _title_docs_case() -> void:
+	var title: Node = (load("res://scenes/title.tscn") as PackedScene).instantiate()
+	add_child(title)
+	for i in 10:
+		await get_tree().process_frame
+	title.call("_set_state", int((title.get_script() as Script).get_script_constant_map()["STATE_DOCS"]))
+	await get_tree().process_frame
+	var box: Node = title.get("buttons_box")
+	_check("문서 목록 버튼 4개", box != null and box.get_child_count() == 4, "" if box == null else str(box.get_child_count()))
+	var styles: Array = ["paper", "terminal", "drive"]
+	for i in 3:
+		if box == null or i >= box.get_child_count():
+			break
+		(box.get_child(i) as Button).pressed.emit()
+		await get_tree().process_frame
+		var doc: Node = title.get_node_or_null("DebugDoc")
+		var ok: bool = doc != null and str(doc.get("style")) == str(styles[i]) and (doc.get("rows") as Array).size() > 0 and get_tree().paused
+		_check("문서 열람 %s · 오버레이 열림(행 %s · pause)" % [styles[i], "-" if doc == null else str((doc.get("rows") as Array).size())], ok)
+		if doc != null:
+			doc.call("_start_finalize")   # 실제 닫기 경로 · 1.4s 홀드 + 0.9s 페이드 뒤 finished
+			var tc: float = 0.0
+			while tc < 4.0 and title.get_node_or_null("DebugDoc") != null:
+				await get_tree().create_timer(0.1, true).timeout
+				tc += 0.1
+		_check("문서 열람 %s · 닫힘 후 pause 해제 + 노드 제거(재열람 가능)" % styles[i], not get_tree().paused and title.get_node_or_null("DebugDoc") == null)
+	# 단일 소스 정합 · Stage 래퍼와 같은 행 수.
+	_check("아카이브 단일 소스 31행", VeilDialogue.get_arcturus_archive_lines().size() == 31, str(VeilDialogue.get_arcturus_archive_lines().size()))
+	_check("서버 로그 단일 소스 10행", VeilDialogue.get_server_log_lines().size() == 10, str(VeilDialogue.get_server_log_lines().size()))
+	get_tree().paused = false
+	title.queue_free()
 	await get_tree().process_frame

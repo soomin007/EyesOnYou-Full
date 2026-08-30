@@ -562,10 +562,13 @@ func _build_row(d: Dictionary) -> Dictionary:
 			lbl = _rtl(row, 0.0, 6.0, PAPER_WIDTH, 18, _c("dim"), _to_bbcode(text))
 			h = lbl.size.y + 14.0
 		"section":
-			# 하위 문서 머리 · 실물 메모의 "기관명 작은 줄 + 큰 문서명 + 괘선"(레퍼런스 실측) 구도.
+			# 하위 문서 머리 · 실물 메모의 "큰 문서명 + 괘선" 구도. 태그 상자(A/B/C)는 제목 줄 왼쪽에.
+			# 종류 배지(badge)는 제목과 낱말이 겹쳐 폐지(14차 판정) · 값이 있으면 옛 두 줄 구도로 그린다.
 			var tag: String = str(d.get("tag", ""))
 			var badge: String = str(d.get("badge", ""))
 			var x: float = 0.0
+			var title_y: float = 36.0 if badge != "" else 8.0
+			var title_x: float = 0.0 if (badge != "" or tag == "") else 44.0
 			if tag != "":
 				var box := PanelContainer.new()
 				var sb := StyleBoxFlat.new()
@@ -577,7 +580,7 @@ func _build_row(d: Dictionary) -> Dictionary:
 				sb.content_margin_top = 1.0
 				sb.content_margin_bottom = 1.0
 				box.add_theme_stylebox_override("panel", sb)
-				box.position = Vector2(0.0, 8.0)
+				box.position = Vector2(0.0, 8.0 if badge != "" else title_y + 7.0)
 				box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 				var tl := Label.new()
 				tl.text = tag
@@ -589,9 +592,9 @@ func _build_row(d: Dictionary) -> Dictionary:
 				x = 44.0
 			if badge != "":
 				_lab(row, x, 8.0, PAPER_WIDTH - x, 16, _c("dim"), badge)
-			lbl = _rtl(row, 0.0, 36.0, PAPER_WIDTH, 26, _c("title"), "[b]%s[/b]" % _to_bbcode(text))
-			_rect(row, 0.0, 36.0 + lbl.size.y + 8.0, PAPER_WIDTH, 2.0, _c("rule"))
-			h = 36.0 + lbl.size.y + 24.0
+			lbl = _rtl(row, title_x, title_y, PAPER_WIDTH - title_x, 26, _c("title"), "[b]%s[/b]" % _to_bbcode(text))
+			_rect(row, 0.0, title_y + lbl.size.y + 8.0, PAPER_WIDTH, 2.0, _c("rule"))
+			h = title_y + lbl.size.y + 24.0
 		"kv":
 			# 라벨: 값 · 라벨 열 고정폭(메모 머리 블록 TO/FROM/SUBJECT 실측: 라벨 12% · 값 이어서).
 			var col_w: float = float(d.get("col", 150.0 if is_paper else 200.0))
@@ -631,14 +634,23 @@ func _build_row(d: Dictionary) -> Dictionary:
 			lbl = _rtl(row, 44.0, 2.0, PAPER_WIDTH - 44.0, 23, _c("body"), _to_bbcode(text))
 			h = lbl.size.y + 12.0
 		"note":
-			# 비고·결론 상자 · 왼쪽 강조 띠 + 옅은 음영 + 작은 라벨 위, 본문 아래.
+			# 비고·결론 상자 · 1px 윤곽선 상자(음영·왼쪽 강조 띠 없음 · 14차 판정 "색 띠 상자는 AI 생성 느낌")
+			# + 작은 라벨 위, 본문 아래. 서식 표의 괘선과 같은 선으로 그려 문서 안의 '붙임 상자'처럼 읽힌다.
 			var lab: String = str(d.get("label", "비고"))
-			lbl = _rtl(row, 20.0, 32.0, PAPER_WIDTH - 40.0, 21, _c("body"), _to_bbcode(text))
+			lbl = _rtl(row, 18.0, 32.0, PAPER_WIDTH - 36.0, 21, _c("body"), _to_bbcode(text))
 			h = 32.0 + lbl.size.y + 12.0
-			var bgc: ColorRect = _rect(row, 0.0, 0.0, PAPER_WIDTH, h, _c("tint"))
-			row.move_child(bgc, 0)
-			_rect(row, 0.0, 0.0, 3.0, h, _c("accent"))
-			_lab(row, 20.0, 8.0, 300.0, 15, _c("dim"), lab, true)
+			var box := Panel.new()
+			var bsb := StyleBoxFlat.new()
+			bsb.bg_color = Color(0, 0, 0, 0)
+			bsb.border_color = _c("rule")
+			bsb.set_border_width_all(1)
+			box.add_theme_stylebox_override("panel", bsb)
+			box.position = Vector2.ZERO
+			box.size = Vector2(PAPER_WIDTH, h)
+			box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			row.add_child(box)
+			row.move_child(box, 0)
+			_lab(row, 18.0, 8.0, 300.0, 15, _c("dim"), lab, true)
 			h += 10.0
 		"sign":
 			# 서명 블록 · 중앙 우측(실물 메모의 서명 위치 · 폭의 55%~85%) + 서명선 + 작은 부기.
@@ -773,7 +785,7 @@ func _start_typing() -> void:
 			pause_after_line = float(ln0.get("delay", 0.2))
 
 func _process(delta: float) -> void:
-	if done:
+	if done or paper == null or not is_instance_valid(paper):
 		return
 	# 종이 부드럽게 스크롤 (현재 줄을 화면 중앙 ~40%에 위치)
 	paper.position.y = lerp(paper.position.y, paper_target_y, SCROLL_LERP)

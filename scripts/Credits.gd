@@ -29,7 +29,7 @@ const CREDITS_LINES: Array[String] = [
 	"[HEADER]Development & Design",
 	"Claude (Anthropic)",
 	"[SUB]시스템 설계 · GDScript 구현 · 게임/레벨 디자인",
-	"[SUB]VEIL 대사 · 엔딩 · ARCTURUS 단편",
+	"[SUB]VEIL 대사 · 엔딩 · ARCTURUS 문서",
 	"[SUB]코드 생성 벡터 그래픽 · UI · 사운드 통합 · 디버깅",
 	"[SUB]Soomin Kim의 디렉션 아래 작업",
 	"",
