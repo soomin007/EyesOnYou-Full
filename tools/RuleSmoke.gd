@@ -449,8 +449,8 @@ func _settings_docs_case() -> void:
 	settings.queue_free()
 	await get_tree().process_frame
 	# 단일 소스 정합 · Stage 래퍼와 같은 행 수.
-	_check("아카이브 단일 소스 31행", VeilDialogue.get_arcturus_archive_lines().size() == 31, str(VeilDialogue.get_arcturus_archive_lines().size()))
-	_check("서버 로그 단일 소스 10행", VeilDialogue.get_server_log_lines().size() == 10, str(VeilDialogue.get_server_log_lines().size()))
+	_check("아카이브 단일 소스 34행", VeilDialogue.get_arcturus_archive_lines().size() == 34, str(VeilDialogue.get_arcturus_archive_lines().size()))
+	_check("서버 로그 단일 소스 11행", VeilDialogue.get_server_log_lines().size() == 11, str(VeilDialogue.get_server_log_lines().size()))
 	get_tree().paused = false
 
 # 서브트리의 Button을 모은다 · meta_key가 비어 있지 않으면 그 메타가 있는 버튼만.

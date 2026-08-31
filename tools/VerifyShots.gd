@@ -28,9 +28,10 @@ const TARGETS: Array = [
 	{"id": "arcturus_doc_minutes", "route": "route_back_alley", "stage": 1, "setup": "doc_paper", "doc_tag": "B"},
 	{"id": "arcturus_doc_record", "route": "route_back_alley", "stage": 1, "setup": "doc_paper", "doc_tag": "C"},
 	{"id": "recovery_doc_drive", "route": "route_back_alley", "stage": 1, "setup": "doc_drive"},
-	# 문서 등장 연출(2026-08-25 5차 피드백) · 봉인 정지컷 + 펼침/켜짐 애니메이션.
+	# 문서 등장 연출(2026-08-25 5차 피드백 · 2026-08-31 봉투 시퀀스 v3) · 봉인 정지컷 + 펼침/켜짐 애니메이션.
+	# 봉투 v3 전체(봉인→뜯김→편지 인출→펼침)는 ~4.2s라 anim 88 × every 3 = 4.4s로 커버.
 	{"id": "arcturus_doc_seal", "route": "route_back_alley", "stage": 1, "setup": "doc_seal"},
-	{"id": "anim_doc_unfold", "route": "route_back_alley", "stage": 1, "setup": "anim_doc_unfold", "anim": 56, "every": 2},
+	{"id": "anim_doc_unfold", "route": "route_back_alley", "stage": 1, "setup": "anim_doc_unfold", "anim": 88, "every": 3},
 	{"id": "anim_doc_power", "route": "route_server_hall", "seg": 1, "stage": 7, "setup": "anim_doc_power", "anim": 44, "every": 2},
 	# 클리어 정산 배너 + 잠금 비트 감속 완충(등장 연출).
 	{"id": "clear_banner", "route": "route_back_alley", "stage": 1, "setup": "clear_banner"},
@@ -258,7 +259,7 @@ func _shot(d: Dictionary) -> void:
 			for i in 90:
 				await get_tree().process_frame
 		"doc_seal":
-			# 종이 등장 연출의 봉인 상태(0.38~0.88s 홀드) 한가운데 정지컷.
+			# 봉투 v3의 봉인 상태(도장 찍힘 후 ~0.5s 홀드) 정지컷 · 38프레임 ≈ 0.63s.
 			var doc_s := ArcturusDocumentOverlay.new()
 			stage.add_child(doc_s)
 			doc_s.show_doc(stage.call("_arcturus_document_lines"))

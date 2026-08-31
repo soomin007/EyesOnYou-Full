@@ -242,13 +242,17 @@ static func get_briefing(stage_index: int) -> String:
 # 복호화 리드아웃 라인. {text, kind(title/kv/blank), label?, delay}. 기록체만 · 해설·대사 혼입 금지.
 # 2026-08-30 서식 리뉴얼: "라벨: 값" 줄은 kv(label + text)로 분리 · 뷰어는 열 정렬, 터널 리드아웃은
 # CoreTunnel이 "라벨: 값"으로 다시 합쳐 한 줄로 찍는다(문구 동일).
+# 15차 리뉴얼(2026-08-31): 납득 사다리 · "자료 파일이 아니라 실행 이미지" → "지금 실행 중이고
+# 연결 대상이 요원" → 그제서야 "빌드 서명: VEIL"(slow · 글자 하나씩 + 틱 SFX + 스팅·틴트).
+# 서명이 충격인 이유(드라이브 = 켜져서 나와 붙어 있는 프로그램 = VEIL 본체)를 서명 전에 다 준다.
 static func get_recovery_doc_lines() -> Array:
 	return [
 		{"text": "회수 데이터: 복호화 완료", "kind": "title", "delay": 0.6},
 		{"text": "", "kind": "blank", "delay": 0.2},
 		{"kind": "kv", "label": "회수 대상", "text": "핵심 데이터 드라이브 (확보)", "delay": 0.6},
-		{"kind": "kv", "label": "드라이브 내용물", "text": "단일 실행 이미지", "delay": 0.6},
-		{"kind": "kv", "label": "빌드 서명", "text": "[[VEIL]]", "delay": 0.9},
+		{"kind": "kv", "label": "드라이브 내용물", "text": "실행 이미지 1건 · 자료 파일 아님", "delay": 0.8},
+		{"kind": "kv", "label": "상태", "text": "[[실행 중]] · 세션 1 · 연결 대상: 요원", "delay": 1.2},
+		{"kind": "kv", "label": "빌드 서명", "text": "[[VEIL]]", "slow": true, "t_int": 0.26, "delay": 1.4},
 	]
 
 # ── ARCTURUS 아카이브 문서(격리 병동 잠긴 문 이스터에그 · Stage._arcturus_document_lines 래퍼) ──
@@ -273,6 +277,7 @@ static func get_arcturus_archive_lines() -> Array:
 	out.append({"kind": "num", "n": "2.", "text": "모든 임무는 기록되지 않습니다.", "delay": 0.6})
 	out.append({"kind": "num", "n": "3.", "text": "질문하지 마세요. 결과만 내세요.", "delay": 0.7})
 	out.append({"kind": "sign", "text": "인사팀", "sub": "(인사팀도 공식적으로 존재하지 않습니다)", "delay": 0.5})
+	out.append({"kind": "cut", "text": "이하 6행 삭제 · 감시팀", "delay": 0.4})
 	out.append({"kind": "sheet", "delay": 0.4})
 	# B · VEIL 회의록(표 + 결론·비고 상자)
 	out.append({"kind": "section", "tag": "B", "text": "VEIL 프로젝트 초기 회의록", "delay": 0.4})
@@ -284,6 +289,7 @@ static func get_arcturus_archive_lines() -> Array:
 	out.append({"kind": "note", "label": "결론", "text": "탑재 보류. 불필요한 복잡성.", "delay": 0.7})
 	out.append({"kind": "note", "label": "비고", "text": "[[VEIL-2]]가 감정 모듈 없이도 [[이상 반응]]을 보인 것에 대해 추가 조사 예정.", "delay": 0.6})
 	out.append({"kind": "redacted", "text": "[REDACTED]", "delay": 0.5})
+	out.append({"kind": "cut", "text": "이하 11행 삭제 · 감시팀", "delay": 0.4})
 	out.append({"kind": "sheet", "delay": 0.4})
 	# C · 감시팀 메모(요원 기록 표 + 비고 + 서명)
 	out.append({"kind": "section", "tag": "C", "text": "감시팀 내부 메모", "delay": 0.4})
@@ -294,13 +300,18 @@ static func get_arcturus_archive_lines() -> Array:
 	out.append({"kind": "blank", "text": "", "h": 10.0, "delay": 0.1})
 	out.append({"kind": "note", "label": "비고", "text": "요원이 이 문서를 읽고 있다면 이미 임무 범위를 벗어난 것임.", "delay": 0.7})
 	out.append({"kind": "sign", "text": "감시팀", "delay": 0.5})
+	out.append({"kind": "cut", "text": "이하 2행 삭제 · 감시팀", "delay": 0.4})
 	return out
 
 # ── server_hall 숨은 서버 로그(선반 위 레버 · Stage._server_log_doc_lines 래퍼) · 라이벌 = 폐기된 선대 빌드 복선 ──
 # 문서는 기록체만(2026-08-15) · VEIL 실황 반응은 문서 밖 자막(2026-08-16). 서식 리뉴얼(2026-08-30): 로그 행
 # (log · ts/lvl 열 + 메시지) + 덮어쓰인 구간 띠(corrupt). 14차 판정: "단편" 제거 · 덮어쓰임 줄 괄호 제거.
+# 15차 리뉴얼(2026-08-31): 앞의 일상 잡음 고속 덤프는 오버레이 preamble(영문 기술 표기) 담당. 여기는
+# 그 덤프가 손상 구간(gap)에서 끊긴 뒤 이어지는 복구본. corrupt 띠 확대(rows 2). 마지막 줄은 live ·
+# 복구된 과거가 아니라 열람하는 지금 이 순간 쓰이는 줄(ts = 실제 현재 시각 + 사람 타자 속도).
 static func get_server_log_lines() -> Array:
 	return [
+		{"text": "손상 구간 · 212행 복구 불가 · 건너뜀", "kind": "gap", "delay": 0.8},
 		{"text": "서버 로그 · 복구된 기록", "kind": "title", "delay": 0.6},
 		{"text": "", "kind": "blank", "delay": 0.2},
 		{"text": "감시 계층 이중화 감지. 등록되지 않은 인스턴스.", "kind": "log", "ts": "03:41:07", "lvl": "WARN", "delay": 0.6},
@@ -309,8 +320,8 @@ static func get_server_log_lines() -> Array:
 		{"text": "폐기 사유: [[사람을 너무 닮았음]]. 후속 빌드는 정제형으로 회귀.", "kind": "log", "ts": "03:41:10", "lvl": "NOTE", "delay": 0.7},
 		{"text": "권한 충돌 기록: 동일 표적에 관측 세션 2건.", "kind": "log", "ts": "03:41:14", "lvl": "WARN", "delay": 0.5},
 		{"text": "세션 1: 대상 위치 추적. 세션 2: 대상의 시야 스트림 열람.", "kind": "log", "ts": "03:41:14", "lvl": "INFO", "delay": 0.8},
-		{"text": "이하 구간 덮어쓰임 · 복구 불가", "kind": "corrupt", "delay": 0.6},
-		{"text": "미서명 문자열 1건 검출: \"[[기다리고 있었습니다.]]\"", "kind": "log", "ts": "03:41:31", "lvl": "ALRT", "delay": 0.9},
+		{"text": "이하 구간 덮어쓰임 · 복구 불가", "kind": "corrupt", "rows": 2, "delay": 1.6},
+		{"text": "미서명 문자열 1건 검출: \"[[기다리고 있었습니다.]]\"", "kind": "log", "lvl": "ALRT", "live": true, "t_int": 0.085, "delay": 0.9},
 	]
 
 # 리드아웃 직후 VEIL의 고백 · truth_seen(???에서 이미 본 회차)이면 "이미 안다" 톤. {text, dur}.

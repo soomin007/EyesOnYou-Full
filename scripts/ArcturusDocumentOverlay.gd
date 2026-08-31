@@ -15,9 +15,12 @@ extends Node
 #   공통   title(제목) · blank(간격, h) · rule(괘선) · body(줄글) · speaker(옛 발화자 라벨)
 #   서식   section(하위 문서 머리 · tag/badge/text) · kv(라벨: 값 · label/text · right_label/right_text ·
 #          gap) · form(표 행 · label/text · last) · para(문단) · num(번호 항목 · n) · note(비고 상자 ·
-#          label) · sign(서명 · sub) · redacted(검열 바) · sheet(장 경계)
-#   콘솔   prompt(프롬프트 줄) · log(로그 행 · ts/lvl) · corrupt(덮어쓰인 구간)
-#   뷰어   bar(복호화 게이지) · hex(헥스 덤프 줄)
+#          label) · sign(서명 · sub) · redacted(검열 바) · sheet(장 경계) · cut(발췌 절단부 · 점선)
+#   콘솔   prompt(프롬프트 줄) · log(로그 행 · ts/lvl) · corrupt(덮어쓰인 구간 · rows) · gap(건너뜀 표기)
+#   뷰어   bar(복호화 게이지 · % 카운트업) · hex(헥스 덤프 줄)
+#   행 옵션(15차 리뉴얼 · 2026-08-31): fast=타이핑 없이 통째 등장(고속 덤프 · 연속되면 좌라락 스크롤) ·
+#   live=드러나는 순간 ts를 실제 현재 시각으로(지금 쓰이고 있는 줄) · slow=글자당 t_int로 느리게 +
+#   틱 SFX + 완성 스팅·화면 틴트(빌드 서명 VEIL 전용) · t_int=행별 타이핑 간격 오버라이드.
 #   타이핑 대상은 행마다 RichTextLabel 하나(labels[i]) · 행 컨테이너(rows[i])가 라벨 열·괘선·상자를 함께
 #   담는다. 행 높이는 실측(get_content_height)으로 쌓는다. [[키워드]]=강조색, [REDACTED]=검열 바.
 
@@ -55,6 +58,8 @@ var t: float = 0.0
 var pause_after_line: float = 0.0
 var done: bool = false
 var paper_target_y: float = 0.0
+# 고속 덤프 연속 카운트 · fast 행이 이어지는 동안 스크롤 추적을 가속하고 SFX를 성기게 낸다.
+var _fast_streak: int = 0
 # 다 나온 뒤 사용자 조작 단계 · 위/아래로 스크롤 + 확인 키로 닫기.
 var reading_done: bool = false
 var read_lockout_t: float = 0.0
@@ -119,10 +124,11 @@ func show_doc(input_lines: Array) -> void:
 	var is_drive: bool = style == "drive"
 	_setup_palette()
 	_kw_color = str(_pal["kw"])
-	# 콘솔 계열 양식은 코딩 폰트(D2Coding, OFL) · 사용자 제안 2026-08-23. 종이는 프리텐다드.
+	# 콘솔 계열 양식은 픽셀 터미널 폰트(네오둥근모, OFL) · 사용자 확정 2026-08-31. D2Coding은
+	# 한글 자면이 프리텐다드와 구분이 안 돼 교체(실측 · 15차 피드백). 종이는 프리텐다드.
 	var mono: FontFile = null
 	if is_term or is_drive:
-		mono = load("res://assets/fonts/D2Coding.ttf")
+		mono = load("res://assets/fonts/NeoDunggeunmo.ttf")
 	paper_visual = ColorRect.new()
 	paper_visual.color = _pal["paper"]
 	# 종이 양식은 레터헤드·스탬프 확대(4차 피드백 "더 커도 될 것 같다")로 머리 여백을 더 쓴다.
@@ -158,7 +164,7 @@ func show_doc(input_lines: Array) -> void:
 		path_l.text = "svr-03 : /var/log/veil.d/recovered.log" if is_term else "drive-A7 : decrypt · read-only"
 		if mono != null:
 			path_l.add_theme_font_override("font", mono)
-		path_l.add_theme_font_size_override("font_size", 13)
+		path_l.add_theme_font_size_override("font_size", 16)
 		path_l.add_theme_color_override("font_color", Color(0.48, 0.75, 0.58) if is_term else Color(0.74, 0.58, 0.96))
 		path_l.position = Vector2(0.0, 4.0)
 		path_l.size = Vector2(bar.size.x, 22.0)
@@ -198,7 +204,7 @@ func show_doc(input_lines: Array) -> void:
 			foot_l.text = "drive-A7 · DECRYPT OK · %d ENTRIES" % input_lines.size()
 		if mono != null:
 			foot_l.add_theme_font_override("font", mono)
-		foot_l.add_theme_font_size_override("font_size", 12)
+		foot_l.add_theme_font_size_override("font_size", 16)
 		foot_l.add_theme_color_override("font_color", Color(0.42, 0.62, 0.50) if is_term else Color(0.62, 0.50, 0.82))
 		foot_l.position = Vector2(14.0, 4.0)
 		foot_l.size = Vector2(foot.size.x - 48.0, 18.0)
@@ -207,7 +213,7 @@ func show_doc(input_lines: Array) -> void:
 		cur.text = "▮"
 		if mono != null:
 			cur.add_theme_font_override("font", mono)
-		cur.add_theme_font_size_override("font_size", 13)
+		cur.add_theme_font_size_override("font_size", 16)
 		cur.add_theme_color_override("font_color", Color(0.45, 0.85, 0.58) if is_term else Color(0.75, 0.55, 1.0))
 		cur.position = Vector2(foot.size.x - 26.0, 3.0)
 		foot.add_child(cur)
@@ -281,6 +287,9 @@ func show_doc(input_lines: Array) -> void:
 		_scan.size = vis_size
 	if _frame != null:
 		_frame.size = vis_size
+	# 종이 양식 + 장 경계가 있으면 · 한 장 시각을 물리 분리된 종이 3장으로 분해(발췌 사본 픽션).
+	if not (is_term or is_drive):
+		_layout_paper_sheets(shadow)
 	# 배경 페이드 인 → 양식별 등장 연출(5차 피드백 "처음부터 펼쳐져 있지 않게 · 양식에 맞게
 	# 펼쳐지거나 켜지게") → 타이핑 시작. 종이 = 봉인 펼침 / 콘솔·뷰어 = 전원 켜짐.
 	get_tree().paused = true
@@ -292,50 +301,73 @@ func show_doc(input_lines: Array) -> void:
 	else:
 		_enter_unfold()
 
-# 종이 등장 v2(2026-08-25 사용자 "펼친다는 느낌이 전혀 아님") · 삼단 접지 편지 문법.
-# 접힌 팩(상단 면) 아래 가장자리를 봉인 도장이 물고 있고, 봉인이 뜯기면 아랫단이 두 번
-# "젖혀지며" 열린다: 각 단은 뒷면(어두움)이 밝아지며 위 접선(pivot)에서 자라는 원근 눈속임 +
-# 접선 크리스 음영. 다 펼쳐지면 실제 종이로 교차 페이드하고, 접힌 자국이 잠시 남는다.
+# 종이 등장 v3(2026-08-31 사용자 "접힌 편지지·봉인된 봉투같지 않다 · 최소한의 물리 법칙") ·
+# 실물 봉투 문법. ① 크라프트 봉투(V자 플랩 + 플랩 꼭짓점 위에 온전히 찍힌 봉인 도장 + 발췌
+# 사본 라벨)가 놓이고 ② 봉인이 뜯겨 떨어지면 플랩이 위로 젖혀지고 ③ 접힌 편지 팩(두께 라인 =
+# 여러 장 겹침)이 봉투 안에서 미끄러져 나온다 ④ 봉투는 물러나고 팩이 자리 잡은 뒤 접힌 두 단이
+# 차례로 젖혀져 펼쳐진다 ⑤ 펼쳐진 순간 미리 인쇄된 서식(레터헤드·스탬프·장 배경)이 이미 보이고,
+# 그 위에 본문이 채워진다(타이핑). 접힌 자국은 잠시 남았다 사라진다.
 func _enter_unfold() -> void:
 	var pw: float = PAPER_WIDTH + MARGIN_SIDE * 2.0
 	var px: float = (VIEWPORT_W - PAPER_WIDTH) * 0.5 - MARGIN_SIDE
 	var seg_h: float = 210.0
-	var top_y: float = MARGIN_TOP - 68.0   # paper_visual 윗변(head_room 68)과 정렬
+	var top_y: float = MARGIN_TOP - 68.0   # 펼침 후 종이 윗변(head_room 68)과 정렬
 	var cream: Color = paper_visual.color
-	var wrap := Control.new()   # 가짜 접지 팩 · 교차 페이드 후 통째로 제거
+	var wrap := Control.new()   # 봉투 + 접지 팩 · 교차 페이드 후 통째로 제거
 	wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	wrap.modulate.a = 0.0
 	layer.add_child(wrap)
-	# 접힌 팩 상단 면 + 아래 가장자리(종이 뭉치 두께).
-	var band := ColorRect.new()
-	band.color = cream
-	band.position = Vector2(px, top_y)
-	band.size = Vector2(pw, seg_h)
-	wrap.add_child(band)
-	var band_edge := ColorRect.new()
-	band_edge.color = Color(0.55, 0.52, 0.46, 0.85)
-	band_edge.position = Vector2(px, top_y + seg_h)
-	band_edge.size = Vector2(pw, 4.0)
-	wrap.add_child(band_edge)
-	# 아랫단 2·3 · 위 접선 pivot에서 scale.y 0→1로 젖혀진다. 시작은 뒷면 음영(어두운 modulate).
-	var segs: Array = []
+	# ── 봉투 · 화면 중앙. 자식 순서 = 그리기 순서: 팩(뒤) → 몸통 → 플랩 → 도장(앞) ──
+	var env_w: float = 560.0
+	var env_h: float = 250.0
+	var ex: float = (VIEWPORT_W - env_w) * 0.5
+	var ey: float = VIEWPORT_H * 0.5 - env_h * 0.62
+	# 접힌 편지 팩 · 봉투 안(몸통에 가려짐)에서 시작해 위로 미끄러져 나온다.
+	var pack_w: float = env_w - 70.0
+	var pack_h: float = 120.0
+	var pack := Control.new()
+	pack.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pack.position = Vector2(ex + 35.0, ey + 74.0)
+	pack.size = Vector2(pack_w, pack_h)
+	wrap.add_child(pack)
+	var pack_face := ColorRect.new()
+	pack_face.color = cream
+	pack_face.size = Vector2(pack_w, pack_h)
+	pack_face.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pack.add_child(pack_face)
+	# 접힌 두께 · 아래 가장자리에 겹친 장의 라인 두 줄.
 	for i in 2:
-		var seg := ColorRect.new()
-		seg.color = cream
-		seg.position = Vector2(px, top_y + seg_h * float(i + 1))
-		seg.size = Vector2(pw, seg_h)
-		seg.pivot_offset = Vector2(pw * 0.5, 0.0)
-		seg.scale = Vector2(1.0, 0.0)
-		seg.modulate = Color(0.72, 0.70, 0.66)
-		wrap.add_child(seg)
-		# 접선 크리스 음영 · 단 상단의 어두운 띠(접혔던 자리).
-		var crease := ColorRect.new()
-		crease.color = Color(0.35, 0.32, 0.28, 0.30)
-		crease.position = Vector2.ZERO
-		crease.size = Vector2(pw, 7.0)
-		seg.add_child(crease)
-		segs.append(seg)
-	# 봉인 도장 · 팩 아래 가장자리를 물고 있는 위치. 펼침 시작에 뜯겨 나간다.
+		var edge := ColorRect.new()
+		edge.color = Color(0.55, 0.52, 0.46, 0.85)
+		edge.position = Vector2(0.0, pack_h - 3.0 - float(i) * 5.0)
+		edge.size = Vector2(pack_w, 2.0)
+		edge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		pack.add_child(edge)
+	# 봉투 몸통 · 크라프트 톤 + 1px 윤곽.
+	var env := Panel.new()
+	var env_sb := StyleBoxFlat.new()
+	env_sb.bg_color = Color(0.80, 0.74, 0.60, 1.0)
+	env_sb.border_color = Color(0.48, 0.42, 0.30, 0.9)
+	env_sb.set_border_width_all(1)
+	env.add_theme_stylebox_override("panel", env_sb)
+	env.position = Vector2(ex, ey)
+	env.size = Vector2(env_w, env_h)
+	env.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	wrap.add_child(env)
+	# 봉투 라벨 · 발췌 사본 픽션(세 문서가 한 봉투에 묶인 이유 = 감시팀이 추린 사본 묶음).
+	var env_lab := Label.new()
+	env_lab.text = "발췌 사본 · 3매 · 감시팀"
+	env_lab.add_theme_font_size_override("font_size", 15)
+	env_lab.add_theme_color_override("font_color", Color(0.35, 0.29, 0.18, 0.85))
+	env_lab.position = Vector2(22.0, env_h - 36.0)
+	env.add_child(env_lab)
+	# V자 플랩 · 접선(봉투 윗변)이 pivot. 젖힘 = scale.y 반전(위로 뒤집힘).
+	var flap := Polygon2D.new()
+	flap.polygon = PackedVector2Array([Vector2(0.0, 0.0), Vector2(env_w, 0.0), Vector2(env_w * 0.5, 148.0)])
+	flap.color = Color(0.74, 0.67, 0.52, 1.0)
+	flap.position = Vector2(ex, ey)
+	wrap.add_child(flap)
+	# 봉인 도장 · 플랩 꼭짓점 위에 온전히 올라앉는다(반걸침·공중부양 금지 · 15차).
 	var seal := PanelContainer.new()
 	var sl_sb := StyleBoxFlat.new()
 	sl_sb.bg_color = Color(0.92, 0.90, 0.84, 1.0)
@@ -354,9 +386,28 @@ func _enter_unfold() -> void:
 	seal.rotation = -0.05
 	seal.modulate.a = 0.0
 	seal.scale = Vector2(1.7, 1.7)
-	seal.resized.connect(func() -> void: seal.pivot_offset = seal.size / 2.0)
+	# 도장 중심 = 플랩 꼭짓점 근처(플랩+몸통 면 위 · 크기 확정 후 중심 정렬).
+	seal.resized.connect(func() -> void:
+		seal.pivot_offset = seal.size / 2.0
+		seal.position = Vector2(ex + env_w * 0.5, ey + 142.0) - seal.size / 2.0)
 	wrap.add_child(seal)
-	seal.position = Vector2(VIEWPORT_W * 0.5 - 120.0, top_y + seg_h - 26.0)
+	# ── 펼침용 아랫단 2·3 · 위 접선 pivot에서 scale.y 0→1로 젖혀진다(기존 삼단 문법) ──
+	var segs: Array = []
+	for i in 2:
+		var seg := ColorRect.new()
+		seg.color = cream
+		seg.position = Vector2(px, top_y + seg_h * float(i + 1))
+		seg.size = Vector2(pw, seg_h)
+		seg.pivot_offset = Vector2(pw * 0.5, 0.0)
+		seg.scale = Vector2(1.0, 0.0)
+		seg.modulate = Color(0.72, 0.70, 0.66)
+		wrap.add_child(seg)
+		var crease := ColorRect.new()
+		crease.color = Color(0.35, 0.32, 0.28, 0.30)
+		crease.position = Vector2.ZERO
+		crease.size = Vector2(pw, 7.0)
+		seg.add_child(crease)
+		segs.append(seg)
 	# 펼친 실제 종이에 남는 접힌 자국 · 잠시 보였다 사라진다(paper 로컬 y = 화면 - MARGIN_TOP).
 	var remnants: Array = []
 	for i in 2:
@@ -369,28 +420,41 @@ func _enter_unfold() -> void:
 		remnants.append(line)
 	var tw := create_tween()
 	tw.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	# 팩 페이드 인 → 도장이 내려찍히는 팝 → 반 박자 봉인 상태.
-	tw.tween_property(wrap, "modulate:a", 1.0, 0.20)
+	# ① 봉투 페이드 인 → 도장 내려찍힘 → 반 박자 봉인 상태.
+	tw.tween_property(wrap, "modulate:a", 1.0, 0.25)
 	tw.tween_property(seal, "modulate:a", 1.0, 0.10)
 	tw.parallel().tween_property(seal, "scale", Vector2.ONE, 0.16).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	tw.tween_interval(0.45)
-	# 봉인 뜯김 + 1단 젖힘(뒷면이 밝아지며 내려온다).
-	tw.tween_property(seal, "modulate:a", 0.0, 0.28)
-	tw.parallel().tween_property(seal, "rotation", 0.30, 0.28)
-	tw.parallel().tween_property(seal, "position", seal.position + Vector2(52.0, -40.0), 0.28)
-	tw.parallel().tween_property(segs[0], "scale:y", 1.0, 0.36).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.tween_interval(0.55)
+	# ② 봉인 뜯김(아래로 떨어져 나감 · 기존 자산 대타 SFX) + 봉투 반동 + 플랩 젖힘.
+	tw.tween_callback(func() -> void: SfxPlayer.play("hatch_open", -4.0))
+	tw.tween_property(seal, "rotation", 0.55, 0.32)
+	tw.parallel().tween_property(seal, "position", Vector2(ex + env_w * 0.5 - 40.0, ey + 240.0), 0.32).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.parallel().tween_property(seal, "modulate:a", 0.0, 0.32)
+	tw.parallel().tween_property(flap, "scale:y", -0.5, 0.30).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(flap, "modulate", Color(0.55, 0.50, 0.40), 0.30)
+	tw.tween_interval(0.12)
+	# ③ 접힌 편지 팩이 봉투에서 미끄러져 나온다(하단은 봉투 몸통에 가려진 채).
+	tw.tween_property(pack, "position:y", ey - pack_h - 26.0, 0.55).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(flap, "modulate:a", 0.0, 0.30)
+	# ④ 봉투 퇴장 + 팩이 문서 자리로 이동·확대(접힌 팩 상단면이 된다).
+	tw.tween_property(env, "position:y", ey + 150.0, 0.40).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.parallel().tween_property(env, "modulate:a", 0.0, 0.38)
+	tw.parallel().tween_property(pack, "position", Vector2(px, top_y), 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+	tw.parallel().tween_property(pack, "scale", Vector2(pw / pack_w, seg_h / pack_h), 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+	tw.tween_interval(0.10)
+	# ⑤ 1단 젖힘(뒷면이 밝아지며 내려온다) → 2단 젖힘.
+	tw.tween_property(segs[0], "scale:y", 1.0, 0.36).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	tw.parallel().tween_property(segs[0], "modulate", Color.WHITE, 0.36)
-	# 2단 젖힘.
 	tw.tween_property(segs[1], "scale:y", 1.0, 0.30).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	tw.parallel().tween_property(segs[1], "modulate", Color.WHITE, 0.30)
-	# 실제 종이로 교차 페이드 + 레터헤드·스탬프 자리 잡기 + 접힌 자국 잔상.
+	# ⑥ 실제 종이로 교차 페이드 · 인쇄된 서식(레터헤드·스탬프·장 배경)은 이 순간 이미 보인다.
 	tw.tween_property(paper, "modulate:a", 1.0, 0.16)
 	tw.parallel().tween_property(wrap, "modulate:a", 0.0, 0.22)
 	if _stamp != null:
-		tw.parallel().tween_property(_stamp, "modulate:a", 1.0, 0.35)
+		tw.parallel().tween_property(_stamp, "modulate:a", 1.0, 0.20)
 	for hn in _head_nodes:
 		if hn != null and is_instance_valid(hn):
-			tw.parallel().tween_property(hn, "modulate:a", 1.0, 0.35)
+			tw.parallel().tween_property(hn, "modulate:a", 1.0, 0.20)
 	for rn in remnants:
 		tw.parallel().tween_property(rn, "modulate:a", 1.0, 0.16)
 	tw.tween_callback(wrap.queue_free)
@@ -460,37 +524,95 @@ func _setup_palette() -> void:
 				"bad": Color(0.72, 0.18, 0.16),
 			}
 	if style == "terminal" or style == "drive":
-		_font_main = load("res://assets/fonts/D2Coding.ttf")
+		# 픽셀 폰트(네오둥근모)는 embolden 합성이 픽셀을 뭉갠다 · 굵기 없이 색으로만 위계.
+		_font_main = load("res://assets/fonts/NeoDunggeunmo.ttf")
+		_font_bold = _font_main
 	else:
 		_font_main = load("res://assets/fonts/Pretendard-Regular.otf")
-	# 굵은 글꼴은 별도 파일이 없어 합성(embolden) · 제목·라벨 열·프롬프트에만 쓴다.
-	var fv := FontVariation.new()
-	fv.base_font = _font_main
-	fv.variation_embolden = 0.55
-	_font_bold = fv
+		# 굵은 글꼴은 별도 파일이 없어 합성(embolden) · 제목·라벨 열·프롬프트에만 쓴다.
+		var fv := FontVariation.new()
+		fv.base_font = _font_main
+		fv.variation_embolden = 0.55
+		_font_bold = fv
 
 func _c(key: String) -> Color:
 	return _pal[key]
+
+# 콘솔 계열은 픽셀 폰트(네오둥근모 · 16px 격자)라 크기를 16/32 정수 배로 스냅한다.
+# 비정수 배 스케일은 픽셀이 불균일하게 깨진다. 실제 터미널처럼 본문은 단일 크기(16)로 눌러
+# "너무 잘 정리된" 위계를 지운다(15차 피드백). 종이 양식은 그대로 통과.
+func _fs(px: int) -> int:
+	if style == "terminal" or style == "drive":
+		return 32 if px >= 24 else 16
+	return px
 
 func _hex(key: String) -> String:
 	return "#" + (_pal[key] as Color).to_html(false)
 
 # 양식별 머리 행 · 데이터(대사집 단일 소스) 밖의 기술 표기만 붙인다(영문 · 검수 대상 아님).
+# 15차 리뉴얼(2026-08-31 사용자 확정): 콘솔 = 접속 배너 + 일상 잡음 로그가 고속 덤프로 좌라락
+# 지나간 뒤(해킹 화면 클리셰) 복구 로그(단일 소스)가 제 속도로 나온다. 뷰어 = 의미 없는 암호문
+# 헥스가 빠르게 지나가고 DECRYPT 게이지가 차오른 뒤에야 평문 리드아웃(복호화가 지금 일어난다).
+# 옛 ELF 매직·VEIL 아스키 바이트는 폐기: 비개발자가 읽을 수 없고 서명 공개를 스포일한다(15차).
 func _style_preamble() -> Array:
 	match style:
 		"terminal":
-			return [{"kind": "prompt", "text": "tail -n +1 /var/log/veil.d/recovered.log", "delay": 0.35}]
+			var out: Array = []
+			# 접속 배너 · figlet 문법(ASCII만 · 박스 문자는 폰트 커버리지 리스크).
+			for ln in [
+				"    _    ____   ____ _____ _   _ ____  _   _ ____",
+				"   / \\  |  _ \\ / ___|_   _| | | |  _ \\| | | / ___|",
+				"  / _ \\ | |_) | |     | | | | | | |_) | | | \\___ \\",
+				" / ___ \\|  _ <| |___  | | | |_| |  _ <| |_| |___) |",
+				"/_/   \\_\\_| \\_\\\\____| |_|  \\___/|_| \\_\\\\___/|____/",
+			]:
+				out.append({"kind": "hex", "text": ln, "fast": true, "delay": 0.03})
+			out.append({"kind": "hex", "text": "svr-03 · restricted shell · unauthorized access is logged", "fast": true, "delay": 0.3})
+			out.append({"kind": "blank", "text": "", "h": 12.0, "delay": 0.15})
+			out.append({"kind": "prompt", "text": "tail -n 200 /var/log/veil.d/recovered.log", "delay": 0.55})
+			# 일상 잡음 로그 · 백업·온도·인증 실패 같은 무해한 운영 기록이 빠르게 흘러가
+			# "정리된 문서"가 아니라 "살아 있던 서버의 로그"로 읽히게 한다.
+			for noise in [
+				["03:38:12", "INFO", "rotate: /var/log/veil.d/audit.log -> audit.log.1 (ok)"],
+				["03:38:12", "INFO", "backup: incremental snapshot committed (delta 412 MB)"],
+				["03:38:40", "WARN", "thermal: rack B-07 intake 41.2 C (threshold 40.0)"],
+				["03:38:41", "INFO", "thermal: fan profile -> MAX"],
+				["03:39:03", "INFO", "auth: session opened for maint-bot (key)"],
+				["03:39:05", "INFO", "watchdog: heartbeat ok (3/3)"],
+				["03:39:27", "WARN", "auth: 4 failed password attempts (source: internal)"],
+				["03:39:31", "INFO", "auth: lockout window applied (300 s)"],
+				["03:39:44", "INFO", "s\u2592\u2593\u2591d: \u2592\u2593 job re\u2591\u2592med ok"],
+				["03:40:02", "INFO", "cron: purge-tmp finished (2913 files)"],
+				["03:40:19", "INFO", "watchdog: heartbeat ok (3/3)"],
+				["03:40:44", "WARN", "fsck: orphaned inode chain at 0x7fa2c relinked"],
+				["03:40:58", "INFO", "audit: integrity sweep started (scope: veil.d)"],
+				["03:41:00", "ERR", "audit: checksum mismatch in 3 segments"],
+				["03:41:02", "INFO", "recover: journal replay \u2592\u2591\u2593 partial"],
+			]:
+				var nr: Array = noise
+				out.append({"kind": "log", "ts": str(nr[0]), "lvl": str(nr[1]), "text": str(nr[2]), "fast": true, "delay": 0.05})
+			return out
 		"drive":
-			return [
-				{"kind": "bar", "text": "DECRYPT", "delay": 0.8},
-				{"kind": "hex", "text": "0000  7f 45 4c 46 02 01 01 00  00 00 00 00 00 00 00 00  |.ELF............|", "delay": 0.15},
-				{"kind": "hex", "text": "0010  02 00 3e 00 01 00 00 00  a0 1f 56 45 49 4c 00 00  |..>.......VEIL..|", "delay": 0.25},
-				{"kind": "rule", "delay": 0.2},
-			]
+			var out: Array = []
+			# 암호문 덤프 · 해독 전이라 바이트도 문자열 열도 전부 쓰레기(읽라고 있는 줄이 아니다).
+			for i in 6:
+				var line: String = "%04x  " % (i * 16)
+				var asc: String = ""
+				for j in 16:
+					line += "%02x " % (randi() % 256)
+					if j == 7:
+						line += " "
+					var g: int = randi() % 93 + 33
+					asc += char(g)
+				out.append({"kind": "hex", "text": "%s |%s|" % [line, asc], "fast": true, "delay": 0.06})
+			out.append({"kind": "bar", "text": "DECRYPT", "delay": 1.7})
+			out.append({"kind": "rule", "delay": 0.3})
+			return out
 	return []
 
 # ── 행 빌더 · 행 컨테이너 + 타이핑 대상 RichTextLabel + 실측 높이 ────────────────────────
 func _rtl(parent: Control, x: float, y: float, w: float, px: int, col: Color, bb: String) -> RichTextLabel:
+	px = _fs(px)
 	var lbl := RichTextLabel.new()
 	lbl.bbcode_enabled = true
 	lbl.scroll_active = false
@@ -515,6 +637,7 @@ func _rtl(parent: Control, x: float, y: float, w: float, px: int, col: Color, bb
 	return lbl
 
 func _lab(parent: Control, x: float, y: float, w: float, px: int, col: Color, text: String, bold: bool = false, align: int = HORIZONTAL_ALIGNMENT_LEFT) -> Label:
+	px = _fs(px)
 	var l := Label.new()
 	l.text = text
 	l.add_theme_font_override("font", _font_bold if bold else _font_main)
@@ -673,17 +796,12 @@ func _build_row(d: Dictionary) -> Dictionary:
 			lbl = _rtl(row, 8.0, 8.0, bw - 16.0, 18, _c("redact"), text.replace("[", "").replace("]", ""))
 			h = 44.0
 		"sheet":
-			# 장 경계 · 겹쳐 쌓인 종이 사이의 어두운 틈 + 윗장 아래 그림자 + 아랫장 윗변 하이라이트.
-			if is_paper:
-				var full_x: float = -MARGIN_SIDE
-				var full_w: float = PAPER_WIDTH + MARGIN_SIDE * 2.0
-				_rect(row, full_x, 8.0, full_w, 34.0, Color(0.03, 0.03, 0.05, 1.0))
-				_rect(row, full_x, 8.0, full_w, 5.0, Color(0.0, 0.0, 0.0, 0.35))
-				_rect(row, full_x, 42.0, full_w, 1.0, Color(1.0, 1.0, 1.0, 0.35))
-			else:
+			# 장 경계 · 종이 양식은 여기서 장 배경 자체가 끊긴다(_layout_paper_sheets가 이 행의
+			# y를 경계로 물리적으로 분리된 종이 3장을 깐다 · 15차). 행 자체는 빈 틈만 남긴다.
+			if not is_paper:
 				_rect(row, 0.0, 22.0, PAPER_WIDTH, 1.0, _c("rule"))
 			lbl = _rtl(row, 0.0, 0.0, PAPER_WIDTH, 16, _c("body"), "")
-			h = 64.0 if is_paper else 46.0
+			h = 72.0 if is_paper else 46.0
 		"prompt":
 			_lab(row, 0.0, 4.0, 110.0, 18, _c("accent"), "svr-03:~$", true)
 			lbl = _rtl(row, 104.0, 2.0, PAPER_WIDTH - 104.0, 18, _c("body"), _to_bbcode(text))
@@ -699,28 +817,49 @@ func _build_row(d: Dictionary) -> Dictionary:
 					lc = Color(1.0, 0.42, 0.38)
 				"NOTE":
 					lc = Color(0.50, 0.80, 0.90)
-			_lab(row, 0.0, 6.0, 90.0, 16, _c("dim"), str(d.get("ts", "")))
-			_lab(row, 96.0, 6.0, 60.0, 16, lc, lvl, true)
+			var ts_l: Label = _lab(row, 0.0, 3.0, 90.0, 16, _c("dim"), str(d.get("ts", "")))
+			_lab(row, 96.0, 3.0, 60.0, 16, lc, lvl, true)
+			# live 행 · 드러나는 순간 ts를 실제 현재 시각으로 채운다(_reveal_row) = 이 줄은
+			# 복구된 과거가 아니라 지금 쓰이고 있다.
+			if bool(d.get("live", false)):
+				row.set_meta("live_ts", ts_l)
 			lbl = _rtl(row, 164.0, 2.0, PAPER_WIDTH - 164.0, 20, _c("body"), _to_bbcode(text))
-			h = max(lbl.size.y, 26.0) + 10.0
+			# 행간 타이트 · 성기면 "정리된 문서"로 읽힌다(콘솔 밀도 = 15차 의도).
+			h = max(lbl.size.y, 22.0) + 4.0
 		"corrupt":
-			# 덮어쓰인 구간 · 깨진 블록 문자 띠 위에 복구 불가 표시(어두운 적색).
-			var noise: String = ""
+			# 덮어쓰인 구간 · 깨진 블록 문자 띠(rows 겹) 위에 복구 불가 표시(어두운 적색).
 			var glyphs: String = "▒▓░█▒░"
-			for i in 64:
-				noise += glyphs[randi() % glyphs.length()]
-			_lab(row, 0.0, 4.0, PAPER_WIDTH, 15, Color(_c("bad"), 0.45), noise)
-			lbl = _rtl(row, 0.0, 28.0, PAPER_WIDTH, 18, _c("bad"), "[center]%s[/center]" % _to_bbcode(text))
-			h = 28.0 + lbl.size.y + 12.0
+			var band_rows: int = int(d.get("rows", 1))
+			var yy: float = 4.0
+			for r in band_rows:
+				var noise: String = ""
+				for i in 64:
+					noise += glyphs[randi() % glyphs.length()]
+				var nl: Label = _lab(row, 0.0, yy, PAPER_WIDTH, 15, Color(_c("bad"), 0.45), noise)
+				nl.clip_text = true
+				yy += 22.0
+			lbl = _rtl(row, 0.0, yy + 2.0, PAPER_WIDTH, 18, _c("bad"), "[center]%s[/center]" % _to_bbcode(text))
+			h = yy + 2.0 + lbl.size.y + 12.0
+		"gap":
+			# 손상 구간 건너뜀 · 복구 도구가 남기는 생략 표기(로그 흐름이 여기서 끊겼다).
+			lbl = _rtl(row, 0.0, 8.0, PAPER_WIDTH, 16, _c("dim"), "[center]· · ·  %s  · · ·[/center]" % _to_bbcode(text))
+			h = lbl.size.y + 20.0
+		"cut":
+			# 발췌 절단부 · 절취 점선 + 표기. 원본에서 이 아래를 잘라냈다는 자리(발췌 사본 픽션).
+			var dash_x: float = 0.0
+			while dash_x < PAPER_WIDTH - 10.0:
+				_rect(row, dash_x, 10.0, 14.0, 1.0, _c("rule"))
+				dash_x += 24.0
+			lbl = _rtl(row, 0.0, 20.0, PAPER_WIDTH, 15, _c("dim"), "[center]%s[/center]" % _to_bbcode(text))
+			h = 20.0 + lbl.size.y + 10.0
 		"bar":
-			# 복호화 게이지 · 드러날 때 0→100%로 차오른다(_reveal_row).
+			# 복호화 게이지 · 드러날 때 0→100%로 차오르고 %가 카운트업(_reveal_row).
 			_lab(row, 0.0, 4.0, 110.0, 16, _c("dim"), text, true)
 			_rect(row, 110.0, 9.0, 560.0, 12.0, _c("tint"))
 			var fill: ColorRect = _rect(row, 110.0, 9.0, 0.0, 12.0, _c("accent"))
 			row.set_meta("bar_fill", fill)
 			row.set_meta("bar_w", 560.0)
-			var pct: Label = _lab(row, 684.0, 4.0, 120.0, 16, _c("accent"), "100%  OK")
-			pct.modulate.a = 0.0
+			var pct: Label = _lab(row, 684.0, 4.0, 160.0, 16, _c("accent"), "0%")
 			row.set_meta("bar_pct", pct)
 			lbl = _rtl(row, 0.0, 0.0, PAPER_WIDTH, 16, _c("body"), "")
 			h = 32.0
@@ -733,19 +872,84 @@ func _build_row(d: Dictionary) -> Dictionary:
 	row.size = Vector2(PAPER_WIDTH, h)
 	return {"row": row, "lbl": lbl, "h": h}
 
-# 행 드러내기 · 컨테이너째 보이고, 게이지 행은 차오르는 연출.
+# 종이 양식 + 장 경계(sheet)가 있으면 한 장 시각을 물리적으로 분리된 종이 3장으로 분해한다
+# (발췌 사본 픽션 · 15차 "왜 세 문서가 한 봉투·한 장에 묶였는지, 크기가 왜 다른지"). 장마다
+# 폭·좌우 오프셋·색조가 미묘하게 달라 "출처가 다른 원본에서 발췌한 사본 묶음"으로 읽힌다.
+func _layout_paper_sheets(shadow: ColorRect) -> void:
+	var bounds: Array = []
+	for i in lines_data.size():
+		if str((lines_data[i] as Dictionary).get("kind", "")) == "sheet":
+			bounds.append((rows[i] as Control).position.y)
+	if bounds.is_empty():
+		return
+	# 기존 "한 장" 시각·그림자 제거 → 장별 종이 + 그림자로 대체.
+	paper_visual.visible = false
+	shadow.visible = false
+	var tops: Array = [-_head_room]
+	var bots: Array = []
+	for b in bounds:
+		bots.append(float(b) + 8.0)
+		tops.append(float(b) + 54.0)
+	bots.append(paper.size.y + 28.0)
+	var offs: Array = [0.0, 16.0, -7.0]
+	var wdel: Array = [0.0, -30.0, -12.0]
+	var tint: Array = [
+		Color(0.92, 0.90, 0.84, 0.96),
+		Color(0.90, 0.86, 0.78, 0.96),
+		Color(0.91, 0.90, 0.86, 0.96),
+	]
+	for s in tops.size():
+		var idx: int = mini(s, 2)
+		var sx: float = -MARGIN_SIDE + float(offs[idx])
+		var sw: float = PAPER_WIDTH + MARGIN_SIDE * 2.0 + float(wdel[idx])
+		var sy: float = float(tops[s])
+		var sh: float = float(bots[s]) - sy
+		var sh_rect := ColorRect.new()
+		sh_rect.color = Color(0.0, 0.0, 0.0, 0.18)
+		sh_rect.position = Vector2(sx - 6.0, sy + 6.0)
+		sh_rect.size = Vector2(sw, sh)
+		sh_rect.z_index = -1
+		sh_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		paper.add_child(sh_rect)
+		var sheet_bgr := ColorRect.new()
+		sheet_bgr.color = tint[idx]
+		sheet_bgr.position = Vector2(sx, sy)
+		sheet_bgr.size = Vector2(sw, sh)
+		sheet_bgr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		paper.add_child(sheet_bgr)
+		paper.move_child(sheet_bgr, 2)   # paper_visual·shadow 다음 · 모든 행/레터헤드보다 뒤
+		# 장 윗변 하이라이트 · 빛 받는 모서리(장이 낱장임을 보이는 최소 신호).
+		var hl := ColorRect.new()
+		hl.color = Color(1.0, 1.0, 1.0, 0.30)
+		hl.position = Vector2(sx, sy)
+		hl.size = Vector2(sw, 1.0)
+		hl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		paper.add_child(hl)
+		paper.move_child(hl, 3)
+
+# 행 드러내기 · 컨테이너째 보이고, 게이지 행은 차오르는 연출 + % 카운트업, live 행은 ts를
+# 실제 현재 시각으로 채운다(지금 쓰이고 있는 줄 · 15차).
 func _reveal_row(i: int) -> void:
 	if i < 0 or i >= rows.size():
 		return
 	var row: Control = rows[i]
 	row.modulate.a = 1.0
+	if row.has_meta("live_ts"):
+		var td: Dictionary = Time.get_time_dict_from_system()
+		(row.get_meta("live_ts") as Label).text = "%02d:%02d:%02d" % [int(td["hour"]), int(td["minute"]), int(td["second"])]
 	if row.has_meta("bar_fill"):
 		var fill: ColorRect = row.get_meta("bar_fill")
+		var pct: Label = row.get_meta("bar_pct")
 		var tw := fill.create_tween()
 		tw.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-		tw.tween_property(fill, "size:x", float(row.get_meta("bar_w")), 0.6).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-		var pct: Label = row.get_meta("bar_pct")
-		tw.tween_property(pct, "modulate:a", 1.0, 0.15)
+		tw.tween_property(fill, "size:x", float(row.get_meta("bar_w")), 1.3).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+		tw.parallel().tween_method(func(v: float) -> void:
+			if is_instance_valid(pct):
+				pct.text = "%d%%" % int(v)
+		, 0.0, 100.0, 1.3)
+		tw.tween_callback(func() -> void:
+			if is_instance_valid(pct):
+				pct.text = "100%  OK")
 
 # 글자가 없는 행(괘선·장 경계·게이지)은 타이핑 없이 delay만 두고 지나간다.
 func _is_static_row(i: int) -> bool:
@@ -777,21 +981,51 @@ func _start_typing() -> void:
 	started = true
 	enter_lockout_t = ENTER_LOCKOUT
 	current_line = 0
+	if labels.size() > 0:
+		_enter_line(0, false)
+
+# 행 진입 공통 처리 · 정적 행(글자 없음)은 delay만, fast 행은 통째 등장(고속 덤프 ·
+# 연속되면 좌라락), 그 외는 타이핑 시작. skip_delay = 사용자 스킵(대기 없이 연쇄).
+func _enter_line(i: int, skip_delay: bool) -> void:
 	revealed = 0
 	t = 0.0
-	if labels.size() > 0:
-		typing = true
-		_reveal_row(0)
-		if _is_static_row(0):
-			typing = false
-			var ln0: Dictionary = lines_data[0]
-			pause_after_line = float(ln0.get("delay", 0.2))
+	typing = true
+	_reveal_row(i)
+	var ln: Dictionary = lines_data[i]
+	if _is_static_row(i):
+		typing = false
+		pause_after_line = 0.0 if skip_delay else float(ln.get("delay", 0.2))
+	elif bool(ln.get("fast", false)):
+		(labels[i] as RichTextLabel).visible_characters = -1
+		typing = false
+		pause_after_line = 0.0 if skip_delay else float(ln.get("delay", 0.045))
+		_fast_streak += 1
+		if _fast_streak % 3 == 1:
+			SfxPlayer.play("terminal_typewrite", -6.0)
+	else:
+		_fast_streak = 0
+	_update_scroll_target()
+
+# slow 행(빌드 서명 VEIL) 완성 · 스팅 + 배경이 강조색으로 물든다(한 번 램프 · 점멸 아님,
+# 광과민 규칙). 스킵으로 완성해도 한 번은 낸다 · row 메타로 이중 발화 차단.
+func _slow_line_done() -> void:
+	if current_line < 0 or current_line >= rows.size():
+		return
+	var row: Control = rows[current_line]
+	if row.has_meta("slow_done"):
+		return
+	row.set_meta("slow_done", true)
+	SfxPlayer.play("veil_subtitle_in")
+	var tw := bg.create_tween()
+	tw.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	tw.tween_property(bg, "color", Color(0.07, 0.03, 0.12, bg.color.a), 0.7)
 
 func _process(delta: float) -> void:
 	if done or paper == null or not is_instance_valid(paper):
 		return
-	# 종이 부드럽게 스크롤 (현재 줄을 화면 중앙 ~40%에 위치)
-	paper.position.y = lerp(paper.position.y, paper_target_y, SCROLL_LERP)
+	# 종이 부드럽게 스크롤 (현재 줄을 화면 중앙 ~40%에 위치) · 고속 덤프 중엔 가속 추적.
+	var slerp: float = SCROLL_LERP * (3.5 if _fast_streak > 0 else 1.0)
+	paper.position.y = lerp(paper.position.y, paper_target_y, slerp)
 	# 페이드인 중엔 typing 진행 X · _start_typing 콜백이 started=true로 바꿔야 시작.
 	if not started:
 		return
@@ -806,11 +1040,11 @@ func _process(delta: float) -> void:
 	if current_line >= lines_data.size():
 		return
 	if typing:
+		var line: Dictionary = lines_data[current_line]
 		t += delta
-		if t >= TYPE_INTERVAL:
+		if t >= float(line.get("t_int", TYPE_INTERVAL)):
 			t = 0.0
 			revealed += 1
-			var line: Dictionary = lines_data[current_line]
 			var label: RichTextLabel = labels[current_line]
 			var total: int = label.get_total_character_count()
 			if revealed >= total:
@@ -818,9 +1052,14 @@ func _process(delta: float) -> void:
 				label.visible_characters = -1
 				typing = false
 				pause_after_line = float(line.get("delay", 0.4))
+				if bool(line.get("slow", false)):
+					_slow_line_done()
 			else:
 				label.visible_characters = revealed
-				SfxPlayer.play("terminal_typewrite")
+				if bool(line.get("slow", false)):
+					SfxPlayer.play("ui_slider_tick", -2.0)
+				else:
+					SfxPlayer.play("terminal_typewrite")
 		_update_scroll_target()
 		return
 	# 줄 사이 침묵 → 다음 줄로
@@ -830,16 +1069,7 @@ func _process(delta: float) -> void:
 		if current_line >= lines_data.size():
 			_enter_reading_done()
 		else:
-			revealed = 0
-			t = 0.0
-			typing = true
-			_reveal_row(current_line)
-			# 글자 없는 행(blank·괘선·장 경계·게이지)은 즉시 통과
-			var ln: Dictionary = lines_data[current_line]
-			if _is_static_row(current_line):
-				typing = false
-				pause_after_line = float(ln.get("delay", 0.2))
-			_update_scroll_target()
+			_enter_line(current_line, false)
 
 func _update_scroll_target() -> void:
 	# 현재 줄의 종이 내부 y 좌표
@@ -936,26 +1166,21 @@ func _input(event: InputEvent) -> void:
 		_enter_reading_done()
 		return
 	if typing:
-		# 현재 줄 즉시 완성
+		# 현재 줄 즉시 완성 · slow 행(빌드 서명)은 스킵해도 스팅·틴트는 낸다.
 		var rl: RichTextLabel = labels[current_line]
 		rl.visible_characters = -1
 		revealed = rl.get_total_character_count()
 		typing = false
 		pause_after_line = 0.0
+		if bool((lines_data[current_line] as Dictionary).get("slow", false)):
+			_slow_line_done()
 	else:
 		# 다음 줄로 스킵
 		current_line += 1
 		if current_line >= lines_data.size():
 			_enter_reading_done()
 			return
-		revealed = 0
-		t = 0.0
-		typing = true
-		_reveal_row(current_line)
-		if _is_static_row(current_line):
-			typing = false
-			pause_after_line = 0.0
-		_update_scroll_target()
+		_enter_line(current_line, true)
 
 func _start_finalize() -> void:
 	if done:
