@@ -51,6 +51,7 @@ var _live: bool = false
 var _readout_box: VBoxContainer = null
 var _readout_lines: Array = []
 var _readout_idx: int = 0
+var _mono_font: Font = null   # 리드아웃 터미널 폰트(네오둥근모) · 15차
 var _conf_lines: Array = []
 var _conf_idx: int = 0
 var _conf_label: Label = null
@@ -280,13 +281,24 @@ func _update_hint(delta: float) -> void:
 # 회수 "문서"의 14-2 리디자인: 종이 오버레이(ArcturusDocumentOverlay) 대신 코어 곁 터미널
 # 리드아웃(좌측, 줄 단위 타이핑 + terminal_typewrite). 문구 단일 소스 = VeilDialogue
 # (스토리 lab 경로와 공유). 전 구간 타이머 체인(입력 불요) · 소프트락 안전판.
+# 15차 리뉴얼(2026-08-31): 3단 복호화. ① 암호문 헥스가 빠르게 지나가고(자료가 아니라 해독
+# 대상) ② DECRYPT 게이지가 차오른 뒤 ③ 평문 리드아웃. 마지막 빌드 서명(slow 플래그 단일
+# 소스)은 글자 하나씩 + 틱 SFX + 스팅 + 시안 틴트 홀드 · 서명 공개가 이 비트의 정점이다.
 func _begin_recovery_beat() -> void:
+	_mono_font = load("res://assets/fonts/NeoDunggeunmo.ttf")
 	_readout_box = VBoxContainer.new()
 	_readout_box.add_theme_constant_override("separation", 8)
 	_readout_box.position = Vector2(90, 170)
 	_readout_box.custom_minimum_size = Vector2(430, 0)
 	add_child(_readout_box)
-	_readout_lines = VeilDialogue.get_recovery_doc_lines()
+	var pre: Array = []
+	for i in 4:
+		var line: String = "%04x  " % (i * 12)
+		for j in 12:
+			line += "%02x " % (randi() % 256)
+		pre.append({"kind": "hex", "text": line.strip_edges(), "delay": 0.14})
+	pre.append({"kind": "gauge", "delay": 1.7})
+	_readout_lines = pre + VeilDialogue.get_recovery_doc_lines()
 	_readout_idx = 0
 	get_tree().create_timer(0.8, false).timeout.connect(_advance_readout)
 
@@ -299,26 +311,82 @@ func _advance_readout() -> void:
 	var d: Dictionary = _readout_lines[_readout_idx]
 	_readout_idx += 1
 	var kind: String = str(d.get("kind", "body"))
+	var wait: float = float(d.get("delay", 0.6)) + 0.45
 	if kind == "blank":
 		var spacer := Control.new()
 		spacer.custom_minimum_size = Vector2(0, 6)
 		_readout_box.add_child(spacer)
+	elif kind == "hex":
+		# ① 암호문 · 의미 없는 바이트가 빠르게 지나간다(읽으라고 있는 줄이 아니다).
+		_readout_box.add_child(_readout_label(str(d.get("text", "")), Color(0.45, 0.55, 0.66)))
+		wait = float(d.get("delay", 0.14))
+		SfxPlayer.play("terminal_typewrite", -8.0)
+	elif kind == "gauge":
+		# ② 복호화 게이지 · 블록 게이지 + % 카운트업(1.4s) · 해독이 지금 일어난다.
+		var gl: Label = _readout_label("DECRYPT", Color(0.62, 0.92, 1.0))
+		_readout_box.add_child(gl)
+		var steps: int = 18
+		var tw := gl.create_tween()
+		tw.tween_method(func(v: float) -> void:
+			if is_instance_valid(gl):
+				var filled: int = int(round(v * float(steps) / 100.0))
+				gl.text = "DECRYPT  %s%s  %d%%" % ["▓".repeat(filled), "░".repeat(steps - filled), int(v)]
+		, 0.0, 100.0, 1.4)
+		tw.tween_callback(func() -> void:
+			if is_instance_valid(gl):
+				gl.text = "DECRYPT  %s  100%%  OK" % "▓".repeat(steps))
+		SfxPlayer.play("terminal_typewrite", -4.0)
+	elif bool(d.get("slow", false)):
+		# ③ 빌드 서명 · 라벨을 먼저 놓고 서명 글자를 하나씩 새긴다. 체인은 _type_signature가 이어감.
+		var sig: String = str(d.get("text", "")).replace("[[", "").replace("]]", "")
+		var sl: Label = _readout_label("", Color(0.62, 0.92, 1.0))
+		_readout_box.add_child(sl)
+		_type_signature(sl, str(d.get("label", "")), sig, 0)
+		return
 	else:
-		var l := Label.new()
 		# kv 행(라벨 + 값)은 한 줄로 합친다 · [[강조]] 표식은 종이 오버레이 전용이라 벗긴다.
 		var body: String = str(d.get("text", "")).replace("[[", "").replace("]]", "")
 		if d.has("label"):
 			body = "%s: %s" % [str(d.get("label", "")), body]
-		l.text = body
-		l.add_theme_font_size_override("font_size", 19 if kind == "title" else 15)
-		l.add_theme_color_override("font_color",
+		var l: Label = _readout_label(body,
 			Color(0.62, 0.92, 1.0) if kind == "title" else Color(0.80, 0.88, 0.94))
-		l.add_theme_color_override("font_outline_color", Color(0, 0, 0))
-		l.add_theme_constant_override("outline_size", 4)
-		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		_readout_box.add_child(l)
 		SfxPlayer.play("terminal_typewrite", -4.0)
-	get_tree().create_timer(float(d.get("delay", 0.6)) + 0.45, false).timeout.connect(_advance_readout)
+	get_tree().create_timer(wait, false).timeout.connect(_advance_readout)
+
+# 리드아웃 공용 라벨 · 터미널 폰트(픽셀 16px 격자) + 외곽선.
+func _readout_label(text: String, col: Color) -> Label:
+	var l := Label.new()
+	l.text = text
+	if _mono_font != null:
+		l.add_theme_font_override("font", _mono_font)
+	l.add_theme_font_size_override("font_size", 16)
+	l.add_theme_color_override("font_color", col)
+	l.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+	l.add_theme_constant_override("outline_size", 4)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	return l
+
+# 빌드 서명 · 글자 하나씩(0.32s) + 틱 SFX. 완성 시 스팅 + 시안 틴트가 한 번 차올라 유지
+# (점멸 아님 · 광과민 규칙) + 홀드 후 고백으로.
+func _type_signature(l: Label, lab: String, full: String, i: int) -> void:
+	if _skipped or not is_inside_tree() or not is_instance_valid(l):
+		return
+	l.text = "%s: %s" % [lab, full.substr(0, i)]
+	if i > 0:
+		SfxPlayer.play("ui_slider_tick", -2.0)
+	if i >= full.length():
+		SfxPlayer.play("veil_subtitle_in")
+		var tint := ColorRect.new()
+		tint.color = Color(0.30, 0.75, 1.0, 0.0)
+		tint.set_anchors_preset(Control.PRESET_FULL_RECT)
+		tint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(tint)
+		var tw := tint.create_tween()
+		tw.tween_property(tint, "color:a", 0.10, 0.7)
+		get_tree().create_timer(1.6, false).timeout.connect(_begin_confession)
+		return
+	get_tree().create_timer(0.32, false).timeout.connect(_type_signature.bind(l, lab, full, i + 1))
 
 func _begin_confession() -> void:
 	if _skipped or not is_inside_tree():
