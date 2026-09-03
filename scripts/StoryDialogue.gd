@@ -272,17 +272,18 @@ func _build_line(ln: Dictionary) -> void:
 	# 구도(2026-08-25 사용자 안).
 	var panel := PanelContainer.new()
 	# 대사 판 자체를 이름표 자리까지 당긴다(2026-08-30 사용자 "텍스트가 아니라 대화창을 거기로") ·
-	# 판 left 466, 이름표 486이 윗변에 걸터앉고 텍스트 시작 = 466 + 20 = 486(이름표 왼끝 정렬 유지).
-	# 초상(48~468)은 판 왼쪽 바깥에 선다.
+	# 판 left 466, 이름표 486이 윗변에 걸터앉고 텍스트 시작 = 466 + 20 = 486(이름표 왼끝 정렬 유지 ·
+	# 왼쪽 여백 20은 이 정렬 계약이라 고정). 초상(48~468)은 판 왼쪽 바깥에 선다.
+	# 위/아래/오른쪽 여백 확대 + 판 8px 상향(15차 판정 "글씨가 테두리에 딱 붙은 느낌" · 2026-09-03).
 	sb.content_margin_left = 20.0
-	sb.content_margin_right = 34.0
-	sb.content_margin_top = 22.0
-	sb.content_margin_bottom = 18.0
+	sb.content_margin_right = 46.0
+	sb.content_margin_top = 28.0
+	sb.content_margin_bottom = 26.0
 	panel.add_theme_stylebox_override("panel", sb)
 	panel.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	panel.offset_left = 466.0
 	panel.offset_right = -130.0
-	panel.offset_top = -208.0
+	panel.offset_top = -216.0
 	panel.offset_bottom = -64.0
 	_row.add_child(panel)
 	# 윗변 림 · 초상 오른쪽부터 패널 오른끝까지 화자색 라인(이름표가 걸터앉는 레일).
@@ -292,8 +293,8 @@ func _build_line(ln: Dictionary) -> void:
 	rim.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	rim.offset_left = 476.0
 	rim.offset_right = -138.0
-	rim.offset_top = -209.0
-	rim.offset_bottom = -207.0
+	rim.offset_top = -217.0
+	rim.offset_bottom = -215.0
 	_row.add_child(rim)
 	# 모서리 브래킷 + 이중 프레임 + 레일 눈금 · 패널보다 6px 바깥.
 	var trim := _PanelTrim.new()
@@ -303,17 +304,17 @@ func _build_line(ln: Dictionary) -> void:
 	trim.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	trim.offset_left = 460.0
 	trim.offset_right = -124.0
-	trim.offset_top = -214.0
+	trim.offset_top = -222.0
 	trim.offset_bottom = -58.0
 	_row.add_child(trim)
 	# 초상을 패널 위에 얹고, 월경부는 셰이더 글리치가 잇는다(명명 연출=셰이더급 규칙).
-	# edge_y = (초상 상단 516 - 패널 윗변 208) / 초상 높이 420 · 초상 에셋이 정사각이라
+	# edge_y = (초상 상단 516 - 패널 윗변 216) / 초상 높이 420 · 초상 에셋이 정사각이라
 	# KEEP_ASPECT로 렉트에 꽉 찬다(스크린샷 실측 확인).
 	_portrait_mat = null
 	if GameState.screen_fx_enabled:
 		var pm := ShaderMaterial.new()
 		pm.shader = PORTRAIT_GLITCH
-		pm.set_shader_parameter("edge_y", (516.0 - 208.0) / 420.0)
+		pm.set_shader_parameter("edge_y", (516.0 - 216.0) / 420.0)
 		pm.set_shader_parameter("block_tint",
 			Vector3(0.55, 0.30, 0.85) if who == "rival" else Vector3(0.30, 0.75, 1.0))
 		p_tex.material = pm
@@ -352,8 +353,8 @@ func _build_line(ln: Dictionary) -> void:
 	plate.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	plate.offset_left = 486.0
 	plate.offset_right = 586.0
-	plate.offset_top = -226.0
-	plate.offset_bottom = -192.0
+	plate.offset_top = -234.0
+	plate.offset_bottom = -200.0
 	var name_l := Label.new()
 	name_l.text = speaker
 	name_l.add_theme_font_size_override("font_size", 18)

@@ -1076,8 +1076,11 @@ func _update_scroll_target() -> void:
 	if current_line >= rows.size():
 		return
 	var lbl_y: float = (rows[current_line] as Control).position.y
-	# paper의 절대 좌표가 (VIEWPORT_H * 0.42 - lbl_y)일 때 그 줄이 화면 약 42% 위치.
-	var target: float = VIEWPORT_H * 0.42 - lbl_y
+	# 타이핑 줄 앵커 = 화면 아래쪽(15차 판정 A안 · 2026-09-03 승인). 종전 42%는 타이핑 줄 아래로
+	# 빈 종이/화면이 절반 넘게 미리 노출됐다. 콘솔·뷰어(어두운 창)는 78%, 종이는 70%.
+	# paper의 절대 좌표가 (앵커 - lbl_y)일 때 그 줄이 앵커 높이에 온다.
+	var anchor: float = 0.70 if style == "paper" else 0.78
+	var target: float = VIEWPORT_H * anchor - lbl_y
 	# 종이가 너무 위로 올라가지 않게 clamp (최대 상단 = MARGIN_TOP)
 	if target > MARGIN_TOP:
 		target = MARGIN_TOP
