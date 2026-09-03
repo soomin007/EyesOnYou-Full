@@ -14,10 +14,23 @@ var t: float = 0.0
 var done: bool = false
 # 진입 직후 1초 입력 lockout · 사망 직전 점프 연타가 다음 화면을 자동 advance하는 사고 방지.
 var input_lockout_t: float = GameState.INPUT_LOCKOUT_DURATION
+# 오버레이 모드(2026-09-03 · 사망 한 박자 확장) · Stage가 pause로 얼린 죽은 플레이 화면 위에
+# 이 씬을 얹는다(Stage._open_death_overlay가 add_child 전에 켠다). 배경을 반투명으로 낮춰
+# 정지 장면이 비쳐 보이고, pause는 유지하다가 씬을 떠나는 순간 해제한다.
+var overlay_mode: bool = false
 
 func _ready() -> void:
-	# 안전망: 이전 scene에서 paused가 carry되어 Death가 freeze되는 패턴 차단.
-	get_tree().paused = false
+	if overlay_mode:
+		# 죽은 장면이 비치는 딤 · 불투명 배경을 낮추고 짧게 차오른다(하드 컷 방지).
+		var bg: ColorRect = $BG
+		var c: Color = bg.color
+		bg.color = Color(c.r, c.g, c.b, 0.0)
+		var tw := bg.create_tween()
+		tw.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+		tw.tween_property(bg, "color:a", 0.62, 0.3)
+	else:
+		# 안전망: 이전 scene에서 paused가 carry되어 Death가 freeze되는 패턴 차단.
+		get_tree().paused = false
 	title_label.text = "MISSION FAILED"
 	speaker_label.text = "VEIL"
 	full_text = VeilDialogue.get_death_briefing(GameState.death_count, GameState.followed_veil_last_choice)
@@ -72,6 +85,7 @@ func _input(event: InputEvent) -> void:
 		return
 	if event.is_action_pressed("ui_cancel"):
 		GameState.reset()
+		get_tree().paused = false   # 오버레이 모드의 pause 해제(비오버레이에선 이미 false · 무해)
 		get_tree().change_scene_to_file.call_deferred(SceneRouter.TITLE)
 		return
 	if event.is_action_pressed("ui_skip") or event.is_action_pressed("jump") or OrientationGuard.is_tap(event):
@@ -84,6 +98,7 @@ func _input(event: InputEvent) -> void:
 		_restart_stage()
 
 func _restart_stage() -> void:
+	get_tree().paused = false   # 오버레이 모드의 pause 해제 · 전환될 새 씬이 얼어 있으면 안 된다
 	GameState.player_hp = GameState.effective_max_hp()
 	# 스토리 모드·연습장 = 그 스테이지 재시작(쉬운 모드 문법 유지).
 	if GameState.story_mode or GameState.playground_active:

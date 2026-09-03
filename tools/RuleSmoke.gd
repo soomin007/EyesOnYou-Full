@@ -8,7 +8,8 @@ extends Node
 #   ④ 이동 발판 탑승: 수평 리프트 위 정지 플레이어의 상대 위치 한 주기 흔들림 0(엔진 1스텝 지연 보정) ·
 #      수직 리프트는 접지 유지(floor lost 0) + 윗면 오차 ≤ 3.5px
 #   ⑤ 14-1 컷씬 게이트: 첫 진입은 인트로 컷씬(세계 정지) · 사망 재시작(본 컷씬)은 정지 없음
-#   ⑥ 사망 한 박자: 죽는 순간 time_scale이 내려갔다가 실시간 ~0.9s 뒤 1.0 복원(씬 전환은 하니스가 차단)
+#   ⑥ 사망 한 박자: 죽는 순간 time_scale이 내려갔다가 실시간 ~0.9s 뒤 1.0 복원(오버레이는 하니스가 차단)
+#      + 오버레이 확장(09-03): _open_death_overlay = tree pause + death.tscn overlay_mode 자식
 #   ⑦ P3 짝 규칙(A안): 실체화 창마다 진짜·가짜 눈이 플레이어가 닿을 수 있는 자리 둘에 동시에 서고,
 #      진짜는 요원을 똑바로 본다 · 다음 창의 진짜 자리는 직전과 다르다
 #   ⑧ 문서 서식: 종이/콘솔/뷰어 3양식이 행마다 컨테이너·타이핑 라벨을 1:1로 갖고, 실측 높이가 0보다 크며
@@ -281,6 +282,18 @@ func _death_beat_case() -> void:
 	await get_tree().create_timer(1.4, true, false, true).timeout    # 실시간 1.4s · 박자 종료 후
 	_check("박자 종료 후 time_scale 1.0 복원", is_equal_approx(Engine.time_scale, 1.0), "ts=%.2f" % Engine.time_scale)
 	Engine.time_scale = 1.0
+	# 오버레이 확장(09-03) · 박자 끝 = 씬 전환이 아니라 pause + 죽은 화면 위 death.tscn.
+	stage.call("_open_death_overlay")
+	await get_tree().process_frame
+	var death_n: Node = null
+	for c in stage.get_children():
+		if c is CanvasLayer:
+			for cc in (c as Node).get_children():
+				if (cc as Node).get("overlay_mode") != null:
+					death_n = cc
+	_check("사망 오버레이 · pause + death 노드 존재", get_tree().paused and death_n != null)
+	_check("사망 오버레이 · overlay_mode 켜짐", death_n != null and bool(death_n.get("overlay_mode")))
+	get_tree().paused = false
 	stage.queue_free()
 	await get_tree().process_frame
 

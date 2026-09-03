@@ -7344,15 +7344,20 @@ func _spawn_enemy(kind: int, pos: Vector2, wave_idx: int = -1, disguise_kind: in
 	if wave_idx >= 0:
 		e.set_meta("wave_idx", wave_idx)
 	# no_reward는 스폰 시점 값이라 bind로 굳으면 안 된다 · 환경 처치(열차)는 죽는 순간에
-	# 정해지므로 그 시점의 적 상태를 읽어 합친다.
+	# 정해지므로 그 시점의 적 상태를 읽어 합친다. 트리클 증원(p1_trickle)은 수확 체감 정산을
+	# 죽는 순간에 돌려 오브만 성기게 한다(점수·집계는 유지).
 	e.killed.connect(func(at_pos: Vector2) -> void:
 		var suppressed: bool = no_reward
-		if is_instance_valid(e) and e.get("env_killed") == true:
-			suppressed = true
-		_on_enemy_killed(at_pos, wave_idx, shiny, elite, suppressed))
+		var thin_orb: bool = false
+		if is_instance_valid(e):
+			if e.get("env_killed") == true:
+				suppressed = true
+			if e.has_meta("p1_trickle") and not suppressed:
+				thin_orb = not _p1_harvest_tick()
+		_on_enemy_killed(at_pos, wave_idx, shiny, elite, suppressed, thin_orb))
 	return e
 
-func _on_enemy_killed(at_position: Vector2, wave_idx: int = -1, shiny: bool = false, elite: bool = false, no_reward: bool = false) -> void:
+func _on_enemy_killed(at_position: Vector2, wave_idx: int = -1, shiny: bool = false, elite: bool = false, no_reward: bool = false, skip_orb: bool = false) -> void:
 	# 처치 파편(그래픽 패키지 1차) · 보상 여부와 무관한 그림(환경 처치도 부서지는 건 같다).
 	# 엘리트·황금은 짧은 히트스톱까지(일반 처치는 빈도가 높아 제외 · 피로 방지).
 	Fx.death_burst(self, at_position, elite, shiny)
@@ -7364,10 +7369,12 @@ func _on_enemy_killed(at_position: Vector2, wave_idx: int = -1, shiny: bool = fa
 	if not no_reward:
 		GameState.register_kill(elite, shiny)
 		_refresh_hud()   # 킬 점수 실시간 반영(우상단 SCORE)
-		_spawn_orb(at_position + Vector2(0, -20.0))
-		# 엘리트 · 오브 1개 추가(총 가치 2, 위험 증가에 보상 동행 §2).
-		if elite:
-			_spawn_orb(at_position + Vector2(14.0, -26.0))
+		# skip_orb = P1 트리클 수확 체감(_p1_harvest_tick) · 점수는 유지, 이번 처치만 드롭 없음.
+		if not skip_orb:
+			_spawn_orb(at_position + Vector2(0, -20.0))
+			# 엘리트 · 오브 1개 추가(총 가치 2, 위험 증가에 보상 동행 §2).
+			if elite:
+				_spawn_orb(at_position + Vector2(14.0, -26.0))
 		if shiny:
 			_reward_shiny_kill(at_position + Vector2(0, -20.0))
 	# 웨이브 모드: 처치된 적의 웨이브 카운트 감소 + 다음 웨이브 트리거 검사
@@ -7707,8 +7714,44 @@ func _p1_trickle_tick() -> void:
 func _p1_do_spawn(kind: int, pos: Vector2) -> void:
 	if _rival_phase != 0 or goal_reached or not is_inside_tree():
 		return
-	_spawn_enemy(kind, pos)
+	var e: Node = _spawn_enemy(kind, pos)
+	if e != null:
+		e.set_meta("p1_trickle", true)   # 수확 체감 대상 표시(아래 _p1_harvest_tick)
 	_enemies_remaining += 1
+
+# ─── P1 트리클 증원 수확 체감(2026-08-31 판정 · 09-03 승인) ───
+# 무한 증원의 XP 드롭은 유지하되(고전 중인 요원에겐 러버밴딩 구제), 빠른 연속 처치가 쌓이면
+# 드롭이 성겨진다. 호출병·경보 증원의 "파밍 구멍 차단" 규칙(무보상)과 결이 같되, 여긴 구제
+# 기능이 목적이라 완전 차단 대신 체감(遞減). 처치 간격이 벌어지면 피로도가 식어 전량 드롭으로
+# 돌아온다. 점수·처치 집계는 그대로(드롭만 성겨진다).
+const P1_HARVEST_SOFT: float = 6.0    # 이 피로도까지는 전량 드롭
+const P1_HARVEST_HARD: float = 12.0   # 소프트~하드 = 2마리당 1드롭, 넘으면 3마리당 1드롭
+const P1_HARVEST_COOL: float = 6.0    # 피로도 1이 식는 데 걸리는 초(6s에 한 마리꼴이면 안 쌓임)
+var _p1_harvest_fatigue: float = 0.0
+var _p1_harvest_last_ms: int = 0
+var _p1_harvest_seq: int = 0
+var _p1_harvest_spoken: bool = false
+
+# 트리클 처치 1건 정산 · 오브를 떨굴지 반환. 사망 P1 리셋 시 Stage가 새로 뜨므로 자동 초기화.
+func _p1_harvest_tick() -> bool:
+	var now: int = Time.get_ticks_msec()
+	if _p1_harvest_last_ms > 0:
+		_p1_harvest_fatigue = maxf(0.0,
+			_p1_harvest_fatigue - float(now - _p1_harvest_last_ms) / 1000.0 / P1_HARVEST_COOL)
+	_p1_harvest_last_ms = now
+	_p1_harvest_fatigue += 1.0
+	if _p1_harvest_fatigue <= P1_HARVEST_SOFT:
+		_p1_harvest_seq = 0
+		return true
+	_p1_harvest_seq += 1
+	# 체감 진입 1회 안내 · 드롭이 조용히 사라지면 버그로 읽힌다(플레이어 경험 동기화 규칙).
+	if not _p1_harvest_spoken:
+		_p1_harvest_spoken = true
+		_show_veil_subtitle(VeilDialogue.banded(
+			"증원만 계속 잡으면 얻는 것이 줄어듭니다. 목표는 위층 안테나입니다.",
+			"증원만 계속 잡으면 얻는 게 줄어요. 위층 안테나부터 부숩시다."), 3.2)
+	var period: int = 2 if _p1_harvest_fatigue <= P1_HARVEST_HARD else 3
+	return _p1_harvest_seq % period == 0
 
 # 살아있는 페이즈 목표 노드(rival_node) 수 · P1 기둥/P2 노드 공용 카운트.
 func _rival_nodes_alive() -> int:
@@ -7937,8 +7980,19 @@ func _p2_spawn_nodes() -> void:
 		node.killed.connect(_on_p2_node_down.bind(side))
 		if side < _p2_turrets.size() and _p2_turrets[side] is Node2D:
 			var link := _P2PowerLink.new()
-			link.from_pos = (node as Node2D).global_position + Vector2(0.0, -34.0)
-			link.to_pos = (_p2_turrets[side] as Node2D).global_position + Vector2(0.0, -8.0)
+			# 경유점: 노드 소켓 → 수직 강하 → 바닥 덕트(사선 아래) → 포탑 뒤 벽면 수직 런
+			# (배선 리워크 2026-09-03 · 사선 높이의 대각 케이블 폐지, 사유는 클래스 주석).
+			var npos: Vector2 = (node as Node2D).global_position
+			var trap_n: BulletTrap = _p2_turrets[side] as BulletTrap
+			var tpos: Vector2 = trap_n.global_position
+			var wall_x: float = tpos.x - trap_n.direction.x * 18.0   # 장착면 쪽(총구 반대)
+			var duct_y: float = 1210.0                               # 지면 살짝 위 · 하단 사선(1182) 아래
+			link.pts = PackedVector2Array([
+				npos + Vector2(0.0, 24.0),
+				Vector2(npos.x, duct_y),
+				Vector2(wall_x, duct_y),
+				Vector2(wall_x, tpos.y),
+			])
 			add_child(link)
 			_p2_links.append(link)
 			_rival_p2_props.append(link)
@@ -8058,10 +8112,15 @@ func _p2_respawn_node(side: int, rx: float) -> void:
 	node.killed.connect(_on_p2_node_down.bind(side))
 	_enemies_remaining += 1
 
-# P2 전원 케이블 · 기둥→포탑을 잇는 처진 바이올렛 라인 + 흐르는 전류 펄스. power_off로 소등.
+# P2 전원 배선 · 노드→바닥 덕트→벽면 런으로 포탑까지 잇는 바이올렛 라인 + 흐르는 전류 펄스.
+# power_off로 소등.
 class _P2PowerLink extends Node2D:
-	var from_pos: Vector2 = Vector2.ZERO
-	var to_pos: Vector2 = Vector2.ZERO
+	# 배선 리워크(15차 판정 부속 · 2026-09-03): 종전엔 노드→포탑을 처진 대각 케이블 하나로 이어
+	# 케이블 끝이 포탑 발사 높이(사선)에 겹쳤다. 그 높이에서 날아온 포탑 탄 피격이 "회선에 닿아
+	# 맞았다"로 읽히는 오인(회선 자체는 판정 없는 시각 전용)과, 포탑이 제 회선을 관통해 쏘는
+	# 배치 모순의 공통 원인. 이제 노드에서 수직 강하 → 바닥 덕트 → 포탑 뒤 벽면 수직 런으로
+	# 둘러 사선 높이를 비운다(경유점은 호출자가 계산).
+	var pts: PackedVector2Array = PackedVector2Array()   # 전역 경유점 · 노드→바닥→벽→포탑 순
 	var _t: float = 0.0
 	var _off: bool = false
 	var _off_t: float = 0.0
@@ -8082,24 +8141,34 @@ class _P2PowerLink extends Node2D:
 		queue_redraw()
 
 	func _draw() -> void:
+		if pts.size() < 2:
+			return
 		var a: float = 0.55
 		if _off:
 			a *= maxf(0.0, 1.0 - _off_t / 0.6)
 		var col := Color(0.72, 0.42, 1.0, a)
-		var seg: int = 14
-		var pts := PackedVector2Array()
-		for i in seg + 1:
-			var k: float = float(i) / float(seg)
-			var p: Vector2 = from_pos.lerp(to_pos, k)
-			p.y += sin(PI * k) * 26.0   # 살짝 처진 케이블
-			pts.append(to_local(p))
-		draw_polyline(pts, col, 2.0, true)
+		var local_pts := PackedVector2Array()
+		for p in pts:
+			local_pts.append(to_local(p))
+		draw_polyline(local_pts, col, 2.0, true)
+		# 모서리 정션 점 · 직선 런들이 "설치된 배선"으로 읽히게(케이블이 아니라 덕트 문법).
+		for i in range(1, local_pts.size() - 1):
+			draw_circle(local_pts[i], 3.0, Color(col.r, col.g, col.b, a * 0.9))
 		if not _off:
-			# 전류 펄스 · 기둥에서 포탑 쪽으로 흐른다(전원 방향).
-			var pk: float = fmod(_t * 0.7, 1.0)
-			var pp: Vector2 = from_pos.lerp(to_pos, pk)
-			pp.y += sin(PI * pk) * 26.0
-			draw_circle(to_local(pp), 3.5, Color(0.9, 0.7, 1.0, minf(1.0, a + 0.35)))
+			# 전류 펄스 · 노드에서 포탑 쪽으로 경유점을 따라 흐른다(전원 방향, ~240px/s).
+			var total: float = 0.0
+			for i in range(pts.size() - 1):
+				total += pts[i].distance_to(pts[i + 1])
+			if total <= 0.0:
+				return
+			var dist: float = fmod(_t * 240.0, total)
+			for i in range(pts.size() - 1):
+				var seg_len: float = pts[i].distance_to(pts[i + 1])
+				if dist <= seg_len:
+					var pp: Vector2 = pts[i].lerp(pts[i + 1], dist / maxf(seg_len, 0.001))
+					draw_circle(to_local(pp), 3.5, Color(0.9, 0.7, 1.0, minf(1.0, a + 0.35)))
+					break
+				dist -= seg_len
 
 # P2 제어 노드의 교대 실드 표시 · 부모(enemy) 메타 fs_dir 쪽 반구. 막힌 쪽은 면이 있는 실드,
 # 열린 쪽은 따뜻한 노출 글로우("여길 치라"), 교대 순간엔 밝은 스냅(실드가 넘어간 쪽으로 시선 유도).
@@ -10083,15 +10152,18 @@ func _on_player_died() -> void:
 	_play_death_beat()
 
 # ─── 사망 한 박자(2026-08-30 사용자 안 · 종전엔 죽는 순간 바로 사망 화면으로 잘려 장면이 없었다) ───
-# 실시간 DEATH_BEAT_DUR: 히트스톱(0.05배) → 0.25배 슬로모, 카메라 1.08배 줌인 + 채도 감쇠 램프 +
-# 음악 덕킹. 아무 키로 스킵(첫 0.25s는 잠금 · 죽게 만든 입력이 그대로 스킵되지 않게). 점멸 없음.
-# 씬 전환 전 time_scale 복원(known_issues · 전환 뒤 배속이 남는 함정). 반복 사망이 잦은 게임이라
-# 1초를 넘기지 않는다.
+# 실시간 DEATH_BEAT_DUR: 히트스톱(0.05배) → 0.25배 슬로모가 완전 정지 직전(0.02배)까지 감속,
+# 카메라 1.08배 줌인 + 채도 감쇠 램프 + 음악 덕킹. 아무 키로 스킵(첫 0.25s는 잠금 · 죽게 만든
+# 입력이 그대로 스킵되지 않게). 점멸 없음. 반복 사망이 잦은 게임이라 1초를 넘기지 않는다.
+# 확장(2026-08-31 안 · 09-03 승인): 박자 끝 = 씬 전환이 아니라 tree pause(진짜 정지) + 사망
+# 화면을 죽은 플레이 화면 위 오버레이로 얹는다. time_scale은 pause 전에 1.0 복원
+# (known_issues · 전환/정지 뒤 배속이 남는 함정).
 const DEATH_BEAT_DUR: float = 0.9
 const DEATH_BEAT_STOP: float = 0.08
 const DEATH_BEAT_SCALE: float = 0.25
+const DEATH_BEAT_FLOOR: float = 0.02   # 감속 종점 · 0이면 delta도 0이 되어 루프가 못 끝난다
 var _death_beat_active: bool = false
-var death_transition_enabled: bool = true   # 하니스(RuleSmoke)가 끈다 · 씬 전환 없이 박자만 검증
+var death_transition_enabled: bool = true   # 하니스(RuleSmoke)가 끈다 · 오버레이 없이 박자만 검증
 
 func _play_death_beat() -> void:
 	if player != null and is_instance_valid(player) and player.has_method("cancel_hit_slowmo"):
@@ -10117,8 +10189,10 @@ func _play_death_beat() -> void:
 		if not is_inside_tree():
 			break
 		t += get_process_delta_time() / maxf(Engine.time_scale, 0.001)
-		if t >= DEATH_BEAT_STOP and Engine.time_scale < DEATH_BEAT_SCALE:
-			Engine.time_scale = DEATH_BEAT_SCALE
+		if t >= DEATH_BEAT_STOP:
+			# 슬로모 → 정지 직전까지 계단 없이 감속(ease-in · 뒤로 갈수록 가파르게 느려진다).
+			var k2: float = clampf((t - DEATH_BEAT_STOP) / (DEATH_BEAT_DUR - DEATH_BEAT_STOP), 0.0, 1.0)
+			Engine.time_scale = lerpf(DEATH_BEAT_SCALE, DEATH_BEAT_FLOOR, k2 * k2)
 		var k: float = clampf(t / DEATH_BEAT_DUR, 0.0, 1.0)
 		var e: float = 1.0 - (1.0 - k) * (1.0 - k)
 		if cam != null and is_instance_valid(cam):
@@ -10129,7 +10203,19 @@ func _play_death_beat() -> void:
 	Engine.time_scale = 1.0
 	if not death_transition_enabled:
 		return
-	get_tree().change_scene_to_file.call_deferred(SceneRouter.DEATH)
+	_open_death_overlay()
+
+# 사망 화면 오버레이 · 세계를 pause로 얼리고(desat·줌 유지) 그 위에 death.tscn을 얹는다.
+# pause 해제는 Death가 씬을 떠나기 직전에 직접 한다(재시도/타이틀 공통).
+func _open_death_overlay() -> void:
+	get_tree().paused = true
+	var layer := CanvasLayer.new()
+	layer.layer = 37
+	layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(layer)
+	var death := (load(SceneRouter.DEATH) as PackedScene).instantiate()
+	death.set("overlay_mode", true)
+	layer.add_child(death)
 
 # 코어 함락 = 방어 실패. 플레이어 사망과 동일 경로(재시도)로 처리한다.
 # breached는 DefenseCore._physics_process 안에서 emit되므로 씬 전환은 call_deferred로 한 프레임 미룬다.
