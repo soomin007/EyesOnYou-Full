@@ -333,6 +333,39 @@ func _build_debug_tab() -> Control:
 	meta_warn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	v.add_child(meta_warn)
 
+	# ── 검증 직행(2026-09-04 · 검증 부담 상한 정책) · 갤러리 카드마다 2분 안에 그 장면에 닿는 점프. ──
+	# 연습장 모드(playground_active)로 들어가 죽어도 그 자리에서 다시 시작하고 진행 데이터를 건드리지 않는다.
+	# 빌드는 s13 시점 표준(lv18 · 2단 점프·대시·사격 강화 2·다발·활강). 맵별 세부는 연습장 HUD 패널에서.
+	var spacer_j := Control.new()
+	spacer_j.custom_minimum_size = Vector2(0, 12)
+	v.add_child(spacer_j)
+	v.add_child(_make_section_header("검증 직행"))
+	var jump_note := Label.new()
+	jump_note.text = "검증 갤러리 카드의 장면으로 바로 들어가요. 연습장 모드라 진행 데이터에 영향 없고, 쓰러지면 그 자리에서 다시 시작합니다."
+	jump_note.add_theme_font_size_override("font_size", 13)
+	jump_note.add_theme_color_override("font_color", Color(0.62, 0.72, 0.85))
+	jump_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(jump_note)
+	var jump_defs: Array = [
+		{"label": "14-1 최종 보스전 · 처음부터 (P1 지휘 → P2 빙의 → P3 눈)", "rid": "route_core_recovery", "stage": 13, "rival": 0, "boss": 0},
+		{"label": "14-1 최종 보스전 · P3 눈부터 (1장 겨눔 → 2장 추격 → 3장 대면)", "rid": "route_core_recovery", "stage": 13, "rival": 2, "boss": 0},
+		{"label": "14-2 터널 · 코어 목격 → 리드아웃 → 고백 → 처리 선택", "tunnel": true},
+		{"label": "SENTINEL 보스전 · 처음부터", "rid": "route_lab", "stage": 8, "rival": 0, "boss": 0},
+		{"label": "SENTINEL 보스전 · 3페이즈부터 (사망 재개 상태 확인)", "rid": "route_lab", "stage": 8, "rival": 0, "boss": 3},
+	]
+	for jump_entry in jump_defs:
+		var jd: Dictionary = jump_entry
+		var jb := Button.new()
+		jb.text = str(jd.get("label", ""))
+		jb.custom_minimum_size = Vector2(0, 36)
+		jb.add_theme_font_size_override("font_size", 13)
+		if bool(jd.get("tunnel", false)):
+			jb.pressed.connect(_debug_jump_tunnel)
+		else:
+			jb.pressed.connect(_debug_jump_stage.bind(str(jd.get("rid", "")), int(jd.get("stage", 0)),
+				int(jd.get("rival", 0)), int(jd.get("boss", 0))))
+		v.add_child(jb)
+
 	# ── 문서 열람(개발용 · 2026-08-30 갤러리 14차 전체 메모 "서식을 직접 체험할 수 있게 디버그 탭에") ──
 	# 인게임 문서 3양식을 설정 위에서 바로 연다(문구 단일 소스 = VeilDialogue). 버튼에 실제 등장 위치를 적어
 	# 실플레이 확인 경로도 안내. 타이틀 메뉴 버튼으로 냈던 것은 같은 날 회수(사용자 지정 자리 = 디버그 탭).
@@ -476,6 +509,42 @@ func _on_playground_pressed() -> void:
 	# pause 메뉴에서 진입한 경우 paused 해제 후 scene 전환
 	get_tree().paused = false
 	get_tree().change_scene_to_file.call_deferred(SceneRouter.STAGE)
+
+# 검증 직행 · 연습장 모드로 특정 맵·페이즈에 바로 선다(PlaygroundOverlay._on_ch14_phase와 같은 세팅 +
+# 표준 빌드). rival_phase = 14-1 도달 페이즈(0/1/2 · _init_rival_boss 체크포인트 경로) ·
+# boss_phase = SENTINEL 도달 페이즈(2/3 · Stage._spawn_boss restore_phase).
+func _debug_jump_stage(rid: String, stage_idx: int, rival_phase: int, boss_phase: int) -> void:
+	GameState.playground_active = true
+	GameState.current_route_id = rid
+	GameState.current_segment = 0
+	GameState.current_stage = stage_idx
+	for r in RouteData.ALL_ROUTES:
+		var route: Dictionary = r
+		if str(route.get("id", "")) == rid:
+			GameState.current_route_tags = route.get("tags", [])
+			GameState.current_route_risk = int(route.get("risk", 3))
+			GameState.current_route_reward_type = str(route.get("reward_type", "xp"))
+			break
+	GameState.player_level = 18
+	GameState.player_xp = 0
+	for sk in [["double_jump", 1], ["dash", 1], ["fire_boost", 2], ["multishot", 1], ["glide", 1]]:
+		var pair: Array = sk
+		GameState.skills[str(pair[0])] = int(pair[1])
+	GameState.player_hp = GameState.effective_max_hp()
+	GameState.rival_phase_reached = rival_phase
+	GameState.boss_phase_reached = boss_phase
+	get_tree().paused = false
+	get_tree().change_scene_to_file.call_deferred(SceneRouter.STAGE)
+
+# 14-2 터널 실런 비트 직행(PlaygroundOverlay._on_tunnel_live와 동일 세팅) · 확인 후 일시정지 → 처음으로.
+func _debug_jump_tunnel() -> void:
+	GameState.playground_active = false
+	GameState.debug_preview_run = true
+	GameState.core_tunnel_live = true
+	GameState.current_stage = 14
+	GameState.rival_phase_reached = 0
+	get_tree().paused = false
+	get_tree().change_scene_to_file.call_deferred(SceneRouter.CORE_TUNNEL)
 
 func _build_av_tab() -> Control:
 	var outer := MarginContainer.new()
