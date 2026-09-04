@@ -1,59 +1,70 @@
 class_name FalseVeil
 extends CharacterBody2D
 
-# 14-1 P3 분신전 본체 · 거짓 VEIL (rival_veil_concept §7.2, 2026-08-12 확정 스펙).
-# 시각 = "인간적인 눈 + 구형 렌더 tell": 본체는 유기적 계열의 눈 도상(곡선·부드러운 깜빡임·
-# 플레이어 시선 추적·반 박자 긴 응시, 그로테스크 배제). 공격 문법 = 내 VEIL 흉내:
-#  - 가짜 마커(_FakeMarker): 아무것도 없는 곳에 구형 렌더 문법(두꺼운 브래킷·스캔라인·커서)의
-#    표적 표시를 뿌린다. 스타일 차이 자체가 §4.1 공정 tell(내 VEIL 마커는 얇은 시안).
-#  - 진짜 위협 무표시: Stage가 volley_started마다 no_marker 적을 투입(VeilSight가 마커 생략).
-# 사이클: PHASED(잠복·무적, 가짜 마커 볼리) → TELE(동공 수축 응시 = 실체화 예고) →
-# SOLID(실체·피격 가능, 조준 3연탄) → PHASED... hp 소진 시 눈을 감으며 소멸(defeated).
+# 14-1 P3 본체 · 거짓 VEIL의 눈 (final_boss_rework §9 B안 "3장 구조" · 2026-09-04 재작성).
+# 정체성 "렌더를 쥔 자"는 적 복제가 아니라 **무대를 다시 그리는 것**으로 표현한다.
+# '가짜' 어휘 전면 폐지(가짜 눈·가짜 탄·가짜 병사·짝 규칙·억제 미사일 삭제 · 2026-09-03 사용자 확정).
+# 시각 = "인간적인 눈 + 구형 렌더 tell"(곡선·부드러운 깜빡임·시선 추적 · 그로테스크 배제)은 유지.
+#
+# 3장 = HP 몫 30/40/30(창당 상한 폐지 · 길이 보장은 구조로):
+#  1장 "겨눔"(~30%): 눈 하나. 짧은 잠복(PHASED) → 응시 예고(TELE) → 모습 드러냄(SOLID · 3연탄 ·
+#      피격 가능) 반복. 창 문법 학습 구간.
+#  2장 "추격"(~40%): 눈이 먼 자리(FLEE)로 도망가 무대를 다시 그린다(Stage가 redraw_requested를 받아
+#      그려진 벽·거짓 발판 배치). 요원이 사거리에 들어오면 타격 창(TELE→SOLID)이 열리고, 닫히면
+#      다음 자리로 워프(WARP)하며 다시 그린다. 자리에서 12s 안 열리면 더 가까운 자리로 옮긴다.
+#  3장 "대면"(~30%): 잠복 폐지 · 상시 SOLID + 짧은 워프 무적만. 5연 부채꼴 볼리 결투.
+# 사이클 신호: volley_started(1장 잠복 진입·3장 홀수 워프)에 Stage가 무표시 위협을 투입한다.
 # 광과민성 기준(known_issues) 준수 · 점멸 없음, 깜빡임은 완만한 눈꺼풀 모션.
 
 signal defeated
 signal volley_started
-# 리워크(§2.4) 변주 3단 · HP 문턱(66%/33%) 통과 시 emit. 1=중반(텔레포트 실체화),
-# 2=후반(창 짧고 잦게 + 방 렌더 붕괴 연출은 Stage 담당).
-signal stage_shifted(stage_idx: int)
-# 실체화 창당 피해 상한 도달(조기 재잠복) · Stage가 첫 회에 VEIL 해설 1회를 단다.
-signal window_capped
-# 가짜 병사 그림 격파(렌더 부하) · Stage가 첫 회에 VEIL 해설 1회를 단다. 인자 = 누적 격파 수.
-signal fake_torn(total: int)
+# 장 전환(1→2 · 2→3) · Stage가 무대 변형 + 자막 + 연출을 단다(명명 연출 = 룰 변화 원칙).
+signal chapter_changed(chapter: int)
+# 2장 · 새 자리에 앉으며 무대를 다시 그려 달라. perch = 이번 자리, prev = 직전 자리.
+signal redraw_requested(perch: Vector2, prev: Vector2)
+# 2장 · 타격 창이 열렸다(요원이 사거리에 들어옴) · Stage 사운드/자막용.
+signal window_opened
 
-enum State { PHASED, TELE, SOLID, DYING }
+enum State { PHASED, TELE, SOLID, FLEE, WARP, DYING }
 
 const MAX_HP: int = 6   # 기본값 · Stage가 레벨 스케일로 덮어쓴다(max_hp/hp)
-# 잠복 7.0 → 5.2 (2026-08-17): 상한 도입으로 창 수가 늘어난 만큼 창 사이 대기를 줄인다
-# ("실체화 될 때까지 기다린다"가 지루하다는 지적과 정합).
-const PHASED_DUR: float = 5.2
-const TELE_DUR: float = 0.7
-const SOLID_DUR: float = 3.4
-const FAKES_PER_VOLLEY: int = 4
+# 장별 HP 몫 · 1장 30% / 2장 40% / 3장 30%.
+const CH1_SHARE: float = 0.30
+const CH2_SHARE: float = 0.40
+# 1장 리듬 · 잠복 3.2(A안 5.2에서 단축 · 창당 상한이 없어져 창 수가 줄었으니 대기도 줄인다).
+const CH1_PHASED_DUR: float = 3.2
+const CH1_TELE_DUR: float = 0.7
+const CH1_SOLID_DUR: float = 3.4
+# 2장 리듬 · 타격 창은 짧고(2.8) 예고도 짧다(0.5) · 창은 "닿았다"의 보상.
+const CH2_TELE_DUR: float = 0.5
+const CH2_SOLID_DUR: float = 2.8
+const CH2_REACH_DX: float = 400.0     # 사거리 = 타격 창 개방 조건(가로)
+const CH2_REACH_DY: float = 250.0     # 같은 층 또는 한 층 차이
+const CH2_FLEE_TIMEOUT: float = 12.0  # 이 시간 안에 창이 안 열리면 더 가까운 자리로
+const CH2_PERCH_MIN_DX: float = 700.0 # 도망 자리 = 요원에게서 최소 이만큼
+# 3장 리듬 · 볼리 2.3s마다 5연 · 4.4s마다 워프(0.55s 무적).
+const CH3_VOLLEY_INTERVAL: float = 2.3
+const CH3_WARP_INTERVAL: float = 4.4
+const WARP_DUR: float = 0.45
 const DRIFT_SPEED: float = 60.0
-# 짝 규칙(A안 · 2026-08-30 사용자 확정): 매 창마다 플레이어가 닿을 수 있는 자리 둘에 진짜 눈과
-# 가짜 눈이 동시에 뜬다. 어느 쪽이 진짜인지는 무작위 · 판별 단서 = "요원을 똑바로 보는 눈이 진짜"
-# (가짜는 딴 데 본다). 종전 "멀리 소환" 규칙은 한쪽 데크에서 반대편까지 3.4s 안에 못 가 창을 통째로
-# 날리는 물리 불가를 만들었다(사용자 지적). 캠핑 대책은 "직전 자리 제외" + 낙하 잔해 + 억제 미사일.
-const PAIR_MIN_DX: float = 60.0     # 요원 몸 위에 겹쳐 뜨지 않게(눈 반경 34 + 몸 반폭 14)
-const PAIR_MAX_DX: float = 520.0    # 한 창(3.4s) 안에 닿는 거리
-const PAIR_Y_BAND: float = 40.0     # 같은 높이(수평 사격으로 바로 맞는 대역)
-const PAIR_Y_REACH: float = 220.0   # 점프·한 층 이동으로 닿는 높이
+# 닿는 자리(1장·3장 실체화 후보 · A안 계산식 계승 · known_issues "이동 속도 × 창 길이 ≥ 거리").
+const NEAR_MIN_DX: float = 60.0     # 요원 몸 위에 겹쳐 뜨지 않게(눈 반경 34 + 몸 반폭 14)
+const NEAR_MAX_DX: float = 520.0    # 한 창(3.4s) 안에 닿는 거리
+const NEAR_Y_BAND: float = 40.0     # 같은 높이(수평 사격으로 바로 맞는 대역)
+const NEAR_Y_REACH: float = 220.0   # 점프·한 층 이동으로 닿는 높이
 
 var max_hp: int = MAX_HP
 var hp: int = MAX_HP
 var state: State = State.PHASED
-# 결정타 출처 기록(Stage가 격파 시 읽음 · 다회차 기억).
+var chapter: int = 1
 # 개시 응시 유예(초 · Stage가 add_child 전에 시드) · 발화가 흐르는 동안 공격 없음(_ready 참조).
 var intro_hold: float = 0.0
+# 결정타 출처 기록(Stage가 격파 시 읽음 · 다회차 기억).
 var last_hit_from_dir: int = 0
-# 변주 단계(0 전반/1 중반/2 후반) · take_damage에서 HP 비율로 전이. 후반은 창이 짧고 잦다.
-var fight_stage: int = 0
-var phased_dur: float = PHASED_DUR
-var solid_dur: float = SOLID_DUR
-# 가짜 눈(§2.4 전반, 사용자 확정) · 실체화 때 함께 뜨는 미끼. 유도탄도 이쪽을 쫓는다
-# (homing_decoy 그룹 · 유도가 판별을 공짜로 주지 않게, 사용자 지적 2026-08-16).
-var _decoy: _DecoyEye = null
+# 다회차 기억(§7) · 2장 도망 자리 순서 회전 시드(Stage가 rival_kills로 준다 · "네가 외운 자리에는 없다").
+var memory_shift: int = 0
+var _t2: int = 0                        # 2장 진입 HP(1장 몫 소진점)
+var _t3: int = 0                        # 3장 진입 HP(2장 몫 소진점)
 var _state_t: float = 0.0
 var _t: float = 0.0
 var _gaze: Vector2 = Vector2.ZERO       # 동공 오프셋(플레이어 추적, 지연 = 긴 응시)
@@ -61,34 +72,26 @@ var _lid: float = 0.0                   # 0=뜸 1=감음
 var _blink_t: float = 0.0
 var _hit_flash_t: float = 0.0
 var _die_t: float = 0.0
-var _ripple_t: float = 0.0              # 잠복 중 탄 통과 파문("지금은 그림이다"의 시각 언어)
+var _ripple_t: float = 0.0              # 그림 상태에서 탄 통과 파문("지금은 그림이다"의 시각 언어)
 var _ripple_cd: float = 0.0
-var _anchors: Array = []                # 부유 이동 지점(순환)
+var _anchors: Array = []                # 실체화 후보 자리(각 데크·지면 가슴 높이)
 var _anchor_idx: int = 0
-var _prev_real_idx: int = -1            # 직전에 *실체화한* 진짜 자리(다음 창 제외 · 캠핑 대책)
-var _fake_spots: Array = []             # 가짜 마커 후보 위치(순환)
-var _spot_idx: int = 0
-var _fakes: Array = []                  # 살아있는 _FakeMarker 참조
-# 실체화 창당 피해 누적(상한 = max_hp/8 · 2026-08-19 확대) · 고DPS "첫 창에 끝" 차단.
-var _window_dmg: int = 0
-var _next_phased_scale: float = 1.0     # 상한 도달 직후의 잠복만 짧게(화력의 보상)
-# 렌더 부하(2026-08-22 "잘하면 빨라지는 경로" · 개연성 = 세계관 내 재료만 사용): 가짜 병사도
-# 잠복의 "그림 상태"도 같은 구형 렌더러가 그린다. 그림을 다시 그리는 속도보다 빨리 찢으면
-# (탄 2회 통과 = 격파) 렌더러가 몸의 소거를 못 버텨 잠복 잔여가 당겨진다 = 조기 실체화.
-# 대기 게이트("실체화까지 기다린다")를 실력으로 줄이는 유일한 손잡이. 찢을수록 본체 스캔라인이
-# 흐트러지는 스트레인 연출로 인과를 화면에 보인다.
-var _torn_total: int = 0
-var _strain_t: float = 0.0              # >0: 렌더 스트레인 연출(본체 짜임 흐트러짐)
-# 텔레포트 워프 연출(중반+ 변주) · 이전 자리에 소멸 파문을 남긴다.
+var _prev_idx: int = -1                 # 직전에 실체화한 자리(다음 창 제외)
+var _perch_idx: int = -1                # 2장 현재 도망 자리
+var _perch_count: int = 0               # 2장 자리 이동 횟수(순서 회전용)
 var _warp_from: Vector2 = Vector2.ZERO
-var _warp_t: float = 0.0
+var _warp_t: float = 0.0                # 워프 파문 연출 잔여
+var _warp_after: String = ""            # 워프 착지 후 상태 · "flee" | "duel"
+var _warp_prev: Vector2 = Vector2.ZERO  # 워프 직전 자리(redraw_requested prev)
+var _volley_t: float = 0.0              # 3장 볼리 타이머
+var _warp_cd: float = 0.0               # 3장 워프 타이머
+var _warp_n: int = 0                    # 3장 워프 누적(홀수마다 무표시 위협 신호)
 
-func setup(anchors: Array, fake_spots: Array) -> void:
+func setup(anchors: Array) -> void:
 	_anchors = anchors
-	_fake_spots = fake_spots
 
 func _ready() -> void:
-	# 잠복 = 콜리전 자체를 끈다 → 탄이 몸을 **통과**("실체 없음"이 총으로도 읽힘. 박히는데 무반응
+	# 그림 상태 = 콜리전 자체를 끈다 → 탄이 몸을 **통과**("실체 없음"이 총으로도 읽힘. 박히는데 무반응
 	# 이라는 반려 2026-08-12). SOLID에서만 레이어 4(적) 켜져 탄이 박힌다.
 	collision_layer = 0
 	collision_mask = 0    # 물리 충돌 없음(부유)
@@ -100,29 +103,17 @@ func _ready() -> void:
 	col.shape = shape
 	add_child(col)
 	z_index = 2
-	# 가짜 눈 동반 스폰 · 부모(스테이지)에 형제로. 자리는 매 창 _pick_pair가 준다(짝 규칙).
-	_decoy = _DecoyEye.new()
-	_decoy.owner_fv = self
-	_decoy.global_position = global_position + Vector2(300.0, 40.0)
-	_decoy.target = _decoy.global_position
-	get_parent().call_deferred("add_child", _decoy)
-	# 개시 응시 유예(2026-08-23 · 컷씬 개정) · 등장 직후엔 응시만(§7.2 "반 박자 긴 응시"의
-	# 개시판). 가짜 그림은 즉시 깔린다(Stage의 오프닝 컷씬 정지 화면에 실물이 서서 "굵은 표식"
-	# 안내가 가리킬 대상이 됨) · 위협은 아니다(그림 자체는 무피해). 첫 볼리 신호(무표시 위협
-	# 투입)만 유예 끝에 나간다. 잠복 진행도 유예만큼 늦게 시작(_state_t 음수 시드 · P2 스윕
-	# 온보딩과 같은 기법). 유예 타이머는 자식 Timer(본체와 함께 사라짐 · pause 동안 정지 =
-	# 컷씬이 떠 있는 동안은 유예가 흐르지 않는다). 그림 즉시 찢기 가속은 그대로(적극 플레이 존중).
+	_t2 = maxi(1, int(round(float(max_hp) * (1.0 - CH1_SHARE))))
+	_t3 = maxi(1, int(round(float(max_hp) * (1.0 - CH1_SHARE - CH2_SHARE))))
+	if _t3 >= _t2:
+		_t3 = maxi(1, _t2 - 1)
+	# 개시 응시 유예(2026-08-23 · 컷씬 개정) · 등장 직후엔 응시만. 잠복 진행도 유예만큼 늦게 시작
+	# (_state_t 음수 시드). 유예 타이머는 자식 Timer(본체와 함께 사라짐 · pause 동안 정지 = 컷씬이
+	# 떠 있는 동안은 유예가 흐르지 않는다). 첫 볼리 신호(무표시 위협 투입)만 유예 끝에 나간다.
 	if intro_hold > 0.0:
 		state = State.PHASED
 		_state_t = -intro_hold
-		_window_dmg = 0
-		_pick_pair()
-		_spawn_fakes()
-		# 첫 배치는 유예만큼 수명 연장 · 잠복 진행이 늦게 시작하므로 그대로면 첫 실체화 전에
-		# 그림이 다 걷혀 판별 안내의 대상이 사라진다.
-		for m in _fakes:
-			if is_instance_valid(m):
-				m.lifetime += intro_hold
+		_pick_near_anchor()
 		var t := Timer.new()
 		t.one_shot = true
 		t.wait_time = maxf(0.05, intro_hold)
@@ -138,21 +129,23 @@ func _intro_hold_end() -> void:
 		return
 	emit_signal("volley_started")
 
+func is_hittable() -> bool:
+	return state == State.SOLID
+
+# ─── 1장 · 잠복 → 응시 → 모습 드러냄 ───
+
 func _enter_phased() -> void:
 	state = State.PHASED
 	_state_t = 0.0
-	_window_dmg = 0
-	_pick_pair()
-	_spawn_fakes()
+	collision_layer = 0
+	_pick_near_anchor()
 	emit_signal("volley_started")
 
-# 짝 선택(A안) · 플레이어 기준 "닿을 수 있는" 자리 둘: 같은 높이 대역(PAIR_Y_BAND)이 1순위, 그다음
-# 한 층 차이(PAIR_Y_REACH), 그래도 모자라면 거리순. 직전에 실체화한 자리는 제외. 둘 중 진짜는 무작위.
-# 중반+(fight_stage ≥ 1)는 가짜를 한 칸 더 먼 후보에 세워 둘 사이를 벌린다("둘을 더 벌려 놓죠").
-# 잠복 시작 때 잠정 선택(부유 목적지)하고, 예고(TELE) 진입 순간 플레이어의 *그때* 위치로 다시 고른다 ·
-# 잠복 5.2s 동안 플레이어가 옮겨 가면 "닿는 자리"가 달라지기 때문(스모크 실측).
-func _pick_pair() -> void:
-	if _anchors.size() < 2:
+# 닿는 자리 하나 · 플레이어 기준 같은 높이 대역(NEAR_Y_BAND)이 1순위, 그다음 한 층 차이(NEAR_Y_REACH),
+# 그래도 모자라면 거리순. 직전 자리는 제외. 잠복 시작 때 잠정 선택(부유 목적지)하고, 예고 진입 순간
+# 플레이어의 *그때* 위치로 다시 고른다(잠복 동안 옮겨 가면 "닿는 자리"가 달라진다 · 스모크 실측).
+func _pick_near_anchor() -> void:
+	if _anchors.is_empty():
 		return
 	var p := _find_player()
 	if p == null:
@@ -163,16 +156,16 @@ func _pick_pair() -> void:
 	var tier2: Array = []
 	var rest: Array = []
 	for i in _anchors.size():
-		if i == _prev_real_idx:
+		if i == _prev_idx:
 			continue
 		var a: Vector2 = _anchors[i]
 		var dx: float = absf(a.x - ref.x)
 		var dy: float = absf(a.y - ref.y)
-		if dx < PAIR_MIN_DX:
+		if dx < NEAR_MIN_DX:
 			continue
-		if dy <= PAIR_Y_BAND and dx <= PAIR_MAX_DX:
+		if dy <= NEAR_Y_BAND and dx <= NEAR_MAX_DX:
 			tier1.append(i)
-		elif dy <= PAIR_Y_REACH and dx <= PAIR_MAX_DX:
+		elif dy <= NEAR_Y_REACH and dx <= NEAR_MAX_DX:
 			tier2.append(i)
 		else:
 			rest.append(i)
@@ -182,64 +175,111 @@ func _pick_pair() -> void:
 	tier2.sort_custom(by_dist)
 	rest.sort_custom(by_dist)
 	var pool: Array = tier1 + tier2 + rest
-	if pool.size() < 2:
+	if pool.is_empty():
 		_anchor_idx = (_anchor_idx + 1) % _anchors.size()
 		return
-	# 가까운 둘(중반+는 셋 중 1·3번째)에 진짜/가짜를 무작위 배정.
-	var a_i: int = int(pool[0])
-	var b_i: int = int(pool[1])
-	if fight_stage >= 1 and pool.size() >= 3:
-		b_i = int(pool[2])
-	var real_i: int = a_i if randf() < 0.5 else b_i
-	var decoy_i: int = b_i if real_i == a_i else a_i
-	_anchor_idx = real_i
-	if _decoy != null and is_instance_valid(_decoy):
-		_decoy.target = _anchors[decoy_i]
+	# 가까운 둘 중 무작위(같은 자리 반복 회피 + 예측 불가).
+	var n: int = mini(2, pool.size())
+	_anchor_idx = int(pool[randi() % n])
 
-func _spawn_fakes() -> void:
-	if _fake_spots.is_empty():
-		return
-	var parent := get_parent()
-	if parent == null:
-		return
-	# 가짜도 "먼 곳" 분포(2026-08-21) · 진짜만 멀리 가면 거리가 판별 단서가 된다. 플레이어에서
-	# 먼 순으로 정렬한 상위 풀에서 무작위 추출 → 진짜/가짜 분포가 같아져 의도된 tell(유도
-	# 미끼·표식 결)로만 가려진다. 고정 순환(_spot_idx)은 폐지.
-	var spots: Array = _fake_spots.duplicate()
+# ─── 2장 · 도망 자리 ───
+
+# 도망 자리 · 요원에게서 CH2_PERCH_MIN_DX 이상 떨어진 후보를 먼 순으로 모아 회차·이동 횟수로 회전
+# (다회차 기억 §7 · "네가 외운 자리에는 없다"). 현재 자리는 제외. closer=true면 요원과 300~700px
+# 사이의 후보(12s 무개방 구제 · 자리를 좁혀 창을 만들어 준다).
+func _pick_perch(closer: bool = false) -> int:
+	if _anchors.is_empty():
+		return 0
 	var p := _find_player()
-	if p != null:
-		var px: float = p.global_position.x
-		spots.sort_custom(func(a: Vector2, b: Vector2) -> bool:
-			return absf(a.x - px) > absf(b.x - px))
-	var pool: Array = spots.slice(0, mini(spots.size(), FAKES_PER_VOLLEY + 2))
-	pool.shuffle()
-	for i in mini(FAKES_PER_VOLLEY, pool.size()):
-		var spot: Vector2 = pool[i]
-		var m := _FakeMarker.new()
-		m.position = spot
-		m.lifetime = PHASED_DUR + 1.0
-		m.owner_fv = self
-		parent.add_child(m)
-		_fakes.append(m)
+	var ref: Vector2 = global_position if p == null else p.global_position + Vector2(0.0, -30.0)
+	var pool: Array = []
+	for i in _anchors.size():
+		if i == _perch_idx:
+			continue
+		var dx: float = absf((_anchors[i] as Vector2).x - ref.x)
+		if closer:
+			if dx >= 300.0 and dx < CH2_PERCH_MIN_DX:
+				pool.append(i)
+		elif dx >= CH2_PERCH_MIN_DX:
+			pool.append(i)
+	if pool.is_empty():
+		for i in _anchors.size():
+			if i != _perch_idx:
+				pool.append(i)
+	var by_far := func(ia: int, ib: int) -> bool:
+		return (_anchors[ia] as Vector2).distance_to(ref) > (_anchors[ib] as Vector2).distance_to(ref)
+	pool.sort_custom(by_far)
+	if closer:
+		pool.reverse()
+	# 상위 4곳 안에서 회전 · 매번 최원거리만 고르면 좌우 왕복 두 자리로 굳는다.
+	var top: int = mini(4, pool.size())
+	return int(pool[(memory_shift + _perch_count) % top])
 
-# 가짜 병사 그림이 탄에 찢겨 나갔다(렌더 부하) · 잠복 잔여를 35% 당긴다. 그림 4장을 다
-# 찢으면 잠복이 사실상 끝난다 · 못 찢어도 기존 리듬 그대로(순수 가산 경로).
-func on_fake_torn() -> void:
-	_torn_total += 1
-	_strain_t = 0.6
-	if state == State.PHASED:
-		var total: float = phased_dur * _next_phased_scale
-		_state_t = minf(total, _state_t + total * 0.35)
-	emit_signal("fake_torn", _torn_total)
+func _begin_warp(to: Vector2, after: String) -> void:
+	_warp_prev = global_position
+	_warp_from = global_position
+	_warp_t = 0.4
+	global_position = to
+	state = State.WARP
+	_state_t = 0.0
+	collision_layer = 0
+	_warp_after = after
+	_lid = 1.0
 
-# 내 VEIL의 지각 보조(§7.2 신뢰=개입 빈도) · 가장 오래된 가짜 하나를 시안 소거로 지운다.
-func erase_one_fake() -> bool:
-	while not _fakes.is_empty():
-		var m = _fakes.pop_front()
-		if m != null and is_instance_valid(m) and not bool(m.get("erasing")):
-			(m as Node).call("erase", true)
-			return true
-	return false
+func _land_warp() -> void:
+	match _warp_after:
+		"flee":
+			state = State.FLEE
+			_state_t = 0.0
+			collision_layer = 0
+			emit_signal("redraw_requested", global_position, _warp_prev)
+		"duel":
+			state = State.SOLID
+			_state_t = 0.0
+			collision_layer = 4
+			_warp_n += 1
+			if _warp_n % 2 == 1:
+				emit_signal("volley_started")
+		_:
+			state = State.FLEE
+			_state_t = 0.0
+
+func _player_in_reach() -> bool:
+	var p := _find_player()
+	if p == null:
+		return false
+	var ref: Vector2 = p.global_position + Vector2(0.0, -30.0)
+	return absf(ref.x - global_position.x) <= CH2_REACH_DX and absf(ref.y - global_position.y) <= CH2_REACH_DY
+
+# ─── 장 전환 ───
+
+func _enter_chapter(ch: int) -> void:
+	if ch <= chapter:
+		return
+	chapter = ch
+	_hit_flash_t = 0.35
+	emit_signal("chapter_changed", chapter)
+	if chapter == 2:
+		_perch_count = 0
+		_perch_idx = _pick_perch()
+		_begin_warp(_anchors[_perch_idx] if not _anchors.is_empty() else global_position, "flee")
+	else:
+		# 3장 · 닿는 자리로 워프해 상시 실체(잠복 폐지).
+		_prev_idx = -1
+		_pick_near_anchor()
+		_volley_t = 0.0
+		_warp_cd = 0.0
+		_warp_n = 0
+		_begin_warp(_anchors[_anchor_idx] if not _anchors.is_empty() else global_position, "duel")
+
+# 하니스 전용 · 장을 강제 진입(HP를 그 장의 시작점으로 맞춘다). 실플레이 경로는 take_damage뿐.
+func debug_force_chapter(ch: int) -> void:
+	if ch == 2:
+		hp = _t2
+		_enter_chapter(2)
+	elif ch == 3:
+		hp = _t3
+		_enter_chapter(3)
 
 func _physics_process(delta: float) -> void:
 	if not is_inside_tree():
@@ -250,9 +290,8 @@ func _physics_process(delta: float) -> void:
 	_ripple_t = maxf(0.0, _ripple_t - delta)
 	_ripple_cd = maxf(0.0, _ripple_cd - delta)
 	_warp_t = maxf(0.0, _warp_t - delta)
-	_strain_t = maxf(0.0, _strain_t - delta)
-	# 잠복/응시 중 탄이 몸을 지나가면 파문 · "박히지 않고 통과한다"를 그 자리에서 보여준다.
-	if (state == State.PHASED or state == State.TELE) and _ripple_cd <= 0.0:
+	# 그림 상태에서 탄이 몸을 지나가면 파문 · "박히지 않고 통과한다"를 그 자리에서 보여준다.
+	if state != State.SOLID and state != State.DYING and _ripple_cd <= 0.0:
 		var btree := get_tree()
 		if btree != null:
 			for b in btree.get_nodes_in_group("player_bullet"):
@@ -260,51 +299,76 @@ func _physics_process(delta: float) -> void:
 					_ripple_t = 0.35
 					_ripple_cd = 0.3
 					break
-	# 살아있는 가짜 참조 정리.
-	var i: int = _fakes.size() - 1
-	while i >= 0:
-		if _fakes[i] == null or not is_instance_valid(_fakes[i]):
-			_fakes.remove_at(i)
-		i -= 1
-	# 시선 추적 · 지연 lerp(반 박자 긴 응시).
+	# 시선 추적 · 지연 lerp(반 박자 긴 응시) · 예고·실체 창에선 즉시 고정.
 	var p := _find_player()
 	if p != null:
 		var want: Vector2 = (p.global_position - global_position).normalized() * 10.0
-		# 판별 tell(A안) · 예고·실체 창에선 시선이 요원에게 즉시 고정된다(가짜는 딴 데 본다).
 		var rate: float = 8.0 if (state == State.TELE or state == State.SOLID) else 2.0
 		_gaze = _gaze.lerp(want, minf(1.0, delta * rate))
 	match state:
 		State.PHASED:
 			_drift(delta)
 			_update_blink(delta)
-			if _state_t >= phased_dur * _next_phased_scale:
+			if _state_t >= CH1_PHASED_DUR:
 				state = State.TELE
 				_state_t = 0.0
-				_next_phased_scale = 1.0
-				# 예고 진입 · 플레이어의 지금 위치로 짝을 다시 고르고 그 자리로 스냅(A안 · 전 단계 공통).
+				# 예고 진입 · 플레이어의 지금 위치로 자리를 다시 고르고 그 자리로 스냅.
 				# 워프 파문(이전 자리 소멸 링)으로 "옮겨 갔다"가 읽힌다.
-				_pick_pair()
-				_prev_real_idx = _anchor_idx
+				_pick_near_anchor()
+				_prev_idx = _anchor_idx
 				if not _anchors.is_empty():
 					var dest: Vector2 = _anchors[_anchor_idx]
 					if global_position.distance_to(dest) > 4.0:
 						_warp_from = global_position
 						_warp_t = 0.4
 						global_position = dest
-					if _decoy != null and is_instance_valid(_decoy):
-						_decoy.tele_jump()
 		State.TELE:
 			_lid = maxf(0.0, _lid - delta * 6.0)   # 크게 뜬다 · 응시 예고
-			if _state_t >= TELE_DUR:
+			var tele_dur: float = CH2_TELE_DUR if chapter == 2 else CH1_TELE_DUR
+			if _state_t >= tele_dur:
 				state = State.SOLID
 				_state_t = 0.0
-				collision_layer = 4   # 실체화 · 이제 탄이 박힌다
-				_fire_volley()
+				collision_layer = 4   # 모습을 드러냄 · 이제 탄이 박힌다
+				_fire_volley(3)
 		State.SOLID:
 			_lid = 0.0
-			if _state_t >= solid_dur:
-				collision_layer = 0   # 잠복 복귀 · 탄이 다시 통과
-				_enter_phased()
+			if chapter == 1:
+				if _state_t >= CH1_SOLID_DUR:
+					_enter_phased()
+			elif chapter == 2:
+				if _state_t >= CH2_SOLID_DUR:
+					# 창 닫힘 · 다음 자리로 도망가며 다시 그린다.
+					_perch_count += 1
+					_perch_idx = _pick_perch()
+					_begin_warp(_anchors[_perch_idx] if not _anchors.is_empty() else global_position, "flee")
+			else:
+				# 3장 결투 · 상시 실체 + 주기 볼리 + 주기 워프(짧은 무적).
+				_volley_t += delta
+				_warp_cd += delta
+				if _volley_t >= CH3_VOLLEY_INTERVAL:
+					_volley_t = 0.0
+					_fire_volley(5)
+				if _warp_cd >= CH3_WARP_INTERVAL:
+					_warp_cd = 0.0
+					_prev_idx = _anchor_idx
+					_pick_near_anchor()
+					_begin_warp(_anchors[_anchor_idx] if not _anchors.is_empty() else global_position, "duel")
+		State.FLEE:
+			_update_blink(delta)
+			if _player_in_reach():
+				state = State.TELE
+				_state_t = 0.0
+				emit_signal("window_opened")
+			elif _state_t >= CH2_FLEE_TIMEOUT:
+				# 무개방 구제 · 더 가까운 자리로 옮긴다(자리를 옮기는 것 자체가 다시 그리기).
+				_perch_count += 1
+				_perch_idx = _pick_perch(true)
+				_begin_warp(_anchors[_perch_idx] if not _anchors.is_empty() else global_position, "flee")
+		State.WARP:
+			_lid = maxf(0.0, 1.0 - _state_t / WARP_DUR)
+			var wd: float = WARP_DUR if chapter < 3 else 0.55
+			if _state_t >= wd:
+				_land_warp()
 		State.DYING:
 			_die_t += delta
 			_lid = minf(1.0, _die_t / 1.1)   # 천천히 눈을 감는다
@@ -329,40 +393,22 @@ func _update_blink(delta: float) -> void:
 	else:
 		_lid = 0.0
 
-# 캠핑 대책 ③(2026-08-20) · 한자리 장기 체류 시 잠복 중에도 유도탄 2발(Stage._tick_p3_camp가
-# 호출). 잠복 무적은 그대로 두고 "숨어만 있으면 완전 안전"만 깬다. 미사일은 발사음 + 궤적이
-# 보이는 약유도(BossMissile)라 움직이기만 하면 피해진다 · 답 = 이동.
-func fire_suppression(at: Vector2) -> void:
-	if state == State.DYING:
-		return
-	SfxPlayer.play_at("boss_missile_launch", global_position)
-	# 3발 부채꼴(2→3, 2026-08-21) · 제자리 점프 회피까지 감안한 커버.
-	for i in 3:
-		var m := Area2D.new()
-		m.set_script(load("res://scripts/BossMissile.gd"))
-		var from: Vector2 = global_position + Vector2(-26.0 + 26.0 * float(i), -18.0)
-		var v: Vector2 = (at - from).normalized() * 330.0
-		m.set("velocity", v.rotated(-0.4 + 0.4 * float(i)))
-		m.global_position = from
-		get_parent().add_child(m)
-
-# 실체화 순간의 조준 3연탄 · "볼 수 있는 창 = 위험한 창"의 리스크 교환.
-# 미끼 눈도 같은 순간 가짜 탄을 쏜다(2026-08-23 사용자 "공격이 나오는 게 무조건 진짜라 속을
-# 이유가 없다") · 볼리 출처가 공짜 판별이 되지 않게. 가짜 탄은 그림이라 피해 없음(닿으면 찢김).
-func _fire_volley() -> void:
+# 모습을 드러내는 순간의 조준 볼리 · "볼 수 있는 창 = 위험한 창"의 리스크 교환. 1·2장 3연, 3장 5연 부채꼴.
+func _fire_volley(count: int) -> void:
 	var p := _find_player()
 	if p == null:
 		return
 	SfxPlayer.play_at("enemy_patrol_fire", global_position)
 	var base_dir: Vector2 = (p.global_position + Vector2(0, -24.0) - global_position).normalized()
-	for spread in [-0.22, 0.0, 0.22]:
+	var spreads: Array = [-0.22, 0.0, 0.22]
+	if count >= 5:
+		spreads = [-0.36, -0.18, 0.0, 0.18, 0.36]
+	for spread in spreads:
 		var b := EnemyBullet.new()
 		b.damage = 1
 		b.velocity = base_dir.rotated(float(spread)) * EnemyBullet.BASE_SPEED * 0.9
 		b.global_position = global_position + base_dir * 30.0
 		get_parent().add_child(b)
-	if _decoy != null and is_instance_valid(_decoy):
-		_decoy.fire_phantom_volley()
 
 func take_damage(amount: int, from_dir: int = 0) -> void:
 	if state == State.DYING:
@@ -370,59 +416,28 @@ func take_damage(amount: int, from_dir: int = 0) -> void:
 	# 결정타 출처 기록(다회차 기억) · 총알 ±1 / 폭발(수류탄) 0. Enemy.take_damage와 같은 규약.
 	last_hit_from_dir = from_dir
 	if state != State.SOLID:
-		# 잠복 중엔 실체가 없다 · 탄이 흘러나감(공정: 실체화 창이 명확히 보임).
+		# 그림 상태엔 실체가 없다 · 탄이 흘러나감(공정: 모습을 드러내는 창이 명확히 보임).
 		SfxPlayer.play_at("bullet_deflect_shield", global_position, -6.0)
 		return
-	# 실체화 창당 피해 상한 · "실체화까지 기다렸다 쏘면 5초 컷"(사용자 2026-08-17) 차단.
-	# 상한 = max_hp/6 → 어떤 화력이든 실체화 창 ~6번은 상대해야 변주 3단이 실제로 등장.
-	# 저DPS 빌드는 상한에 닿지 않으므로 영향 없음.
-	# 보스전 확대(2026-08-19): 분모 6→8 · 창 ~6개 → ~8개(P3 약 +17s). 창 길이·HP 불변.
-	var cap: int = maxi(3, int(ceil(float(max_hp) / 8.0)))
-	var allowed: int = cap - _window_dmg
-	if allowed <= 0:
-		SfxPlayer.play_at("bullet_deflect_shield", global_position, -6.0)
-		return
-	amount = mini(amount, allowed)
-	_window_dmg += amount
-	hp -= amount
+	# 장별 HP 몫 · 이번 장의 몫을 넘는 피해는 버린다(다음 장은 그 장의 시작점에서 시작).
+	var floor_hp: int = 0
+	if chapter == 1:
+		floor_hp = _t2
+	elif chapter == 2:
+		floor_hp = _t3
+	hp = maxi(floor_hp, hp - amount)
 	_hit_flash_t = 0.25
 	SfxPlayer.play_at("bullet_impact_enemy", global_position)
 	SfxPlayer.play_at("boss_hurt", global_position, -2.0)
-	# 변주 3단 전이(§2.4) · 66%/33% 문턱. 후반은 실체화 창이 짧아지는 대신 자주 온다.
-	var ratio: float = float(hp) / maxf(1.0, float(max_hp))
-	var want_stage: int = 0
-	if ratio <= 0.33:
-		want_stage = 2
-	elif ratio <= 0.66:
-		want_stage = 1
-	if want_stage > fight_stage:
-		fight_stage = want_stage
-		if fight_stage >= 2:
-			phased_dur = 4.2
-			solid_dur = 2.2
-		emit_signal("stage_shifted", fight_stage)
-	if hp <= 0:
+	if chapter == 1 and hp <= _t2:
+		_enter_chapter(2)
+	elif chapter == 2 and hp <= _t3:
+		_enter_chapter(3)
+	elif hp <= 0:
 		state = State.DYING
 		_die_t = 0.0
-		_clear_fakes()
-		if _decoy != null and is_instance_valid(_decoy):
-			_decoy.begin_erase()
 		collision_layer = 0
 		emit_signal("defeated")
-	elif _window_dmg >= cap:
-		# 상한 도달 · 깊게 박히기 전에 몸을 물린다(조기 재잠복). 화력의 보상 = 다음 잠복이 짧다.
-		collision_layer = 0
-		_hit_flash_t = 0.35
-		_next_phased_scale = 0.6
-		SfxPlayer.play_at("bullet_deflect_shield", global_position, -4.0)
-		emit_signal("window_capped")
-		_enter_phased()
-
-func _clear_fakes() -> void:
-	for m in _fakes:
-		if m != null and is_instance_valid(m):
-			(m as Node).call("erase", false)
-	_fakes.clear()
 
 func _find_player() -> Node2D:
 	var tree := get_tree()
@@ -444,21 +459,28 @@ func _draw() -> void:
 		draw_arc(rel, 6.0 + 18.0 * wk, 0.0, TAU, 18, Color(0.90, 0.75, 1.0, 0.4 * (1.0 - wk)), 2.0, true)
 		draw_line(rel * (1.0 - wk), Vector2.ZERO, Color(0.72, 0.42, 1.0, 0.25 * (1.0 - wk)), 2.0)
 	var a: float = 1.0
+	# 그림도(ghost) · 1이면 "구형 렌더로 그려진 그림"(스캔라인 짜임), 0이면 실체.
+	var ghost: float = 0.0
 	match state:
 		State.PHASED:
 			a = 0.42
+			ghost = 1.0
 		State.TELE:
-			a = lerpf(0.42, 1.0, clampf(_state_t / TELE_DUR, 0.0, 1.0))
+			var tele_dur: float = CH2_TELE_DUR if chapter == 2 else CH1_TELE_DUR
+			var k: float = clampf(_state_t / tele_dur, 0.0, 1.0)
+			a = lerpf(0.42 if chapter == 1 else 0.75, 1.0, k)
+			ghost = 1.0 - k
 		State.SOLID:
 			a = 1.0
+		State.FLEE:
+			# 도망 자리의 눈 · 실체보다 옅고 짜임이 남는다("아직 안 박힌다"가 멀리서도 읽힘).
+			a = 0.75
+			ghost = 0.55
+		State.WARP:
+			a = 0.55
+			ghost = 0.8
 		State.DYING:
 			a = maxf(0.0, 1.0 - maxf(0.0, _die_t - 1.1) / 0.8)
-	# 잠복도(ghost) · 1이면 "구형 렌더로 그려진 그림"(스캔라인 짜임), 0이면 실체.
-	var ghost: float = 0.0
-	if state == State.PHASED:
-		ghost = 1.0
-	elif state == State.TELE:
-		ghost = 1.0 - clampf(_state_t / TELE_DUR, 0.0, 1.0)
 	var open_amt: float = 1.0 - _lid
 	if open_amt <= 0.02 and state != State.DYING:
 		open_amt = 0.02
@@ -493,7 +515,8 @@ func _draw() -> void:
 		var iris_p: Vector2 = _gaze.limit_length(10.0)
 		var pupil_r: float = 7.0
 		if state == State.TELE:
-			pupil_r = lerpf(7.0, 4.2, clampf(_state_t / TELE_DUR, 0.0, 1.0))
+			var tele_dur2: float = CH2_TELE_DUR if chapter == 2 else CH1_TELE_DUR
+			pupil_r = lerpf(7.0, 4.2, clampf(_state_t / tele_dur2, 0.0, 1.0))
 		elif state == State.SOLID:
 			pupil_r = 4.2
 		var squash: float = clampf(h / 26.0, 0.02, 1.0)
@@ -503,13 +526,9 @@ func _draw() -> void:
 		draw_circle(Vector2.ZERO, pupil_r, Color(0.05, 0.03, 0.09, a))
 		draw_circle(Vector2(-3.5, -3.5), 2.2, Color(1.0, 1.0, 1.0, 0.8 * a))
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-		# 잠복 = 가짜 마커와 같은 스캔라인 짜임을 본체에도 · "지금은 그림"이 시각 언어로 읽힌다.
-		# 실체화(TELE→SOLID)되며 짜임이 걷히고 몸이 꽉 찬다. 텍스트 라벨 없이 상태 전달
-		# ("실체 없음" 라벨 작위적 반려 2026-08-13).
+		# 그림 상태 = 스캔라인 짜임 · "지금은 그림"이 시각 언어로 읽힌다. 모습을 드러내며(TELE→SOLID)
+		# 짜임이 걷히고 몸이 꽉 찬다. 텍스트 라벨 없이 상태 전달("실체 없음" 라벨 작위적 반려 2026-08-13).
 		if ghost > 0.02:
-			# 렌더 스트레인 · 그림이 찢겨 나간 직후 본체의 짜임이 줄 단위로 밀린다
-			# ("같은 렌더러가 버거워한다"의 시각 인과 · 완만 감쇠, 점멸 없음).
-			var strain: float = _strain_t / 0.6
 			var sy: float = -h + 2.0
 			while sy < h * 0.8 - 1.0:
 				var rel: float = (-sy / h) if sy < 0.0 else (sy / maxf(h * 0.8, 0.001))
@@ -517,14 +536,17 @@ func _draw() -> void:
 				var t0: float = asin(rel) / PI
 				var half_w: float = w * (1.0 - 2.0 * t0)
 				if half_w > 2.0:
-					var s_off: float = 6.0 * strain * (1.0 if fmod(sy, 8.0) < 4.0 else -1.0)
-					draw_line(Vector2(-half_w + s_off, sy), Vector2(half_w + s_off, sy),
+					draw_line(Vector2(-half_w, sy), Vector2(half_w, sy),
 						Color(0.05, 0.03, 0.09, 0.5 * ghost * a), 2.0)
 				sy += 4.0
-	# 실체(피격 가능) 링 · SOLID에서만 완만히 맥동.
+	# 실체(피격 가능) 링 · SOLID에서만 완만히 맥동. 3장은 상시라 링도 상시.
 	if state == State.SOLID:
 		var ring_a: float = 0.35 + 0.15 * sin(_t * 3.0)
 		draw_arc(Vector2.ZERO, 52.0, 0.0, TAU, 40, Color(0.92, 0.80, 1.0, ring_a), 2.0, true)
+	# 2장 도망 자리 · 사거리 표시 없음(공간 항법은 요원의 판단) · 대신 눈 아래 얇은 받침선으로
+	# "여기 앉아 있다"를 알린다.
+	if state == State.FLEE:
+		draw_line(Vector2(-30.0, 30.0), Vector2(30.0, 30.0), Color(0.72, 0.42, 1.0, 0.35), 2.0)
 	# 피격 플래시 · 확장 링(짧고 국소적).
 	if _hit_flash_t > 0.0:
 		var k: float = 1.0 - _hit_flash_t / 0.25
@@ -533,323 +555,7 @@ func _draw() -> void:
 	if state == State.SOLID and _state_t < 0.35:
 		var sk: float = _state_t / 0.35
 		draw_arc(Vector2.ZERO, 40.0 + 26.0 * sk, 0.0, TAU, 40, Color(0.95, 0.85, 1.0, 0.8 * (1.0 - sk)), 3.0, true)
-	# 탄 통과 파문 · 잠복 중 탄이 몸을 지나간 흔적(박히지 않았음을 그 자리에서 보여줌).
+	# 탄 통과 파문 · 그림 상태에서 탄이 몸을 지나간 흔적(박히지 않았음을 그 자리에서 보여줌).
 	if _ripple_t > 0.0:
 		var rk: float = 1.0 - _ripple_t / 0.35
 		draw_arc(Vector2.ZERO, 30.0 + 42.0 * rk, 0.0, TAU, 36, Color(0.72, 0.42, 1.0, 0.38 * (1.0 - rk)), 2.0, true)
-
-# ═══ 가짜 눈(§2.4 전반, 2026-08-16 사용자 확정) · 실체화 때 함께 뜨는 미끼 눈 ═══
-# 본체와 같은 아몬드 눈 도상을 미러하되 tell = 구형 렌더 문법: ① 실체화해도 스캔라인 잔결이
-# 남는다(본체는 걷힘) ② 주기적 x-슬립 ③ 탄이 통과하며 파문(콜리전 없음) ④ 볼리를 쏘지 않는다.
-# homing_decoy 그룹 · 유도탄이 이쪽으로도 휘어 "유도 방향 = 공짜 판별"을 차단(사용자 지적).
-class _DecoyEye extends Node2D:
-	var owner_fv: Node2D = null
-	var target: Vector2 = Vector2.ZERO   # 이번 창의 자리(본체 _pick_pair가 준다)
-	var _t: float = 0.0
-	var _gaze: Vector2 = Vector2.ZERO
-	var _ripple_t: float = 0.0
-	var _ripple_cd: float = 0.0
-	var _erasing: bool = false
-	var _erase_t: float = 0.0
-
-	func _ready() -> void:
-		add_to_group("homing_decoy")
-		z_index = 2
-
-	func tele_jump() -> void:
-		global_position = target
-
-	func begin_erase() -> void:
-		_erasing = true
-		_erase_t = 0.0
-
-	# 가짜 탄 볼리 · 본체 볼리와 같은 순간·같은 문법으로 쏜다(볼리 출처 = 공짜 판별 차단).
-	# 탄도 이쪽 렌더러의 그림: 피해 없음, 플레이어에 닿으면 찢겨 흩어진다(맞아 본 뒤에야 확인되는
-	# tell · 원거리에선 진짜 탄과 거의 같아 보인다).
-	func fire_phantom_volley() -> void:
-		var tree := get_tree()
-		if tree == null or _erasing:
-			return
-		var arr := tree.get_nodes_in_group("player")
-		if arr.is_empty():
-			return
-		var p: Node2D = arr[0] as Node2D
-		SfxPlayer.play_at("enemy_patrol_fire", global_position, -3.0)
-		var base_dir: Vector2 = (p.global_position + Vector2(0, -24.0) - global_position).normalized()
-		var parent := get_parent()
-		if parent == null:
-			return
-		for spread in [-0.22, 0.0, 0.22]:
-			var b := _PhantomBullet.new()
-			b.velocity = base_dir.rotated(float(spread)) * EnemyBullet.BASE_SPEED * 0.9
-			parent.add_child(b)
-			b.global_position = global_position + base_dir * 30.0
-			b.reset_physics_interpolation()
-
-	func _physics_process(delta: float) -> void:
-		if owner_fv == null or not is_instance_valid(owner_fv):
-			queue_free()
-			return
-		_t += delta
-		_ripple_t = maxf(0.0, _ripple_t - delta)
-		_ripple_cd = maxf(0.0, _ripple_cd - delta)
-		if _erasing:
-			_erase_t += delta
-			if _erase_t > 0.6:
-				queue_free()
-				return
-		var st: int = int(owner_fv.get("state"))
-		# 잠복 동안 이번 창의 자리로 부유(본체와 같은 리듬, 다른 자리).
-		if st == 0:
-			global_position = global_position.move_toward(target, 60.0 * delta)
-		# 판별 tell(A안) · 가짜는 요원을 보지 않는다. 시선이 천천히 헛돈다(본체는 요원에게 고정).
-		var want: Vector2 = Vector2(sin(_t * 0.9) * 8.0, cos(_t * 0.7) * 5.0)
-		_gaze = _gaze.lerp(want, minf(1.0, delta * 2.0))
-		var tree := get_tree()
-		if tree != null:
-			# 탄 통과 파문 · 쏘면 그림임이 드러난다(확정 판별 · 대신 탄과 시간을 쓴다).
-			if _ripple_cd <= 0.0:
-				for b in tree.get_nodes_in_group("player_bullet"):
-					if b is Node2D and global_position.distance_to((b as Node2D).global_position) < 46.0:
-						_ripple_t = 0.35
-						_ripple_cd = 0.3
-						break
-		queue_redraw()
-
-	func _draw() -> void:
-		if owner_fv == null or not is_instance_valid(owner_fv):
-			return
-		var st: int = int(owner_fv.get("state"))
-		var st_t: float = 0.0
-		if owner_fv.get("_state_t") != null:
-			st_t = float(owner_fv.get("_state_t"))
-		var a: float = 0.42
-		var open_amt: float = 0.55
-		match st:
-			1:   # TELE · 본체와 같이 떠오른다
-				a = lerpf(0.42, 1.0, clampf(st_t / 0.7, 0.0, 1.0))
-				open_amt = lerpf(0.55, 1.0, clampf(st_t / 0.7, 0.0, 1.0))
-			2:   # SOLID · 실체처럼 보이지만 스캔라인 잔결이 남는다(tell ①)
-				a = 1.0
-				open_amt = 1.0
-			3:   # 본체 소멸 · 미끼도 걷힌다
-				a = 0.3
-		if _erasing:
-			a *= maxf(0.0, 1.0 - _erase_t / 0.6)
-		# 주기 슬립(tell ②) · 1.9s마다 한순간 옆으로 밀린다.
-		var slip: float = 3.0 if fmod(_t, 1.9) < 0.1 else 0.0
-		var w: float = 46.0
-		var h: float = 26.0 * open_amt
-		draw_set_transform(Vector2(slip, 0.0), 0.0, Vector2(1.0, 0.62))
-		draw_circle(Vector2.ZERO, w * 1.5, Color(0.72, 0.42, 1.0, 0.07 * a))
-		draw_circle(Vector2.ZERO, w * 1.1, Color(0.72, 0.42, 1.0, 0.10 * a))
-		draw_set_transform(Vector2(slip, 0.0), 0.0, Vector2.ONE)
-		if h > 1.0:
-			var seg: int = 22
-			var upper := PackedVector2Array()
-			var lower := PackedVector2Array()
-			for k in seg + 1:
-				var tt: float = float(k) / float(seg)
-				var x: float = lerpf(-w, w, tt)
-				var lift: float = sin(PI * tt)
-				upper.append(Vector2(x + slip, -h * lift))
-				lower.append(Vector2(x + slip, h * 0.8 * lift))
-			var fill := PackedVector2Array()
-			fill.append_array(upper)
-			for k in range(lower.size() - 1, -1, -1):
-				fill.append(lower[k])
-			draw_colored_polygon(fill, Color(0.13, 0.09, 0.19, 0.88 * a))
-			draw_polyline(upper, Color(0.88, 0.74, 1.0, 0.85 * a), 2.5, true)
-			draw_polyline(lower, Color(0.88, 0.74, 1.0, 0.7 * a), 2.5, true)
-			var iris_p: Vector2 = _gaze.limit_length(10.0) + Vector2(slip, 0.0)
-			var squash: float = clampf(h / 26.0, 0.02, 1.0)
-			draw_set_transform(iris_p, 0.0, Vector2(1.0, squash))
-			draw_circle(Vector2.ZERO, 15.0, Color(0.58, 0.34, 0.88, 0.9 * a))
-			draw_circle(Vector2.ZERO, 15.0 * 0.72, Color(0.42, 0.24, 0.66, 0.95 * a))
-			draw_circle(Vector2.ZERO, 5.5, Color(0.05, 0.03, 0.09, a))
-			draw_circle(Vector2(-3.5, -3.5), 2.2, Color(1.0, 1.0, 1.0, 0.8 * a))
-			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-			# 스캔라인 잔결(tell ①) · 실체 상태에서도 얇게 남는다(본체는 SOLID에서 걷힘).
-			var weave_a: float = 0.5 if st != 2 else 0.22
-			var sy: float = -h + 2.0
-			while sy < h * 0.8 - 1.0:
-				var rel: float = (-sy / h) if sy < 0.0 else (sy / maxf(h * 0.8, 0.001))
-				rel = clampf(rel, 0.0, 0.999)
-				var t0: float = asin(rel) / PI
-				var half_w: float = w * (1.0 - 2.0 * t0)
-				if half_w > 2.0:
-					draw_line(Vector2(-half_w + slip, sy), Vector2(half_w + slip, sy),
-						Color(0.05, 0.03, 0.09, weave_a * a), 2.0)
-				sy += 4.0
-		# 탄 통과 파문(tell ③).
-		if _ripple_t > 0.0:
-			var rk: float = 1.0 - _ripple_t / 0.35
-			draw_arc(Vector2.ZERO, 30.0 + 42.0 * rk, 0.0, TAU, 36, Color(0.72, 0.42, 1.0, 0.38 * (1.0 - rk)), 2.0, true)
-
-# ═══ 가짜 탄(거짓 렌더) · 미끼 눈이 쏘는 그림 탄 ═══
-# 진짜 탄(EnemyBullet · 주황)과 같은 크기·색·속도로 날아간다. 가까이서만 보이는 tell =
-# 바이올렛 이음선 + 주기 슬립(가짜 병사와 같은 구형 렌더 문법). 콜리전 없음 · 플레이어에
-# 닿으면 피해 없이 찢겨 흩어진다("탄도 그림이었다"를 그 자리에서 학습).
-class _PhantomBullet extends Node2D:
-	var velocity: Vector2 = Vector2.ZERO
-	var _life: float = 2.4
-	var _t: float = 0.0
-	var _burst_t: float = 0.0   # >0: 통과 찢김 재생 중(끝나면 소멸)
-
-	func _ready() -> void:
-		z_index = 5
-		add_to_group("phantom_bullet")
-
-	func _physics_process(delta: float) -> void:
-		_t += delta
-		if _burst_t > 0.0:
-			_burst_t -= delta
-			if _burst_t <= 0.0:
-				queue_free()
-				return
-			queue_redraw()
-			return
-		_life -= delta
-		if _life <= 0.0:
-			queue_free()
-			return
-		global_position += velocity * delta
-		var tree := get_tree()
-		if tree != null:
-			var arr := tree.get_nodes_in_group("player")
-			if arr.size() > 0 and global_position.distance_to((arr[0] as Node2D).global_position) < 22.0:
-				_burst_t = 0.3
-				velocity = Vector2.ZERO
-		queue_redraw()
-
-	func _draw() -> void:
-		if _burst_t > 0.0:
-			# 찢김 · 슬라이스가 흩어지며 바이올렛 결이 드러난다(가짜 병사 소멸과 같은 문법).
-			var k: float = 1.0 - _burst_t / 0.3
-			for i in 4:
-				var off := Vector2(-7.0 + 5.0 * float(i), (-1.0 if i % 2 == 0 else 1.0) * 9.0 * k)
-				draw_rect(Rect2(off, Vector2(5.0, 2.0)), Color(0.82, 0.58, 1.0, 0.8 * (1.0 - k)))
-			return
-		# 진행 탄 · 진짜 탄과 같은 주황 몸체. 주기 슬립(1.1s마다 한순간 1px 밀림) + 몸체를 가르는
-		# 얇은 바이올렛 이음선이 유일한 근거리 tell.
-		var slip: float = 1.5 if fmod(_t, 1.1) < 0.08 else 0.0
-		draw_rect(Rect2(Vector2(-6.0 + slip, -2.0), Vector2(12.0, 4.0)), Color(1.0, 0.65, 0.35, 1.0))
-		draw_rect(Rect2(Vector2(-6.0 + slip, -0.5), Vector2(12.0, 1.0)), Color(0.72, 0.42, 1.0, 0.55))
-
-# ═══ 가짜 적(거짓 렌더) · 구형 렌더 문법의 적 실루엣 ═══
-# "허공에 네모만 떠 있어 뭔지 모르겠다" 반려(2026-08-12) → 마커가 아니라 **적처럼 보이는 것**을
-# 그린다: 디더 스캔라인으로 짜인 옛 렌더러풍 병사 실루엣이 서서 플레이어를 겨눈다.
-# tell = 구형 문법(디더 실루엣·굵은 브래킷) + 쏘면 탄이 통과하며 렌더가 찢김(콜리전 없음).
-# "대기열 등록 #N" 라벨과 발사 없는 조준 점선은 스폰/사격 예고로 오독돼 제거(실플레이 2026-08-13).
-class _FakeMarker extends Node2D:
-	var lifetime: float = 8.0
-	var t: float = 0.0
-	var erasing: bool = false
-	var owner_fv: Node = null        # 렌더 부하 통지 대상(본체) · 탄으로 다 찢으면 알린다
-	var tear_hits: int = 0           # 탄 통과 누적 · 2회면 그림이 못 버티고 흩어진다
-	var _erase_t: float = 0.0
-	var _erase_cyan: bool = false
-	var _slip_burst_t: float = 0.0   # 탄 통과 순간의 찢김(회복되는 약한 tear)
-	var _aim_to: Vector2 = Vector2.ZERO
-
-	func _ready() -> void:
-		z_index = 6
-		# 유도 미끼 · 유도탄이 가짜 병사도 쫓는다(유도 방향 = 공짜 판별 차단, 2026-08-16).
-		add_to_group("homing_decoy")
-
-	func _process(delta: float) -> void:
-		t += delta
-		_slip_burst_t = maxf(0.0, _slip_burst_t - delta)
-		if erasing:
-			_erase_t += delta
-			if _erase_t > 0.4:
-				queue_free()
-				return
-		elif t >= lifetime:
-			erase(false)
-		var tree := get_tree()
-		if tree != null:
-			# 겨누는 척 · 실루엣이 플레이어를 계속 향한다(발사는 없다).
-			var arr := tree.get_nodes_in_group("player")
-			if arr.size() > 0:
-				_aim_to = (arr[0] as Node2D).global_position - global_position
-			# 탄이 실루엣을 지나가면 렌더가 찢겼다 재조립 · "쏘면 뚫리는 그림"을 즉석에서 학습.
-			# 렌더 부하(2026-08-22): 2회째 통과엔 그림이 재조립을 못 버티고 흩어진다(격파) ·
-			# 본체에 통지해 잠복 잔여를 당긴다("빨리 찢으면 조기 실체화"의 실행 지점).
-			if not erasing and _slip_burst_t <= 0.0:
-				for b in tree.get_nodes_in_group("player_bullet"):
-					if b is Node2D:
-						var lp: Vector2 = (b as Node2D).global_position - global_position
-						if absf(lp.x) < 26.0 and lp.y > -60.0 and lp.y < 6.0:
-							_slip_burst_t = 0.32
-							tear_hits += 1
-							if tear_hits >= 2:
-								erase(false)
-								if owner_fv != null and is_instance_valid(owner_fv):
-									owner_fv.call("on_fake_torn")
-							break
-		queue_redraw()
-
-	func erase(by_veil: bool) -> void:
-		if erasing:
-			return
-		erasing = true
-		_erase_cyan = by_veil
-		_erase_t = 0.0
-
-	func _draw() -> void:
-		var appear: float = clampf(t / 0.3, 0.0, 1.0)
-		var a: float = appear
-		if erasing:
-			a = maxf(0.0, 1.0 - _erase_t / 0.4)
-		var vi := Color(0.82, 0.58, 1.0, 0.9 * a)
-		# 글리치 슬립 · 드물게(1.7s 주기) 한순간 실루엣이 옆으로 밀린다(구형 렌더의 미끄러짐).
-		var slip: float = 3.0 if fmod(t, 1.7) < 0.1 else 0.0
-		# 소멸 = 슬라이스 흩어짐 / 탄 통과 = 같은 문법의 약한 찢김(회복됨).
-		var tear: float = 0.0
-		if erasing:
-			tear = _erase_t / 0.4
-		elif _slip_burst_t > 0.0:
-			tear = 0.35 * (_slip_burst_t / 0.32)
-		# ① 병사 실루엣(발 기준, 높이 ~52) · 2px 가로 스트립 디더(CRT 짜임). 옛 렌더러가 그린 적.
-		var seg_defs: Array = [
-			{"y0": -52.0, "y1": -40.0, "hw": 6.0},    # 머리
-			{"y0": -40.0, "y1": -16.0, "hw": 9.0},    # 몸통
-			{"y0": -16.0, "y1": 0.0, "hw": 7.0},      # 다리
-		]
-		for sd_raw in seg_defs:
-			var sd: Dictionary = sd_raw
-			var y: float = float(sd.get("y0", 0.0))
-			var y1: float = float(sd.get("y1", 0.0))
-			var hw: float = float(sd.get("hw", 6.0))
-			while y < y1:
-				var band_off: float = slip + tear * (24.0 if fmod(y, 8.0) < 4.0 else -24.0)
-				draw_rect(Rect2(Vector2(-hw + band_off, y), Vector2(hw * 2.0, 2.0)),
-					Color(vi.r, vi.g, vi.b, 0.55 * a), true)
-				y += 4.0
-		# 팔(총 든 자세) · 조준 방향으로 뻗은 짧은 스트립(발사는 없다 · 긴 조준선은 제거).
-		var aim_dir: Vector2 = _aim_to.normalized() if _aim_to.length() > 1.0 else Vector2.RIGHT
-		var shoulder := Vector2(0.0, -32.0)
-		draw_line(shoulder, shoulder + aim_dir * 14.0, Color(vi.r, vi.g, vi.b, 0.55 * a), 3.0)
-		# ② 표적 브래킷(굵음 = 구형 문법 tell) · 실루엣을 감싼다.
-		var bw: float = 22.0
-		var top: float = -58.0
-		var arm: float = 10.0
-		for corner in [Vector2(-bw, top), Vector2(bw, top), Vector2(-bw, 0.0), Vector2(bw, 0.0)]:
-			var c: Vector2 = corner
-			var sx: float = -1.0 if c.x > 0.0 else 1.0
-			var sy: float = 1.0 if c.y < -20.0 else -1.0
-			draw_line(c, c + Vector2(sx * arm, 0.0), vi, 4.0)
-			draw_line(c, c + Vector2(0.0, sy * arm), vi, 4.0)
-		# ③ 스캔라인 스윕 + 깜빡이는 커서(1.6Hz 소면적 · 광과민성 기준 내).
-		var scan: float = fmod(t, 1.4) / 1.4
-		var sy2: float = lerpf(top + 4.0, -4.0, scan)
-		draw_line(Vector2(-bw + 3.0, sy2), Vector2(bw - 3.0, sy2), Color(vi.r, vi.g, vi.b, 0.40 * a), 1.5)
-		if fmod(t, 0.62) < 0.34:
-			draw_line(Vector2(-8.0, 10.0), Vector2(8.0, 10.0), vi, 3.0)
-		# ④ VEIL 소거 · 시안 취소선(내 VEIL이 그은 줄).
-		if erasing and _erase_cyan:
-			var k: float = clampf(_erase_t / 0.22, 0.0, 1.0)
-			var x0: float = -bw - 6.0
-			var x1: float = lerpf(x0, bw + 6.0, k)
-			draw_line(Vector2(x0, top * 0.5), Vector2(x1, top * 0.5), Color(0.45, 0.90, 1.0, 0.9), 2.5)

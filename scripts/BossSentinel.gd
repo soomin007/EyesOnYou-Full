@@ -689,6 +689,27 @@ func _transition_to(new_phase: int) -> void:
 			_debris_nodes.append(fd)
 	emit_signal("phase_changed", new_phase)
 
+# 페이즈 재시작(final_boss_rework §9.4 · 2026-09-04) · 사망 후 도달했던 페이즈부터. HP를 그 페이즈의
+# 진입 임계로 복원하고 전환 연출(freeze·플래시·자막) 없이 상태만 맞춘다. Stage._spawn_boss가
+# apply_hp_bonus 뒤에 호출(임계가 성장 보너스를 반영한 뒤). 잔당·잔해는 전환과 같은 경로로 다시 깐다.
+func restore_phase(target: int) -> void:
+	if story_simplified or dead or target < 2:
+		return
+	target = mini(target, 3)
+	phase = target
+	hp = p3_threshold if target >= 3 else p2_threshold
+	hp = maxi(hp, HP_SELF_DESTRUCT + 1)   # 자폭 임계 위(복원 직후 즉시 자폭 방지)
+	if visual != null:
+		visual.self_modulate = Color(1.4, 0.55, 0.55) if target >= 3 else Color(1.2, 0.85, 0.65)
+	call_deferred("_summon_minions", target)
+	if target >= 3 and _debris_nodes.is_empty():
+		for cfg0 in [{"x_min": 350.0, "x_max": 900.0, "interval": 7.0},
+				{"x_min": 1300.0, "x_max": 1850.0, "interval": 8.0, "phase": 0.5}]:
+			var fd := FallingDebris.new()
+			get_parent().add_child(fd)
+			fd.setup(cfg0, GROUND_Y_LAB)
+			_debris_nodes.append(fd)
+
 # 과부하 배기 진입 · 무적 3s + 증기 + 증원 1기(상한 안에서). 배기가 끝나면 창 리셋.
 func _enter_vent() -> void:
 	if vent_t > 0.0 or self_destruct_active or dead:

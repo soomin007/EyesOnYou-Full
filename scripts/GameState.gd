@@ -141,9 +141,12 @@ const DISPOSAL_CONCEAL: String = "conceal"   # 은닉 · 빼돌려 요원이 보
 const DISPOSAL_LEAVE: String = "leave"       # 잔류 · 건드리지 않고 그 자리에 둔다(시설에 남김).
 var disposal_choice: String = ""
 # 14-1 라이벌 보스 페이즈 체크포인트(§7.2 확정: 사망 시 현 페이즈부터 재시작, 전체 재시작 없음).
-# 0=미도달/P1, 1=P2(빙의), 2=P3(분신전) 도달. 런 내 세션 한정(run.cfg 미저장) · 이어하기 재진입은 P1부터.
+# 0=미도달/P1, 1=P2(빙의), 2=P3(눈) 도달. 사망 재시작은 도달 페이즈부터(final_boss_rework §9.4 ·
+# 2026-09-04 · Death가 더는 리셋하지 않는다). run.cfg에 저장 · 이어하기도 같은 페이즈에서.
 # 해제: 보스 처치(_on_false_veil_defeated) + reset()/start_main_game()(지속 플래그 경계 원칙).
 var rival_phase_reached: int = 0
+# SENTINEL(lab) 도달 페이즈(1~3 · 0=미도달) · 같은 규약. Stage._on_boss_phase_changed가 올리고 격파가 지운다.
+var boss_phase_reached: int = 0
 # 14-2 코어 대면 터널 실런 모드(§7.1 ④) · Stage가 보스 클리어 → 터널 전환 직전에 켠다.
 # CoreTunnel이 읽어 목격 비트에서 회수 리드아웃·고백·처리 선택을 실행(꺼져 있으면 연습장 프로토).
 # 해제: 처리 선택 완료(터널 → 브리핑) + reset()/start_main_game().
@@ -518,6 +521,7 @@ func reset() -> void:
 	veilsight_tag_shown = false
 	disposal_choice = ""
 	rival_phase_reached = 0
+	boss_phase_reached = 0
 	core_tunnel_live = false
 	rival_lure_shown = 0
 	rival_lure_followed = 0
@@ -594,6 +598,7 @@ func start_main_game() -> void:
 	veilsight_tag_shown = false
 	disposal_choice = ""
 	rival_phase_reached = 0
+	boss_phase_reached = 0
 	core_tunnel_live = false
 	rival_lure_shown = 0
 	rival_lure_followed = 0
@@ -893,8 +898,8 @@ func register_death() -> void:
 	death_count += 1
 	current_segment = 0   # 방 체인 · 사망 재개는 체인 첫 방부터(스토리·연습장 포함)
 	# 사망 = 그 막 첫 스테이지로 후퇴(2026-08-23 통일 · 자원은 HP 하나). 여기서 즉시 후퇴·저장을
-	# 마쳐 타이틀 이탈 후 이어하기로도 무를 수 없게 한다(이어하기 무름 방지). 예외 = 14-1
-	# 보스전: 같은 스테이지 P1부터(Death._restart_stage가 rival_phase_reached를 리셋).
+	# 마쳐 타이틀 이탈 후 이어하기로도 무를 수 없게 한다(이어하기 무름 방지). 예외 = 보스전:
+	# 같은 스테이지, 도달한 페이즈부터(§9.4 · rival_phase_reached/boss_phase_reached 유지).
 	death_restart_in_place = false
 	if story_mode or playground_active:
 		return
@@ -905,6 +910,7 @@ func register_death() -> void:
 	if not death_restart_in_place:
 		current_stage = act_start_stage(act_for_stage(current_stage))
 		rival_phase_reached = 0
+		boss_phase_reached = 0
 		# 진행 불가 소프트락 수정(2026-08-25 사용자 보고): 막 시작으로 후퇴하면서 그 막에서
 		# 골랐던 경로 기록을 안 지우면 불변식(route_history.size == current_stage)이 깨지고,
 		# RouteMap이 history 필터로 풀을 짜므로 죽을 때마다 실패한 시도의 맵이 영구 소모돼
@@ -1167,6 +1173,9 @@ func _store_run_state(cf: ConfigFile, section: String) -> void:
 	cf.set_value(section, "rival_lock_beat5_shown", rival_lock_beat5_shown)
 	cf.set_value(section, "boss_intro_seen_run", boss_intro_seen_run)
 	cf.set_value(section, "rival_cutscenes_seen_run", rival_cutscenes_seen_run)
+	# 보스전 페이즈 체크포인트(§9.4 · 2026-09-04) · 이어하기도 도달 페이즈에서 다시 선다.
+	cf.set_value(section, "rival_phase_reached", rival_phase_reached)
+	cf.set_value(section, "boss_phase_reached", boss_phase_reached)
 	# 막 시작 검문 스냅샷(감사 A-1) · 이어하기 후의 사망 되감기도 같은 기준점을 쓰게.
 	cf.set_value(section, "act_checkpoint", act_checkpoint)
 
@@ -1261,6 +1270,8 @@ func _restore_run_state(cf: ConfigFile, section: String) -> void:
 	rival_lock_beat4_shown = bool(cf.get_value(section, "rival_lock_beat4_shown", false))
 	rival_lock_beat5_shown = bool(cf.get_value(section, "rival_lock_beat5_shown", false))
 	boss_intro_seen_run = bool(cf.get_value(section, "boss_intro_seen_run", false))
+	rival_phase_reached = int(cf.get_value(section, "rival_phase_reached", 0))
+	boss_phase_reached = int(cf.get_value(section, "boss_phase_reached", 0))
 	rival_cutscenes_seen_run = []
 	for k in cf.get_value(section, "rival_cutscenes_seen_run", []):
 		rival_cutscenes_seen_run.append(str(k))

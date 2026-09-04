@@ -3599,15 +3599,15 @@ class _RouteLineTriggers extends Node:
 			else:
 				host.call("_show_veil_subtitle", txt, dur)
 
-# 거짓 렌더 배웅 실루엣 · MapData "fake_watchers": [Vector2]. 잔류 탈출의 정체성(§3.2):
-# 구형 렌더 문법의 실루엣(FalseVeil._FakeMarker 재사용)이 길가에 서서 플레이어를 겨눈 채
-# 배웅한다. 콜리전 없음 · 쏘면 렌더가 찢겼다 재조립(P3와 같은 공정 tell).
+# 구형 렌더 배웅 실루엣 · MapData "fake_watchers": [Vector2]. 잔류 탈출의 정체성(§3.2):
+# 옛 렌더러풍 병사 실루엣(DrawnWatcher · 2026-09-04 P3 B안 개편으로 FalseVeil에서 분리)이 길가에 서서
+# 플레이어를 겨눈 채 배웅한다. 콜리전 없음 · 쏘면 렌더가 찢겼다 재조립(2회면 흩어진다).
 func _build_fake_watchers() -> void:
 	var arr: Array = _map_data.get("fake_watchers", [])
 	if arr.is_empty() or GameState.story_mode:
 		return
 	for p in arr:
-		var m := FalseVeil._FakeMarker.new()
+		var m := DrawnWatcher.new()
 		m.lifetime = 99999.0
 		m.position = p
 		add_child(m)
@@ -5810,7 +5810,8 @@ func _build_player() -> void:
 	player = CharacterBody2D.new()
 	player.set_script(load("res://scripts/Player.gd"))
 	player.collision_layer = 2
-	player.collision_mask = 1
+	# 마스크 1(월드) + 8(14-1 P3 그려진 벽 · 요원과 내 탄만 막는 전용 레이어 · Stage._DrawnWall).
+	player.collision_mask = 1 | 8
 	var col := CollisionShape2D.new()
 	col.name = "Collision"
 	var shape := RectangleShape2D.new()
@@ -6761,6 +6762,12 @@ func _spawn_boss(boss_meta: Dictionary) -> void:
 	if not GameState.story_mode:
 		var off_tiers: int = GameState.get_skill_tier("fire_boost") + GameState.get_skill_tier("multishot") + GameState.get_skill_tier("explosive")
 		boss.apply_hp_bonus(mini(off_tiers * 2, 16))
+	# 페이즈 재시작(§9.4) · 사망 후 도달했던 페이즈부터. HP는 그 페이즈 진입 임계로 복원하고 시설 소환(P2)·
+	# 잔해(P3)는 전환 때와 같은 경로로 다시 깐다(전환 연출·자막은 생략 · 임계는 성장 보너스 반영 뒤 값).
+	if not GameState.story_mode and GameState.boss_phase_reached >= 2:
+		boss.restore_phase(GameState.boss_phase_reached)
+		_summon_facility_hazards.call_deferred()
+		_refresh_boss_hp_bar()
 	# 보스전 진입 안내 · 본편은 인트로 컷씬의 VEIL 대사가 대신한다(중복 방지). 스토리 모드는 인트로가
 	# 없으므로 기존 1회성 안내 유지(피드백: 사격법 혼란).
 	if GameState.story_mode:
@@ -6825,6 +6832,8 @@ func _refresh_boss_hp_bar() -> void:
 		3: boss_hp_bar_fill.color = Color(1.0, 0.18, 0.18)
 
 func _on_boss_phase_changed(new_phase: int) -> void:
+	# 페이즈 재시작(final_boss_rework §9.4 · 2026-09-04) · 도달한 페이즈를 런에 기록. 사망 후 재도전은 여기부터.
+	GameState.boss_phase_reached = maxi(GameState.boss_phase_reached, new_phase)
 	# 페이즈 인지 · 화면 플래시 + 카메라 흔들림 + 강조 자막(큰 폰트 + 박스 배경).
 	_screen_flash(Color(1.0, 0.20, 0.22, 0.55), 0.06, 0.45)
 	_camera_shake(8.0 if new_phase == 2 else 14.0, 0.45)
@@ -7133,6 +7142,7 @@ func _on_boss_self_destruct_disarmed() -> void:
 		_show_veil_subtitle(VeilDialogue.banded("...자폭은 위장입니다. 코어가 다시 점화됩니다. 침착하게, 마무리하십시오.", "...자폭이 위장이에요. 코어가 다시 점화됩니다. 침착하게, 마무리하세요."), 3.6)
 
 func _on_boss_killed(at_position: Vector2) -> void:
+	GameState.boss_phase_reached = 0   # 정복 · 페이즈 체크포인트 해제(지속 플래그 경계 원칙)
 	# Boss는 ARENA enemy_clear에 자연스럽게 잡히도록 wave_idx=-1로 처리하되,
 	# 추가로 VEIL 보스 처치 대사 시퀀스를 깔아준다.
 	_on_enemy_killed(at_position, -1)
@@ -7646,8 +7656,7 @@ func _init_rival_boss() -> void:
 			_wave_spawned[i] = true
 		if GameState.rival_phase_reached >= 2:
 			call_deferred("_start_rival_p3", 3.6)
-			get_tree().create_timer(1.4, false).timeout.connect(_p3_tell_line)   # 판별 tell 재고지
-			get_tree().create_timer(4.8, false).timeout.connect(_p3_unmarked_line)
+			get_tree().create_timer(1.4, false).timeout.connect(_p3_restart_line)   # 창 안내 재고지
 		else:
 			call_deferred("_start_rival_p2")
 		return
@@ -8603,21 +8612,20 @@ func _fake_clear_end() -> void:
 	_fake_clear_rect = null
 	_fake_clear_label = null
 	GameState.restrict_combat_input = false
-	# P3 오프닝 = 컷씬(2026-08-23) · 눈이 먼저 등장해 응시하고(가짜 그림 포함 정지 화면),
-	# 다음 프레임에 세계를 멈춰 자백 + VEIL 안내 3줄을 읽는다. 컷씬 종료 후 응시 유예 3.0s가
+	# P3 오프닝 = 컷씬(2026-08-23) · 눈이 먼저 등장해 응시하고(그림 상태 정지 화면),
+	# 다음 프레임에 세계를 멈춰 자백 + VEIL 안내 2줄을 읽는다. 컷씬 종료 후 응시 유예 3.0s가
 	# 마저 흐른 뒤 첫 볼리. VEIL 줄이 온전히 나오는 건 억압 연출의 예외 · 판별 정보는 컷씬이
 	# 전달하고, 억압(1.4s 끊김)은 전투 중 보조 자막이 담당한다(사용자 2026-08-23 가독 우선).
 	_start_rival_p3(3.0)
 	call_deferred("_p3_opening_cutscene")
 
-# P3 오프닝 컷씬 · 자백(이번 런 이력 변형 3종) + VEIL 동요·판별 안내.
+# P3 오프닝 컷씬 · 자백(이번 런 이력 변형 3종) + VEIL 동요·창 안내.
 func _p3_opening_cutscene() -> void:
 	if not is_inside_tree() or goal_reached or _rival_phase != 2:
 		return
-	# 사망 재시작에선 자백 컷씬(세계 정지)을 생략하고 판별 tell 자막 2줄만 전투 중에 흘린다(2026-08-30).
+	# 사망 재시작에선 자백 컷씬(세계 정지)을 생략하고 짧은 창 안내 1줄만 전투 중에 흘린다(2026-08-30).
 	if not GameState.rival_cutscene_first_time("p3"):
-		get_tree().create_timer(1.4, false).timeout.connect(_p3_tell_line)
-		get_tree().create_timer(4.8, false).timeout.connect(_p3_unmarked_line)
+		get_tree().create_timer(1.4, false).timeout.connect(_p3_restart_line)
 		return
 	# 정보 축적형 공개(2026-08-23) · 자백이 이번 런의 이력을 회수한다: 막4+ 루트맵에서 유인
 	# (? 귀띔)을 따랐으면 "그것도 나였다", 봤지만 안 따랐으면 그 불신을 짚는다. 조우 없으면 원형.
@@ -8631,57 +8639,54 @@ func _p3_opening_cutscene() -> void:
 		confession = "이 화면, 익숙하시죠. 제가 그렸습니다.\n경로 고를 때는 저를 한 번도 안 믿으시더니."
 	else:
 		confession = "이 화면, 익숙하시죠. 제가 그렸습니다."
-	# 판별 규칙(A안 · 2026-08-30) · 눈이 둘 뜨고, 요원을 똑바로 보는 쪽이 진짜.
+	# B안(2026-09-04) · 이 순간 화면 = 스캔라인 짜임의 눈 하나(그림 상태). 안내는 창 문법만.
+	# 그려진 벽·발판은 2장에 실제로 나타날 때 라이벌이 직접 말한다(화면에 없는 것을 미리 지칭하지 않는다).
 	_play_story_dialogue([
 		{"who": "rival", "text": confession},
+		# EN: "That signal just now. It wasn't mine."
 		{"who": "veil", "text": "방금 그 신호, 제가 보낸 게 아닙니다."},
-		{"who": "veil", "text": "눈이 둘 뜹니다. 요원을 똑바로 보는 쪽이 진짜입니다."},
-		{"who": "veil", "text": "딴 데 보는 쪽은 그림입니다. 탄이 그냥 지나갑니다."},
+		# EN: "That eye is only a picture right now. Bullets land only while it shows itself."
+		{"who": "veil", "text": "저 눈, 지금은 그림입니다. 모습을 드러내는 동안에만 탄이 박힙니다."},
 	])
 
-func _p3_tell_line() -> void:
-	if not is_inside_tree() or goal_reached:
-		return
-	# 재시작·체크포인트 진입용 짧은 판별 tell(A안).
-	_show_veil_subtitle("요원을 똑바로 보는 눈이 진짜입니다.", 3.0)
-
-func _p3_unmarked_line() -> void:
+# 재시작·체크포인트 진입용 짧은 창 안내 · 억압(1.4s 컷) 안에 핵심어가 들어가게 짧게.
+func _p3_restart_line() -> void:
 	if not is_inside_tree() or goal_reached or _rival_phase != 2:
 		return
-	_show_veil_subtitle("딴 데 보는 눈은 그림입니다. 탄이 그냥 지나갑니다.", 3.0)
+	# EN: "Bullets land only while the eye shows itself."
+	_show_veil_subtitle("눈이 드러날 때만 탄이 박힙니다.", 3.0)
 
-# ─── P3 분신전 · 거짓 VEIL(FalseVeil) + 무표시 위협 + 신뢰=지각 보조 ───
+# ─── P3 · 거짓 VEIL의 눈(FalseVeil) 3장 구조 + 무표시 위협 + 무대 다시 그리기 ───
+# (final_boss_rework §9 B안 · 2026-09-04) 1장 겨눔(창 학습) → 2장 추격(눈이 도망가며 벽·발판을 그린다)
+# → 3장 대면(그릴 방이 없다 · 배경이 와이어로 벗겨지고 잔해가 떨어진다 · 상시 실체 결투).
+# 장 전환 = 무대 실변형 + 자막(명명 연출 = 룰 변화 원칙). '가짜' 어휘·억제 미사일·창당 상한 전부 폐지.
 var _false_veil: Node2D = null
 var _p3_assist_timer: Timer = null
-var _p3_assist_spoken: bool = false   # 지각 보조 의도 발화 1회(이후 소거는 침묵 · 취소선이 말한다)
-var _p3_cap_spoken: bool = false      # 창당 피해 상한 해설 1회(버그가 아니라 룰임을 알린다)
+var _p3_assist_spoken: bool = false   # 지각 보조 의도 발화 1회(이후 표시는 시안 취소선이 말한다)
 var _p3_bar_layer: CanvasLayer = null
+var _p3_chapter: int = 1
+var _p3_drawn: Array = []             # 2장 그림(그려진 벽·거짓 발판) · 다시 그릴 때/3장 진입 시 정리
+var _p3_redraw_band: Node2D = null    # 2장 다시 그리기 예고 밴드(스윕 예고 문법)
+var _p3_wire: Node2D = null           # 3장 · 배경 와이어 벗김 오버레이
+var _p3_shudder_timer: Timer = null
 
-# 가짜 병사 그림 격파(렌더 부하) · 첫 회에만 룰을 말로 짚는다 · "찢으면 빨리 나온다"의 인과.
-# 개연성은 세계관 재료 그대로: 가짜도 본체의 잠복도 같은 구형 렌더러의 그림이다.
-var _p3_torn_spoken: bool = false
+# 2장 그림 자리 · 그려진 벽(x, 바닥 y)은 지면·발판 위 통로 한가운데 · 거짓 발판(x, y, 폭)은 진짜 발판
+# 사이 빈틈을 잇는 "너무 좋은 다리" 자리(같은 층의 연장선으로 보이게). 다회차 기억(§7)으로 순서 회전.
+const P3_WALL_SLOTS: Array = [
+	Vector2(760.0, 1220.0), Vector2(1000.0, 1220.0), Vector2(1400.0, 1220.0), Vector2(1640.0, 1220.0),
+	Vector2(1120.0, 988.0), Vector2(1280.0, 988.0),          # 중앙 낮은 데크(1000 · 윗면 988)
+	Vector2(700.0, 880.0), Vector2(1700.0, 880.0),           # 상층 연결 계단(892 · 윗면 880)
+	Vector2(1200.0, 848.0),                                   # 중앙 상단(860 · 윗면 848)
+]
+const P3_FALSE_PLATFORM_SLOTS: Array = [
+	{"x": 760.0, "y": 1030.0, "w": 150.0}, {"x": 1640.0, "y": 1030.0, "w": 150.0},   # 중층 링 빈틈
+	{"x": 935.0, "y": 880.0, "w": 150.0}, {"x": 1465.0, "y": 880.0, "w": 150.0},     # 계단 ↔ 중앙 상단
+	{"x": 800.0, "y": 770.0, "w": 150.0}, {"x": 1600.0, "y": 770.0, "w": 150.0},     # 상단 데크 ↔ 중앙 상단
+]
 
-func _on_p3_fake_torn(_total: int) -> void:
-	if _p3_torn_spoken or not is_inside_tree() or goal_reached:
-		return
-	_p3_torn_spoken = true
-	# EN: "Those fakes are its own renders. Tear them faster than it can redraw,
-	#      and it can't stay a picture either."
-	# ("몸을 그림으로 못 버팁니다" 비입말 결합 지적 · 무맥락 검수 1차, 2026-08-23)
-	_show_veil_subtitle("저 가짜들은 저쪽이 직접 그리는 그림입니다. 다시 그리는 속도보다 빨리 찢으면, 저놈도 그림인 채로는 못 버팁니다.", 4.2)
-
-# 창당 피해 상한 도달(조기 재잠복) · 첫 회에만 룰을 말로 짚는다. "탄이 안 박힌다"가
-# 버그로 읽히지 않게(2026-08-17 상한 도입과 한 세트).
-func _on_p3_window_capped() -> void:
-	if _p3_cap_spoken or not is_inside_tree() or goal_reached:
-		return
-	_p3_cap_spoken = true
-	# "실체화 창"은 설계 용어 · 플레이어에겐 보이는 대로("모습을 드러낼 때"). 2026-08-17.
-	_show_veil_subtitle("깊게는 안 박힙니다. 그래도 몸은 물었습니다. 모습을 드러낼 때마다 조금씩, 확실하게.", 3.2)
-
-# P3 보스 체력바 · SENTINEL 바 문법 재사용. 잠복/실체는 텍스트 라벨 대신 본체의 시각 언어
-# (잠복 = 스캔라인 그림 + 탄 통과 파문 / 실체 = 꽉 찬 몸 + 링)와 바 밝기로만 전달
-# ("실체 없음" 라벨은 작위적 · 실플레이 반려 2026-08-13).
+# P3 보스 체력바 · SENTINEL 바 문법 재사용. 그림/실체는 텍스트 라벨 대신 본체의 시각 언어
+# (그림 = 스캔라인 짜임 + 탄 통과 파문 / 실체 = 꽉 찬 몸 + 링)와 바 밝기로만 전달
+# ("실체 없음" 라벨은 작위적 · 실플레이 반려 2026-08-13). 장 경계(70%·30%)는 눈금으로.
 class _FvBarUpdater extends Node:
 	var fv: Node2D = null
 	var fill: ColorRect = null
@@ -8693,7 +8698,7 @@ class _FvBarUpdater extends Node:
 		var st: int = int(fv.get("state"))
 		if st == 2:   # SOLID · 피격 가능(밝음)
 			fill.color = Color(0.85, 0.55, 1.0)
-		else:         # PHASED/TELE/DYING · 흐림
+		else:         # 그림/워프/소멸 · 흐림
 			fill.color = Color(0.45, 0.38, 0.55)
 
 func _build_fv_bar(fv: Node2D) -> void:
@@ -8721,6 +8726,13 @@ func _build_fv_bar(fv: Node2D) -> void:
 	fill.position = Vector2(440.0, 84.0)
 	fill.size = Vector2(400.0, 8.0)
 	holder.add_child(fill)
+	# 장 경계 눈금 · 1장 30% / 2장 40% / 3장 30%(final_boss_rework §9.2).
+	for frac in [0.70, 0.30]:
+		var tick := ColorRect.new()
+		tick.color = Color(0.10, 0.07, 0.14, 0.95)
+		tick.position = Vector2(440.0 + 400.0 * float(frac) - 1.0, 83.0)
+		tick.size = Vector2(2.0, 10.0)
+		holder.add_child(tick)
 	var upd := _FvBarUpdater.new()
 	upd.fv = fv
 	upd.fill = fill
@@ -8740,20 +8752,20 @@ func _start_rival_p3(hold: float = 3.0) -> void:
 		return
 	_rival_phase = 2
 	_rival_hold = true
+	_p3_chapter = 1
 	GameState.rival_phase_reached = 2
 	_break_rival_lock(2)
 	_run_glitch(0.6, 0.38)
 	var fv := FalseVeil.new()
 	# 눈 HP 레벨 스케일 · 고정 6은 s13 빌드에 SOLID 한두 창이면 녹아 "재미도 감동도 없다"
-	# (사용자 2026-08-14). 2026-08-15 재상향(8+1.5lv, lv18=35): "1분 컷" 재보고 · 실체화 창
-	# 5~6번을 살아남아야 하는 싸움으로. 전개 재설계는 리워크에서.
+	# (사용자 2026-08-14). 2026-08-15 재상향(8+1.5lv, lv18=35). B안은 이 HP를 3장 몫 30/40/30으로
+	# 나눈다(FalseVeil) · 길이는 상한 튕김 대신 구조(2장 항법 · 3장 결투)가 보장한다.
 	fv.max_hp = 8 + int(float(GameState.player_level) * 1.5)
 	fv.hp = fv.max_hp
 	fv.intro_hold = hold
-	# A안(2026-08-30) · 실체화 후보 = 각 데크·지면의 가슴 높이(데크 y - 30 · 수평 사격으로 바로 맞는
-	# 높이) 13곳. 매 창마다 FalseVeil._pick_pair가 플레이어가 닿을 수 있는 둘을 골라 진짜/가짜를
-	# 무작위 배정한다. 종전 위층 3지점(560/640)은 점프샷이어야 닿고 "멀리 소환"과 겹쳐 물리 불가였다.
-	# 가짜 마커(병사 그림)는 지상·중층·데크에 분산 · 가짜 눈은 FalseVeil이 자체 관리.
+	# 실체화 후보 = 각 데크·지면의 가슴 높이(데크 y - 30 · 수평 사격으로 바로 맞는 높이) 13곳.
+	# 1장·3장은 FalseVeil._pick_near_anchor가 플레이어가 닿을 수 있는 곳을, 2장은 _pick_perch가
+	# 먼 도망 자리를 고른다(known_issues "이동 속도 × 창 길이 ≥ 거리").
 	var p3_anchors: Array = [
 		Vector2(560.0, 1190.0), Vector2(1840.0, 1190.0),            # 지면
 		Vector2(300.0, 1022.0), Vector2(2100.0, 1022.0),            # 좌·우 낮은 데크(1052)
@@ -8763,26 +8775,22 @@ func _start_rival_p3(hold: float = 3.0) -> void:
 		Vector2(380.0, 706.0), Vector2(520.0, 706.0),               # 좌 상단 데크(736)
 		Vector2(1880.0, 706.0), Vector2(2020.0, 706.0),             # 우 상단 데크(736)
 	]
-	var p3_spots: Array = [Vector2(350.0, 1190.0), Vector2(850.0, 1190.0), Vector2(1550.0, 1190.0),
-		Vector2(2050.0, 1190.0), Vector2(350.0, 1022.0), Vector2(2050.0, 1022.0),
-		Vector2(700.0, 862.0), Vector2(1700.0, 862.0), Vector2(1200.0, 830.0)]
-	# 다회차 기억 변주 · P3 · 가짜 병사 슬롯 순서를 회차로 회전("네가 외운 자리에는 없다").
-	# 실체화 자리는 A안(플레이어 기준 짝 선택)이라 회전 대상이 아니다. 개수·창 길이·HP는 불변.
-	if GameState.rival_kills >= 1:
-		p3_spots = _rotated(p3_spots, (GameState.rival_kills * 4) % p3_spots.size())
-	fv.setup(p3_anchors, p3_spots)
+	fv.setup(p3_anchors)
+	# 다회차 기억 변주(§7) · 2장 도망 자리 순서·그림 자리 순서를 회차로 회전("네가 외운 자리에는 없다").
+	# 개수·창 길이·HP는 불변.
+	fv.memory_shift = GameState.rival_kills
 	# deferred · volley_started는 take_damage(물리 콜백)에서 발화, 동기 스폰은 flushing 에러
-	# (2026-08-20 실플레이 로그 실측 · BossSentinel 소환과 동형).
+	# (2026-08-20 실플레이 로그 실측 · BossSentinel 소환과 동형). redraw도 같은 경로(물리 틱 안).
 	fv.volley_started.connect(_on_p3_volley, CONNECT_DEFERRED)
 	fv.defeated.connect(_on_false_veil_defeated)
-	fv.stage_shifted.connect(_on_p3_stage_shifted)
-	fv.window_capped.connect(_on_p3_window_capped)
-	fv.fake_torn.connect(_on_p3_fake_torn)
+	fv.chapter_changed.connect(_on_p3_chapter_changed, CONNECT_DEFERRED)
+	fv.redraw_requested.connect(_on_p3_redraw_requested, CONNECT_DEFERRED)
 	fv.position = Vector2(1200.0, 600.0)
 	add_child(fv)
 	_false_veil = fv
 	_build_fv_bar(fv)
-	# 신뢰 = 지각 보조(§7.2): warm이 가장 자주, thaw는 드물게, cold는 혼자 판별(tell은 전원 상시).
+	# 신뢰 = 지각 보조(§7.2): warm이 가장 자주, thaw는 드물게, cold는 혼자 읽는다(tell은 전원 상시).
+	# B안에서 보조 대상 = 2장 거짓 발판(가까운 것 하나에 시안 취소선).
 	var band: String = GameState.veil_register_band()
 	if band != "cold":
 		_p3_assist_timer = Timer.new()
@@ -8791,25 +8799,36 @@ func _start_rival_p3(hold: float = 3.0) -> void:
 		_p3_assist_timer.timeout.connect(_veil_assist_tick)
 		_p3_assist_timer.start()
 
-# P3 변주 전환(리워크 §2.4) · FalseVeil이 HP 문턱(66%/33%)에서 알린다.
-# 1 = 중반: 텔레포트 실체화 개시 비트. 2 = 후반: 방 렌더 붕괴 · 주기 글리치 + 카메라 미진.
-var _p3_shudder_timer: Timer = null
-
-func _on_p3_stage_shifted(stage_idx: int) -> void:
+# 장 전환(FalseVeil chapter_changed) · 무대 실변형 + 자막 + 연출.
+# 2 = 추격: 첫 자리 이동과 함께 redraw_requested가 따라오므로 여기선 자막·연출만.
+# 3 = 대면: 그림 전부 소거 + 배경 와이어 벗김 + 낙하 잔해 3존 + 방 진동(기존 후반 자산 유지).
+func _on_p3_chapter_changed(ch: int) -> void:
 	if goal_reached or not is_inside_tree():
 		return
+	_p3_chapter = ch
 	_run_glitch(0.55, 0.32)
 	_rival_beat_flash()
 	SfxPlayer.play("boss_phase_change")
-	if stage_idx == 1:
-		_show_rival_subtitle("잘 보시네요. 그럼 둘을 더 벌려 놓죠.", 3.0)
-	elif stage_idx == 2:
-		_show_rival_subtitle("...방이 저를 못 버티기 시작하는군요. 서두르겠습니다.", 3.2)
+	if ch == 2:
+		# EN: "Sharp eyes. Then I'll redraw the room. The walls, the floors."
+		_show_rival_subtitle("잘 보시네요. 그럼 방을 다시 그리죠. 벽도, 발판도.", 3.4)
+	elif ch == 3:
+		_p3_clear_drawn(true)
+		if _p3_redraw_band != null and is_instance_valid(_p3_redraw_band):
+			_p3_redraw_band.queue_free()
+			_p3_redraw_band = null
+		if _p3_assist_timer != null and is_instance_valid(_p3_assist_timer):
+			_p3_assist_timer.stop()
+		# EN: "...Nothing left to draw. Then we finish it in this room, as it is."
+		_show_rival_subtitle("...더 그릴 게 없군요. 그럼 이 방 그대로 끝내죠.", 3.2)
+		# 배경 벗김 · 발판 윤곽이 와이어로 남고 화면 전체에 옅은 스캔라인(1.5s에 걸쳐 차오름 · 점멸 없음).
+		if _p3_wire == null or not is_instance_valid(_p3_wire):
+			var wire := _P3Wire.new()
+			wire.plats = _debris_mark_platforms()
+			add_child(wire)
+			_p3_wire = wire
 		# 낙하 잔해 3존(final_boss_rework §6-1) · 진동이 실제 붕괴로 이어지는 체감.
-		# 그림자 예고 0.9s 문법 유지(FallingDebris 자체) · 격파 시 정리.
-		# 캠핑 대책 ②(2026-08-20): 존이 최상단 데크(300~600/1800~2100)와 중앙 상단(1090~1310)을
-		# 전부 덮도록 확장 · 종전 존(400~1000/1400~2000)은 데크 절반 + 중앙을 통째로 비워
-		# "맨 위 발판 = 완전 안전"이었다. 발판 표면 예고(mark_platforms)로 상단에도 회피 정보.
+		# 존이 최상단 데크(300~600/1800~2100)와 중앙 상단(1090~1310)을 전부 덮는다(캠핑 대책 ②).
 		if _p3_debris_nodes.is_empty():
 			var plats: Array = _debris_mark_platforms()
 			for cfg0 in [{"x_min": 290.0, "x_max": 1000.0, "interval": 6.0},
@@ -8819,13 +8838,14 @@ func _on_p3_stage_shifted(stage_idx: int) -> void:
 				add_child(fd)
 				fd.setup(cfg0, 1220.0, plats)
 				_p3_debris_nodes.append(fd)
-		_p3_shudder_timer = Timer.new()
-		_p3_shudder_timer.wait_time = 3.2
-		add_child(_p3_shudder_timer)
-		_p3_shudder_timer.timeout.connect(_p3_room_shudder)
-		_p3_shudder_timer.start()
+		if _p3_shudder_timer == null or not is_instance_valid(_p3_shudder_timer):
+			_p3_shudder_timer = Timer.new()
+			_p3_shudder_timer.wait_time = 3.2
+			add_child(_p3_shudder_timer)
+			_p3_shudder_timer.timeout.connect(_p3_room_shudder)
+			_p3_shudder_timer.start()
 
-# 후반 · 방 렌더가 흔들린다(짧은 글리치 + 미세 흔들림, 광과민 기준 내 저강도).
+# 3장 · 방 렌더가 흔들린다(짧은 글리치 + 미세 흔들림, 광과민 기준 내 저강도).
 func _p3_room_shudder() -> void:
 	if goal_reached or _false_veil == null or not is_instance_valid(_false_veil):
 		if _p3_shudder_timer != null and is_instance_valid(_p3_shudder_timer):
@@ -8834,8 +8854,108 @@ func _p3_room_shudder() -> void:
 	_run_glitch(0.35, 0.22)
 	_camera_shake(3.0, 0.18)
 
-# P3 볼리 · 가짜 마커 세례와 동시에 "무표시 진짜 위협" 투입(VeilSight가 마커 생략).
-# 누적 상한 3 · 안 잡고 버티는 플레이어에게 무한 적체 방지.
+# 2장 · 눈이 새 자리에 앉으며 무대를 다시 그린다. 예고 밴드(스윕 예고 문법 1.0s · 요원과 자리 사이
+# 구간) → 기존 그림 소거 → 새 그림(그려진 벽 2 + 거짓 발판 2). 예고 중 다시 요청되면 최신 것만.
+func _on_p3_redraw_requested(perch: Vector2, _prev: Vector2) -> void:
+	if _rival_phase != 2 or goal_reached or not is_inside_tree() or _p3_chapter != 2:
+		return
+	if player == null or not is_instance_valid(player):
+		return
+	var px: float = player.global_position.x
+	var x0: float = minf(px, perch.x) - 80.0
+	var x1: float = maxf(px, perch.x) + 80.0
+	if _p3_redraw_band != null and is_instance_valid(_p3_redraw_band):
+		_p3_redraw_band.queue_free()
+	var band := _P3RedrawBand.new()
+	band.x0 = x0
+	band.x1 = x1
+	add_child(band)
+	_p3_redraw_band = band
+	SfxPlayer.play("enemy_sniper_charge", -4.0)
+	band.finished.connect(func() -> void:
+		_p3_draw_region(x0, x1, perch))
+
+func _p3_draw_region(x0: float, x1: float, perch: Vector2) -> void:
+	if _rival_phase != 2 or goal_reached or not is_inside_tree() or _p3_chapter != 2:
+		return
+	if player == null or not is_instance_valid(player):
+		return
+	_p3_clear_drawn(true)
+	var px: float = player.global_position.x
+	var py: float = player.global_position.y
+	var mid_x: float = (px + perch.x) * 0.5
+	# 그려진 벽 · 구간 안 후보 중 요원 몸(110px)·자리(80px)에서 떨어진 곳, 요원과 자리의 중간에 가까운 순 2개.
+	var walls: Array = _rotated(P3_WALL_SLOTS, GameState.rival_kills % P3_WALL_SLOTS.size())
+	var wall_pool: Array = []
+	for w_raw in walls:
+		var w: Vector2 = w_raw
+		if w.x <= x0 or w.x >= x1:
+			continue
+		if absf(w.x - px) < 110.0 or absf(w.x - perch.x) < 80.0:
+			continue
+		wall_pool.append(w)
+	wall_pool.sort_custom(func(a: Vector2, b: Vector2) -> bool:
+		return absf(a.x - mid_x) < absf(b.x - mid_x))
+	for i in mini(2, wall_pool.size()):
+		var w: Vector2 = wall_pool[i]
+		var wall := _DrawnWall.new()
+		wall.h = 150.0 if w.y >= 1200.0 else 120.0
+		add_child(wall)
+		wall.global_position = w
+		wall.reset_physics_interpolation()
+		_p3_drawn.append(wall)
+	# 거짓 발판 · 구간 안 후보 2개(요원이 지금 서 있는 자리는 제외 · 발밑에서 찢기는 건 부당).
+	var fps: Array = _rotated(P3_FALSE_PLATFORM_SLOTS, GameState.rival_kills % P3_FALSE_PLATFORM_SLOTS.size())
+	var fp_pool: Array = []
+	for f_raw in fps:
+		var f: Dictionary = f_raw
+		var fx: float = float(f.get("x", 0.0))
+		var fy: float = float(f.get("y", 0.0))
+		var fw: float = float(f.get("w", 140.0))
+		if fx <= x0 - 60.0 or fx >= x1 + 60.0:
+			continue
+		if absf(fx - px) < fw * 0.5 + 24.0 and absf(fy - py) < 40.0:
+			continue
+		fp_pool.append(f)
+	fp_pool.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return absf(float(a.get("x", 0.0)) - mid_x) < absf(float(b.get("x", 0.0)) - mid_x))
+	for i in mini(2, fp_pool.size()):
+		var f: Dictionary = fp_pool[i]
+		var fp := _DrawnPlatform.new()
+		fp.w = float(f.get("w", 140.0))
+		add_child(fp)
+		fp.global_position = Vector2(float(f.get("x", 0.0)), float(f.get("y", 0.0)))
+		fp.reset_physics_interpolation()
+		_p3_drawn.append(fp)
+
+# 그림 소거 · fade=true면 흩어지는 연출로, false면 즉시.
+func _p3_clear_drawn(fade: bool) -> void:
+	for n in _p3_drawn:
+		if n != null and is_instance_valid(n):
+			if fade and (n as Node).has_method("fade_out"):
+				(n as Node).call("fade_out")
+			else:
+				(n as Node).queue_free()
+	_p3_drawn.clear()
+
+# P3 무대 소품 정리(격파·페이즈 종료 공용) · 그림·예고 밴드·와이어·캠핑 경고/가시.
+func _p3_clear_stage_props() -> void:
+	_p3_clear_drawn(false)
+	if _p3_redraw_band != null and is_instance_valid(_p3_redraw_band):
+		_p3_redraw_band.queue_free()
+	_p3_redraw_band = null
+	if _p3_wire != null and is_instance_valid(_p3_wire):
+		_p3_wire.queue_free()
+	_p3_wire = null
+	if _p3_camp_warn != null and is_instance_valid(_p3_camp_warn):
+		_p3_camp_warn.queue_free()
+	_p3_camp_warn = null
+	if _p3_camp_spikes != null and is_instance_valid(_p3_camp_spikes):
+		_p3_camp_spikes.queue_free()
+	_p3_camp_spikes = null
+
+# P3 볼리 · 눈이 잠복에 들어갈 때(1장)·3장 홀수 워프마다 "무표시 진짜 위협" 투입(VeilSight가 마커 생략 ·
+# 라이벌이 렌더를 쥔 방에서 내 VEIL의 표식이 지워진다). 누적 상한 3 · 안 잡고 버티는 플레이어에게 무한 적체 방지.
 func _on_p3_volley() -> void:
 	if _rival_phase != 2 or goal_reached or not is_inside_tree():
 		return
@@ -8851,16 +8971,260 @@ func _on_p3_volley() -> void:
 		n.set_meta("no_marker", true)
 	_enemies_remaining += 2
 
-# 지각 보조는 시안 취소선(시각)이 말한다 · 지울 때마다 말로 중계하던 3종 로테이션은
-# "작위적·오글거림" 반려(사용자 2026-08-14 3차). 첫 소거 때 의도 한 줄만, 이후엔 침묵.
+# 지각 보조는 시안 취소선(시각)이 말한다 · 지울 때마다 말로 중계하던 로테이션은 "작위적·오글거림" 반려
+# (사용자 2026-08-14 3차). 첫 표시 때 의도 한 줄만, 이후엔 침묵. 대상 = 요원 320px 안의 거짓 발판.
 func _veil_assist_tick() -> void:
 	if goal_reached or _false_veil == null or not is_instance_valid(_false_veil):
 		if _p3_assist_timer != null and is_instance_valid(_p3_assist_timer):
 			_p3_assist_timer.stop()
 		return
-	if bool(_false_veil.call("erase_one_fake")) and not _p3_assist_spoken:
+	if player == null or not is_instance_valid(player):
+		return
+	var best: Node2D = null
+	var best_d: float = 320.0
+	for n in _p3_drawn:
+		if n == null or not is_instance_valid(n) or not (n is _DrawnPlatform):
+			continue
+		var fp := n as _DrawnPlatform
+		if fp.marked or fp.torn:
+			continue
+		var d: float = fp.global_position.distance_to(player.global_position)
+		if d < best_d:
+			best_d = d
+			best = fp
+	if best == null:
+		return
+	(best as _DrawnPlatform).mark_by_veil()
+	if not _p3_assist_spoken:
 		_p3_assist_spoken = true
-		_show_veil_subtitle("제 것이 아닌 표식이 섞였습니다. 걷어냅니다.", 2.6)
+		# EN: "That floor was drawn by the eye. Marking it."
+		_show_veil_subtitle("저 발판, 눈이 그린 겁니다. 표시해 둡니다.", 2.6)
+
+# 2장 다시 그리기 예고 밴드 · 요원과 새 자리 사이 구간에 1.0s 바이올렛 밴드(스윕 warn 문법 · 가장자리 광 +
+# 위아래 경계선 · 연속 감쇠, 점멸 없음). 끝나면 finished → Stage가 그린다.
+class _P3RedrawBand extends Node2D:
+	signal finished
+	const DUR: float = 1.0
+	var x0: float = 0.0
+	var x1: float = 100.0
+	var _t: float = 0.0
+	var _done: bool = false
+	func _ready() -> void:
+		z_index = 3
+	func _process(delta: float) -> void:
+		_t += delta
+		if _t >= DUR and not _done:
+			_done = true
+			emit_signal("finished")
+			queue_free()
+			return
+		queue_redraw()
+	func _draw() -> void:
+		var k: float = clampf(_t / DUR, 0.0, 1.0)
+		var wa: float = (0.10 + 0.08 * sin(_t * 9.0)) * (1.0 - k * 0.5)
+		draw_rect(Rect2(Vector2(x0, 0.0), Vector2(x1 - x0, 1300.0)), Color(0.72, 0.42, 1.0, wa), true)
+		draw_rect(Rect2(Vector2(x0 - 2.0, 0.0), Vector2(4.0, 1300.0)), Color(0.88, 0.62, 1.0, 0.55), true)
+		draw_rect(Rect2(Vector2(x1 - 2.0, 0.0), Vector2(4.0, 1300.0)), Color(0.88, 0.62, 1.0, 0.55), true)
+		# 그려지는 중 · 위에서 아래로 내려오는 스캔 줄(진행도).
+		var sy: float = lerpf(0.0, 1300.0, k)
+		draw_rect(Rect2(Vector2(x0, sy - 1.5), Vector2(x1 - x0, 3.0)), Color(0.98, 0.88, 1.0, 0.7), true)
+
+# 그려진 벽 · 2장 · 통로를 막는 바이올렛 스캔라인 벽. 레이어 8(요원·내 탄만 막힌다 · 저쪽 탄은 제 그림을
+# 통과한다 = 제 회선 관통 모순 방지). 내 탄 2회로 찢으면 뚫린다(hit_by_bullet · Bullet의 StaticBody2D
+# 분기 · "잘하면 빨라진다" 손잡이). 첫 피격에 균열 선 2개 = "한 발 더면 찢긴다" 예고.
+class _DrawnWall extends StaticBody2D:
+	var h: float = 150.0
+	var w: float = 24.0
+	var hits: int = 0
+	var torn: bool = false
+	var _t: float = 0.0
+	var _torn_t: float = 0.0
+	var _hit_t: float = 0.0
+	var _shape: CollisionShape2D = null
+	func _ready() -> void:
+		collision_layer = 8
+		collision_mask = 0
+		add_to_group("drawn_wall")
+		z_index = 3
+		_shape = CollisionShape2D.new()
+		var rs := RectangleShape2D.new()
+		rs.size = Vector2(w, h)
+		_shape.shape = rs
+		_shape.position = Vector2(0.0, -h * 0.5)
+		add_child(_shape)
+	func hit_by_bullet() -> void:
+		if torn:
+			return
+		hits += 1
+		_hit_t = 0.3
+		if hits >= 2:
+			tear(true)
+		else:
+			SfxPlayer.play_at("bullet_impact_wall", global_position)
+	func fade_out() -> void:
+		tear(false)
+	func tear(by_shot: bool) -> void:
+		if torn:
+			return
+		torn = true
+		_torn_t = 0.0
+		if _shape != null:
+			_shape.set_deferred("disabled", true)
+		if by_shot:
+			SfxPlayer.play_at("bestiary_first_seen", global_position)
+	func _process(delta: float) -> void:
+		_t += delta
+		_hit_t = maxf(0.0, _hit_t - delta)
+		if torn:
+			_torn_t += delta
+			if _torn_t > 0.4:
+				queue_free()
+				return
+		queue_redraw()
+	func _draw() -> void:
+		var appear: float = clampf(_t / 0.35, 0.0, 1.0)
+		var a: float = appear
+		var tear_k: float = 0.0
+		if torn:
+			tear_k = _torn_t / 0.4
+			a = 1.0 - tear_k
+		var slip: float = 3.0 if fmod(_t, 1.9) < 0.1 else 0.0
+		var vi := Color(0.72, 0.42, 1.0)
+		var top: float = -h * appear
+		var y: float = 0.0
+		while y > top:
+			var off: float = slip + tear_k * (26.0 if fmod(y, 8.0) < 4.0 else -26.0)
+			draw_rect(Rect2(Vector2(-w * 0.5 + off, y - 2.0), Vector2(w, 2.0)),
+				Color(vi.r, vi.g, vi.b, (0.45 + 0.25 * _hit_t) * a), true)
+			y -= 4.0
+		draw_line(Vector2(-w * 0.5 + slip, 0.0), Vector2(-w * 0.5 + slip, top), Color(0.90, 0.75, 1.0, 0.85 * a), 2.0)
+		draw_line(Vector2(w * 0.5 + slip, 0.0), Vector2(w * 0.5 + slip, top), Color(0.90, 0.75, 1.0, 0.85 * a), 2.0)
+		if hits >= 1 and not torn:
+			for cy in [-h * 0.35, -h * 0.62]:
+				draw_line(Vector2(-w * 0.5 - 4.0, float(cy)), Vector2(w * 0.5 + 4.0, float(cy) + 6.0), Color(1.0, 1.0, 1.0, 0.75 * a), 2.0)
+
+# 거짓 발판 · 2장 · 진짜 발판과 같은 3단 패널이되 바이올렛 짜임과 주기 슬립이 남는다(tell · 항상 켜짐).
+# 원웨이·"platform" 그룹이라 발판 규약(아래 통과·탄 차단) 그대로. 요원이 위에 접지하면 0.12s 뒤 찢어져
+# 발이 빠진다(낙하 피해 없음 · 비용 = 시간·복귀 · DisguisedSpike 문법의 발판판). 신뢰 warm/thaw면
+# 내 VEIL이 시안 취소선을 긋는다(mark_by_veil).
+class _DrawnPlatform extends StaticBody2D:
+	var w: float = 140.0
+	var torn: bool = false
+	var marked: bool = false
+	var _t: float = 0.0
+	var _stood_t: float = 0.0
+	var _torn_t: float = 0.0
+	var _mark_t: float = 0.0
+	var _shape: CollisionShape2D = null
+	func _ready() -> void:
+		collision_layer = 1
+		collision_mask = 0
+		add_to_group("platform")
+		add_to_group("drawn_platform")
+		z_index = 1
+		_shape = CollisionShape2D.new()
+		_shape.one_way_collision = true
+		var rs := RectangleShape2D.new()
+		rs.size = Vector2(w, 24.0)
+		_shape.shape = rs
+		add_child(_shape)
+	func mark_by_veil() -> void:
+		marked = true
+		_mark_t = 0.0
+	func fade_out() -> void:
+		tear(false)
+	func tear(by_step: bool) -> void:
+		if torn:
+			return
+		torn = true
+		_torn_t = 0.0
+		if _shape != null:
+			_shape.set_deferred("disabled", true)
+		if by_step:
+			SfxPlayer.play_at("bestiary_first_seen", global_position)
+	func _physics_process(delta: float) -> void:
+		_t += delta
+		if marked:
+			_mark_t += delta
+		if torn:
+			_torn_t += delta
+			if _torn_t > 0.45:
+				queue_free()
+				return
+			queue_redraw()
+			return
+		# 밟기 감지 · 직전 move_and_slide의 접지 콜라이더가 이 몸이면 밟은 것(위치 근사 대신 실제 판정).
+		var tree := get_tree()
+		if tree != null:
+			var arr := tree.get_nodes_in_group("player")
+			var standing: bool = false
+			if arr.size() > 0 and arr[0] is CharacterBody2D:
+				var pc := arr[0] as CharacterBody2D
+				var rel: Vector2 = pc.global_position - global_position
+				if absf(rel.x) <= w * 0.5 + 40.0 and absf(rel.y) < 80.0 and pc.is_on_floor():
+					for i in pc.get_slide_collision_count():
+						if pc.get_slide_collision(i).get_collider() == self:
+							standing = true
+							break
+			if standing:
+				_stood_t += delta
+				if _stood_t >= 0.12:
+					tear(true)
+			else:
+				_stood_t = 0.0
+		queue_redraw()
+	func _draw() -> void:
+		var appear: float = clampf(_t / 0.35, 0.0, 1.0)
+		var a: float = appear
+		var tear_k: float = 0.0
+		if torn:
+			tear_k = _torn_t / 0.45
+			a = 1.0 - tear_k
+		var slip: float = 3.0 if fmod(_t, 1.9) < 0.1 else 0.0
+		var hw: float = w * 0.5
+		var px: float = -hw + slip
+		var py: float = -12.0
+		# 3단 패널 · 진짜 발판 팔레트에 바이올렛을 섞는다(같은 구조물 문법 + 다른 재질).
+		draw_rect(Rect2(Vector2(px, py + 4.0), Vector2(w, 16.0)), Color(0.27, 0.19, 0.38, 0.95 * a), true)
+		draw_rect(Rect2(Vector2(px, py), Vector2(w, 4.0)), Color(0.66, 0.54, 0.86, a), true)
+		draw_rect(Rect2(Vector2(px, py + 20.0), Vector2(w, 4.0)), Color(0.08, 0.06, 0.12, a), true)
+		# 짜임 tell · 표면을 가로지르는 스캔라인 + 찢김 시 밴드가 좌우로 흩어짐.
+		var y: float = py + 6.0
+		while y < py + 20.0:
+			var off: float = tear_k * (30.0 if fmod(y, 8.0) < 4.0 else -30.0)
+			draw_rect(Rect2(Vector2(px + off, y), Vector2(w, 1.5)), Color(0.78, 0.50, 1.0, 0.60 * a), true)
+			y += 4.0
+		# 내 VEIL 취소선(시안) · 신뢰 warm/thaw · "이건 제 것이 아닙니다".
+		if marked:
+			var k: float = clampf(_mark_t / 0.22, 0.0, 1.0)
+			draw_line(Vector2(-hw - 6.0, py + 10.0), Vector2(lerpf(-hw - 6.0, hw + 6.0, k), py + 10.0),
+				Color(0.45, 0.90, 1.0, 0.9 * a), 2.5)
+
+# 3장 · 배경 와이어 벗김 오버레이. 화면 전체 옅은 스캔라인 + 발판·지면 윤곽 와이어(1.5s 차오름 · 점멸 없음).
+class _P3Wire extends Node2D:
+	var plats: Array = []
+	var _t: float = 0.0
+	func _ready() -> void:
+		z_index = 1
+	func _process(delta: float) -> void:
+		_t += delta
+		queue_redraw()
+	func _draw() -> void:
+		var k: float = clampf(_t / 1.5, 0.0, 1.0)
+		var y: float = 0.0
+		while y < 1300.0:
+			draw_line(Vector2(0.0, y), Vector2(2400.0, y), Color(0.72, 0.42, 1.0, 0.045 * k), 1.0)
+			y += 6.0
+		var wc := Color(0.85, 0.62, 1.0, 0.5 * k)
+		for p_raw in plats:
+			var pd: Dictionary = p_raw
+			var xa: float = float(pd.get("x_min", 0.0))
+			var xb: float = float(pd.get("x_max", 0.0))
+			var yy: float = float(pd.get("y", 0.0)) - 12.0
+			draw_rect(Rect2(Vector2(xa, yy), Vector2(xb - xa, 24.0)), wc, false, 1.5)
+			draw_line(Vector2(xa, yy), Vector2(xb, yy + 24.0), Color(wc.r, wc.g, wc.b, wc.a * 0.6), 1.0)
+			draw_line(Vector2(xa, yy + 24.0), Vector2(xb, yy), Color(wc.r, wc.g, wc.b, wc.a * 0.6), 1.0)
+		draw_line(Vector2(0.0, 1220.0), Vector2(2400.0, 1220.0), wc, 1.5)
 
 func _on_false_veil_defeated() -> void:
 	if _rival_phase != 2 or goal_reached:
@@ -8886,6 +9250,7 @@ func _on_false_veil_defeated() -> void:
 		if is_instance_valid(fd):
 			(fd as Node).queue_free()
 	_p3_debris_nodes.clear()
+	_p3_clear_stage_props()
 	# 격파 슬로우 비트(§2.4) · 시간이 잠깐 늘어지고 눈이 천천히 감긴다(FalseVeil DYING 연출과 정렬).
 	Engine.time_scale = 0.35
 	get_tree().create_timer(0.55, true, false, true).timeout.connect(func() -> void:
@@ -10353,43 +10718,126 @@ func _tick_hide_zone() -> void:
 		# EN: "That recess is deep enough to hide in. Hold Down inside the marked bay."
 		_show_veil_subtitle("칠해진 칸 안쪽은 몸을 숨길 만큼 깊습니다. 칸 안에서 아래 키를 꾹 누르십시오.", 3.6)
 
-# ─── P3 캠핑 감지(2026-08-20 사용자 "맨 위 발판에서 연사 홀드로 무피해 클리어") ───
-# 판정 3차 개정(2026-08-21 사용자 "발판 하나에서 좌우 와리가리만 하면 유도탄이 영영 안 옴"):
-#   1차 유클리드 130px → 제자리 점프 y 진폭이 리셋(구멍) → 2차 x만 130px → 130px 넘는 좌우
-#   왕복이 매번 리셋(구멍). → 3차 = **체류 범위 창**: 최근 이동이 300px 폭(발판 하나+여유) 안에
-#   머무는 동안 타이머가 계속 흐른다. 왕복·점프는 창 안 = 캠핑, 다른 데크로 실제 이동만 리셋.
-# 발동 시 잠복 중에도 유도탄(FalseVeil.fire_suppression) · ~2.4s마다 반복 · 첫 발동 VEIL 1회.
+# ─── P3 캠핑 방지 = 경고 후 가시(final_boss_rework §9.3 · 사용자 확정 2026-09-03) ───
+# 판정은 3차 개정(2026-08-21)의 **체류 범위 창** 그대로: 최근 이동이 300px 폭 안에 머무는 동안 타이머가
+# 흐른다(왕복·점프는 창 안 = 캠핑, 다른 데크로 실제 이동만 리셋). 2.5s 체류 → 서 있는 발판 가장자리에
+# 바이올렛 경고 1.2s(경고음) → 그 발판에 "그려진 가시"(진짜 가시 문법 · dmg 1)가 솟았다가 3.2s 뒤 사라진다.
+# 억제 미사일(본체 위치 누설 · 15차 반려)은 폐지. 경고 중 창을 벗어나면 취소.
 const P3_CAMP_SPAN: float = 300.0
-const P3_CAMP_TIME: float = 4.5
+const P3_CAMP_TIME: float = 2.5
+const P3_CAMP_WARN: float = 1.2
+const P3_CAMP_SPIKE_LIFE: float = 3.2
 var _p3_min_x: float = 1e9
 var _p3_max_x: float = -1e9
 var _p3_camp_t: float = 0.0
+var _p3_camp_warn: Node2D = null
+var _p3_camp_spikes: Node2D = null
 var _p3_camp_line_shown: bool = false
+
+func _p3_camp_reset(px: float) -> void:
+	_p3_min_x = px
+	_p3_max_x = px
+	_p3_camp_t = 0.0
+	if _p3_camp_warn != null and is_instance_valid(_p3_camp_warn):
+		_p3_camp_warn.queue_free()
+	_p3_camp_warn = null
+
+# 요원이 서 있는 구간 · 발밑 발판(윗면이 발에서 6px 안)이 있으면 그 발판 전체, 없으면 지면의 발밑 ±150px.
+# 반환 {x0, x1, y(윗면)}.
+func _p3_stand_segment() -> Dictionary:
+	var px: float = player.global_position.x
+	var py: float = player.global_position.y
+	for pd_raw in _debris_mark_platforms():
+		var pd: Dictionary = pd_raw
+		var top: float = float(pd.get("y", 0.0)) - 12.0
+		if px >= float(pd.get("x_min", 0.0)) - 6.0 and px <= float(pd.get("x_max", 0.0)) + 6.0 and absf(py - top) <= 6.0:
+			return {"x0": float(pd.get("x_min", 0.0)), "x1": float(pd.get("x_max", 0.0)), "y": top}
+	return {"x0": px - 150.0, "x1": px + 150.0, "y": GROUND_Y}
 
 func _tick_p3_camp(delta: float) -> void:
 	if _rival_phase != 2 or _false_veil == null or not is_instance_valid(_false_veil):
-		_p3_camp_t = 0.0
+		_p3_camp_reset(0.0)
 		_p3_min_x = 1e9
 		_p3_max_x = -1e9
 		return
 	if player == null or not is_instance_valid(player):
 		return
+	# 가시가 솟아 있는 동안은 재판정 없음(연속 발동 방지) · 사라지면 새 창.
+	if _p3_camp_spikes != null and is_instance_valid(_p3_camp_spikes):
+		return
 	var px: float = player.global_position.x
 	_p3_min_x = minf(_p3_min_x, px)
 	_p3_max_x = maxf(_p3_max_x, px)
 	if _p3_max_x - _p3_min_x > P3_CAMP_SPAN:
-		# 창을 벗어나는 실제 이동 · 현 위치부터 새 창.
-		_p3_min_x = px
-		_p3_max_x = px
-		_p3_camp_t = 0.0
+		# 창을 벗어나는 실제 이동 · 현 위치부터 새 창(경고 중이었으면 취소).
+		_p3_camp_reset(px)
 		return
 	_p3_camp_t += delta
-	if _p3_camp_t >= P3_CAMP_TIME:
-		_p3_camp_t = P3_CAMP_TIME - 2.4
-		_false_veil.call("fire_suppression", player.global_position + Vector2(0.0, -24.0))
+	if _p3_camp_warn == null and _p3_camp_t >= P3_CAMP_TIME:
+		var seg: Dictionary = _p3_stand_segment()
+		var wn := _P3CampWarn.new()
+		wn.x0 = float(seg.get("x0", px - 150.0))
+		wn.x1 = float(seg.get("x1", px + 150.0))
+		wn.y = float(seg.get("y", GROUND_Y))
+		add_child(wn)
+		_p3_camp_warn = wn
+		SfxPlayer.play("enemy_sniper_charge", -6.0)
 		if not _p3_camp_line_shown:
 			_p3_camp_line_shown = true
-			_show_veil_subtitle("한자리에 오래 서 있으면 조준이 고정됩니다. 계속 움직이십시오.", 3.2)
+			# EN: "Move. Purple on the ledge means spikes are coming."
+			# (억압 1.4s 컷 안에 행동 지시가 들어가게 앞에 둔다 · 무맥락 검수 비고 2026-09-04)
+			_show_veil_subtitle("자리를 옮기십시오. 발판이 보라색으로 물들면 가시가 솟습니다.", 3.2)
+	elif _p3_camp_warn != null and is_instance_valid(_p3_camp_warn) and _p3_camp_t >= P3_CAMP_TIME + P3_CAMP_WARN:
+		var x0: float = float(_p3_camp_warn.get("x0"))
+		var x1: float = float(_p3_camp_warn.get("x1"))
+		var top: float = float(_p3_camp_warn.get("y"))
+		_p3_camp_warn.queue_free()
+		_p3_camp_warn = null
+		_p3_raise_camp_spikes(x0, x1, top)
+		_p3_camp_reset(px)
+
+# 그려진 가시 · 진짜 가시(_spawn_toggleable_spike · 판정 있음)에 바이올렛 재질 + 솟음/잦아듦 트윈.
+func _p3_raise_camp_spikes(x0: float, x1: float, top: float) -> void:
+	var cx: float = (x0 + x1) * 0.5
+	var w: float = maxf(60.0, (x1 - x0) - 24.0)
+	var g: Node2D = _spawn_toggleable_spike(cx, w, top - 6.0, 1)
+	g.modulate = Color(0.85, 0.60, 1.0, 0.0)
+	g.position = Vector2(0.0, 18.0)
+	var tw := g.create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(g, "modulate:a", 1.0, 0.22)
+	tw.tween_property(g, "position:y", 0.0, 0.25).set_ease(Tween.EASE_OUT)
+	tw.chain().tween_interval(P3_CAMP_SPIKE_LIFE)
+	tw.chain().tween_property(g, "modulate:a", 0.0, 0.35)
+	tw.chain().tween_callback(func() -> void:
+		if is_instance_valid(g):
+			g.queue_free()
+		if _p3_camp_spikes == g:
+			_p3_camp_spikes = null)
+	SfxPlayer.play_at("spike_hit", Vector2(cx, top), -10.0)
+	_p3_camp_spikes = g
+
+# 캠핑 경고 · 서 있는 발판 윗면을 따라 바이올렛 선이 차오르고 양끝에 짧은 세로 눈금(연속 감쇠 · 점멸 없음).
+class _P3CampWarn extends Node2D:
+	var x0: float = 0.0
+	var x1: float = 100.0
+	var y: float = 0.0
+	var _t: float = 0.0
+	func _ready() -> void:
+		z_index = 3
+	func _process(delta: float) -> void:
+		_t += delta
+		queue_redraw()
+	func _draw() -> void:
+		var k: float = clampf(_t / 1.2, 0.0, 1.0)
+		var a: float = 0.45 + 0.35 * k + 0.1 * sin(_t * 8.0)
+		var c := Color(0.72, 0.42, 1.0, a)
+		var mid: float = (x0 + x1) * 0.5
+		var half: float = (x1 - x0) * 0.5 * k
+		draw_rect(Rect2(Vector2(mid - half, y - 3.0), Vector2(half * 2.0, 3.0)), c, true)
+		draw_rect(Rect2(Vector2(mid - half, y), Vector2(half * 2.0, 10.0)), Color(c.r, c.g, c.b, a * 0.25), true)
+		for ex in [x0, x1]:
+			draw_rect(Rect2(Vector2(float(ex) - 1.5, y - 16.0), Vector2(3.0, 16.0)), c, true)
 
 # 자막창 흔들림은 완전 제거됨(2026-08-14 2차: 잠깐의 등장 떨림조차 "글씨를 읽을 수 없다" 반려).
 # 통신 두절 톤은 14-1 후반의 대사 조기 끊김(_show_veil_subtitle duration 캡)이 담당한다.

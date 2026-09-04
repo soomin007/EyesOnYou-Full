@@ -10,8 +10,10 @@ extends Node
 #   ⑤ 14-1 컷씬 게이트: 첫 진입은 인트로 컷씬(세계 정지) · 사망 재시작(본 컷씬)은 정지 없음
 #   ⑥ 사망 한 박자: 죽는 순간 time_scale이 내려갔다가 실시간 ~0.9s 뒤 1.0 복원(오버레이는 하니스가 차단)
 #      + 오버레이 확장(09-03): _open_death_overlay = tree pause + death.tscn overlay_mode 자식
-#   ⑦ P3 짝 규칙(A안): 실체화 창마다 진짜·가짜 눈이 플레이어가 닿을 수 있는 자리 둘에 동시에 서고,
-#      진짜는 요원을 똑바로 본다 · 다음 창의 진짜 자리는 직전과 다르다
+#   ⑦ P3 3장 구조(B안 · 09-04): 1장 창 문법(닿는 자리·시선) → 몫 소진 시 HP 70%에서 2장 → 도망 자리(dx ≥ 700)에서
+#      다시 그리기(그려진 벽 = 탄 2회 찢김 · 거짓 발판 = 밟으면 찢어져 낙하·무피해) · 사거리 진입 = 타격 창 ·
+#      캠핑 = 경고 2.5s 후 가시(서 있는 발판) · 3장 = 상시 실체 + 그림 소거 + 와이어 ·
+#      보스전 사망 = 도달 페이즈 유지(14-1 rival_phase_reached · SENTINEL 3페이즈 HP·시설 복원)
 #   ⑧ 문서 서식: 종이/콘솔/뷰어 3양식이 행마다 컨테이너·타이핑 라벨을 1:1로 갖고, 실측 높이가 0보다 크며
 #      종이 높이 = 행 합 · 종이 문서엔 장(section) 3개 · 글자 없는 행(괘선·장 경계·게이지)은 정적 판정
 #   ⑨ 설정 디버그 탭 "문서 열람": 잠금 해제 상태의 설정에 문서 버튼 3개 · 각 버튼이 해당 양식 오버레이를 열고
@@ -48,8 +50,8 @@ func _boot(route_id: String, stage_idx: int, pre: Callable = Callable()) -> Node
 
 func _ready() -> void:
 	GameState.persist_blocked = true
-	# 감시견 · 어떤 이유로든 60s 안에 못 끝나면 종료(멈춤 방지).
-	get_tree().create_timer(60.0).timeout.connect(func() -> void:
+	# 감시견 · 어떤 이유로든 150s 안에 못 끝나면 종료(멈춤 방지 · ⑦ P3 3장 케이스가 게임 시간 ~30s를 쓴다 09-04).
+	get_tree().create_timer(150.0).timeout.connect(func() -> void:
 		print("[RULE] WATCHDOG timeout")
 		get_tree().quit(2))
 	await _discharge_case()
@@ -58,7 +60,7 @@ func _ready() -> void:
 	await _platform_case()
 	await _rival_cutscene_case()
 	await _death_beat_case()
-	await _p3_pair_case()
+	await _p3_chapters_case()
 	await _doc_format_case()
 	await _settings_docs_case()
 	print("[RULE] %s" % ("ALL PASS" if fails == 0 else "%d FAIL" % fails))
@@ -297,11 +299,11 @@ func _death_beat_case() -> void:
 	stage.queue_free()
 	await get_tree().process_frame
 
-func _p3_pair_case() -> void:
+func _p3_chapters_case() -> void:
 	var stage: Node = await _boot("route_core_recovery", 13, func() -> void:
 		GameState.rival_phase_reached = 2
 		GameState.rival_cutscenes_seen_run = ["intro", "p2", "p3"])
-	var p: Node2D = get_tree().get_first_node_in_group("player") as Node2D
+	var p: CharacterBody2D = get_tree().get_first_node_in_group("player") as CharacterBody2D
 	p.set("clear_protect", true)
 	# 본체 등장 대기(deferred 3.6s 유예 시작).
 	var fv: Node = null
@@ -314,44 +316,157 @@ func _p3_pair_case() -> void:
 	if fv == null:
 		stage.queue_free()
 		return
-	# 요원을 좌 상단 데크(450,736)에 세운다 · 짝은 이 데크 근처 둘이어야 한다.
-	p.global_position = Vector2(450.0, 736.0)
-	var prev_real: Vector2 = Vector2.INF
-	for w in 2:
-		# 실체(SOLID=2) 진입 대기.
-		var t: float = 0.0
-		while t < 14.0 and int(fv.get("state")) != 2:
+	_check("1장 시작 · 가짜 눈 없음", int(fv.get("chapter")) == 1 and fv.get("_decoy") == null)
+	# 1장 · 요원을 좌 상단 데크(450 · 윗면 724)에 세운다 · 실체화 자리는 닿는 곳이어야 한다.
+	var deck := Vector2(450.0, 724.0)
+	p.global_position = deck
+	var t: float = 0.0
+	while t < 14.0 and int(fv.get("state")) != 2:
+		await get_tree().physics_frame
+		t += get_physics_process_delta_time()
+		p.global_position = deck
+	var solid: bool = int(fv.get("state")) == 2
+	_check("1장 · 모습 드러냄(SOLID) 도달", solid, "t=%.1f" % t)
+	if not solid:
+		stage.queue_free()
+		return
+	var real_pos: Vector2 = (fv as Node2D).global_position
+	var ref: Vector2 = p.global_position + Vector2(0.0, -30.0)
+	_check("1장 · 닿는 자리(dx ≤ 520 · dy ≤ 220)", absf(real_pos.x - ref.x) <= 520.0 and absf(real_pos.y - ref.y) <= 220.0,
+		"dx=%.0f dy=%.0f" % [absf(real_pos.x - ref.x), absf(real_pos.y - ref.y)])
+	var gaze: Vector2 = fv.get("_gaze")
+	var to_p: Vector2 = (p.global_position - real_pos).normalized()
+	_check("1장 · 시선 = 요원 방향", gaze.length() > 4.0 and gaze.normalized().dot(to_p) > 0.9, "dot=%.2f" % gaze.normalized().dot(to_p))
+	# 1장 몫 소진 · 과잉 피해는 버려지고 HP = 70%에서 2장으로.
+	fv.call("take_damage", 999, 1)
+	var t2: int = int(fv.get("_t2"))
+	_check("1장 몫 소진 → 2장(HP = 70%)", int(fv.get("chapter")) == 2 and int(fv.get("hp")) == t2,
+		"ch=%d hp=%d t2=%d" % [int(fv.get("chapter")), int(fv.get("hp")), t2])
+	# 2장 · 워프 착지 → 다시 그리기 예고(1.0s) → 그림 생성 대기.
+	var drawn: Array = []
+	var t3: float = 0.0
+	while t3 < 4.0 and drawn.is_empty():
+		await get_tree().create_timer(0.1).timeout
+		t3 += 0.1
+		drawn = stage.get("_p3_drawn")
+		p.global_position = deck
+	var walls: int = 0
+	var fps: int = 0
+	for n in drawn:
+		if is_instance_valid(n) and (n as Node).is_in_group("drawn_wall"):
+			walls += 1
+		elif is_instance_valid(n) and (n as Node).is_in_group("drawn_platform"):
+			fps += 1
+	_check("2장 · 그려진 벽 ≥ 1 + 거짓 발판 ≥ 1", walls >= 1 and fps >= 1, "walls=%d fps=%d t=%.1f" % [walls, fps, t3])
+	var perch: Vector2 = (fv as Node2D).global_position
+	_check("2장 · 도망 자리는 요원에게서 멀다(dx ≥ 700)", absf(perch.x - deck.x) >= 700.0, "perch=%s" % str(perch))
+	_check("2장 · 도망 상태 = 안 박힌다", int(fv.get("state")) == 3 and int((fv as CollisionObject2D).collision_layer) == 0,
+		"state=%d" % int(fv.get("state")))
+	# 그려진 벽 · 탄 2회로 찢김(콜리전 해제).
+	var wall: Node = null
+	var fp: Node = null
+	for n in drawn:
+		if is_instance_valid(n) and (n as Node).is_in_group("drawn_wall") and wall == null:
+			wall = n
+		elif is_instance_valid(n) and (n as Node).is_in_group("drawn_platform") and fp == null:
+			fp = n
+	if wall != null:
+		wall.call("hit_by_bullet")
+		var one: bool = not bool(wall.get("torn"))
+		wall.call("hit_by_bullet")
+		await get_tree().physics_frame
+		var shape_off: bool = false
+		for c in wall.get_children():
+			if c is CollisionShape2D:
+				shape_off = (c as CollisionShape2D).disabled
+		_check("2장 · 그려진 벽 = 탄 1회 버팀 · 2회에 찢김(콜리전 해제)", one and bool(wall.get("torn")) and shape_off)
+	else:
+		_check("2장 · 그려진 벽 = 탄 2회에 찢김", false, "벽 없음")
+	# 거짓 발판 · 요원이 올라서면 0.12s 뒤 찢어져 발이 빠진다 · 피해 없음.
+	if fp != null:
+		var hp0: int = GameState.player_hp
+		var top: Vector2 = (fp as Node2D).global_position + Vector2(0.0, -14.0)
+		p.global_position = top
+		p.velocity = Vector2.ZERO
+		var t4: float = 0.0
+		while t4 < 1.5 and is_instance_valid(fp) and not bool(fp.get("torn")):
 			await get_tree().physics_frame
-			t += get_physics_process_delta_time()
-			p.global_position = Vector2(450.0, 736.0)
-		var solid: bool = int(fv.get("state")) == 2
-		_check("창 %d · 실체화 도달" % (w + 1), solid, "t=%.1f" % t)
-		if not solid:
-			break
-		var real_pos: Vector2 = (fv as Node2D).global_position
-		var decoy: Node2D = fv.get("_decoy") as Node2D
-		var ref: Vector2 = p.global_position + Vector2(0.0, -30.0)
-		var dx: float = absf(real_pos.x - ref.x)
-		var dy: float = absf(real_pos.y - ref.y)
-		_check("창 %d · 진짜가 닿는 자리(dx ≤ 520 · dy ≤ 220)" % (w + 1), dx <= 520.0 and dy <= 220.0, "dx=%.0f dy=%.0f" % [dx, dy])
-		_check("창 %d · 가짜 눈 동반(닿는 자리 · 진짜와 ≥ 90px)" % (w + 1),
-			decoy != null and is_instance_valid(decoy) and absf(decoy.global_position.x - ref.x) <= 520.0
-			and decoy.global_position.distance_to(real_pos) >= 90.0,
-			"" if decoy == null else str(decoy.global_position))
-		var gaze: Vector2 = fv.get("_gaze")
-		var to_p: Vector2 = (p.global_position - real_pos).normalized()
-		_check("창 %d · 진짜 시선 = 요원 방향" % (w + 1), gaze.length() > 4.0 and gaze.normalized().dot(to_p) > 0.9, "dot=%.2f" % gaze.normalized().dot(to_p))
-		if w == 1:
-			_check("창 2 · 진짜 자리가 직전과 다름", real_pos.distance_to(prev_real) > 60.0, "%s vs %s" % [str(prev_real), str(real_pos)])
-		prev_real = real_pos
-		# 잠복 복귀 대기.
-		var t2: float = 0.0
-		while t2 < 6.0 and int(fv.get("state")) == 2:
+			t4 += get_physics_process_delta_time()
+		var torn: bool = not is_instance_valid(fp) or bool(fp.get("torn"))
+		for i in 20:
 			await get_tree().physics_frame
-			t2 += get_physics_process_delta_time()
-			p.global_position = Vector2(450.0, 736.0)
+		_check("2장 · 거짓 발판 = 밟으면 찢어져 낙하 · 피해 없음", torn and p.global_position.y > top.y + 20.0 and GameState.player_hp == hp0,
+			"torn=%s y=%.0f→%.0f hp %d→%d t=%.2f" % [str(torn), top.y, p.global_position.y, hp0, GameState.player_hp, t4])
+	else:
+		_check("2장 · 거짓 발판 = 밟으면 찢어져 낙하", false, "발판 없음")
+	# 사거리 진입 → 타격 창 개방(FLEE → TELE/SOLID).
+	perch = (fv as Node2D).global_position
+	var near := Vector2(perch.x + (-150.0 if perch.x > 1200.0 else 150.0), perch.y + 18.0)
+	p.global_position = near
+	p.velocity = Vector2.ZERO
+	var t5: float = 0.0
+	while t5 < 2.0 and int(fv.get("state")) == 3:
+		await get_tree().physics_frame
+		t5 += get_physics_process_delta_time()
+		p.global_position = near
+	var opened: bool = int(fv.get("state")) == 1 or int(fv.get("state")) == 2
+	_check("2장 · 사거리 진입 → 타격 창 개방", opened, "state=%d t=%.2f" % [int(fv.get("state")), t5])
+	# 캠핑 = 경고 후 가시 · 데크에 가만히 서면 2.5s 경고 → 1.2s 뒤 그 발판에 가시.
+	p.global_position = deck
+	p.velocity = Vector2.ZERO
+	var warn_at: float = -1.0
+	var spike_at: float = -1.0
+	var t6: float = 0.0
+	while t6 < 5.5 and spike_at < 0.0:
+		await get_tree().physics_frame
+		t6 += get_physics_process_delta_time()
+		p.global_position = deck
+		if warn_at < 0.0 and stage.get("_p3_camp_warn") != null:
+			warn_at = t6
+		if stage.get("_p3_camp_spikes") != null:
+			spike_at = t6
+	var spikes: Node2D = stage.get("_p3_camp_spikes") as Node2D
+	var on_deck: bool = spikes != null and is_instance_valid(spikes) and absf(float(spikes.get_meta("zone").global_position.y) - deck.y) < 40.0
+	_check("캠핑 · 경고(2.5s) 후 가시(+1.2s) · 서 있는 발판에", warn_at > 0.0 and spike_at > warn_at and spike_at >= 3.4 and on_deck,
+		"warn=%.1f spike=%.1f on_deck=%s" % [warn_at, spike_at, str(on_deck)])
+	# 3장 · 상시 실체 + 그림 소거 + 배경 와이어.
+	fv.call("debug_force_chapter", 3)
+	await get_tree().create_timer(1.0).timeout
+	var left: int = 0
+	for n in stage.get("_p3_drawn"):
+		if is_instance_valid(n):
+			left += 1
+	var wire: Node = stage.get("_p3_wire")
+	_check("3장 · 상시 실체(SOLID·레이어 4) + 그림 소거 + 와이어", int(fv.get("chapter")) == 3 and int(fv.get("state")) == 2
+		and int((fv as CollisionObject2D).collision_layer) == 4 and left == 0 and wire != null and is_instance_valid(wire),
+		"state=%d left=%d" % [int(fv.get("state")), left])
 	stage.queue_free()
 	await get_tree().process_frame
+	# 보스전 사망 = 도달 페이즈 유지(§9.4) · 14-1.
+	GameState.start_main_game()
+	GameState.current_stage = 13
+	for r in RouteData.ALL_ROUTES:
+		var rd: Dictionary = r
+		if str(rd.get("id", "")) == "route_core_recovery":
+			GameState.record_route_choice(rd, "")
+	GameState.rival_phase_reached = 2
+	GameState.register_death()
+	_check("14-1 사망 · 도달 페이즈(P3) 유지 + 제자리", GameState.rival_phase_reached == 2 and GameState.death_restart_in_place)
+	# SENTINEL · 도달 페이즈 3 복원(HP = P3 임계 · 시설 소환).
+	var lab: Node = await _boot("route_lab", 8, func() -> void:
+		GameState.boss_phase_reached = 3
+		GameState.boss_intro_seen_run = true)
+	var boss: Node = lab.get("boss")
+	for i in 10:
+		await get_tree().process_frame
+	var ok_boss: bool = boss != null and is_instance_valid(boss) and int(boss.get("phase")) == 3 \
+		and int(boss.get("hp")) == int(boss.get("p3_threshold"))
+	var fac: Array = lab.get("_boss_facility_nodes")
+	_check("SENTINEL 사망 · 3페이즈 복원(HP = P3 임계 · 시설 소환)", ok_boss and not fac.is_empty(),
+		"" if boss == null else "phase=%d hp=%d thr=%d fac=%d" % [int(boss.get("phase")), int(boss.get("hp")), int(boss.get("p3_threshold")), fac.size()])
+	lab.queue_free()
+	await get_tree().process_frame
+	GameState.boss_phase_reached = 0
 
 # ⑧ 문서 서식 · 3양식을 실제 Stage 위에서 열어 행 배치 정합을 단언한다(타이핑은 기다리지 않는다).
 func _doc_format_case() -> void:

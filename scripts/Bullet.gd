@@ -27,8 +27,8 @@ var tracking_max_angle: float = TRACKING_MAX_ANGLE
 
 func _ready() -> void:
 	collision_layer = 0
-	collision_mask = 1 | 4  # 벽 + 적
-	# 거짓 렌더(FalseVeil 가짜 적 등)가 "탄이 통과하는 그림"임을 보여주기 위한 근접 감지용 그룹.
+	collision_mask = 1 | 4 | 8  # 벽 + 적 + 14-1 P3 그려진 벽(레이어 8 · Stage._DrawnWall · 2회로 찢긴다)
+	# 그림 상태의 눈·배웅 실루엣이 "탄이 통과하는 그림"임을 보여주기 위한 근접 감지용 그룹.
 	add_to_group("player_bullet")
 	body_entered.connect(_on_body_entered)
 	z_index = 2
@@ -119,11 +119,10 @@ func _find_nearest_enemy() -> Node2D:
 	# "enemy" + "boss_hittable"(그룹 밖 보스체, 14-1 거짓 VEIL 실체 등) 둘 다 추적 대상.
 	# 충돌(131행)·수류탄(Grenade)은 이미 두 그룹을 보는데 유도 타깃 스캔만 enemy뿐이라
 	# P3 실체에 유도가 안 먹혔다(사용자 2026-08-16, 동형 오류 스윕으로 수정).
-	# + "homing_decoy"(P3 가짜 눈·가짜 병사) · 유도탄이 미끼도 쫓아야 "유도 방향 = 공짜 판별"이
-	# 안 된다(유도만 실체를 쫓으면 게임이 너무 쉬워진다는 사용자 지적, 같은 날).
+	# ("homing_decoy" 미끼 그룹은 2026-09-04 P3 B안 개편으로 소멸 · 가짜 눈·가짜 병사 폐지.)
 	var nearest: Node2D = null
 	var min_d: float = 99999.0
-	for e in get_tree().get_nodes_in_group("enemy") + get_tree().get_nodes_in_group("boss_hittable") + get_tree().get_nodes_in_group("homing_decoy"):
+	for e in get_tree().get_nodes_in_group("enemy") + get_tree().get_nodes_in_group("boss_hittable"):
 		if not (e is Node2D):
 			continue
 		if e in hit_enemies:

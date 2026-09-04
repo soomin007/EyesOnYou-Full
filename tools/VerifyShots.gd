@@ -50,8 +50,9 @@ const TARGETS: Array = [
 	{"id": "pump_jet_zorder", "route": "route_pump_station", "stage": 1, "setup": "pump_jet"},
 	{"id": "sniper_lock", "route": "route_pump_station", "stage": 1, "setup": "sniper_lock"},
 	{"id": "challenge_lamps", "route": "route_blackout", "stage": 3, "setup": "challenge_lamps"},
-	# 08-30 · P3 짝 규칙(A안) 정지컷 + 사망 한 박자 연사.
-	{"id": "p3_pair", "route": "route_core_recovery", "stage": 13, "setup": "p3_pair"},
+	# 09-04 · P3 B안 3장 구조 정지컷(2장 그려진 벽·거짓 발판 / 3장 와이어 결투) + 사망 한 박자 연사.
+	{"id": "p3_chase", "route": "route_core_recovery", "stage": 13, "setup": "p3_chase"},
+	{"id": "p3_duel", "route": "route_core_recovery", "stage": 13, "setup": "p3_duel"},
 	{"id": "anim_death_beat", "route": "route_back_alley", "stage": 1, "setup": "anim_death_beat", "anim": 60, "every": 1},
 ]
 
@@ -121,7 +122,7 @@ func _shot(d: Dictionary) -> void:
 		return
 	GameState.record_route_choice(route, "")
 	GameState.current_segment = int(d.get("seg", 0))
-	if setup == "p3_pair":
+	if setup == "p3_chase" or setup == "p3_duel":
 		GameState.rival_phase_reached = 2
 		GameState.rival_cutscenes_seen_run = ["intro", "p2", "p3"]
 	var stage: Node = (load(STAGE_SCENE) as PackedScene).instantiate()
@@ -132,22 +133,45 @@ func _shot(d: Dictionary) -> void:
 	if p != null:
 		p.set("clear_protect", true)   # 캡처 중 사망 = 씬 전환 = 하니스 소멸 방지(anim과 동일 가드)
 	match setup:
-		"p3_pair":
-			# 요원을 좌 상단 데크(450,736)에 세우고 짝(진짜 응시 · 가짜 헛시선)이 실체화된 순간.
+		"p3_chase", "p3_duel":
+			# 2장 · 요원을 좌 상단 데크(450 · 윗면 724)에 세워 1장 창을 연 뒤 몫을 소진시켜 2장으로. 눈이 먼 자리로
+			# 도망가 예고 밴드 뒤 벽·거짓 발판을 그린 순간(요원은 그림 구간 가운데 지면으로 옮겨 한 화면에 담는다).
+			# 3장 · 거기서 강제 진입 · 와이어 벗김 + 상시 실체 결투 + 잔해.
 			var fv: Node = null
 			var tw0: float = 0.0
 			while tw0 < 4.0 and fv == null:
 				await get_tree().create_timer(0.1).timeout
 				tw0 += 0.1
 				fv = stage.get("_false_veil")
+			var deck := Vector2(450.0, 724.0)
 			if p is Node2D:
-				(p as Node2D).global_position = Vector2(450.0, 736.0)
+				(p as Node2D).global_position = deck
 			var tw1: float = 0.0
 			while fv != null and tw1 < 14.0 and int(fv.get("state")) != 2:
 				await get_tree().physics_frame
 				tw1 += get_physics_process_delta_time()
 				if p is Node2D:
-					(p as Node2D).global_position = Vector2(450.0, 736.0)
+					(p as Node2D).global_position = deck
+			if fv != null:
+				fv.call("take_damage", 999, 1)
+			var drawn: Array = []
+			var tw2: float = 0.0
+			while tw2 < 4.0 and drawn.size() < 2:
+				await get_tree().create_timer(0.1).timeout
+				tw2 += 0.1
+				drawn = stage.get("_p3_drawn")
+				if p is Node2D:
+					(p as Node2D).global_position = deck
+			if p is Node2D and fv != null:
+				# 요원을 눈 쪽 지면(380px 앞)으로 · 줌 0.85면 눈과 가운데 그림이 한 화면에 든다.
+				var perch: Vector2 = (fv as Node2D).global_position
+				(p as Node2D).global_position = Vector2(perch.x + (-380.0 if perch.x > 1200.0 else 380.0), 1220.0)
+				(p as Node2D).set("velocity", Vector2.ZERO)
+			if setup == "p3_duel" and fv != null:
+				fv.call("debug_force_chapter", 3)
+				await get_tree().create_timer(1.6).timeout
+			else:
+				await get_tree().create_timer(0.5).timeout   # 그림 등장 애니(0.35s) 완료 후
 			for i in 12:
 				await get_tree().process_frame
 		"dash":
