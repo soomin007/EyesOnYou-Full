@@ -38,8 +38,9 @@
 | lab 첫 과부하 배기(`_on_boss_vent_started`) | 김을 빼는 동안엔 총알이 안 박힙니다. 대신 쏠수록 배출이 빨라집니다. 그 사이 증원부터 정리하십시오. | |
 | lab 첫 과부하 배기 · warm | 김을 빼는 동안엔 총알이 안 박힙니다. 대신 쏠수록 배출이 빨라져요. 그 사이 증원도 정리하고요. | |
 | 14-1 P2 노드 재접속(`_on_p2_node_down`) | ...같은 자리에 회선이 다시 붙습니다. 한 번 더 끊어야 합니다. | |
-| 14-1 P3 캠핑 감지(`_tick_p3_camp`, 1회) | 한자리에 오래 서 있으면 조준이 고정됩니다. 계속 움직이십시오. | |
-| 14-1 P3 그림 격파(`_on_p3_fake_torn`, 1회 · 2026-08-22) | 저 가짜들은 저쪽이 직접 그리는 그림입니다. 다시 그리는 속도보다 빨리 찢으면, 저놈도 그림인 채로는 못 버팁니다. | Those fakes are its own renders. Tear them faster than it can redraw, and it can't stay a picture either. |
+| 14-1 P3 창 안내 재고지(`_p3_restart_line`, 재시작 1회 · 2026-09-04) | 눈이 드러날 때만 탄이 박힙니다. | Bullets land only while the eye shows itself. |
+| 14-1 P3 캠핑 경고(`_tick_p3_camp`, 1회 · 2026-09-04 경고 후 가시) | 자리를 옮기십시오. 발판이 보라색으로 물들면 가시가 솟습니다. | Move. Purple on the ledge means spikes are coming. |
+| 14-1 P3 거짓 발판 표시(`_veil_assist_tick`, warm/thaw 1회 · 2026-09-04) | 저 발판, 눈이 그린 겁니다. 표시해 둡니다. | That floor was drawn by the eye. Marking it. |
 | 14-1 P1 수확 체감(`_p1_harvest_tick`, 1회 · 2026-09-03) | 증원만 계속 잡으면 얻는 것이 줄어듭니다. 목표는 위층 안테나입니다. | |
 | 14-1 P1 수확 체감 · warm | 증원만 계속 잡으면 얻는 게 줄어요. 위층 안테나부터 부숩시다. | |
 | beam | 게이트는 스캔 빔이 지날 때만 열립니다. 빔 뒤에 붙어 통과하십시오. | |

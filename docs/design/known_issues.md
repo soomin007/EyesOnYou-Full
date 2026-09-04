@@ -1117,3 +1117,24 @@
   규칙: 지적 항목마다 ① 원래 의도 ② 왜 그렇게 안 읽혔는지(스크린샷·코드로 확인) ③ 발전안(2안 이상 + 추천)을
   먼저 내고 결정을 받는다. 바로 고치는 건 지시와 자리·조건이 다른 명백한 오작업뿐.
   메모리 explain-intent-before-replacing.
+
+## 2026-09-04 추가
+
+- **적 탄(EnemyBullet)도 StaticBody2D의 `hit_by_bullet`을 부른다 · 보스가 그린 장애물을 레이어 1에 두면
+  제 탄에 제 그림이 찢긴다.**
+  증상(설계 검토 중 발견): P3 2장 그려진 벽을 일반 벽처럼 레이어 1 + `hit_by_bullet`으로 만들면 눈의 볼리
+  (mask 1|2)가 벽에 박히며 찢는다 = "제 회선 관통"과 같은 모순(P2 09-03 사례의 재판).
+  규칙: 특정 주체만 막아야 하는 장애물은 전용 레이어를 쓴다(그려진 벽 = 레이어 8 · Player mask 1|8 ·
+  Bullet mask 1|4|8 · EnemyBullet은 그대로 1|2 = 통과). `hit_by_bullet` 계약은 "누가 쐈든"이라 인자로
+  구분할 수 없다.
+
+- **새 `class_name` 파일은 `--headless --import`(에디터 스캔) 전엔 헤드리스 하니스에서 "Identifier not
+  declared"로 죽는다.**
+  증상: DrawnWatcher.gd 신설 직후 RuleSmoke가 Stage.gd 파싱 실패(전 케이스 연쇄 FAIL).
+  원인: 전역 클래스 캐시(.godot/global_script_class_cache.cfg)는 에디터/임포트가 갱신한다. 게임 실행은 갱신 안 함.
+  규칙: class_name을 새로 만들면 하니스 전에 `godot --headless --path . --import`를 1회 돌린다(.uid 파일도 이때
+  생성 · 커밋 대상). 대안은 `load("res://...").new()`.
+
+- **하니스 정지컷은 등장 애니메이션(appear 0.35s)이 끝난 뒤 찍는다 · 갓 생성된 노드는 절반 높이로 찍힌다.**
+  증상: p3_chase 첫 촬영에서 그려진 벽이 120px 대신 ~55px로 찍혀 "짧다"로 오독할 뻔함(등장 60% 시점).
+  규칙: 생성 폴링 직후 0.5s(게임 시간) 대기 후 캡처. 상태 print를 함께 남겨 스크린샷 단독 판독을 피한다(09-03 규칙과 동형).
